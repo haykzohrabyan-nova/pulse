@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operator Terminal — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style>
+    /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
+    body { font-size: 14px; overflow: hidden; }
+
+    /* ╔══════════════════════════════════╗
+       ║        LOGIN SCREEN              ║
+       ╚══════════════════════════════════╝ */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; background: linear-gradient(135deg, #f0f4ff 0%, #f4f6f9 100%);
+    }
+    .login-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 14px;
+      padding: 36px 44px; max-width: 440px; width: 100%;
+      box-shadow: 0 8px 40px rgba(37,99,235,0.10);
+    }
+    .login-header { text-align: center; margin-bottom: 28px; }
+    .login-header .logo { font-size: 40px; margin-bottom: 8px; }
+    .login-header h1 { font-size: 24px; font-weight: 800; color: var(--accent); margin: 0; }
+    .login-header p { font-size: 14px; color: var(--text-muted); margin: 4px 0 0; }
+    .login-time {
+      text-align: center; font-size: 32px; font-weight: 700; color: var(--text);
+      background: #f8f9fb; border-radius: 10px; padding: 10px 0; margin-bottom: 20px;
+      letter-spacing: -1px; line-height: 1;
+    }
+    .login-time .date-line { font-size: 13px; color: var(--text-muted); font-weight: 400; margin-top: 4px; letter-spacing: 0; }
+    .login-form-row { margin-bottom: 14px; }
+    .op-preview {
+      background: #f8f9fb; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 16px; margin: 12px 0;
+    }
+    .op-preview .op-name { font-size: 18px; font-weight: 800; }
+    .op-preview .op-role { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 2px 0 6px; }
+    .op-preview .op-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .machine-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .machine-chip {
+      background: #e0edff; color: #1d4ed8; border-radius: 5px;
+      padding: 3px 8px; font-size: 11px; font-weight: 500;
+    }
+    .btn-big-clock-in {
+      width: 100%; padding: 16px; font-size: 18px; font-weight: 800;
+      background: var(--green); color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; transition: background 0.2s; margin-top: 4px;
+    }
+    .btn-big-clock-in:hover { background: #15803d; }
+    .btn-big-clock-in:disabled { background: #9ca3af; cursor: not-allowed; }
+    .already-in-msg {
+      display: none; text-align: center; font-size: 14px; color: var(--green);
+      font-weight: 600; margin-top: 10px;
+    }
+
+    /* ╔══════════════════════════════════╗
+       ║        MAIN SCREEN               ║
+       ╚══════════════════════════════════╝ */
+    #main-screen { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* ── SITE NAV (from renderNav) ── */
+    .top-nav { padding: 8px 20px; }
+    .top-nav h1 { font-size: 15px; }
+    .top-nav .nav-links a { font-size: 12px; padding: 3px 7px; }
+
+    /* ── OPERATOR TOP BAR ── */
+    .op-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 18px; background: #fff; border-bottom: 2px solid var(--border);
+      flex-shrink: 0; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    }
+    .op-identity { display: flex; align-items: center; gap: 8px; }
+    .op-name-label { font-size: 16px; font-weight: 800; color: var(--text); }
+    .op-machine-badge {
+      background: var(--accent); color: #fff; border-radius: 6px;
+      padding: 3px 9px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .op-machine-badge.multi { background: #7c3aed; }
+    .op-machine-badge.boyd { background: #d97706; }
+    .topbar-spacer { flex: 1; }
+    .topbar-clock {
+      font-size: 15px; font-weight: 700; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .break-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 16px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid; transition: all 0.2s; white-space: nowrap;
+      user-select: none;
+    }
+    .break-pill.green { border-color: #16a34a; background: #d4edda; color: #0f6b2d; }
+    .break-pill.yellow { border-color: #d97706; background: #fef3cd; color: #92600a; }
+    .break-pill.red { border-color: #dc2626; background: #fde8e8; color: #b91c1c; animation: pill-flash 1.5s infinite; }
+    @keyframes pill-flash { 0%,100%{opacity:1} 50%{opacity:0.65} }
+    .bp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .bp-dot.green { background: #16a34a; }
+    .bp-dot.yellow { background: #d97706; }
+    .bp-dot.red { background: #dc2626; }
+    .coins-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px;
+      padding: 4px 10px; font-size: 13px; font-weight: 800; color: #b45309;
+    }
+    .coins-badge .coins-month { font-size: 11px; font-weight: 600; color: #92600a; margin-left: 4px; }
+    .btn-clockout {
+      padding: 7px 16px; background: #dc2626; color: #fff; border: none;
+      border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-clockout:hover { background: #b91c1c; }
+
+    /* ╔══════════════════════════════════╗
+       ║       THREE-COLUMN LAYOUT        ║
+       ╚══════════════════════════════════╝ */
+    .main-area {
+      display: flex; flex: 1; overflow: hidden;
+      /* height managed by JS based on topbar/bottombar actual heights */
+    }
+
+    /* ── LEFT COLUMN: MY QUEUE ── */
+    .col-queue {
+      width: 248px; min-width: 220px; background: #fff;
+      border-right: 2px solid var(--border); display: flex; flex-direction: column;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .col-queue-header {
+      padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-muted); background: #f8f9fb;
+      border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+    }
+    .job-count-badge {
+      background: var(--accent); color: #fff; border-radius: 10px;
+      padding: 1px 7px; font-size: 11px; font-weight: 700;
+    }
+    .qr-scan-bar { padding: 8px 8px 6px; border-bottom: 1px solid #eef0f3; }
+    .qr-scan-bar .scan-inner { display: flex; gap: 5px; }
+    .qr-scan-bar input {
+      flex: 1; padding: 6px 9px; font-size: 13px; border-radius: 6px;
+    }
+    .qr-scan-bar .btn-scan {
+      padding: 6px 11px; font-size: 12px; font-weight: 700; border-radius: 6px;
+      background: var(--accent); color: #fff; border: none; cursor: pointer;
+      white-space: nowrap;
+    }
+    .queue-scroll { flex: 1; overflow-y: auto; padding: 6px; }
+    .section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.7px; color: var(--text-muted); padding: 6px 6px 2px;
+    }
+    .queue-item {
+      padding: 9px 10px; border-radius: 8px; border: 1.5px solid var(--border);
+      margin-bottom: 5px; cursor: pointer; transition: all 0.15s; background: #fff;
+      border-left-width: 4px;
+    }
+    .queue-item:hover { border-color: var(--accent); background: #f0f6ff; border-left-width: 4px; }
+    .queue-item.active {
+      border-color: var(--accent); background: #e8f0ff;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.12);
+    }
+    .queue-item.coming { opacity: 0.8; }
+    .qi-order { font-size: 14px; font-weight: 800; color: var(--accent); line-height: 1.2; }
+    .qi-customer { font-size: 11px; color: var(--text-muted); margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qi-product { font-size: 12px; font-weight: 600; color: var(--text); }
+    .qi-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+    .qi-qty { font-size: 11px; color: var(--text-muted); }
+    .qi-due { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .qi-due.overdue { color: var(--red); }
+    .qi-machine-tag {
+      font-size: 10px; font-weight: 600; margin-top: 4px; display: inline-block;
+      padding: 1px 7px; border-radius: 4px; background: #f0f4ff; color: #3b62d9;
+    }
+    .qi-step-tag {
+      font-size: 10px; font-weight: 600; margin-top: 4px; display: inline-block;
+      padding: 1px 7px; border-radius: 4px; background: #fef3cd; color: #92600a;
+    }
+    .queue-empty { text-align: center; padding: 36px 12px; color: var(--text-muted); }
+    .queue-empty .qs-icon { font-size: 32px; margin-bottom: 8px; }
+    .queue-empty p { font-size: 12px; }
+
+    /* ── CENTER COLUMN: ACTIVE JOB ── */
+    .col-job {
+      flex: 1; overflow-y: auto; background: var(--bg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .no-job-placeholder {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: var(--text-muted); padding: 40px;
+    }
+    .no-job-placeholder .icon { font-size: 56px; margin-bottom: 12px; }
+    .no-job-placeholder h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .no-job-placeholder p { font-size: 13px; }
+
+    /* Job Header */
+    .job-header-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; border-left-width: 5px;
+    }
+    .jh-row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+    .jh-order { font-size: 20px; font-weight: 900; color: var(--accent); }
+    .jh-customer { font-size: 16px; font-weight: 600; color: var(--text); }
+    .jh-due { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-left: auto; }
+    .jh-due.overdue { color: var(--red); }
+    .jh-row2 { display: flex; align-items: center; gap: 8px; }
+    .jh-step-label { font-size: 12px; color: var(--text-muted); }
+    .jh-step-machine { font-size: 14px; font-weight: 700; color: var(--text); }
+
+    /* Job Details Grid */
+    .job-details-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px;
+    }
+    .jd-item {
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .jd-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .jd-value { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .jd-value.large { font-size: 18px; font-weight: 800; color: var(--accent); }
+    .jd-value.overdue { color: var(--red); }
+    .jd-value.warn { color: var(--yellow); }
+
+    /* Workflow Pipeline */
+    .workflow-pipeline-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    }
+    .wpc-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 10px; }
+    .pipeline-steps { display: flex; align-items: center; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+    .ps-step {
+      display: flex; flex-direction: column; align-items: center; min-width: 88px;
+      position: relative; flex-shrink: 0;
+    }
+    .ps-step:not(:last-child)::after {
+      content: ''; position: absolute; right: -12px; top: 13px;
+      width: 24px; height: 2px; background: var(--border); z-index: 0;
+    }
+    .ps-step.completed:not(:last-child)::after { background: var(--green); }
+    .ps-step.current-step:not(:last-child)::after { background: var(--accent); }
+    .ps-node {
+      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 12px; font-weight: 800; z-index: 1;
+      border: 2px solid var(--border); background: #fff; color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .ps-step.completed .ps-node { background: var(--green); border-color: var(--green); color: #fff; }
+    .ps-step.current-step .ps-node {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.15);
+    }
+    .ps-name {
+      font-size: 10px; text-align: center; margin-top: 4px; color: var(--text-muted);
+      line-height: 1.2; max-width: 80px; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .ps-step.completed .ps-name { color: var(--green); }
+    .ps-step.current-step .ps-name { color: var(--accent); font-weight: 700; }
+    .ps-arrow { font-size: 14px; color: var(--border); flex-shrink: 0; margin: 0 4px; }
+
+    /* Special Notes */
+    .special-notes-card {
+      background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 10px; padding: 12px 14px;
+    }
+    .special-notes-card .note-label { font-size: 11px; font-weight: 700; color: #92600a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .special-notes-card .note-text { font-size: 13px; color: #78350f; line-height: 1.5; }
+
+    /* Knowledge Base Alerts */
+    .kb-alert {
+      border-radius: 8px; padding: 11px 13px; border-left: 4px solid;
+    }
+    .kb-alert.critical { background: #fde8e8; border-color: #dc2626; }
+    .kb-alert.warning { background: #fef3cd; border-color: #d97706; }
+    .kb-alert.info { background: #e0edff; border-color: #2563eb; }
+    .kb-alert h4 { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+    .kb-alert p { font-size: 12px; line-height: 1.4; }
+    .kb-alert .kb-fix { font-size: 11px; font-weight: 600; background: rgba(0,0,0,0.06); border-radius: 4px; padding: 5px 7px; margin-top: 5px; }
+
+    /* Recommended Overs */
+    .overs-card {
+      background: #fff7ed; border: 2px solid #fdba74; border-radius: 10px; padding: 12px 14px;
+    }
+    .overs-card .oc-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .overs-card .oc-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #c2410c; }
+    .overs-card .oc-value { font-size: 28px; font-weight: 900; color: #c2410c; line-height: 1; }
+    .overs-card .oc-unit { font-size: 13px; color: #c2410c; font-weight: 600; }
+    .overs-card .oc-breakdown { font-size: 12px; color: #78350f; }
+
+    /* Die Scan */
+    .die-scan-card {
+      background: #fde8e8; border: 2px solid #dc2626; border-radius: 10px; padding: 14px;
+    }
+    .die-scan-card.verified { background: #d4edda; border-color: #16a34a; }
+    .die-scan-card h4 { font-size: 14px; font-weight: 800; color: #7f1d1d; margin-bottom: 6px; }
+    .die-scan-card.verified h4 { color: #0f6b2d; }
+    .die-scan-card input { font-size: 15px; padding: 9px 12px; }
+    .die-result { margin-top: 8px; padding: 8px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .die-result.ok { background: #d4edda; color: #0f6b2d; }
+    .die-result.fail { background: #fde8e8; color: #b91c1c; }
+
+    /* ── RIGHT COLUMN: CONTROLS ── */
+    .col-controls {
+      width: 280px; min-width: 260px; background: #fff;
+      border-left: 2px solid var(--border); display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+    }
+    .controls-section {
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }
+    .controls-section:last-child { border-bottom: none; }
+    .ctrl-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    /* Step Timer */
+    .step-timer-block { text-align: center; }
+    .timer-display {
+      font-size: 36px; font-weight: 900; color: var(--text);
+      font-variant-numeric: tabular-nums; letter-spacing: -2px; line-height: 1;
+    }
+    .timer-state {
+      display: inline-block; margin-top: 4px; padding: 3px 10px;
+      border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .ts-idle { background: #f1f3f5; color: var(--text-muted); }
+    .ts-running { background: #d4edda; color: #0f6b2d; }
+    .ts-paused { background: #fef3cd; color: #92600a; }
+    .ts-complete { background: #ede9fe; color: #6d28d9; }
+
+    /* Action Buttons */
+    .action-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px 12px; font-size: 15px; font-weight: 800;
+      border: none; border-radius: 9px; cursor: pointer; transition: all 0.15s;
+      text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px;
+    }
+    .action-btn:last-child { margin-bottom: 0; }
+    .btn-start { background: #16a34a; color: #fff; }
+    .btn-start:hover { background: #15803d; }
+    .btn-pause { background: #d97706; color: #fff; }
+    .btn-pause:hover { background: #b45309; }
+    .btn-resume { background: #2563eb; color: #fff; }
+    .btn-resume:hover { background: #1d4ed8; }
+    .btn-complete { background: #7c3aed; color: #fff; }
+    .btn-complete:hover { background: #6d28d9; }
+    .action-btn:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; transform: none; }
+    .action-btn.hidden { display: none; }
+    .pause-overdue-warn {
+      background: #fde8e8; border: 1.5px solid #dc2626; border-radius: 7px;
+      padding: 8px 10px; font-size: 12px; font-weight: 700; color: #b91c1c;
+      text-align: center; display: none; animation: flash-red 1s infinite;
+    }
+    .pause-overdue-warn.visible { display: block; }
+
+    /* Performance */
+    .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .perf-stat { text-align: center; }
+    .ps-val { font-size: 22px; font-weight: 900; color: var(--text); line-height: 1; }
+    .ps-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 1px; }
+    .perf-bar-wrap { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; margin: 6px 0; }
+    .perf-bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+    .pf-ahead { background: #16a34a; }
+    .pf-behind { background: #d97706; }
+    .pf-over { background: #7c3aed; }
+    .perf-footer { display: flex; align-items: center; justify-content: space-between; }
+    .perf-pct { font-size: 12px; color: var(--text-muted); }
+    .perf-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    }
+    .pb-ahead { background: #d4edda; color: #0f6b2d; }
+    .pb-behind { background: #fef3cd; color: #92600a; }
+    .pb-over { background: #ede9fe; color: #6d28d9; }
+
+    /* Coins in right panel */
+    .coins-panel { display: flex; gap: 8px; }
+    .coin-box {
+      flex: 1; text-align: center; background: #fffbeb; border: 1.5px solid #fcd34d;
+      border-radius: 8px; padding: 8px 6px;
+    }
+    .coin-box.month { background: #f0fdf4; border-color: #86efac; }
+    .coin-box .cb-val { font-size: 20px; font-weight: 900; color: #b45309; line-height: 1; }
+    .coin-box.month .cb-val { color: #16a34a; }
+    .coin-box .cb-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+    /* ── BOTTOM BAR: BREAK TRACKER ── */
+    .bottom-bar {
+      background: #fff; border-top: 2px solid var(--border); flex-shrink: 0;
+    }
+    .bb-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 18px; cursor: pointer; user-select: none;
+      background: #f8f9fb;
+    }
+    .bb-header:hover { background: #f0f2f5; }
+    .bb-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .bb-summary { display: flex; align-items: center; gap: 12px; }
+    .bb-slot-mini {
+      display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    }
+    .bb-slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .bb-slot-dot.done { background: #16a34a; }
+    .bb-slot-dot.active { background: #2563eb; animation: pulse-dot 1s infinite; }
+    .bb-slot-dot.upcoming { background: #d97706; }
+    .bb-slot-dot.overdue { background: #dc2626; }
+    .bb-slot-dot.idle { background: #d1d5db; }
+    @keyframes pulse-dot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+    .bb-toggle { font-size: 12px; color: var(--text-muted); }
+    .bb-body { display: none; padding: 12px 18px; border-top: 1px solid var(--border); }
+    .bb-body.open { display: block; }
+    .break-slots-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .break-slot {
+      flex: 1; min-width: 140px; background: #f8f9fb; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .break-slot.done { border-color: #16a34a; background: #d4edda; }
+    .break-slot.in-progress { border-color: #2563eb; background: #e0edff; animation: pulse-border 1.5s infinite; }
+    .break-slot.overdue { border-color: #dc2626; background: #fde8e8; animation: flash-red 1.5s infinite; }
+    .break-slot.approaching { border-color: #d97706; background: #fef3cd; }
+    @keyframes pulse-border { 0%,100%{border-color:#2563eb} 50%{border-color:#93c5fd} }
+    .bs-type { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .bs-duration { font-size: 16px; font-weight: 800; color: var(--text); margin: 2px 0; }
+    .bs-status { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+    .break-slot.done .bs-status, .break-slot.done .bs-type { color: #0f6b2d; }
+    .break-slot.in-progress .bs-status, .break-slot.in-progress .bs-type { color: #1d4ed8; }
+    .break-slot.overdue .bs-status, .break-slot.overdue .bs-type { color: #b91c1c; }
+    .break-slot.approaching .bs-status, .break-slot.approaching .bs-type { color: #92600a; }
+    .break-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn-break {
+      padding: 9px 16px; font-size: 13px; font-weight: 700; border: none;
+      border-radius: 7px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-break:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+    .btn-rest { background: #bfdbfe; color: #1e40af; }
+    .btn-rest:not(:disabled):hover { background: #93c5fd; }
+    .btn-meal { background: #fed7aa; color: #92400e; }
+    .btn-meal:not(:disabled):hover { background: #fdba74; }
+    .btn-end-break { background: var(--green); color: #fff; }
+    .btn-end-break:not(:disabled):hover { background: #15803d; }
+    .ca-law-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    /* ── BREAK OVERLAY (popup from pill) ── */
+    .break-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+      z-index: 500; align-items: flex-start; justify-content: flex-end;
+      padding: 60px 20px 0;
+    }
+    .break-overlay.open { display: flex; }
+    .break-overlay-card {
+      background: #fff; border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 18px; min-width: 320px; max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .break-overlay-card h3 { font-size: 16px; font-weight: 800; margin-bottom: 14px; }
+    .bov-close { float: right; cursor: pointer; font-size: 18px; color: var(--text-muted); }
+
+    /* ── TOAST NOTIFICATION ── */
+    #toast-container {
+      position: fixed; bottom: 80px; right: 20px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      padding: 12px 16px; border-radius: 10px; font-size: 13px;
+      font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      max-width: 320px; animation: toast-in 0.3s ease; pointer-events: auto;
+      cursor: pointer;
+    }
+    @keyframes toast-in {
+      from { transform: translateX(60px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast.green { background: #d4edda; border-left: 4px solid #16a34a; color: #0f6b2d; }
+    .toast.yellow { background: #fef3cd; border-left: 4px solid #d97706; color: #78350f; }
+    .toast.red { background: #fde8e8; border-left: 4px solid #dc2626; color: #7f1d1d; }
+    .toast .toast-title { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
+    .toast .toast-body { font-size: 12px; }
+
+    /* ── MODALS ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px 24px; min-width: 360px; max-width: 92vw;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.18); max-height: 92vh; overflow-y: auto;
+    }
+    .modal-box h2 { font-size: 18px; font-weight: 800; margin-bottom: 14px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 5px; }
+    .modal-field input, .modal-field textarea, .modal-field select {
+      font-size: 15px; padding: 10px 12px;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .short-warning {
+      background: #fef3cd; border: 1.5px solid #d97706; border-radius: 7px;
+      padding: 10px 12px; font-size: 12px; color: #78350f; display: none; margin-top: 8px;
+    }
+    .short-warning.visible { display: block; }
+    .short-warning strong { font-weight: 800; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      #main-screen { height: auto; }
+      .main-area { flex-direction: column; height: auto; overflow: visible; }
+      .col-queue { width: 100%; min-width: 0; border-right: none; border-bottom: 2px solid var(--border); height: 260px; }
+      .col-job { overflow: visible; }
+      .col-controls { width: 100%; min-width: 0; border-left: none; border-top: 2px solid var(--border); }
+      .op-topbar { flex-wrap: wrap; }
+      .topbar-spacer { display: none; }
+    }
+    @media (max-width: 580px) {
+      .job-details-grid { grid-template-columns: 1fr 1fr; }
+      .modal-box { min-width: 0; width: 96vw; }
+      .perf-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║                   LOGIN SCREEN                          ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo">🏭</div>
+      <h1>Operator Terminal</h1>
+      <p>Bazaar Printing — Production Floor</p>
+    </div>
+
+    <div class="login-time">
+      <div id="login-clock-time">—</div>
+      <div class="date-line" id="login-clock-date">—</div>
+    </div>
+
+    <div class="login-form-row">
+      <label for="operator-select">Select Your Name</label>
+      <select id="operator-select" style="font-size:16px;padding:10px 12px;" onchange="onOperatorSelect(this.value)">
+        <option value="">— Choose Operator —</option>
+      </select>
+    </div>
+
+    <div class="op-preview" id="op-preview" style="display:none;">
+      <div class="op-name" id="prev-name">—</div>
+      <div class="op-role" id="prev-role">—</div>
+      <div class="op-meta">
+        <strong>Facility:</strong> <span id="prev-facility">—</span> &nbsp;·&nbsp;
+        <strong>Shift:</strong> <span id="prev-shift">—</span>
+      </div>
+      <div class="machine-chips" id="prev-machines"></div>
+    </div>
+
+    <button class="btn-big-clock-in" id="btn-clock-in" disabled onclick="doClockin()">
+      ⏱ Clock In &amp; Start My Shift
+    </button>
+    <div class="already-in-msg" id="already-in-msg">✅ Session found — resuming your shift…</div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║                    MAIN SCREEN                          ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<div id="main-screen">
+
+  <!-- SITE NAV -->
+  <div id="site-nav"></div>
+
+  <!-- OPERATOR TOP BAR -->
+  <div class="op-topbar" id="op-topbar">
+    <div class="op-identity">
+      <span class="op-name-label" id="tb-op-name">—</span>
+      <span class="op-machine-badge" id="tb-machine-badge">—</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <span class="topbar-clock" id="tb-clock">—</span>
+    <div class="break-pill green" id="break-pill" onclick="toggleBreakOverlay()" title="Click to manage breaks">
+      <span class="bp-dot green" id="bp-dot"></span>
+      <span id="bp-text">On schedule</span>
+    </div>
+    <div class="coins-badge" id="tb-coins">
+      <span>🪙</span>
+      <span id="tb-coins-today">0</span>
+      <span class="coins-month">/ <span id="tb-coins-month">0</span> mo</span>
+    </div>
+    <button class="btn-clockout" onclick="initiateClockout()">⏹ Clock Out</button>
+  </div>
+
+  <!-- THREE COLUMN MAIN AREA -->
+  <div class="main-area" id="main-area">
+
+    <!-- ── LEFT: MY QUEUE ── -->
+    <div class="col-queue">
+      <div class="col-queue-header">
+        📋 My Queue
+        <span class="job-count-badge" id="queue-count">0</span>
+      </div>
+      <div class="qr-scan-bar">
+        <div class="scan-inner">
+          <input type="text" id="qr-input" placeholder="📷 Scan or type Order #"
+            onkeydown="if(event.key==='Enter') doQRScan()" />
+          <button class="btn-scan" onclick="doQRScan()">Go</button>
+        </div>
+      </div>
+      <div class="queue-scroll" id="queue-scroll">
+        <div class="queue-empty">
+          <div class="qs-icon">⏳</div>
+          <p>Loading jobs…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CENTER: ACTIVE JOB ── -->
+    <div class="col-job" id="col-job">
+      <div class="no-job-placeholder" id="no-job-msg">
+        <div class="icon">👆</div>
+        <h3>Select a Job</h3>
+        <p>Tap a job from your queue to view details and start work.</p>
+      </div>
+      <!-- job detail rendered here by JS -->
+      <div id="job-detail-area" style="display:none; display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+
+    <!-- ── RIGHT: CONTROLS & METRICS ── -->
+    <div class="col-controls" id="col-controls">
+
+      <!-- Timer -->
+      <div class="controls-section">
+        <div class="ctrl-section-title">Step Timer</div>
+        <div class="step-timer-block">
+          <div class="timer-display" id="timer-display">00:00:00</div>
+          <span class="timer-state ts-idle" id="timer-state-badge">Not Started</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="controls-section" id="action-section">
+        <div class="ctrl-section-title">Actions</div>
+        <div id="no-job-ctrl" style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px 0;">
+          Select a job to begin
+        </div>
+        <div id="action-buttons" style="display:none;">
+          <button class="action-btn btn-start" id="btn-start" onclick="stepAction('start')">▶ Start</button>
+          <button class="action-btn btn-pause hidden" id="btn-pause" onclick="stepAction('pause')">⏸ Pause</button>
+          <button class="action-btn btn-resume hidden" id="btn-resume" onclick="stepAction('resume')">▶ Resume</button>
+          <button class="action-btn btn-complete hidden" id="btn-complete" onclick="stepAction('complete')">✅ Complete Step</button>
+          <div class="pause-overdue-warn" id="pause-overdue-warn">⚠️ Paused &gt;10 min — add a note!</div>
+        </div>
+      </div>
+
+      <!-- Daily Performance -->
+      <div class="controls-section" id="perf-section">
+        <div class="ctrl-section-title">Daily Performance</div>
+        <div id="no-perf-msg" style="color:var(--text-muted);font-size:12px;text-align:center;padding:8px 0;">Select a job</div>
+        <div id="perf-content" style="display:none;">
+          <div class="perf-grid">
+            <div class="perf-stat">
+              <div class="ps-val" id="perf-done">0</div>
+              <div class="ps-lbl">Done Today</div>
+            </div>
+            <div class="perf-stat">
+              <div class="ps-val" id="perf-target">—</div>
+              <div class="ps-lbl">Daily Target</div>
+            </div>
+          </div>
+          <div class="perf-bar-wrap">
+            <div class="perf-bar-fill pf-ahead" id="perf-bar" style="width:0%"></div>
+          </div>
+          <div class="perf-footer">
+            <span class="perf-pct" id="perf-pct">0%</span>
+            <span class="perf-badge pb-ahead" id="perf-badge">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coins -->
+      <div class="controls-section">
+        <div class="ctrl-section-title">🪙 My Coins</div>
+        <div class="coins-panel">
+          <div class="coin-box">
+            <div class="cb-val" id="ctrl-coins-today">0</div>
+            <div class="cb-lbl">Today</div>
+          </div>
+          <div class="coin-box month">
+            <div class="cb-val" id="ctrl-coins-month">0</div>
+            <div class="cb-lbl">This Month</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center;">
+          25 🪙 = reward · hit target = +1 · exceed = +2
+        </div>
+      </div>
+
+    </div><!-- end col-controls -->
+  </div><!-- end main-area -->
+
+  <!-- ── BOTTOM BAR: BREAKS ── -->
+  <div class="bottom-bar" id="bottom-bar">
+    <div class="bb-header" onclick="toggleBreakBar()">
+      <div class="bb-title">
+        ☕ Break &amp; Meal Tracker
+      </div>
+      <div class="bb-summary" id="bb-summary">
+        <!-- mini slot dots rendered by JS -->
+      </div>
+      <span class="bb-toggle" id="bb-toggle">▼</span>
+    </div>
+    <div class="bb-body" id="bb-body">
+      <div class="break-slots-row" id="break-slots-row">
+        <!-- rendered by JS -->
+      </div>
+      <div class="break-actions" id="break-actions">
+        <button class="btn-break btn-rest" id="bb-btn-rest1" onclick="takeBreak('rest1')" disabled>☕ 1st Rest (10 min)</button>
+        <button class="btn-break btn-meal" id="bb-btn-meal1" onclick="takeBreak('meal1')" disabled>🍽 Meal Break (30 min)</button>
+        <button class="btn-break btn-rest" id="bb-btn-rest2" onclick="takeBreak('rest2')" disabled style="display:none;">☕ 2nd Rest (10 min)</button>
+        <button class="btn-break btn-meal" id="bb-btn-meal2" onclick="takeBreak('meal2')" disabled style="display:none;">🍽 2nd Meal (30 min)</button>
+        <button class="btn-break btn-end-break" id="bb-btn-end" onclick="endCurrentBreak()" style="display:none;">✅ End Break — I'm Back</button>
+      </div>
+      <p class="ca-law-note">CA Law: 10-min paid rest ~every 4 hrs · 30-min unpaid meal before end of 5th hour</p>
+    </div>
+  </div>
+
+</div><!-- end main-screen -->
+
+<!-- ── BREAK OVERLAY (from pill click) ── -->
+<div class="break-overlay" id="break-overlay" onclick="if(event.target===this)closeBreakOverlay()">
+  <div class="break-overlay-card">
+    <span class="bov-close" onclick="closeBreakOverlay()">✕</span>
+    <h3>☕ Break Status</h3>
+    <div id="break-overlay-content"><!-- rendered by JS --></div>
+    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="break-overlay-actions"></div>
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ── -->
+<div id="toast-container"></div>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║                       MODALS                            ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<!-- PAUSE NOTE MODAL -->
+<div class="modal-overlay" id="pause-modal">
+  <div class="modal-box">
+    <h2>⏸ Pause — Add a Note</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+      What caused this pause? (Required for pauses over 10 min)
+    </p>
+    <div class="modal-field">
+      <label>Pause Reason</label>
+      <textarea id="pause-note-input" rows="3"
+        placeholder="e.g. Waiting for material, machine jam, die not found…"
+        style="font-size:15px;padding:10px 12px;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cancelPause()">Cancel — Resume</button>
+      <button class="btn btn-warning" onclick="confirmPause()">⏸ Confirm Pause</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLETE STEP MODAL -->
+<div class="modal-overlay" id="complete-modal">
+  <div class="modal-box" style="min-width:400px;">
+    <h2>✅ Complete Step</h2>
+    <div class="modal-field">
+      <label>Quantity Completed *</label>
+      <input type="number" id="cmp-qty" placeholder="Actual units/sheets produced"
+        oninput="onCompleteQtyChange()" style="font-size:16px;padding:10px 12px;" />
+    </div>
+    <div class="modal-field">
+      <label>Waste / Loss</label>
+      <input type="number" id="cmp-waste" value="0" placeholder="0"
+        oninput="onCompleteQtyChange()" style="font-size:15px;" />
+    </div>
+    <div class="modal-field" id="cmp-overs-row" style="display:none;">
+      <label>Actual Overs Printed</label>
+      <input type="number" id="cmp-overs" placeholder="How many overs did you actually print?"
+        style="font-size:15px;" />
+    </div>
+    <div class="modal-field" id="cmp-overs-reason-row" style="display:none;">
+      <label>Overs Reason (if different from recommended)</label>
+      <textarea id="cmp-overs-reason" rows="2"
+        placeholder="Why did overs differ?" style="font-size:13px;"></textarea>
+    </div>
+    <div class="modal-field">
+      <label>Completion Note (optional)</label>
+      <textarea id="cmp-note" rows="2"
+        placeholder="Any observations, issues, or handoff notes…" style="font-size:13px;"></textarea>
+    </div>
+    <div class="short-warning" id="cmp-short-warning">
+      <strong>⚠️ Short on Quantity</strong><br />
+      <span id="cmp-short-msg"></span>
+      A reprint job will be auto-created for the shortfall.
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCompleteModal()">Cancel</button>
+      <button class="btn btn-success" onclick="confirmComplete()" style="font-size:15px;padding:10px 22px;">
+        ✅ Mark Step Complete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOCK OUT MODAL -->
+<div class="modal-overlay" id="clockout-modal">
+  <div class="modal-box" style="min-width:380px;max-width:460px;">
+    <h2>End Shift</h2>
+    <div id="clockout-summary" style="background:#f8f9fb;border-radius:8px;padding:12px;font-size:13px;margin-bottom:14px;line-height:1.7;"></div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;font-weight:600;">Breaks / meals remaining:</p>
+    <div id="clockout-break-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+    <hr style="border:none;border-top:1.5px solid var(--border);margin:12px 0;" />
+    <button class="btn btn-danger" onclick="confirmClockout()"
+      style="width:100%;font-size:16px;padding:14px;justify-content:center;border-radius:8px;">
+      ⏹ Clock Out — End Shift
+    </button>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('clockout-modal').classList.remove('open')">
+        Cancel — Go Back
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║                    JAVASCRIPT                           ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<script>
+'use strict';
+
+// ── STATE ────────────────────────────────────────────────────────────
+let currentOperator   = null;   // string name
+let currentSession    = null;   // operator_sessions record
+let currentJob        = null;   // selected order record
+let currentStepIdx    = 0;      // which step we're working
+let stepState         = 'idle'; // 'idle' | 'running' | 'paused' | 'done'
+let stepStartedAt     = null;   // Date.now() when step started (adjusted for pauses)
+let stepPausedAt      = null;   // Date.now() when current pause began
+let wasteCount        = 0;
+let dieVerified       = false;
+let unitsDoneToday    = 0;
+let tickInterval      = null;
+let breakBarOpen      = false;
+let lastBreakPopupKey = null;   // prevents repeat popups
+
+// ── INIT ─────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  injectThemeCSS();
+  startLoginClock();
+  await populateOperatorList();
+
+  // Check sessionStorage for persisted login
+  const savedOp = sessionStorage.getItem('op_operator');
+  if (savedOp) {
+    const sess = await getOperatorSession(savedOp);
+    if (sess) {
+      currentOperator = savedOp;
+      currentSession = sess;
+      await enterMainScreen();
+      return;
+    }
+  }
+});
+
+// ── LOGIN CLOCK ───────────────────────────────────────────────────────
+function startLoginClock() {
+  const tick = () => {
+    const now = new Date();
+    const tc = document.getElementById('login-clock-time');
+    const td = document.getElementById('login-clock-date');
+    if (tc) tc.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (td) td.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ── POPULATE OPERATOR LIST ────────────────────────────────────────────
+async function populateOperatorList() {
+  const sel = document.getElementById('operator-select');
+  const names = Object.keys(OPERATOR_PROFILES);
+  // Also load from DB in case there are extra operators
+  let dbPeople = [];
+  try { dbPeople = await getAllPersonnel(); } catch (e) {}
+  const extraNames = dbPeople.map(p => p.name).filter(n => !names.includes(n));
+  [...names, ...extraNames].forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+// ── OPERATOR SELECT ───────────────────────────────────────────────────
+function onOperatorSelect(name) {
+  const preview = document.getElementById('op-preview');
+  const btn = document.getElementById('btn-clock-in');
+  if (!name) { preview.style.display = 'none'; btn.disabled = true; return; }
+  const profile = OPERATOR_PROFILES[name];
+  if (profile) {
+    document.getElementById('prev-name').textContent = name;
+    document.getElementById('prev-role').textContent = profile.role;
+    const facLabel = profile.facility === '16th-street' ? '16th Street' :
+                     profile.facility === 'boyd-street' ? 'Boyd Street' : profile.facility;
+    document.getElementById('prev-facility').textContent = facLabel;
+    document.getElementById('prev-shift').textContent = profile.shift || '—';
+    const mEl = document.getElementById('prev-machines');
+    mEl.innerHTML = profile.machines.length
+      ? profile.machines.map(m => `<span class="machine-chip">${m}</span>`).join('')
+      : '<span style="font-size:12px;color:var(--text-muted);font-style:italic;">No machines assigned</span>';
+    preview.style.display = 'block';
+  }
+  btn.disabled = false;
+}
+
+// ── CLOCK IN ──────────────────────────────────────────────────────────
+async function doClockin() {
+  const name = document.getElementById('operator-select').value;
+  if (!name) return;
+  // Check for existing open session today
+  const existing = await getOperatorSession(name);
+  if (existing) {
+    currentOperator = name;
+    currentSession = existing;
+    document.getElementById('already-in-msg').style.display = 'block';
+    sessionStorage.setItem('op_operator', name);
+    setTimeout(() => enterMainScreen(), 600);
+    return;
+  }
+  const newId = await clockIn(name);
+  currentSession = await _get('operator_sessions', newId);
+  currentOperator = name;
+  sessionStorage.setItem('op_operator', name);
+  await addActivity({
+    type: 'clock-in', operatorName: name, timestamp: new Date().toISOString()
+  });
+  await enterMainScreen();
+}
+
+// ── ENTER MAIN SCREEN ────────────────────────────────────────────────
+async function enterMainScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'flex';
+
+  // Render nav
+  const navEl = document.getElementById('site-nav');
+  navEl.innerHTML = renderNav('operator-terminal');
+
+  // Populate top bar
+  const profile = OPERATOR_PROFILES[currentOperator] || {};
+  document.getElementById('tb-op-name').textContent = currentOperator;
+
+  // Machine badge: primary machine or "Multiple"
+  const machines = profile.machines || [];
+  let badgeLabel = machines.length === 0 ? profile.role || 'Staff' :
+                   machines.length === 1 ? machines[0] :
+                   machines.length <= 3 ? machines.map(m => m.split(' ')[0] + (m.includes('6K') ? ' 6K' : m.includes('15K') ? ' 15K' : '')).join(' · ') :
+                   'Multiple Machines';
+  const badge = document.getElementById('tb-machine-badge');
+  badge.textContent = badgeLabel;
+  const line = detectOperatorLine(profile);
+  if (line === 'boyd') badge.classList.add('boyd');
+  else if (machines.length > 2) badge.classList.add('multi');
+
+  // Seed knowledge base (no-op if already seeded)
+  try { await seedKnowledge(); } catch (e) {}
+
+  // Load data
+  await refreshCoins();
+  await refreshQueue();
+
+  // Size the main area
+  sizeMainArea();
+  window.addEventListener('resize', sizeMainArea);
+
+  // Start tick
+  startTicker();
+
+  // Subscribe to live updates
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders') await refreshQueue();
+    if (data.store === 'operator_points') await refreshCoins();
+    if (data.store === 'operator_sessions') {
+      currentSession = await _get('operator_sessions', currentSession.id);
+      updateBreakUI();
+    }
+  });
+
+  updateBreakUI();
+}
+
+function detectOperatorLine(profile) {
+  if (!profile || !profile.machines || !profile.machines.length) return null;
+  const m = profile.machines.join(' ');
+  if (m.includes('6K')) return '6k';
+  if (m.includes('15K')) return '15k';
+  if (profile.facility === 'boyd-street') return 'boyd';
+  return null;
+}
+
+function sizeMainArea() {
+  const nav = document.getElementById('site-nav');
+  const topbar = document.getElementById('op-topbar');
+  const bottombar = document.getElementById('bottom-bar');
+  const mainArea = document.getElementById('main-area');
+  if (!mainArea) return;
+  if (window.innerWidth <= 900) { mainArea.style.height = 'auto'; return; }
+  const navH = nav ? nav.offsetHeight : 0;
+  const topH = topbar ? topbar.offsetHeight : 0;
+  const botH = bottombar ? bottombar.offsetHeight : 0;
+  mainArea.style.height = (window.innerHeight - navH - topH - botH) + 'px';
+}
+
+// ── MAIN TICKER (every second) ────────────────────────────────────────
+function startTicker() {
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    const now = new Date();
+    // Topbar clock
+    document.getElementById('tb-clock').textContent =
+      now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Step timer
+    if (stepState === 'running' && stepStartedAt != null) {
+      const elapsed = Date.now() - stepStartedAt;
+      document.getElementById('timer-display').textContent = fmtElapsed(elapsed);
+    }
+
+    // Pause overdue warning
+    if (stepState === 'paused' && stepPausedAt != null) {
+      const pausedMs = Date.now() - stepPausedAt;
+      const warnEl = document.getElementById('pause-overdue-warn');
+      if (pausedMs > 10 * 60 * 1000) warnEl.classList.add('visible');
+    }
+
+    // Break status pill
+    if (currentSession) {
+      const bs = getBreakStatus(currentSession.clockIn, now, currentSession.breaks || {});
+      updateBreakPill(bs);
+      checkBreakToast(now);
+    }
+  }, 1000);
+}
+
+function fmtElapsed(ms) {
+  const s = Math.floor(Math.max(0, ms) / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [String(h).padStart(2,'0'), String(m).padStart(2,'0'), String(sec).padStart(2,'0')].join(':');
+}
+
+// ── BREAK PILL ────────────────────────────────────────────────────────
+function updateBreakPill(status) {
+  const pill = document.getElementById('break-pill');
+  const dot  = document.getElementById('bp-dot');
+  const text = document.getElementById('bp-text');
+  const c = status.color;
+  pill.className = 'break-pill ' + c;
+  dot.className  = 'bp-dot ' + c;
+  // Strip emoji for the pill text
+  text.textContent = status.message.replace(/[🔴⚠️⏰✅☕🍽]/gu, '').trim().replace(/^[^a-zA-Z]+/, '').trim();
+}
+
+function checkBreakToast(now) {
+  if (!currentSession) return;
+  const breaks = currentSession.breaks || {};
+  const ci = new Date(currentSession.clockIn);
+  const minsIn = (now - ci) / 60000;
+  const meal1Gone = breaks.meal1?.start;
+  if (meal1Gone) return;
+  const minsLeft = 300 - minsIn; // minutes until 5-hr meal deadline
+  if (minsLeft <= 15 && minsLeft > 0 && lastBreakPopupKey !== 'meal-urgent') {
+    showToast('red', '🚨 Meal Break URGENT', `Must start meal break within ${Math.ceil(minsLeft)} min!`);
+    lastBreakPopupKey = 'meal-urgent';
+  } else if (minsLeft <= 45 && minsLeft > 15 && lastBreakPopupKey !== 'meal-warn' && lastBreakPopupKey !== 'meal-urgent') {
+    showToast('yellow', '⏰ Meal Break Approaching', `Meal break due in ~${Math.ceil(minsLeft)} min.`);
+    lastBreakPopupKey = 'meal-warn';
+  }
+}
+
+// ── TOAST SYSTEM ─────────────────────────────────────────────────────
+function showToast(color, title, body, durationMs = 8000) {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + color;
+  el.innerHTML = `<div class="toast-title">${title}</div><div class="toast-body">${body}</div>`;
+  el.onclick = () => el.remove();
+  container.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, durationMs);
+}
+
+// ── COINS ─────────────────────────────────────────────────────────────
+async function refreshCoins() {
+  if (!currentOperator) return;
+  const today = new Date().toISOString().split('T')[0];
+  let allPts = [];
+  try { allPts = await _getAll('operator_points'); } catch (e) {}
+  const todayC = allPts
+    .filter(p => p.operatorName === currentOperator && p.date === today)
+    .reduce((s, p) => s + (p.points || 0), 0);
+  const monthC = await getOperatorMonthlyPoints(currentOperator);
+  document.getElementById('tb-coins-today').textContent  = todayC;
+  document.getElementById('tb-coins-month').textContent  = monthC;
+  document.getElementById('ctrl-coins-today').textContent = todayC;
+  document.getElementById('ctrl-coins-month').textContent = monthC;
+}
+
+// ── QUEUE REFRESH ─────────────────────────────────────────────────────
+async function refreshQueue() {
+  if (!currentOperator) return;
+  const profile = OPERATOR_PROFILES[currentOperator];
+  const myMachines = profile ? profile.machines : [];
+
+  let orders = [];
+  try { orders = await getAllOrders(); } catch (e) {}
+
+  const myJobs      = [];
+  const comingJobs  = [];
+
+  orders.forEach(order => {
+    if (!order.workflowSteps || !order.workflowSteps.length) return;
+    // Skip terminal statuses
+    if (['completed','shipped','received','waiting-pickup','qc-checkout','ready-to-ship'].includes(order.status)) return;
+    const idx  = order.currentStep || 0;
+    const step = order.workflowSteps[idx];
+    if (!step) return;
+
+    const atMyMachine = matchMachine(step.machine, myMachines);
+    if (atMyMachine) {
+      myJobs.push({ order, stepIdx: idx, step });
+      return;
+    }
+    // "Coming next"
+    const nextIdx  = idx + 1;
+    if (nextIdx < order.workflowSteps.length) {
+      const nextStep = order.workflowSteps[nextIdx];
+      if (matchMachine(nextStep.machine, myMachines)) {
+        comingJobs.push({ order, stepIdx: nextIdx, step: nextStep });
+      }
+    }
+  });
+
+  document.getElementById('queue-count').textContent = myJobs.length;
+
+  const scroll = document.getElementById('queue-scroll');
+  if (!myJobs.length && !comingJobs.length) {
+    scroll.innerHTML = `<div class="queue-empty"><div class="qs-icon">✅</div><p>No active jobs at your machine</p></div>`;
+    return;
+  }
+
+  let html = '';
+
+  myJobs.forEach(({ order, step }) => {
+    const isActive = currentJob && currentJob.id === order.id;
+    const line = getProductionLine(order);
+    const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
+    const overdue   = isOverdue(order.dueDate);
+    html += `<div class="queue-item ${isActive ? 'active' : ''}"
+      style="border-left-color:${lineColor};"
+      onclick="selectJob(${order.id})">
+      <div class="qi-order">#${order.orderId || order.id}</div>
+      <div class="qi-customer">${escHtml(order.customer || '—')}</div>
+      <div class="qi-product">${escHtml(order.productType || '—')}</div>
+      <div class="qi-meta">
+        <span class="qi-qty">${(order.quantity || 0).toLocaleString()} units</span>
+        <span class="qi-due ${overdue ? 'overdue' : ''}">${order.dueDate ? fmtDate(order.dueDate) : '—'}</span>
+      </div>
+      <span class="qi-machine-tag">${escHtml(step.machine || '—')}</span>
+    </div>`;
+  });
+
+  if (comingJobs.length) {
+    html += `<div class="section-label">⏭ Coming to Your Machine Next</div>`;
+    comingJobs.forEach(({ order, step }) => {
+      const line = getProductionLine(order);
+      const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
+      html += `<div class="queue-item coming"
+        style="border-left-color:${lineColor}; opacity:0.75;"
+        onclick="selectJob(${order.id})">
+        <div class="qi-order">#${order.orderId || order.id}</div>
+        <div class="qi-customer">${escHtml(order.customer || '—')}</div>
+        <div class="qi-product">${escHtml(order.productType || '—')}</div>
+        <div class="qi-meta">
+          <span class="qi-qty">${(order.quantity || 0).toLocaleString()} units</span>
+          <span class="qi-due ${isOverdue(order.dueDate) ? 'overdue' : ''}">${order.dueDate ? fmtDate(order.dueDate) : '—'}</span>
+        </div>
+        <span class="qi-step-tag">Next: ${escHtml(step.machine || '—')}</span>
+      </div>`;
+    });
+  }
+
+  scroll.innerHTML = html;
+}
+
+function matchMachine(stepMachine, myMachines) {
+  if (!stepMachine || !myMachines.length) return false;
+  // Exact match first
+  if (myMachines.includes(stepMachine)) return true;
+  // Partial match (e.g. "Graphtec Flatbed (Large)" vs "Graphtec Flatbed (Large) x2")
+  return myMachines.some(m => {
+    const base = m.replace(/ x\d+$/, '').replace(/ \(\w+\)$/, '');
+    return stepMachine === m || stepMachine.startsWith(base) || m.startsWith(stepMachine);
+  });
+}
+
+// ── QR SCAN ───────────────────────────────────────────────────────────
+async function doQRScan() {
+  const input = document.getElementById('qr-input');
+  const raw = input.value.trim().replace(/^#/, '');
+  if (!raw) return;
+  const order = await getOrderByOrderId(raw).catch(() => null);
+  if (order) {
+    input.value = '';
+    input.style.background = '#d4edda';
+    setTimeout(() => { input.style.background = ''; }, 500);
+    await selectJob(order.id);
+  } else {
+    input.style.background = '#fde8e8';
+    setTimeout(() => { input.style.background = ''; }, 800);
+    showToast('red', 'Not Found', `Order #${raw} not found. Check the order number.`);
+  }
+}
+
+// ── SELECT JOB ────────────────────────────────────────────────────────
+async function selectJob(orderId) {
+  let order;
+  try { order = await _get('orders', orderId); } catch (e) { return; }
+  if (!order) return;
+
+  // Auto-pause the current job if running
+  if (currentJob && currentJob.id !== orderId && stepState === 'running') {
+    await autoPauseCurrentJob(order.orderId);
+  }
+
+  currentJob = order;
+  currentStepIdx = order.currentStep || 0;
+  const step = order.workflowSteps?.[currentStepIdx];
+
+  // Restore step state from DB
+  if (step && step.status === 'in-progress' && step.startedAt) {
+    stepState = 'running';
+    // Reconstruct elapsed: (now - startedAt) accounting for stored paused duration
+    const raw = Date.now() - new Date(step.startedAt).getTime();
+    const pausedMs = step.totalPausedMs || 0;
+    stepStartedAt = Date.now() - (raw - pausedMs);
+    stepPausedAt  = null;
+  } else if (step && step.status === 'paused' && step.startedAt) {
+    stepState = 'paused';
+    const raw = (step.pausedAt ? new Date(step.pausedAt).getTime() : Date.now()) - new Date(step.startedAt).getTime();
+    const pausedMs = step.totalPausedMs || 0;
+    stepStartedAt = Date.now() - (raw - pausedMs);
+    stepPausedAt  = step.pausedAt ? new Date(step.pausedAt).getTime() : Date.now();
+  } else if (step && step.status === 'completed') {
+    stepState = 'done';
+    stepStartedAt = null;
+    stepPausedAt  = null;
+  } else {
+    stepState = 'idle';
+    stepStartedAt = null;
+    stepPausedAt  = null;
+  }
+
+  wasteCount   = step?.unitsLost || 0;
+  dieVerified  = false;
+
+  // Show job detail
+  document.getElementById('no-job-msg').style.display = 'none';
+  document.getElementById('job-detail-area').style.display = 'flex';
+
+  await renderJobDetail(order);
+  setTimerUI();
+  setActionButtonUI();
+  await refreshQueue();
+}
+
+async function autoPauseCurrentJob(newJobOrderId) {
+  if (!currentJob) return;
+  const steps = [...(currentJob.workflowSteps || [])];
+  const idx = currentJob.currentStep || 0;
+  if (steps[idx] && steps[idx].status === 'in-progress') {
+    const pausedMs = (steps[idx].totalPausedMs || 0);
+    steps[idx] = {
+      ...steps[idx],
+      status: 'paused',
+      pausedAt: new Date().toISOString(),
+      totalPausedMs: pausedMs,
+    };
+    await updateOrder(currentJob.id, { workflowSteps: steps });
+    await addActivity({
+      type: 'step-auto-paused', orderId: currentJob.orderId,
+      operatorName: currentOperator,
+      message: `Auto-paused — switched to job #${newJobOrderId}`
+    });
+  }
+  stepState = 'idle';
+  stepStartedAt = null;
+  stepPausedAt  = null;
+}
+
+// ── RENDER JOB DETAIL ─────────────────────────────────────────────────
+async function renderJobDetail(order) {
+  const area = document.getElementById('job-detail-area');
+  const idx  = order.currentStep || 0;
+  const step = order.workflowSteps?.[idx];
+  const machine = step?.machine || '—';
+  const line = getProductionLine(order);
+  const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
+
+  let html = '';
+
+  // ── JOB HEADER CARD ──
+  const overdueClass = isOverdue(order.dueDate) ? 'overdue' : '';
+  const daysLeft = order.dueDate ? daysUntil(order.dueDate) : null;
+  const dueStr = order.dueDate
+    ? `${fmtDate(order.dueDate)}${daysLeft !== null ? (daysLeft < 0 ? ` (${Math.abs(daysLeft)}d OVERDUE)` : daysLeft === 0 ? ' (due today!)' : ` (${daysLeft}d left)`) : ''}`
+    : '—';
+
+  html += `<div class="job-header-card" style="border-left-color:${lineColor};">
+    <div class="jh-row1">
+      <span class="jh-order">#${order.orderId || order.id}</span>
+      <span class="jh-customer">${escHtml(order.customer || '—')}</span>
+      ${renderStatusBadge(order.status || 'new')}
+      <span class="jh-due ${overdueClass}" style="margin-left:auto;">📅 ${dueStr}</span>
+    </div>
+    <div class="jh-row2">
+      <span class="jh-step-label">Current Step:</span>
+      <span class="jh-step-machine">${escHtml(machine)}</span>
+      ${step?.operation ? `<span style="font-size:12px;color:var(--text-muted);">· ${escHtml(step.operation)}</span>` : ''}
+    </div>
+  </div>`;
+
+  // ── JOB DETAILS GRID ──
+  const details = [];
+  details.push({ label: 'Product Type', value: order.productType || '—' });
+  details.push({ label: 'Material', value: order.material || '—' });
+  details.push({ label: 'Quantity', value: (order.quantity || 0).toLocaleString(), large: true });
+  if (order.sheetCount) details.push({ label: 'Sheet / Frame Count', value: order.sheetCount.toLocaleString(), large: true });
+  if (order.piecesPerSheet) details.push({ label: 'Per Sheet', value: order.piecesPerSheet });
+  details.push({ label: 'Print Type', value: order.printType || '—' });
+  if (order.colors) details.push({ label: 'Colors', value: order.colors });
+  if (order.lamination && order.lamination !== 'None') details.push({ label: 'Lamination', value: order.lamination });
+  if (order.hasUV) details.push({ label: 'UV', value: '✅ Yes', warn: true });
+  if (order.foilType && order.foilType !== 'None') details.push({ label: 'Foil', value: order.foilType, warn: true });
+  if (order.cutMethod) details.push({ label: 'Cut Method', value: order.cutMethod });
+  if (order.dieStatus) details.push({ label: 'Die Status', value: order.dieStatus });
+  if (order.dieNumber) details.push({ label: 'Die #', value: order.dieNumber });
+
+  html += `<div class="job-details-grid">`;
+  details.forEach(d => {
+    html += `<div class="jd-item">
+      <div class="jd-label">${escHtml(d.label)}</div>
+      <div class="jd-value ${d.large ? 'large' : ''} ${d.warn ? 'warn' : ''}">${escHtml(String(d.value))}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // ── SPECIAL NOTES ──
+  if (order.notes && order.notes.trim()) {
+    html += `<div class="special-notes-card">
+      <div class="note-label">📝 Special Notes</div>
+      <div class="note-text">${escHtml(order.notes)}</div>
+    </div>`;
+  }
+
+  // ── WORKFLOW PIPELINE ──
+  if (order.workflowSteps && order.workflowSteps.length) {
+    html += `<div class="workflow-pipeline-card">
+      <div class="wpc-title">Workflow Pipeline</div>
+      <div class="pipeline-steps">`;
+    order.workflowSteps.forEach((ws, i) => {
+      const isDone    = ws.status === 'completed' || i < idx;
+      const isCurrent = i === idx;
+      const cls = isDone ? 'completed' : isCurrent ? 'current-step' : '';
+      const icon = isDone ? '✓' : isCurrent ? '▶' : String(i + 1);
+      // Short machine name
+      const shortName = ws.machine
+        ? ws.machine.replace('HP Indigo ', '').replace(' Brothers', '').replace(' (Nobelus)', '').replace('Moll ', 'Moll ').replace(' w/ JetFX', '+JetFX')
+        : '—';
+      html += `<div class="ps-step ${cls}">
+        <div class="ps-node">${icon}</div>
+        <div class="ps-name">${escHtml(shortName)}</div>
+      </div>`;
+      if (i < order.workflowSteps.length - 1) {
+        html += `<div class="ps-arrow">›</div>`;
+      }
+    });
+    html += `</div></div>`;
+  }
+
+  // ── DIE SCAN (if needed) ──
+  const needsDie = machine.includes('Moll Brothers Cutter') || machine.includes('GM Die Cutter');
+  if (needsDie) {
+    html += `<div class="die-scan-card" id="die-scan-card">
+      <h4>🔍 Die Scan Required Before Starting</h4>
+      <p style="font-size:12px;color:#7f1d1d;margin-bottom:8px;">
+        Scan the die barcode to verify the correct die before cutting.
+      </p>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="die-input" placeholder="Scan or type die barcode…"
+          style="flex:1;font-size:15px;padding:9px 12px;"
+          onkeydown="if(event.key==='Enter')scanDie()" />
+        <button class="btn btn-danger" onclick="scanDie()" style="white-space:nowrap;padding:9px 14px;font-size:13px;">
+          🔎 Verify
+        </button>
+      </div>
+      <div id="die-result" class="die-result" style="display:none;"></div>
+    </div>`;
+  }
+
+  // ── RECOMMENDED OVERS (printing steps) ──
+  const isPrintStep = machine.includes('HP Indigo') || machine.includes('Canon Colorado') || machine.includes('Roland');
+  if (isPrintStep) {
+    const overs = calculateRecommendedOvers(order);
+    html += `<div class="overs-card">
+      <div class="oc-header">
+        <span class="oc-label">📦 Recommended Overs</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <span class="oc-value">${overs.total}</span>
+        <span class="oc-unit">${overs.unit} extra</span>
+      </div>
+      <div class="oc-breakdown">${escHtml(overs.breakdown)}</div>
+    </div>`;
+  }
+
+  // ── KNOWLEDGE BASE ALERTS ──
+  let alerts = [];
+  try { alerts = await getAlertsForStep(machine, order.material || '', step?.operation || ''); } catch (e) {}
+  if (alerts.length) {
+    alerts.forEach(a => {
+      const cls = a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info';
+      const icon = a.severity === 'critical' ? '🚨' : a.severity === 'warning' ? '⚠️' : 'ℹ️';
+      html += `<div class="kb-alert ${cls}">
+        <h4>${icon} ${escHtml(a.title)}</h4>
+        <p>${escHtml(a.description)}</p>
+        ${a.fix ? `<div class="kb-fix">✅ Fix: ${escHtml(a.fix)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  area.innerHTML = html;
+
+  // Update performance panel in right column
+  updatePerfPanel(machine);
+}
+
+// ── TIMER UI ──────────────────────────────────────────────────────────
+function setTimerUI() {
+  const display = document.getElementById('timer-display');
+  const badge   = document.getElementById('timer-state-badge');
+
+  if (stepState === 'running' && stepStartedAt != null) {
+    badge.className = 'timer-state ts-running';
+    badge.textContent = 'Running';
+  } else if (stepState === 'paused' && stepStartedAt != null) {
+    const elapsed = stepPausedAt - stepStartedAt;
+    display.textContent = fmtElapsed(Math.max(0, elapsed));
+    badge.className = 'timer-state ts-paused';
+    badge.textContent = 'Paused';
+  } else if (stepState === 'done') {
+    badge.className = 'timer-state ts-complete';
+    badge.textContent = 'Step Complete';
+  } else {
+    display.textContent = '00:00:00';
+    badge.className = 'timer-state ts-idle';
+    badge.textContent = 'Not Started';
+  }
+}
+
+// ── ACTION BUTTON UI ──────────────────────────────────────────────────
+function setActionButtonUI() {
+  const noJob  = document.getElementById('no-job-ctrl');
+  const actDiv = document.getElementById('action-buttons');
+  const bStart   = document.getElementById('btn-start');
+  const bPause   = document.getElementById('btn-pause');
+  const bResume  = document.getElementById('btn-resume');
+  const bComplete= document.getElementById('btn-complete');
+
+  if (!currentJob) {
+    noJob.style.display = 'block';
+    actDiv.style.display = 'none';
+    document.getElementById('perf-content').style.display = 'none';
+    document.getElementById('no-perf-msg').style.display = 'block';
+    return;
+  }
+
+  noJob.style.display  = 'none';
+  actDiv.style.display = 'block';
+  document.getElementById('perf-content').style.display = 'block';
+  document.getElementById('no-perf-msg').style.display  = 'none';
+
+  bStart.classList.toggle('hidden',   stepState !== 'idle');
+  bPause.classList.toggle('hidden',   stepState !== 'running');
+  bResume.classList.toggle('hidden',  stepState !== 'paused');
+  bComplete.classList.toggle('hidden', stepState !== 'running' && stepState !== 'paused');
+
+  // Pause overdue warning visibility
+  if (stepState !== 'paused') {
+    document.getElementById('pause-overdue-warn').classList.remove('visible');
+  }
+}
+
+// ── STEP ACTIONS ──────────────────────────────────────────────────────
+async function stepAction(action) {
+  if (!currentJob) return;
+  const step = currentJob.workflowSteps?.[currentStepIdx];
+  const machine = step?.machine || '';
+
+  if (action === 'start') {
+    // Die check
+    const needsDie = machine.includes('Moll Brothers Cutter') || machine.includes('GM Die Cutter');
+    if (needsDie && !dieVerified) {
+      showToast('red', '🔍 Die Not Verified', 'Please scan and verify the die barcode first.');
+      const di = document.getElementById('die-input');
+      if (di) di.focus();
+      return;
+    }
+
+    stepState    = 'running';
+    stepStartedAt = Date.now();
+    stepPausedAt  = null;
+
+    // Persist to DB
+    const steps = [...(currentJob.workflowSteps || [])];
+    steps[currentStepIdx] = {
+      ...steps[currentStepIdx],
+      status: 'in-progress',
+      startedAt: new Date().toISOString(),
+      startedBy: currentOperator,
+      totalPausedMs: 0,
+    };
+    await updateOrder(currentJob.id, { workflowSteps: steps, status: 'in-production' });
+    currentJob = await _get('orders', currentJob.id);
+    await addActivity({
+      type: 'step-started', orderId: currentJob.orderId,
+      operatorName: currentOperator, machine, stepIdx: currentStepIdx
+    });
+
+    setTimerUI();
+    setActionButtonUI();
+
+  } else if (action === 'pause') {
+    // Always show pause modal for note
+    document.getElementById('pause-note-input').value = '';
+    document.getElementById('pause-modal').classList.add('open');
+
+  } else if (action === 'resume') {
+    if (stepPausedAt) {
+      const pauseDuration = Date.now() - stepPausedAt;
+      // Shift startedAt forward so elapsed doesn't count paused time
+      stepStartedAt = stepStartedAt + pauseDuration;
+      // Also persist accumulated paused time
+      const steps = [...(currentJob.workflowSteps || [])];
+      const prev = steps[currentStepIdx]?.totalPausedMs || 0;
+      steps[currentStepIdx] = {
+        ...steps[currentStepIdx],
+        status: 'in-progress',
+        totalPausedMs: prev + pauseDuration,
+        pauseNote: steps[currentStepIdx]?.pauseNote || '',
+      };
+      await updateOrder(currentJob.id, { workflowSteps: steps });
+      currentJob = await _get('orders', currentJob.id);
+    }
+    stepPausedAt = null;
+    stepState    = 'running';
+
+    setTimerUI();
+    setActionButtonUI();
+    document.getElementById('pause-overdue-warn').classList.remove('visible');
+
+  } else if (action === 'complete') {
+    // Pre-fill complete modal
+    const isPrint = machine.includes('HP Indigo') || machine.includes('Canon') || machine.includes('Roland');
+    document.getElementById('cmp-overs-row').style.display = isPrint ? 'block' : 'none';
+    document.getElementById('cmp-overs-reason-row').style.display = isPrint ? 'block' : 'none';
+    document.getElementById('cmp-qty').value   = currentJob.quantity || '';
+    document.getElementById('cmp-waste').value = wasteCount;
+    document.getElementById('cmp-short-warning').classList.remove('visible');
+    document.getElementById('complete-modal').classList.add('open');
+  }
+}
+
+// ── PAUSE MODAL ───────────────────────────────────────────────────────
+function cancelPause() {
+  document.getElementById('pause-modal').classList.remove('open');
+  // Don't pause — keep running
+}
+
+async function confirmPause() {
+  const note = document.getElementById('pause-note-input').value.trim();
+  document.getElementById('pause-modal').classList.remove('open');
+
+  stepPausedAt = Date.now();
+  stepState    = 'paused';
+
+  // Persist
+  const steps = [...(currentJob.workflowSteps || [])];
+  steps[currentStepIdx] = {
+    ...steps[currentStepIdx],
+    status: 'paused',
+    pausedAt: new Date().toISOString(),
+    pauseNote: note || steps[currentStepIdx]?.pauseNote || '',
+  };
+  await updateOrder(currentJob.id, { workflowSteps: steps });
+  currentJob = await _get('orders', currentJob.id);
+  if (note) {
+    await addActivity({
+      type: 'step-paused', orderId: currentJob.orderId,
+      operatorName: currentOperator, note, stepIdx: currentStepIdx
+    });
+  }
+
+  setTimerUI();
+  setActionButtonUI();
+}
+
+// ── DIE SCAN ─────────────────────────────────────────────────────────
+async function scanDie() {
+  const input = document.getElementById('die-input');
+  if (!input) return;
+  const barcode = input.value.trim();
+  if (!barcode) return;
+
+  const resultEl = document.getElementById('die-result');
+  resultEl.style.display = 'block';
+
+  let die = null;
+  try { die = await getDieByBarcode(barcode); } catch (e) {}
+
+  if (!die) {
+    resultEl.className = 'die-result fail';
+    resultEl.textContent = '❌ Die not found in registry. Check barcode or contact supervisor.';
+    dieVerified = false;
+    return;
+  }
+  if (die.status === 'damaged' || die.status === 'retired') {
+    resultEl.className = 'die-result fail';
+    resultEl.textContent = `⚠️ Die #${die.dieNumber} is ${die.status.toUpperCase()} — do not use. Contact supervisor.`;
+    dieVerified = false;
+    return;
+  }
+
+  // Success
+  dieVerified = true;
+  resultEl.className = 'die-result ok';
+  resultEl.textContent = `✅ Die #${die.dieNumber} verified — ${die.customer || '—'} | ${die.description || '—'} | Uses: ${(die.usageCount || 0) + 1}`;
+  const card = document.getElementById('die-scan-card');
+  if (card) card.classList.add('verified');
+  await recordDieUsage(die.id).catch(() => {});
+  await addActivity({
+    type: 'die-scanned', orderId: currentJob?.orderId,
+    operatorName: currentOperator, dieNumber: die.dieNumber
+  });
+}
+
+// ── COMPLETE STEP MODAL ───────────────────────────────────────────────
+function onCompleteQtyChange() {
+  const qty   = parseInt(document.getElementById('cmp-qty').value) || 0;
+  const waste = parseInt(document.getElementById('cmp-waste').value) || 0;
+  const net   = qty - waste;
+  const ordered = currentJob?.quantity || 0;
+  const warnEl  = document.getElementById('cmp-short-warning');
+  if (ordered && net < ordered * 0.97) {
+    document.getElementById('cmp-short-msg').textContent =
+      `Net output: ${net.toLocaleString()} vs ordered: ${ordered.toLocaleString()} (${Math.round((net / ordered) * 100)}%).`;
+    warnEl.classList.add('visible');
+  } else {
+    warnEl.classList.remove('visible');
+  }
+}
+
+function closeCompleteModal() {
+  document.getElementById('complete-modal').classList.remove('open');
+}
+
+async function confirmComplete() {
+  if (!currentJob) return;
+  const qty        = parseInt(document.getElementById('cmp-qty').value) || 0;
+  const waste      = parseInt(document.getElementById('cmp-waste').value) || 0;
+  const note       = document.getElementById('cmp-note').value.trim();
+  const overs      = parseInt(document.getElementById('cmp-overs').value) || 0;
+  const oversReason= document.getElementById('cmp-overs-reason').value.trim();
+  const net        = qty - waste;
+  const ordered    = currentJob.quantity || 0;
+  const elapsed    = stepStartedAt ? Date.now() - stepStartedAt : 0;
+
+  const steps = [...(currentJob.workflowSteps || [])];
+  const step  = steps[currentStepIdx];
+  steps[currentStepIdx] = {
+    ...step,
+    status:          'completed',
+    completedAt:     new Date().toISOString(),
+    completedBy:     currentOperator,
+    qtyCompleted:    qty,
+    wasteCount:      waste,
+    netQty:          net,
+    actualOvers:     overs,
+    oversReason,
+    completionNote:  note,
+    elapsedMs:       elapsed,
+  };
+
+  const nextIdx      = currentStepIdx + 1;
+  const hasMoreSteps = nextIdx < steps.length;
+  const newStatus    = hasMoreSteps ? 'in-production' : 'qc-checkout';
+
+  await updateOrder(currentJob.id, {
+    workflowSteps: steps,
+    currentStep: hasMoreSteps ? nextIdx : currentStepIdx,
+    status: newStatus,
+  });
+
+  await addActivity({
+    type: 'step-completed', orderId: currentJob.orderId,
+    operatorName: currentOperator, stepIdx: currentStepIdx,
+    qtyCompleted: qty, waste, netQty: net, note,
+  });
+
+  // Auto-create reprint if short
+  if (net < ordered * 0.97) {
+    const shortfall = ordered - net;
+    await addReprint({
+      parentOrderId: currentJob.orderId,
+      reason: `Short on step ${currentStepIdx + 1}: delivered ${net}, needed ${ordered}. Shortfall: ${shortfall}.`,
+      shortfall, createdBy: currentOperator, status: 'pending',
+    });
+    await addActivity({ type: 'reprint-created', orderId: currentJob.orderId, operatorName: currentOperator, shortfall });
+    showToast('yellow', '⚠️ Reprint Queued', `Shortfall of ${shortfall.toLocaleString()} units — reprint job created.`);
+  }
+
+  // Coin awards
+  unitsDoneToday += net;
+  const cap    = MACHINE_CAPACITY[step?.machine];
+  const target = cap?.dailySheets || cap?.dailyUnits || cap?.dailyPouches || null;
+  if (target) {
+    if (unitsDoneToday >= target * 1.1) {
+      await addOperatorPoints(currentOperator, 2, 'Exceeded daily target by 10%+');
+      showToast('green', '🪙 +2 Coins!', 'You exceeded your daily target. Keep it up!');
+    } else if (unitsDoneToday >= target) {
+      await addOperatorPoints(currentOperator, 1, 'Met daily target');
+      showToast('green', '🪙 +1 Coin!', 'Daily target hit!');
+    }
+  }
+  await refreshCoins();
+
+  // Reset step state
+  stepState     = 'idle';
+  stepStartedAt = null;
+  stepPausedAt  = null;
+  wasteCount    = 0;
+  dieVerified   = false;
+
+  closeCompleteModal();
+
+  // Reload job
+  currentJob = await _get('orders', currentJob.id);
+  currentStepIdx = currentJob.currentStep || 0;
+
+  if (newStatus === 'qc-checkout') {
+    showToast('green', '✅ All Steps Complete!', `Order #${currentJob.orderId} sent to QC Checkout.`);
+    currentJob = null;
+    document.getElementById('no-job-msg').style.display = 'flex';
+    document.getElementById('job-detail-area').style.display = 'none';
+    document.getElementById('timer-display').textContent = '00:00:00';
+    document.getElementById('timer-state-badge').className = 'timer-state ts-idle';
+    document.getElementById('timer-state-badge').textContent = 'Not Started';
+    setActionButtonUI();
+  } else {
+    await renderJobDetail(currentJob);
+    setTimerUI();
+    setActionButtonUI();
+  }
+
+  await refreshQueue();
+  updatePerfPanel(step?.machine);
+}
+
+// ── PERFORMANCE PANEL ─────────────────────────────────────────────────
+function updatePerfPanel(machine) {
+  const cap    = machine ? MACHINE_CAPACITY[machine] : null;
+  const target = cap ? (cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || null) : null;
+  document.getElementById('perf-target').textContent = target ? target.toLocaleString() : '—';
+  document.getElementById('perf-done').textContent   = unitsDoneToday.toLocaleString();
+
+  if (target && target > 0) {
+    const pct = Math.round((unitsDoneToday / target) * 100);
+    const bar = document.getElementById('perf-bar');
+    bar.style.width = Math.min(100, pct) + '%';
+    bar.className = 'perf-bar-fill ' + (pct >= 110 ? 'pf-over' : pct >= 100 ? 'pf-ahead' : 'pf-behind');
+    document.getElementById('perf-pct').textContent = pct + '%';
+    const badge = document.getElementById('perf-badge');
+    if (pct >= 110) { badge.className = 'perf-badge pb-over'; badge.textContent = '🚀 Exceeded'; }
+    else if (pct >= 100) { badge.className = 'perf-badge pb-ahead'; badge.textContent = '✅ On Target'; }
+    else if (pct >= 75) { badge.className = 'perf-badge pb-behind'; badge.textContent = '⏳ Approaching'; }
+    else { badge.className = 'perf-badge pb-behind'; badge.textContent = '⚠️ Behind'; }
+  }
+}
+
+// ── BREAK UI ──────────────────────────────────────────────────────────
+async function updateBreakUI() {
+  if (!currentSession) return;
+  try { currentSession = await _get('operator_sessions', currentSession.id); } catch (e) {}
+  const breaks = currentSession.breaks || {};
+  const now    = new Date();
+
+  // Break pill
+  const bs = getBreakStatus(currentSession.clockIn, now, breaks);
+  updateBreakPill(bs);
+
+  // Available breaks from shared.js
+  const available = getAvailableBreaks(currentSession.clockIn, breaks);
+
+  // Update mini summary dots in bottom bar header
+  const summaryEl = document.getElementById('bb-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = available.map(b => {
+      let dotClass = 'idle';
+      if (b.status === 'taken') dotClass = 'done';
+      else if (b.status === 'active') dotClass = 'active';
+      else if (b.status === 'urgent') dotClass = 'overdue';
+      else if (b.status === 'available') dotClass = 'upcoming';
+      return `<div class="bb-slot-mini">
+        <span class="bb-slot-dot ${dotClass}"></span>
+        <span style="font-size:11px;color:var(--text-muted);">${b.label.replace(/[☕🍽️]/gu,'').trim().split('(')[0].trim()}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Bottom bar slots
+  renderBreakSlots(available);
+
+  // Update break action buttons
+  const onBreak = available.some(b => b.status === 'active');
+  const ci = new Date(currentSession.clockIn);
+  const minsIn = (now - ci) / 60000;
+
+  // rest1
+  const r1 = available.find(b => b.key === 'rest1');
+  const bb_r1 = document.getElementById('bb-btn-rest1');
+  if (bb_r1) bb_r1.disabled = !r1 || r1.status === 'taken' || r1.status === 'active' || r1.status === 'not-yet' || onBreak;
+
+  // meal1
+  const m1 = available.find(b => b.key === 'meal1');
+  const bb_m1 = document.getElementById('bb-btn-meal1');
+  if (bb_m1) bb_m1.disabled = !m1 || m1.status === 'taken' || m1.status === 'active' || onBreak;
+
+  // rest2
+  const r2 = available.find(b => b.key === 'rest2');
+  const bb_r2 = document.getElementById('bb-btn-rest2');
+  if (bb_r2) { bb_r2.style.display = r2 ? 'block' : 'none'; if (r2) bb_r2.disabled = r2.status === 'taken' || r2.status === 'active' || r2.status === 'not-yet' || onBreak; }
+
+  // meal2
+  const m2 = available.find(b => b.key === 'meal2');
+  const bb_m2 = document.getElementById('bb-btn-meal2');
+  if (bb_m2) { bb_m2.style.display = m2 ? 'block' : 'none'; if (m2) bb_m2.disabled = m2.status === 'taken' || m2.status === 'active' || onBreak; }
+
+  // end break button
+  const bb_end = document.getElementById('bb-btn-end');
+  if (bb_end) bb_end.style.display = onBreak ? 'block' : 'none';
+
+  // Update overlay content if open
+  if (document.getElementById('break-overlay').classList.contains('open')) {
+    renderBreakOverlay(available);
+  }
+}
+
+function renderBreakSlots(available) {
+  const row = document.getElementById('break-slots-row');
+  if (!row) return;
+  const ci = new Date(currentSession.clockIn);
+  row.innerHTML = available.map(b => {
+    let cls = '';
+    let statusText = '';
+    const bk = currentSession.breaks?.[b.key] || {};
+
+    if (b.status === 'taken') {
+      cls = 'done';
+      const s = bk.start ? new Date(bk.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '?';
+      const e = bk.end   ? new Date(bk.end).toLocaleTimeString('en-US',   { hour: 'numeric', minute: '2-digit' }) : '?';
+      statusText = `${s} → ${e}`;
+    } else if (b.status === 'active') {
+      cls = 'in-progress';
+      const s = bk.start ? new Date(bk.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '?';
+      statusText = `Started ${s}`;
+    } else if (b.status === 'urgent') {
+      cls = 'overdue';
+      statusText = `🚨 DUE NOW${b.deadline != null ? ` (${Math.ceil(b.deadline)} min left)` : ''}`;
+    } else if (b.status === 'available') {
+      cls = 'approaching';
+      statusText = 'Ready to take';
+    } else if (b.status === 'not-yet') {
+      cls = '';
+      statusText = b.unlockAt != null ? `Available in ~${Math.ceil(b.unlockAt)} min` : 'Not yet';
+    } else {
+      cls = '';
+      statusText = 'Coming up';
+    }
+
+    return `<div class="break-slot ${cls}">
+      <div class="bs-type">${b.label.replace(/[☕🍽️]/gu, '').trim()}</div>
+      <div class="bs-duration">${b.duration} min</div>
+      <div class="bs-status">${statusText}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── BREAK OVERLAY ─────────────────────────────────────────────────────
+function toggleBreakOverlay() {
+  const overlay = document.getElementById('break-overlay');
+  overlay.classList.toggle('open');
+  if (overlay.classList.contains('open')) {
+    const available = getAvailableBreaks(currentSession?.clockIn, currentSession?.breaks || {});
+    renderBreakOverlay(available);
+  }
+}
+
+function closeBreakOverlay() {
+  document.getElementById('break-overlay').classList.remove('open');
+}
+
+function renderBreakOverlay(available) {
+  const content = document.getElementById('break-overlay-content');
+  const actions = document.getElementById('break-overlay-actions');
+  if (!content || !actions) return;
+
+  const onBreak = available.some(b => b.status === 'active');
+
+  content.innerHTML = `
+    <div style="font-size:13px;margin-bottom:12px;">
+      ${available.map(b => {
+        const bk = currentSession?.breaks?.[b.key] || {};
+        let st = b.status;
+        let row = '';
+        if (st === 'taken') {
+          const s = bk.start ? new Date(bk.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+          const e = bk.end   ? new Date(bk.end).toLocaleTimeString('en-US',   { hour: 'numeric', minute: '2-digit' }) : '';
+          row = `<span style="color:#16a34a;font-weight:700;">✅ Done (${s}–${e})</span>`;
+        } else if (st === 'active') {
+          row = `<span style="color:#2563eb;font-weight:700;">⏳ In Progress…</span>`;
+        } else if (st === 'urgent') {
+          row = `<span style="color:#dc2626;font-weight:700;">🚨 OVERDUE — Take now!</span>`;
+        } else if (st === 'available') {
+          row = `<span style="color:#d97706;font-weight:600;">Ready</span>`;
+        } else {
+          row = `<span style="color:var(--text-muted);">Upcoming</span>`;
+        }
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;">
+          <span style="font-weight:600;">${b.label}</span>
+          ${row}
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  actions.innerHTML = available
+    .filter(b => b.status !== 'taken' && b.status !== 'active' && b.status !== 'not-yet')
+    .map(b => {
+      const cls = b.key.includes('meal') ? 'btn-meal' : 'btn-rest';
+      return `<button class="btn-break ${cls}" onclick="takeBreak('${b.key}');closeBreakOverlay();"
+        ${onBreak ? 'disabled' : ''}>
+        ${b.label}
+      </button>`;
+    }).join('') +
+    (onBreak ? `<button class="btn-break btn-end-break" onclick="endCurrentBreak();closeBreakOverlay();">
+      ✅ End Break — I'm Back
+    </button>` : '');
+}
+
+// ── BREAK ACTIONS ─────────────────────────────────────────────────────
+function toggleBreakBar() {
+  const body   = document.getElementById('bb-body');
+  const toggle = document.getElementById('bb-toggle');
+  breakBarOpen = !breakBarOpen;
+  body.classList.toggle('open', breakBarOpen);
+  toggle.textContent = breakBarOpen ? '▲' : '▼';
+  if (breakBarOpen) { updateBreakUI(); sizeMainArea(); }
+  else { sizeMainArea(); }
+}
+
+async function takeBreak(breakKey) {
+  if (!currentSession) return;
+  await startBreak(currentSession.id, breakKey);
+  currentSession = await _get('operator_sessions', currentSession.id);
+  await addActivity({
+    type: 'break-start', operatorName: currentOperator, breakType: breakKey,
+    timestamp: new Date().toISOString()
+  });
+  const dur = breakKey.includes('meal') ? 30 : 10;
+  const label = breakKey.includes('meal') ? 'Meal Break' : 'Rest Break';
+  showToast('green', `${label} Started`, `${dur} minutes. Click "End Break" when you return.`);
+  updateBreakUI();
+}
+
+async function endCurrentBreak() {
+  if (!currentSession) return;
+  const breaks = currentSession.breaks || {};
+  let activeKey = null;
+  for (const k of ['rest1', 'meal1', 'rest2', 'meal2']) {
+    if (breaks[k]?.start && !breaks[k]?.end) { activeKey = k; break; }
+  }
+  if (!activeKey) return;
+  await endBreak(currentSession.id, activeKey);
+  currentSession = await _get('operator_sessions', currentSession.id);
+  await addActivity({
+    type: 'break-end', operatorName: currentOperator, breakType: activeKey,
+    timestamp: new Date().toISOString()
+  });
+  showToast('green', 'Welcome Back!', 'Break ended. Resume your work when ready.');
+  updateBreakUI();
+}
+
+// ── CLOCK OUT ─────────────────────────────────────────────────────────
+async function initiateClockout() {
+  if (!currentSession) return;
+  const ci    = new Date(currentSession.clockIn);
+  const now   = new Date();
+  const hrs   = ((now - ci) / 3600000).toFixed(2);
+  const breaks = currentSession.breaks || {};
+  const mealTaken = breaks.meal1?.start;
+
+  let summary = `<strong>Clock-in:</strong> ${ci.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}<br>
+    <strong>Current time:</strong> ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}<br>
+    <strong>Hours worked:</strong> ${hrs} hours`;
+  if (!mealTaken && parseFloat(hrs) >= 5) {
+    summary += `<br><span style="color:#dc2626;font-weight:700;">⚠️ Meal break not recorded — potential labor violation!</span>`;
+  }
+  document.getElementById('clockout-summary').innerHTML = summary;
+
+  // Break options
+  const available = getAvailableBreaks(currentSession.clockIn, breaks);
+  const optContainer = document.getElementById('clockout-break-options');
+  optContainer.innerHTML = available.map(b => {
+    if (b.status === 'taken') {
+      return `<button class="btn" disabled style="opacity:0.5;font-size:13px;padding:10px;justify-content:center;">✅ ${b.label} — Done</button>`;
+    }
+    if (b.status === 'active') {
+      return `<button class="btn btn-warning" disabled style="font-size:13px;padding:10px;justify-content:center;">⏳ ${b.label} — In Progress</button>`;
+    }
+    if (b.status === 'not-yet') {
+      return `<button class="btn" disabled style="opacity:0.5;font-size:13px;padding:10px;justify-content:center;">🔒 ${b.label}</button>`;
+    }
+    const urgentStyle = b.status === 'urgent' ? 'background:#dc2626;color:#fff;' : '';
+    const urgentLabel = b.status === 'urgent' ? '🚨 ' : '';
+    return `<button class="btn btn-warning" onclick="takeBreak('${b.key}');document.getElementById('clockout-modal').classList.remove('open');"
+      style="font-size:14px;padding:12px;justify-content:center;${urgentStyle}">
+      ${urgentLabel}${b.label}
+    </button>`;
+  }).join('');
+
+  document.getElementById('clockout-modal').classList.add('open');
+}
+
+async function confirmClockout() {
+  if (!currentSession) return;
+
+  // Coin deduction if behind target at EOD
+  if (currentJob) {
+    const stepMachine = currentJob.workflowSteps?.[currentStepIdx]?.machine;
+    const cap = stepMachine ? MACHINE_CAPACITY[stepMachine] : null;
+    const target = cap ? (cap.dailySheets || cap.dailyUnits || cap.dailyPouches || null) : null;
+    if (target && unitsDoneToday < target * 0.8) {
+      await addOperatorPoints(currentOperator, -1, 'Below 80% of daily target at end of shift');
+    }
+  }
+
+  await clockOut(currentSession.id);
+  await addActivity({ type: 'clock-out', operatorName: currentOperator, timestamp: new Date().toISOString() });
+
+  // Cleanup
+  if (tickInterval) clearInterval(tickInterval);
+  sessionStorage.removeItem('op_operator');
+  document.getElementById('clockout-modal').classList.remove('open');
+  document.getElementById('main-screen').style.display   = 'none';
+  document.getElementById('login-screen').style.display  = 'flex';
+
+  // Reset state
+  currentOperator  = null;
+  currentSession   = null;
+  currentJob       = null;
+  stepState        = 'idle';
+  stepStartedAt    = null;
+  stepPausedAt     = null;
+  unitsDoneToday   = 0;
+  wasteCount       = 0;
+  lastBreakPopupKey = null;
+  document.getElementById('operator-select').value = '';
+  document.getElementById('op-preview').style.display = 'none';
+  document.getElementById('btn-clock-in').disabled    = true;
+  document.getElementById('already-in-msg').style.display = 'none';
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function daysUntil(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  d.setHours(0,0,0,0);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+
+// ── SEED & INIT ───────────────────────────────────────────────────────
+seedKnowledge().catch(() => {});
+</script>
+</body>
+</html>
