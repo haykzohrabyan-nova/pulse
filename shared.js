@@ -1968,7 +1968,7 @@ function renderNav(activePage) {
   ];
   return `
     <nav class="top-nav">
-      <h1>🏭 Bazaar Print Production</h1>
+      <a href="dashboard.html"><img src="pulse-logo.png" alt="Pulse" style="height:40px;width:auto;display:block;"></a>
       <div class="nav-links">
         ${pages.map(p => `<a href="${p.href}" class="${p.id === activePage ? 'active' : ''}">${p.label}</a>`).join('')}
       </div>
