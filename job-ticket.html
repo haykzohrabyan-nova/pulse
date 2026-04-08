@@ -36,6 +36,11 @@
             <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;">
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
           </div>
+          <div class="field" style="max-width:260px;">
+            <label style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;">📎 Parent Order # <span style="font-weight:400;font-size:11px;">(optional)</span></label>
+            <input type="text" id="parentOrderInput" placeholder="e.g. 18000" style="font-size:15px;" onblur="linkParentOrder()" onkeydown="if(event.key==='Enter'){event.preventDefault();linkParentOrder();}">
+            <div id="parentOrderStatus" style="font-size:11px;margin-top:3px;"></div>
+          </div>
           <div style="display:flex;gap:20px;align-items:center;margin-top:18px;font-size:12px;">
             <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
             <div id="dueDateCountdown" style="font-weight:700;"></div>
@@ -505,6 +510,48 @@ let singleFileData = { white: null, uv: null, foil: null };
 let skuList = [];
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
+
+// ─── Parent Order Linking ───────────────────────────────────
+async function linkParentOrder() {
+  const val = document.getElementById('parentOrderInput').value.trim();
+  const statusEl = document.getElementById('parentOrderStatus');
+  if (!val) { statusEl.textContent = ''; _parentOrderId = null; return; }
+
+  statusEl.innerHTML = '<span style="color:#6b7280;">Looking up order...</span>';
+  const parent = await getOrderByOrderId(val);
+  if (!parent) {
+    statusEl.innerHTML = '<span style="color:var(--red);">&#10005; Order #' + val + ' not found</span>';
+    _parentOrderId = null;
+    return;
+  }
+
+  // Found — link it
+  _parentOrderId = parent.orderId;
+
+  // Auto-generate sub-ticket ID
+  const subId = await generateSubTicketId(parent.orderId);
+  const ticketInput = document.getElementById('jobTicketNumber');
+  if (!ticketInput.value) {
+    ticketInput.value = subId;
+    ticketInput.readOnly = true;
+  }
+
+  // Pre-fill customer, rep, facility, due date
+  if (!document.getElementById('customerName').value)
+    document.getElementById('customerName').value = parent.customerName || parent.customer || '';
+  if (!document.getElementById('accountManager').value)
+    document.getElementById('accountManager').value = parent.accountManager || '';
+  if (!document.getElementById('facility').value && parent.facility) {
+    document.getElementById('facility').value = parent.facility;
+    onFacilityChange();
+  }
+  if (!document.getElementById('dueDate').value && parent.dueDate) {
+    document.getElementById('dueDate').value = parent.dueDate;
+    checkDueDate();
+  }
+
+  statusEl.innerHTML = '<span style="color:var(--green);">&#10003; Linked to <strong>' + (parent.customerName||parent.customer||'Order') + '</strong> — ' + subId + '</span>';
+}
 
 // ─────────────────────────────────────────────────────────────
 // Init
