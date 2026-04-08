@@ -405,6 +405,7 @@
     <div class="save-bar">
       <button type="button" class="btn" onclick="window.history.back()">Cancel</button>
       <button type="button" class="btn btn-primary" onclick="saveTicket()">💾 Save Job Ticket</button>
+      <button type="button" class="btn" id="saveAndAddBtn" onclick="saveAndAddSubTicket()" style="background:#2563eb;color:#fff;border:none;font-weight:600;">💾 Save &amp; Add Next Item ➕</button>
     </div>
 
     <!-- Hidden: workflow template (still used internally for save) -->
@@ -569,8 +570,30 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (parentId) {
     // Creating a sub-ticket — pre-fill from parent
     _parentOrderId = parentId;
+
+    // If URL has inline params (from Save & Add flow), use them directly
+    const urlCustomer = params.get('customer');
+    const urlRep = params.get('rep');
+    const urlFacility = params.get('facility');
+    const urlDue = params.get('due');
+    if (urlCustomer || urlRep || urlFacility || urlDue) {
+      const subId = await generateSubTicketId(parentId);
+      document.getElementById('jobTicketNumber').value = subId;
+      document.getElementById('jobTicketNumber').readOnly = true;
+      document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
+      document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
+      if (urlCustomer) document.getElementById('customerName').value = urlCustomer;
+      if (urlRep) document.getElementById('accountManager').value = urlRep;
+      if (urlFacility) { document.getElementById('facility').value = urlFacility; onFacilityChange(); }
+      if (urlDue) { document.getElementById('dueDate').value = urlDue; checkDueDate(); }
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;';
+      banner.innerHTML = `📎 <strong>Sub-Ticket ${subId}</strong> — linked to order <strong>#${parentId}</strong>. Customer &amp; rep pre-filled. Fill in product details below.`;
+      document.querySelector('.jt-container').insertBefore(banner, document.querySelector('.jt-header').nextSibling);
+    }
+
     const parent = await getOrderByOrderId(parentId);
-    if (parent) {
+    if (parent && !urlCustomer) {
       document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
       document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
       // Generate sub-ticket ID
@@ -1448,7 +1471,8 @@ function closeLightbox() {
 // ─────────────────────────────────────────────────────────────
 // Save Ticket
 // ─────────────────────────────────────────────────────────────
-async function saveTicket() {
+let _lastSavedOrderId = null;
+async function saveTicket(suppressRedirect = false) {
   const customerName = document.getElementById('customerName').value.trim();
   const productType = document.getElementById('productType').value;
   const facility = document.getElementById('facility').value;
@@ -1653,6 +1677,8 @@ async function saveTicket() {
       if (!order.orderId) order.orderId = await generateOrderId();
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
+      _lastSavedOrderId = order.orderId;
+      if (suppressRedirect) return; // saveAndAddSubTicket handles navigation
       // Show sub-ticket prompt instead of immediately redirecting
       showAfterSavePrompt(order.orderId, customerName, order.accountManager);
       return;
@@ -1792,7 +1818,41 @@ async function loadOrderIntoForm(order) {
   calcFrames();
 }
 
-// ─── After-Save Sub-Ticket Prompt ──────────────────────────────
+// ─── Save & Add Next Item ───────────────────────────────────────
+async function saveAndAddSubTicket() {
+  const btn = document.getElementById('saveAndAddBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    // Grab key fields before saving
+    const customerName = document.getElementById('customerName').value.trim();
+    const accountManager = document.getElementById('accountManager').value.trim();
+    const facility = document.getElementById('facility').value;
+    const dueDate = document.getElementById('dueDate').value;
+
+    // Run normal save
+    await saveTicket(true); // pass flag to suppress redirect
+
+    // _lastSavedOrderId is set by saveTicket when flag=true
+    const parentId = _lastSavedOrderId;
+    if (!parentId) { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Save & Add Next Item \u2795'; return; }
+
+    // Navigate to new ticket pre-filled via URL params
+    const params = new URLSearchParams({
+      parent: parentId,
+      customer: customerName,
+      rep: accountManager,
+      facility: facility,
+      due: dueDate
+    });
+    window.location.href = `job-ticket.html?${params.toString()}`;
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '\uD83D\uDCBE Save & Add Next Item \u2795';
+  }
+}
+
+// ─── After-Save Sub-Ticket Prompt ───────────────────────────────
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
