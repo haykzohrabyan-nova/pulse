@@ -36,6 +36,11 @@
 
 <!-- Table View -->
 <div class="table-container" id="tableContainer" style="display:none;">
+  <div style="padding:10px 0 10px 0;display:flex;gap:10px;align-items:center;">
+    <input id="tableSearch" type="text" placeholder="🔍 Search order # or customer..." oninput="onTableSearch()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:280px;outline:none;">
+    <span id="tableSearchCount" style="font-size:12px;color:#6b7280;"></span>
+    <button onclick="clearTableSearch()" id="tableSearchClear" style="display:none;font-size:12px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;">✕ Clear</button>
+  </div>
   <table class="data-table" id="ordersTable">
     <thead id="tableHead"></thead>
     <tbody id="tableBody"></tbody>
@@ -691,21 +696,105 @@
       </div>`;
   }
 
+  // ── Table sort + search state
+  let _tableSortCol = 'status';
+  let _tableSortDir = 'asc';
+  let _tableSearchQuery = '';
+  let _tableAllOrders = [];
+
+  function onTableSearch() {
+    _tableSearchQuery = document.getElementById('tableSearch').value.trim().toLowerCase();
+    document.getElementById('tableSearchClear').style.display = _tableSearchQuery ? '' : 'none';
+    renderTable(_tableAllOrders);
+  }
+  function clearTableSearch() {
+    document.getElementById('tableSearch').value = '';
+    _tableSearchQuery = '';
+    document.getElementById('tableSearchClear').style.display = 'none';
+    renderTable(_tableAllOrders);
+  }
+  function tableSort(col) {
+    if (_tableSortCol === col) _tableSortDir = _tableSortDir === 'asc' ? 'desc' : 'asc';
+    else { _tableSortCol = col; _tableSortDir = 'asc'; }
+    renderTable(_tableAllOrders);
+  }
+
   function renderTable(activeOrders) {
-    const sorted = [...activeOrders].sort((a, b) => {
-      const statusWeight = { 'in-production': 0, 'pending-review': 1, 'on-hold': 2, 'qc-checkout': 3, 'ready-to-ship': 4 };
-      const wa = statusWeight[a.status] ?? 5;
-      const wb = statusWeight[b.status] ?? 5;
-      if (wa !== wb) return wa - wb;
-      return new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01');
+    _tableAllOrders = activeOrders;
+
+    // Search filter
+    const q = _tableSearchQuery;
+    let filtered = q
+      ? activeOrders.filter(o =>
+          (o.orderId || '').toLowerCase().includes(q) ||
+          (o.customer || '').toLowerCase().includes(q) ||
+          (o.customerName || '').toLowerCase().includes(q) ||
+          (o.parentOrderId || '').toLowerCase().includes(q)
+        )
+      : activeOrders;
+
+    // When searching by order#, also include siblings (same parent)
+    if (q) {
+      const matchedParentIds = new Set(filtered.map(o => o.parentOrderId || o.orderId));
+      const extras = activeOrders.filter(o => {
+        const pid = o.parentOrderId || o.orderId;
+        return matchedParentIds.has(pid) && !filtered.find(f => f.id === o.id);
+      });
+      filtered = [...filtered, ...extras];
+    }
+
+    // Sort
+    const dir = _tableSortDir === 'asc' ? 1 : -1;
+    const statusWeight = { 'in-production': 0, 'pending-review': 1, 'on-hold': 2, 'qc-checkout': 3, 'ready-to-ship': 4 };
+    let sorted = [...filtered].sort((a, b) => {
+      if (_tableSortCol === 'order') return dir * ((parseInt(a.orderId)||0) - (parseInt(b.orderId)||0));
+      if (_tableSortCol === 'customer') return dir * (a.customer||'').localeCompare(b.customer||'');
+      if (_tableSortCol === 'due') return dir * (new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01'));
+      if (_tableSortCol === 'qty') return dir * ((a.quantity||0) - (b.quantity||0));
+      if (_tableSortCol === 'status') {
+        const wa = statusWeight[a.status] ?? 5, wb = statusWeight[b.status] ?? 5;
+        if (wa !== wb) return dir * (wa - wb);
+        return new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01');
+      }
+      return 0;
     });
 
+    // Group sub-tickets under their parent (insert subs after parent row)
+    const grouped = [];
+    const seen = new Set();
+    sorted.forEach(o => {
+      if (seen.has(o.id)) return;
+      if (!o.parentOrderId) {
+        // Parent or standalone
+        grouped.push({ order: o, isParent: _subProgressMap[o.orderId]?.total > 0, subs: [] });
+        seen.add(o.id);
+        // Find its subs in sorted list
+        const subs = sorted.filter(s => s.parentOrderId === o.orderId);
+        subs.forEach(s => { if (!seen.has(s.id)) { grouped[grouped.length-1].subs.push(s); seen.add(s.id); } });
+      } else if (!seen.has(o.id)) {
+        // Orphaned sub (parent not in filtered set) — show standalone
+        grouped.push({ order: o, isParent: false, subs: [] });
+        seen.add(o.id);
+      }
+    });
+
+    const sortIcon = col => _tableSortCol === col ? (_tableSortDir === 'asc' ? ' ▲' : ' ▼') : ' ▴▾';
+    const thStyle = col => `cursor:pointer;user-select:none;white-space:nowrap;` + (_tableSortCol === col ? 'color:var(--accent);' : '');
+
     document.getElementById('tableHead').innerHTML = `<tr>
-      <th>Line</th><th>Order</th><th>Customer</th><th>Product</th><th>Qty</th><th>Status</th><th>Current Stage</th><th>Due</th><th>In Prod</th>
+      <th>Line</th>
+      <th onclick="tableSort('order')" style="${thStyle('order')}">Order${sortIcon('order')}</th>
+      <th onclick="tableSort('customer')" style="${thStyle('customer')}">Customer${sortIcon('customer')}</th>
+      <th>Product</th>
+      <th onclick="tableSort('qty')" style="${thStyle('qty')}">Qty${sortIcon('qty')}</th>
+      <th onclick="tableSort('status')" style="${thStyle('status')}">Status${sortIcon('status')}</th>
+      <th>Current Stage</th>
+      <th onclick="tableSort('due')" style="${thStyle('due')}">Due${sortIcon('due')}</th>
+      <th>In Prod</th>
     </tr>`;
 
-    document.getElementById('tableBody').innerHTML = sorted.map(o => {
-      const line = o._line;
+    function renderRow(o, isSubRow) {
+      const line = o._line || getProductionLine(o);
       const lineColor = PRODUCTION_LINES[line]?.color || '#666';
       const steps = o.workflowSteps || [];
       const cs = steps[o.currentStep || 0];
@@ -718,11 +807,13 @@
         const endPoint = activeStep ? Date.now() : (steps.filter(s => s.endTime).map(s => new Date(s.endTime).getTime()).sort((a,b)=>b-a)[0] || Date.now());
         inProdTime = endPoint - new Date(prodStart).getTime();
       }
-
-      return `<tr class="${overdue ? 'overdue-row' : ''}" style="cursor:pointer;" onclick="showDetail(${o.id})">
+      const indent = isSubRow ? 'padding-left:28px;' : '';
+      const subTag = isSubRow ? `<span style="font-size:10px;color:#6b7280;margin-left:4px;">└ sub</span>` : '';
+      const rowBg = isSubRow ? 'background:#f8faff;' : '';
+      return `<tr class="${overdue ? 'overdue-row' : ''}" style="cursor:pointer;${rowBg}" onclick="showDetail(${o.id})">
         <td><span class="line-dot-sm" style="background:${lineColor};"></span>${line.toUpperCase()}</td>
-        <td><strong style="color:var(--accent);">#${o.orderId}</strong></td>
-        <td>${o.customer || '—'}</td>
+        <td style="${indent}"><strong style="color:var(--accent);">#${o.orderId}</strong>${subTag}</td>
+        <td>${o.customer || o.customerName || '—'}</td>
         <td>${o.productType || o.jobDescription || '—'}</td>
         <td>${(o.quantity || 0).toLocaleString()}</td>
         <td>${renderStatusBadge(o.status)}</td>
@@ -730,7 +821,26 @@
         <td><span class="card-due ${dueClass(o.dueDate)}" style="font-size:11px;">${dueLabel(o.dueDate)}</span></td>
         <td>${inProdTime > 0 ? formatDuration(inProdTime) : '—'}</td>
       </tr>`;
+    }
+
+    const rows = grouped.map(g => {
+      let html = renderRow(g.order, false);
+      if (g.subs.length > 0) {
+        // Parent row: show progress in order column
+        const prog = _subProgressMap[g.order.orderId];
+        const progText = prog ? ` <span style="font-size:10px;color:#6b7280;font-weight:400;">(${prog.done}/${prog.total})</span>` : '';
+        html = html.replace(`<strong style="color:var(--accent);">#${g.order.orderId}</strong>`,
+          `<strong style="color:var(--accent);">#${g.order.orderId}</strong>${progText}`);
+        html += g.subs.map(s => renderRow(s, true)).join('');
+        // Separator row
+        html += `<tr style="height:4px;background:#f1f5f9;"><td colspan="9"></td></tr>`;
+      }
+      return html;
     }).join('');
+
+    const total = filtered.length;
+    document.getElementById('tableSearchCount').textContent = q ? `${total} result${total!==1?'s':''} found` : '';
+    document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:24px;">No orders match.</td></tr>';
   }
 
   function renderUpcoming(upcomingOrders) {
