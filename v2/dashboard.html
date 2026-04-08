@@ -89,8 +89,12 @@
     .line-header .job-count { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: auto; }
     .stages-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; min-height: 120px; }
     .stage-col { min-width: 180px; max-width: 220px; flex-shrink: 0; }
-    .stage-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 4px 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .stage-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 4px 8px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .stage-header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
     .stage-header .stage-count { background: var(--border); border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+    .stage-load-bar { height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; width: 100%; }
+    .stage-load-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .stage-load-label { font-size: 9px; color: var(--text-muted); font-weight: 500; }
     .stage-cards { display: flex; flex-direction: column; gap: 6px; }
 
     /* ── Job Card ── */
@@ -98,6 +102,11 @@
     .job-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
     .job-card.line-6k { border-left: 3px solid #2563eb; }
     .job-card.line-15k { border-left: 3px solid #7c3aed; }
+    /* Queue visualization */
+    .job-card.card-active { background: #fffdf0; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+    .job-card.card-hold { background: #fff5f5; border-color: var(--red); }
+    .job-card.card-pending { background: #fafafa; border-color: #d1d5db; opacity: 0.85; }
+    .card-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
     .job-card.line-boyd { border-left: 3px solid #d97706; }
     .job-card.overdue { border-left-color: var(--red) !important; background: #fff5f5; }
     .job-card .card-order { font-weight: 700; font-size: 13px; color: var(--accent); }
@@ -210,9 +219,27 @@
     // On hold indicator
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
 
-    return `<div class="job-card line-${line} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
+    // Queue visualization classes
+    let queueClass = '';
+    let statusDot = '';
+    if (order.status === 'in-production') {
+      queueClass = 'card-active';
+      statusDot = '<span class="card-status-dot" style="background:#f59e0b;"></span>';
+    } else if (order.status === 'on-hold') {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (['pending-review','new','waiting-approval'].includes(order.status)) {
+      queueClass = 'card-pending';
+      statusDot = '<span class="card-status-dot" style="background:#9ca3af;"></span>';
+    } else if (order.status === 'qc-checkout') {
+      statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
+    } else if (order.status === 'ready-to-ship') {
+      statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
+    }
+
+    return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="card-order">#${order.orderId}</span>
+        <span class="card-order">${statusDot}#${order.orderId}</span>
         <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
       </div>
       <div class="card-customer">${order.customer || '—'}</div>
@@ -365,6 +392,41 @@
       // Only show stages that have jobs or are key stages
       const activeStages = Object.keys(stageBuckets).filter(s => lineConfig.stages.includes(s) || stageBuckets[s]?.length > 0);
 
+      // Pre-compute machine load pct per stage
+      function getStageMachineLoad(stageName) {
+        // Map stage name to primary machine name
+        const stageToMachine = {
+          'Press 6K': 'HP Indigo 6K',
+          'Press 15K': 'HP Indigo 15K',
+          'GM Die/Laser Cut': 'GM Die Cutter w/ JetFX',
+          'Lamination': 'Laminator (Nobelus)',
+          'Pouching': 'Karlville Poucher',
+          'Scodix': 'Scodix',
+          'Die Cut (Moll)': 'Moll Brothers Cutter',
+          'Flatbed Cut (Duplo)': 'Duplo',
+          'Flatbed Cut (Boyd)': 'Graphtec Flatbed (Large) x2',
+          'Guillotine': 'Guillotine Cutter',
+          'Fold & Glue': 'Moll Brothers Folder-Gluer',
+          'Application': 'Application Dept',
+          'UV Coat': 'UV Coater',
+          'Printing': 'Canon Colorado',
+          'Cutting': 'Graphtec Flatbed (Large) x2',
+        };
+        const machine = stageToMachine[stageName];
+        if (!machine) return null;
+        const cap = MACHINE_CAPACITY[machine];
+        if (!cap) return null;
+        const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || 1;
+        // Sum sheets/units across all active orders hitting this machine today
+        let totalLoad = 0;
+        (stageBuckets[stageName] || []).forEach(o => {
+          const sheets = o.sheetCount || Math.ceil((o.quantity || 0) / (o.piecesPerSheet || 1));
+          totalLoad += sheets;
+        });
+        const pct = Math.min(150, Math.round((totalLoad / dailyCap) * 100));
+        return { pct, totalLoad, dailyCap, machine };
+      }
+
       html += `<div class="line-section">
         <div class="line-header" style="background:${lineConfig.bgColor};border:1px solid ${lineConfig.borderColor};">
           <span class="line-dot" style="background:${lineConfig.color};"></span>
@@ -375,8 +437,24 @@
         <div class="stages-row">
           ${lineConfig.stages.map(stage => {
             const jobs = stageBuckets[stage] || [];
+            const load = getStageMachineLoad(stage);
+            let loadBarHTML = '';
+            if (load && (jobs.length > 0 || stage === 'Application')) {
+              const barColor = load.pct >= 100 ? 'var(--red)' : load.pct >= 75 ? '#d97706' : 'var(--green)';
+              const displayPct = Math.min(100, load.pct);
+              loadBarHTML = `
+                <div class="stage-load-bar" title="${load.machine}: ${load.totalLoad.toLocaleString()} / ${load.dailyCap.toLocaleString()} today (~${load.pct}%)">
+                  <div class="stage-load-fill" style="width:${displayPct}%;background:${barColor};"></div>
+                </div>
+                <div class="stage-load-label">${load.pct}% capacity</div>
+              `;
+            }
+            // Job card highlight: active = bright border, hold = red tint, pending = default
             return `<div class="stage-col">
-              <div class="stage-header">${stage} <span class="stage-count">${jobs.length}</span></div>
+              <div class="stage-header">
+                <div class="stage-header-top">${stage} <span class="stage-count">${jobs.length}</span></div>
+                ${loadBarHTML}
+              </div>
               <div class="stage-cards">
                 ${jobs.map(o => renderJobCard(o, lineKey)).join('')}
               </div>

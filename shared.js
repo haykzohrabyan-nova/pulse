@@ -841,6 +841,12 @@ const OPERATOR_PROFILES = {
   'Adrian':    { facility: '16th-street', machines: ['Karlville Poucher','Laminator (Nobelus)'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville poucher, backup laminator' },
   'Harry':     { facility: '16th-street', machines: ['Karlville Poucher','HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville, knows 6K (not expert)' },
   'Mike':      { facility: '16th-street', machines: [], role: 'production-manager', shift: '7:00 AM', notes: 'Production manager (new)' },
+  // Account Managers / Sales Reps
+  'Gary Gharibyan':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
+  'Ernesto Flores':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
+  'David Vasquez':    { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
+  'Bob Werner':       { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
+  'Tigran Zohrabyan': { facility: 'all', machines: [], role: 'supervisor', shift: '—', notes: 'Supervisor / Sales Manager' },
 };
 
 // ── Break & Meal Rules (California Labor Law) ──────────────

@@ -29,10 +29,16 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <div class="form-section" style="padding:14px 20px;">
       <div class="form-row" style="margin-bottom:0;">
-        <div class="field" style="max-width:300px;">
-          <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
-          <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+          <div class="field" style="max-width:300px;">
+            <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
+            <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+          </div>
+          <div style="display:flex;gap:20px;align-items:center;margin-top:18px;font-size:12px;">
+            <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
+            <div id="dueDateCountdown" style="font-weight:700;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -61,16 +67,14 @@
             <input type="text" id="customerName" placeholder="e.g. Green Leaf Cannabis" required>
           </div>
         </div>
-        <div class="form-row">
-          <div class="field">
-            <label>Job Description</label>
-            <input type="text" id="jobDescription" placeholder="e.g. 2oz Mylar Bags - White BOPP - Front/Back">
-          </div>
-        </div>
+        <!-- Job Description removed per Hayk — product type + material captures this -->
+        <input type="hidden" id="jobDescription">
         <div class="form-row">
           <div class="field">
             <label>Account Manager / Rep</label>
-            <input type="text" id="accountManager" placeholder="e.g. John">
+            <select id="accountManager">
+              <option value="">— Select Rep —</option>
+            </select>
           </div>
         </div>
       </div>
@@ -221,7 +225,7 @@
       <div class="form-row" style="margin-top:8px;">
         <div class="field">
           <label>Finishing Notes</label>
-          <input type="text" id="finishingNotes" placeholder="Additional finishing instructions">
+          <textarea id="finishingNotes" rows="1" placeholder="Additional finishing instructions" oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
         </div>
       </div>
     </div>
@@ -260,7 +264,7 @@
         <div class="form-row-3">
           <div class="field">
             <label>Quantity (Units) *</label>
-            <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames()" required>
+            <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames(); checkDueDate();" required>
           </div>
           <div class="field">
             <label id="ppsLabel">Pieces per Frame</label>
@@ -360,6 +364,7 @@
           <label>Due Date *</label>
           <input type="date" id="dueDate" onchange="checkDueDate()" required>
           <div id="leadTimeHint" style="font-size:11px;color:var(--text-muted);margin-top:3px;"></div>
+          <div id="capacityCalHint" style="font-size:11px;margin-top:4px;"></div>
           <div id="rushWarning" style="display:none;margin-top:6px;padding:8px 12px;background:#fef3cd;border:1px solid #f59e0b;border-radius:var(--radius);font-size:12px;color:#92600a;"></div>
           <div id="rushApprovalSection" style="display:none;margin-top:8px;">
             <div style="background:#fde8e8;border:2px solid var(--red);border-radius:var(--radius);padding:12px;">
@@ -384,7 +389,7 @@
       <h3 class="section-title">📝 Special Notes</h3>
       <div class="form-row">
         <div class="field">
-          <textarea id="specialNotes" rows="3" placeholder="Special instructions, customer notes, handling requirements..."></textarea>
+          <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
         </div>
       </div>
     </div>
@@ -504,6 +509,8 @@ let rushApproved = false;
 // ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   populateProductTypes();
+  populateAccountManagers();
+  stampCreationDate();
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -518,6 +525,75 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 });
+
+// ─────────────────────────────────────────────────────────────
+// Account Manager dropdown
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Creation date stamp + due date countdown
+// ─────────────────────────────────────────────────────────────
+let _creationDate = null;
+
+function stampCreationDate() {
+  const el = document.getElementById('creationDateStamp');
+  if (!el) return;
+  if (!_creationDate) _creationDate = new Date();
+  el.textContent = _creationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  updateDueDateCountdown();
+}
+
+function updateDueDateCountdown() {
+  const el = document.getElementById('dueDateCountdown');
+  if (!el) return;
+  const dueVal = document.getElementById('dueDate')?.value;
+  if (!dueVal) { el.innerHTML = ''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueVal + 'T12:00:00');
+  const diff = Math.round((due - today) / 86400000);
+  if (diff < 0) {
+    el.innerHTML = `<span style="color:var(--red);">&#9203; ${Math.abs(diff)}d OVERDUE</span>`;
+  } else if (diff === 0) {
+    el.innerHTML = `<span style="color:var(--red);">&#9203; DUE TODAY</span>`;
+  } else if (diff <= 2) {
+    el.innerHTML = `<span style="color:#d97706;">&#9203; ${diff}d left</span>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--green);">&#9203; ${diff}d left</span>`;
+  }
+}
+
+function populateAccountManagers() {
+  const sel = document.getElementById('accountManager');
+  if (!sel) return;
+  const reps = Object.entries(OPERATOR_PROFILES)
+    .filter(([, p]) => p.role === 'account-manager' || p.role === 'supervisor')
+    .sort(([a], [b]) => a.localeCompare(b));
+  // Group: supervisors first, then account managers
+  const supervisors = reps.filter(([, p]) => p.role === 'supervisor');
+  const managers = reps.filter(([, p]) => p.role === 'account-manager');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">— Select Rep —</option>';
+  if (supervisors.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'Supervisors';
+    supervisors.forEach(([name]) => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  }
+  if (managers.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'Account Managers';
+    managers.forEach(([name]) => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  }
+  if (currentVal) sel.value = currentVal;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Product type dropdown
@@ -545,6 +621,14 @@ function onFacilityChange() {
   updateFrameSheetLabels();
   calcFrames();
   checkDueDate();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auto-expand textarea
+// ─────────────────────────────────────────────────────────────
+function autoExpandNotes(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
 }
 
 function updateFrameSheetLabels() {
@@ -577,6 +661,8 @@ function onProductTypeChange() {
   updateFrameSheetLabels();
   checkDueDate();
   autoDetectWorkflow();
+  // recalculate capacity hint when product type changes
+  updateCapacityHint();
 }
 
 function onPrintTypeChange() {
@@ -728,6 +814,8 @@ function checkDueDate() {
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('dueDate').min = today;
+  updateCapacityHint();
+  updateDueDateCountdown();
 
   const lt = LEAD_TIMES[productType];
   hint.textContent = lt ? `Standard: ${lt.label}` : 'Standard: 3–5 business days';
@@ -775,6 +863,67 @@ function verifyRushCode() {
     result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
     rushApproved = false;
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Capacity Calendar Hint — shows machine load for selected date
+// ─────────────────────────────────────────────────────────────
+let _capacityHintTimer = null;
+async function updateCapacityHint() {
+  const hintEl = document.getElementById('capacityCalHint');
+  if (!hintEl) return;
+  const dueDate = document.getElementById('dueDate').value;
+  const productType = document.getElementById('productType').value;
+  const quantity = parseInt(document.getElementById('quantity').value) || 0;
+  if (!dueDate || !productType || !quantity) { hintEl.innerHTML = ''; return; }
+
+  // Determine primary machine from workflow template, or guess from product type
+  const workflowKey = document.getElementById('workflowTemplate').value;
+  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  let primaryMachine = tpl?.steps?.[0] || null;
+  if (!primaryMachine) {
+    // Fallback: guess machine from product type
+    const pt = productType;
+    if (['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Diecut Stickers'].includes(pt)) primaryMachine = 'HP Indigo 6K';
+    else if (['Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets'].includes(pt)) primaryMachine = 'HP Indigo 15K';
+    else if (['Vinyl Banners','Canvas Prints','Foam Board','Yard Signs','Window Graphics','Floor Graphics','Car Wraps'].includes(pt)) primaryMachine = 'Canon Colorado';
+    else { hintEl.innerHTML = ''; return; }
+  }
+  const cap = MACHINE_CAPACITY[primaryMachine];
+  if (!cap) { hintEl.innerHTML = ''; return; }
+
+  // Count active orders on this machine due on or before selected date
+  let allOrders;
+  try { allOrders = await getAllOrders(); } catch(e) { return; }
+
+  const sel = new Date(dueDate + 'T12:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const bdays = countBusinessDays(today, sel);
+
+  // Sum up sheets/units queued on primary machine
+  let queuedSheets = 0;
+  allOrders.forEach(o => {
+    if (['completed','shipped','received','cancelled'].includes(o.status)) return;
+    const steps = o.workflowSteps || [];
+    const hasMachine = steps.some(s => s.machine === primaryMachine && s.status !== 'completed');
+    if (!hasMachine) return;
+    const sheets = o.sheetCount || Math.ceil((o.quantity || 0) / (o.piecesPerSheet || 1));
+    queuedSheets += sheets;
+  });
+
+  const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || 1;
+  const totalCap = dailyCap * bdays;
+  const thisOrderSheets = parseInt(document.getElementById('sheetCount')?.value) ||
+    Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet')?.value) || 1));
+  const afterThis = queuedSheets + thisOrderSheets;
+  const pct = totalCap > 0 ? Math.round((afterThis / totalCap) * 100) : 0;
+
+  let color, icon, label;
+  if (pct < 70) { color = 'var(--green)'; icon = '🟢'; label = `${primaryMachine}: ~${pct}% loaded — looks good`; }
+  else if (pct < 100) { color = '#d97706'; icon = '🟡'; label = `${primaryMachine}: ~${pct}% loaded — tight`; }
+  else { color = 'var(--red)'; icon = '🔴'; label = `${primaryMachine}: ~${pct}% loaded — OVERBOOKED. Rush approval or push date.`; }
+
+  hintEl.innerHTML = `<span style="color:${color};font-weight:600;">${icon} ${label}</span>`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -912,6 +1061,8 @@ function autoDetectWorkflow() {
   }
 
   document.getElementById('workflowTemplate').value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
+  // update capacity hint now that workflow is known
+  updateCapacityHint();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1402,6 +1553,13 @@ async function loadOrderIntoForm(order) {
   await new Promise(r => setTimeout(r, 10));
   populateProductTypes();
   updateFrameSheetLabels();
+
+  // Restore creation date from saved order
+  if (order.createdAt) {
+    _creationDate = new Date(order.createdAt);
+    const el = document.getElementById('creationDateStamp');
+    if (el) el.textContent = _creationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
   document.getElementById('customerName').value = order.customerName || order.customer || '';
   document.getElementById('jobDescription').value = order.jobDescription || '';

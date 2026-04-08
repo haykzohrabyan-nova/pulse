@@ -14,197 +14,181 @@
   <div class="jt-header">
     <div>
       <h2 id="pageTitle">New Job Ticket</h2>
-      <p id="orderIdDisplay" style="color:var(--text-muted);font-size:12px;margin-top:2px;"></p>
+      <p id="orderIdDisplay" style="color:var(--text-muted);font-size:13px;"></p>
     </div>
     <div style="display:flex;gap:8px;">
-      <button type="button" class="btn" onclick="window.location='production-manager.html'">← Back</button>
+      <button type="button" class="btn" onclick="window.location='production-manager.html'">← Back to Production</button>
       <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
     </div>
   </div>
 
   <form id="ticketForm" onsubmit="return false;">
 
-    <!-- ── JOB TICKET # ── -->
-    <div class="card" style="padding:10px 16px;">
-      <div style="display:flex;align-items:center;gap:16px;">
-        <label style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;white-space:nowrap;">🎫 Job Ticket #</label>
-        <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:14px;font-weight:600;max-width:280px;">
-        <span style="font-size:10px;color:var(--text-muted);">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</span>
-      </div>
-    </div>
-
-    <!-- ── ROW 1: Facility | Customer | Job Description | Rep ── -->
-    <div class="card">
-      <div class="sec-title">🏭 Customer &amp; Job</div>
-      <div class="row4">
-        <div class="field">
-          <label>Facility *</label>
-          <select id="facility" onchange="onFacilityChange()" required class="sel-auto">
-            <option value="">— Select —</option>
-            <option value="16th-street">16th Street — Main Production</option>
-            <option value="boyd-street">Boyd Street — Design &amp; Large Format</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Customer Name *</label>
-          <input type="text" id="customerName" placeholder="e.g. Green Leaf Cannabis" required>
-        </div>
-        <div class="field">
-          <label>Job Description</label>
-          <input type="text" id="jobDescription" placeholder="e.g. 2oz Mylar Bags - White BOPP - F/B">
-        </div>
-        <div class="field">
-          <label>Account Manager / Rep</label>
-          <input type="text" id="accountManager" placeholder="e.g. John">
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- JOB TICKET NUMBER (top of form)                        -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section" style="padding:14px 20px;">
+      <div class="form-row" style="margin-bottom:0;">
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+          <div class="field" style="max-width:300px;">
+            <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
+            <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+          </div>
+          <div style="display:flex;gap:20px;align-items:center;margin-top:18px;font-size:12px;">
+            <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
+            <div id="dueDateCountdown" style="font-weight:700;"></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ── ROW 2: Product Type | Material | Color Mode | Sides ── -->
-    <div class="card">
-      <div class="sec-title">📦 Product</div>
-      <div class="row4">
-        <div class="field">
-          <label>Product Type *</label>
-          <select id="productType" onchange="onProductTypeChange()" required class="sel-auto">
-            <option value="">— Select Product Type —</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Material *</label>
-          <select id="material" required class="sel-auto">
-            <option value="">— Select Material —</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Color Mode *</label>
-          <select id="colorMode" onchange="onColorModeChange()" class="sel-auto">
-            <option value="CMYK">CMYK</option>
-            <option value="CMYK+White">CMYK + White</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Sides</label>
-          <select id="sides" class="sel-auto">
-            <option value="1">1-sided</option>
-            <option value="2">2-sided</option>
-          </select>
-        </div>
-      </div>
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ROW 1: Facility & Customer (left) | Product Type (right) -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-grid form-grid-2">
 
-      <!-- Other product desc (conditional) -->
-      <div id="otherProductRow" style="display:none;" class="row1 mt6">
-        <div class="field">
-          <label>Describe Product *</label>
-          <input type="text" id="otherProductDesc" placeholder="e.g. Custom hanging tag, specialty diecut...">
+      <!-- LEFT: Facility & Customer -->
+      <div class="form-section">
+        <h3 class="section-title">🏭 Facility &amp; Customer</h3>
+        <div class="form-row">
+          <div class="field">
+            <label>Facility *</label>
+            <select id="facility" onchange="onFacilityChange()" required>
+              <option value="">— Select Facility —</option>
+              <option value="16th-street">16th Street — Main Production</option>
+              <option value="boyd-street">Boyd Street — Design &amp; Large Format</option>
+            </select>
+          </div>
         </div>
-      </div>
-
-      <!-- Special Color (conditional) -->
-      <div class="row4 mt6" style="align-items:center;">
-        <label class="check-label">
-          <input type="checkbox" id="hasSpecialColor" onchange="toggleSpecialColor()"> Has Special Color
-        </label>
-        <div id="specialColorField" style="display:none;grid-column:span 3;">
-          <input type="text" id="specialColorDetails" placeholder="e.g. PMS 185 C, Gold Metallic">
+        <div class="form-row">
+          <div class="field">
+            <label>Customer Name *</label>
+            <input type="text" id="customerName" placeholder="e.g. Green Leaf Cannabis" required>
+          </div>
         </div>
-      </div>
-
-      <!-- Roll Direction (conditional) -->
-      <div id="rollDirectionRow" style="display:none;" class="row4 mt6">
-        <div class="field">
-          <label>Roll Direction</label>
-          <select id="rollDirection" class="sel-auto">
-            <option value="1">↑ Direction 1 (Unwind top)</option>
-            <option value="2">↓ Direction 2 (Unwind bottom)</option>
-            <option value="3">← Direction 3 (Unwind left)</option>
-            <option value="4">→ Direction 4 (Unwind right)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ROW 3: Size | Qty | PPS | Frame Count | Due Date ── -->
-    <div class="card">
-      <div class="sec-title">🔢 Quantity &amp; <span id="frameSheetLabel">Frames</span>
-        <button type="button" class="btn btn-sm" id="addSkuBtn" onclick="addSKU()" style="float:right;margin-top:-2px;">+ Add Version/SKU</button>
-      </div>
-
-      <div class="row5" style="align-items:end;">
-        <div class="field">
-          <label>Width (in)</label>
-          <input type="number" id="labelWidth" step="0.01" min="0.1" placeholder='e.g. 3.5' oninput="calcLabelFit()">
-        </div>
-        <div class="field">
-          <label>Height (in)</label>
-          <input type="number" id="labelHeight" step="0.01" min="0.1" placeholder='e.g. 2.5' oninput="calcLabelFit()">
-        </div>
-        <div class="field">
-          <label>Quantity (Units) *</label>
-          <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames()" required>
-        </div>
-        <div class="field">
-          <label id="ppsLabel">Pcs / Frame</label>
-          <input type="number" id="piecesPerSheet" min="1" value="1" oninput="calcFrames()">
-        </div>
-        <div class="field">
-          <label id="scLabel">Frame Count</label>
-          <input type="number" id="sheetCount" placeholder="Auto" style="background:#f5f6fa;" readonly>
-        </div>
-      </div>
-
-      <div id="labelFitResult" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
-      <div id="labelFitWarning" class="warn-box" style="display:none;margin-top:6px;"></div>
-      <div id="labelSizeSection" style="display:block;"></div>
-
-      <!-- Single SKU files -->
-      <div id="singleSkuSection">
-        <div id="singleSkuFiles" class="attachment-area mt8">
-          <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">📎 Artwork &amp; Layer Files</div>
-          <div class="file-grid" id="fileGrid">
-            <div class="file-slot">
-              <label>🎨 Main Artwork *</label>
-              <input type="file" id="artworkFiles" multiple accept=".pdf,.ai,.eps,.png,.jpg,.jpeg,.tif,.tiff,.psd" onchange="handleArtworkUpload(this)">
-              <div id="artworkThumbnails" class="artwork-thumbs-inline"></div>
-            </div>
-            <div class="file-slot" id="whiteFileSlot" style="display:none;">
-              <label>⬜ White Layer</label>
-              <input type="file" id="whiteLayerFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('whiteLayerFile','whiteLayerPreview','white')">
-              <div id="whiteLayerPreview" class="inline-preview"></div>
-            </div>
-            <div class="file-slot" id="uvFileSlot" style="display:none;">
-              <label>☀️ UV File</label>
-              <input type="file" id="uvFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('uvFile','uvFilePreview','uv')">
-              <div id="uvFilePreview" class="inline-preview"></div>
-            </div>
-            <div class="file-slot" id="foilFileSlot" style="display:none;">
-              <label>✨ Foil File</label>
-              <input type="file" id="foilFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('foilFile','foilFilePreview','foil')">
-              <div id="foilFilePreview" class="inline-preview"></div>
-            </div>
+        <!-- Job Description removed per Hayk — product type + material captures this -->
+        <input type="hidden" id="jobDescription">
+        <div class="form-row">
+          <div class="field">
+            <label>Account Manager / Rep</label>
+            <select id="accountManager">
+              <option value="">— Select Rep —</option>
+            </select>
           </div>
         </div>
       </div>
 
-      <!-- Multi-SKU -->
-      <div id="multiSkuSection" style="display:none;">
-        <div id="skuList"></div>
-        <div id="skuSummary" style="display:none;margin-top:6px;padding:6px 12px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:var(--radius);font-size:13px;"></div>
-      </div>
+      <!-- RIGHT: Product Type -->
+      <div class="form-section">
+        <h3 class="section-title">📦 Product Type</h3>
 
-      <input type="hidden" id="extraFrames" value="0">
-      <input type="hidden" id="makeReadyFrames" value="0">
-      <input type="hidden" id="framesWasted" value="0">
+        <div class="form-row">
+          <div class="field">
+            <label>Product Type *</label>
+            <select id="productType" onchange="onProductTypeChange()" required>
+              <option value="">— Select Product Type —</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" id="otherProductRow" style="display:none;">
+          <div class="field">
+            <label>Describe Product *</label>
+            <input type="text" id="otherProductDesc" placeholder="e.g. Custom hanging tag, specialty diecut...">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Material *</label>
+            <select id="material" required>
+              <option value="">— Select Material —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Color Mode + Has Special Color -->
+        <div class="form-row-2" style="margin-bottom:8px;">
+          <div class="field">
+            <label>Color Mode *</label>
+            <select id="colorMode" onchange="onColorModeChange()">
+              <option value="CMYK">CMYK</option>
+              <option value="CMYK+White">CMYK + White</option>
+            </select>
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <label class="checkbox-label" style="margin-top:24px;">
+              <input type="checkbox" id="hasSpecialColor" onchange="toggleSpecialColor()">
+              Has Special Color
+            </label>
+          </div>
+        </div>
+        <div class="form-row" id="specialColorField" style="display:none;">
+          <div class="field">
+            <label>Pantone / Special Color Details</label>
+            <input type="text" id="specialColorDetails" placeholder="e.g. PMS 185 C, Gold Metallic">
+          </div>
+        </div>
+
+        <!-- Roll Direction (only for roll products) -->
+        <div id="rollDirectionRow" style="display:none;" class="form-row">
+          <div class="field">
+            <label>Roll Direction</label>
+            <select id="rollDirection">
+              <option value="1">Direction 1 (↑ Unwind from top)</option>
+              <option value="2">Direction 2 (↓ Unwind from bottom)</option>
+              <option value="3">Direction 3 (← Unwind left)</option>
+              <option value="4">Direction 4 (→ Unwind right)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Sides</label>
+            <select id="sides">
+              <option value="1">1-sided</option>
+              <option value="2">2-sided</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom Batching -->
+        <div class="form-row" style="margin-bottom:6px;">
+          <label class="checkbox-label">
+            <input type="checkbox" id="customBatching" onchange="toggleCustomBatching()">
+            Custom Batching
+          </label>
+        </div>
+        <div id="customBatchingSection" style="display:none;background:#f8f9ff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+          <div id="unitsPerRollRow" style="display:none;" class="form-row">
+            <div class="field">
+              <label>Units per Roll</label>
+              <input type="number" id="unitsPerRoll" min="1" placeholder="e.g. 1000 labels per roll">
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <div class="field">
+              <label>Packaging Instructions</label>
+              <textarea id="packagingInstructions" rows="2" placeholder="e.g. pouches in bundles of 128, separate by flavor, 500 per pouch..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <input type="hidden" id="printType">
+      </div>
     </div>
 
-    <!-- ── ROW 4: Finishing | Cut | Due Date (all in one card) ── -->
-    <div class="card">
-      <div class="sec-title">✨ Finishing &amp; ✂️ Cut &amp; 📅 Due Date</div>
-      <div class="row4" style="align-items:end;">
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Special Finishing (no file uploads here)      -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">✨ Special Finishing</h3>
+      <div class="form-grid form-grid-3" style="grid-template-columns: 1fr 1fr 1fr;">
         <!-- Lamination -->
         <div class="field">
           <label>Lamination</label>
-          <select id="lamination" class="sel-auto">
+          <select id="lamination">
             <option value="None">None</option>
             <option value="Gloss">Gloss</option>
             <option value="Matte">Matte</option>
@@ -213,114 +197,202 @@
             <option value="Coating">Coating</option>
           </select>
         </div>
-        <!-- UV + Foil toggles -->
+        <!-- UV toggle only (no file) -->
         <div class="field">
-          <label>Finishing</label>
-          <div style="display:flex;gap:16px;padding-top:6px;">
-            <label class="check-label"><input type="checkbox" id="hasUV" onchange="onFinishingChange()"> UV Coating</label>
-            <label class="check-label"><input type="checkbox" id="hasFoil" onchange="onFinishingChange()"> Foil</label>
-          </div>
+          <label class="checkbox-label finishing-check">
+            <input type="checkbox" id="hasUV" onchange="onFinishingChange()">
+            <span>UV Coating</span>
+          </label>
         </div>
-        <!-- Cut Method -->
+        <!-- Foil toggle + type (no file) -->
         <div class="field">
-          <label>Cut Method</label>
-          <select id="cutMethod" onchange="onCutMethodChange()" class="sel-auto">
-            <option value="none">No Cut Required</option>
-          </select>
-        </div>
-        <!-- Due Date -->
-        <div class="field">
-          <label>Due Date *</label>
-          <input type="date" id="dueDate" onchange="checkDueDate()" required>
-          <div id="leadTimeHint" style="font-size:10px;color:var(--text-muted);margin-top:2px;"></div>
-        </div>
-      </div>
-
-      <!-- Foil details (conditional) -->
-      <div id="foilSection" style="display:none;" class="mt6">
-        <div class="row4">
-          <div class="field">
-            <label>Foil Type</label>
-            <select id="foilType" class="sel-auto">
+          <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
+            <input type="checkbox" id="hasFoil" onchange="onFinishingChange()">
+            <span>Foil</span>
+          </label>
+          <div id="foilSection" style="display:none;">
+            <select id="foilType" style="margin-bottom:6px;">
               <option value="Gold">Gold Foil</option>
               <option value="Silver">Silver Foil</option>
               <option value="Rose Gold">Rose Gold Foil</option>
               <option value="Holographic">Holographic Foil</option>
               <option value="Custom">Custom Foil</option>
             </select>
-          </div>
-          <div class="field" style="grid-column:span 3;">
-            <label>Foil Notes</label>
             <input type="text" id="foilNotes" placeholder="Foil notes / custom color">
           </div>
         </div>
       </div>
-
-      <!-- Die info (conditional) -->
-      <div id="dieStatusRow" style="display:none;" class="mt6">
-        <div class="row4">
-          <div class="field">
-            <label>Die Status</label>
-            <select id="dieStatus" onchange="onDieStatusChange()" class="sel-auto">
-              <option value="existing">Existing Die on File</option>
-              <option value="new-ordered">New Die (Ordered)</option>
-            </select>
-          </div>
-          <div class="field" id="dieBarcodeRow" style="display:none;grid-column:span 3;">
-            <label>Die Barcode / Number</label>
-            <input type="text" id="dieName" placeholder="Scan or type die number (e.g. DIE-1042)">
-          </div>
-        </div>
-      </div>
-
-      <!-- Rush warning (conditional) -->
-      <div id="rushWarning" style="display:none;margin-top:8px;padding:8px 12px;background:#fef3cd;border:1px solid #f59e0b;border-radius:var(--radius);font-size:12px;color:#92600a;"></div>
-      <div id="rushApprovalSection" style="display:none;margin-top:8px;">
-        <div style="background:#fde8e8;border:2px solid var(--red);border-radius:var(--radius);padding:10px;">
-          <div style="font-weight:700;color:#b91c1c;margin-bottom:6px;">🚨 Rush — Supervisor Approval Required</div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="password" id="rushApprovalCode" placeholder="Enter approval code" autocomplete="off" style="max-width:200px;">
-            <button type="button" class="btn btn-warning btn-sm" onclick="verifyRushCode()">Verify &amp; Approve</button>
-            <div id="rushCodeResult" style="font-size:12px;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Finishing Notes + Custom Batching + Special Notes (compact card) ── -->
-    <div class="card">
-      <div class="row3">
+      <div class="form-row" style="margin-top:8px;">
         <div class="field">
           <label>Finishing Notes</label>
-          <input type="text" id="finishingNotes" placeholder="Additional finishing instructions">
-        </div>
-        <div class="field">
-          <label class="check-label" style="margin-top:18px;">
-            <input type="checkbox" id="customBatching" onchange="toggleCustomBatching()"> Custom Batching
-          </label>
-        </div>
-        <div class="field">
-          <label>Special Notes</label>
-          <input type="text" id="specialNotes" placeholder="Special instructions, customer notes...">
+          <textarea id="finishingNotes" rows="1" placeholder="Additional finishing instructions" oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
         </div>
       </div>
-      <!-- Custom batching details (conditional) -->
-      <div id="customBatchingSection" style="display:none;background:#f8f9ff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px;">
-        <div class="row3">
-          <div class="field" id="unitsPerRollRow" style="display:none;">
-            <label>Units per Roll</label>
-            <input type="number" id="unitsPerRoll" min="1" placeholder="e.g. 1000">
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Size, Quantity, Attachments & SKUs            -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">
+        🔢 Quantity &amp; <span id="frameSheetLabel">Frames</span>
+        <button type="button" class="btn btn-sm" id="addSkuBtn" onclick="addSKU()" style="float:right;margin-top:-4px;">+ Add Version/SKU</button>
+      </h3>
+
+      <!-- Size fields (always visible) + 6K auto-calc hint -->
+      <div class="label-size-box">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">📐 Size</div>
+        <div class="form-row-3">
+          <div class="field">
+            <label>Width (inches)</label>
+            <input type="number" id="labelWidth" step="0.01" min="0.1" placeholder='e.g. 3.5' oninput="calcLabelFit()">
           </div>
-          <div class="field" style="grid-column:span 3;">
-            <label>Packaging Instructions</label>
-            <input type="text" id="packagingInstructions" placeholder="e.g. pouches in bundles of 128, separate by flavor...">
+          <div class="field">
+            <label>Height (inches)</label>
+            <input type="number" id="labelHeight" step="0.01" min="0.1" placeholder='e.g. 2.5' oninput="calcLabelFit()">
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <div id="labelFitResult" style="font-size:12px;color:var(--text-muted);margin-top:20px;line-height:1.6;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Hidden: keeps the label size section logic working (always "shown" now) -->
+      <div id="labelSizeSection" style="display:block;"></div>
+
+      <!-- Main quantity row (single SKU mode) -->
+      <div id="singleSkuSection">
+        <div class="form-row-3">
+          <div class="field">
+            <label>Quantity (Units) *</label>
+            <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames(); checkDueDate();" required>
+          </div>
+          <div class="field">
+            <label id="ppsLabel">Pieces per Frame</label>
+            <input type="number" id="piecesPerSheet" min="1" value="1" oninput="calcFrames()">
+          </div>
+          <div class="field">
+            <label id="scLabel">Frame Count (needed)</label>
+            <input type="number" id="sheetCount" placeholder="Auto-calculated" style="background:#f5f6fa;" readonly>
+          </div>
+        </div>
+
+        <!-- Frame count mismatch warning (label size) -->
+        <div id="labelFitWarning" class="warn-box" style="display:none;margin-bottom:8px;"></div>
+
+        <!-- Artwork & Layer Files (single SKU) -->
+        <div id="singleSkuFiles" class="attachment-area">
+          <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📎 Artwork &amp; Layer Files</div>
+          <div class="file-grid" id="fileGrid">
+            <div class="file-slot">
+              <label>🎨 Main Artwork *</label>
+              <input type="file" id="artworkFiles" multiple accept=".pdf,.ai,.eps,.png,.jpg,.jpeg,.tif,.tiff,.psd" onchange="handleArtworkUpload(this)">
+              <div id="artworkThumbnails" class="artwork-thumbs-inline"></div>
+            </div>
+            <div class="file-slot" id="whiteFileSlot" style="display:none;">
+              <label>⬜ White Layer File</label>
+              <input type="file" id="whiteLayerFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('whiteLayerFile', 'whiteLayerPreview', 'white')">
+              <div id="whiteLayerPreview" class="inline-preview"></div>
+            </div>
+            <div class="file-slot" id="uvFileSlot" style="display:none;">
+              <label>☀️ UV File</label>
+              <input type="file" id="uvFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('uvFile', 'uvFilePreview', 'uv')">
+              <div id="uvFilePreview" class="inline-preview"></div>
+            </div>
+            <div class="file-slot" id="foilFileSlot" style="display:none;">
+              <label>✨ Foil File</label>
+              <input type="file" id="foilFile" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSingleFileUpload('foilFile', 'foilFilePreview', 'foil')">
+              <div id="foilFilePreview" class="inline-preview"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-SKU list (hidden until Add SKU is clicked) -->
+      <div id="multiSkuSection" style="display:none;">
+        <div id="skuList"></div>
+        <div id="skuSummary" style="display:none;margin-top:8px;padding:8px 12px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:var(--radius);font-size:13px;"></div>
+      </div>
+
+      <!-- Hidden fields for overs (calculated but not shown to rep) -->
+      <input type="hidden" id="extraFrames" value="0">
+      <input type="hidden" id="makeReadyFrames" value="0">
+      <input type="hidden" id="framesWasted" value="0">
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Cutting & Die                                 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">✂️ Cutting &amp; Die</h3>
+
+      <div id="productionHints" style="display:none;"></div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Cut Method</label>
+          <select id="cutMethod" onchange="onCutMethodChange()">
+            <option value="none">No Cut Required</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" id="dieStatusRow" style="display:none;">
+        <div class="field">
+          <label>Die Status</label>
+          <select id="dieStatus" onchange="onDieStatusChange()">
+            <option value="existing">Existing Die on File</option>
+            <option value="new-ordered">New Die (Ordered)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" id="dieBarcodeRow" style="display:none;">
+        <div class="field">
+          <label>Die Barcode / Number</label>
+          <input type="text" id="dieName" placeholder="Scan barcode or type die number (e.g. DIE-1042)">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Due Date (moved here — after all specs)       -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">📅 Due Date</h3>
+      <div class="form-row">
+        <div class="field" style="max-width:400px;">
+          <label>Due Date *</label>
+          <input type="date" id="dueDate" onchange="checkDueDate()" required>
+          <div id="leadTimeHint" style="font-size:11px;color:var(--text-muted);margin-top:3px;"></div>
+          <div id="capacityCalHint" style="font-size:11px;margin-top:4px;"></div>
+          <div id="rushWarning" style="display:none;margin-top:6px;padding:8px 12px;background:#fef3cd;border:1px solid #f59e0b;border-radius:var(--radius);font-size:12px;color:#92600a;"></div>
+          <div id="rushApprovalSection" style="display:none;margin-top:8px;">
+            <div style="background:#fde8e8;border:2px solid var(--red);border-radius:var(--radius);padding:12px;">
+              <div style="font-weight:700;color:#b91c1c;margin-bottom:6px;">🚨 Rush Order — Supervisor Approval Required</div>
+              <div style="font-size:12px;color:var(--text);margin-bottom:8px;">This timeline is shorter than standard. Get approval from Tigran or admin.</div>
+              <div class="field">
+                <label>Supervisor/Admin Code</label>
+                <input type="password" id="rushApprovalCode" placeholder="Enter approval code" autocomplete="off">
+              </div>
+              <button type="button" class="btn btn-warning btn-sm" onclick="verifyRushCode()" style="margin-top:6px;">Verify &amp; Approve Rush</button>
+              <div id="rushCodeResult" style="margin-top:4px;font-size:12px;"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Production hints -->
-    <div id="productionHints" style="display:none;margin-bottom:8px;"></div>
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Notes                                         -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">📝 Special Notes</h3>
+      <div class="form-row">
+        <div class="field">
+          <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
+        </div>
+      </div>
+    </div>
 
     <!-- Save Bar -->
     <div class="save-bar">
@@ -328,8 +400,8 @@
       <button type="button" class="btn btn-primary" onclick="saveTicket()">💾 Save Job Ticket</button>
     </div>
 
+    <!-- Hidden: workflow template (still used internally for save) -->
     <input type="hidden" id="workflowTemplate">
-    <input type="hidden" id="printType">
   </form>
 </div>
 
@@ -344,99 +416,102 @@ injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('job-ticket');
 
 document.getElementById('page-styles').textContent = `
-  .jt-container { max-width: 1200px; margin: 0 auto; padding: 14px 20px; }
-  .jt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  .jt-header h2 { font-size:20px; font-weight:700; }
-
-  .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; box-shadow:var(--shadow); margin-bottom:10px; }
-  .sec-title { font-size:12px; font-weight:700; color:var(--text); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:0.4px; }
-
-  /* Grid helpers */
-  .row1 { display:grid; grid-template-columns:1fr; gap:10px; }
-  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-  .row4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; }
-  .row5 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; }
-  .mt6 { margin-top:6px; }
-  .mt8 { margin-top:8px; }
-
-  .field { display:flex; flex-direction:column; }
-  label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:3px; }
-
-  input[type=text], input[type=number], input[type=date], input[type=password], textarea, select {
-    font-size:13px; padding:5px 8px; border:1px solid var(--border);
-    border-radius:5px; background:var(--card); color:var(--text);
-    outline:none; transition:border-color 0.15s;
-    width:100%; box-sizing:border-box;
+  .jt-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .jt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .jt-header h2 { font-size: 22px; font-weight: 700; }
+  .form-section {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+    margin-bottom: 16px;
   }
-  input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+  .section-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .form-grid { display: grid; gap: 16px; margin-bottom: 16px; }
+  .form-grid-2 { grid-template-columns: 1fr 1fr; }
+  .form-grid-3 { }
+  .form-row { margin-bottom: 12px; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--text); cursor: pointer; }
+  .checkbox-label input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
 
-  /* Fit-content selects — don't stretch beyond content */
-  .sel-auto { width:auto; min-width:100%; }
+  /* Finishing */
+  .finishing-check { padding-top: 2px; min-width: 130px; }
 
-  .check-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:0; }
-  .check-label input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent); flex-shrink:0; }
+  /* Attachment area */
+  .attachment-area { margin-top: 12px; padding: 14px; background: #f8f9fb; border: 1px solid var(--border); border-radius: var(--radius); }
+  .file-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .file-slot { display: flex; flex-direction: column; }
+  .file-slot label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+  .file-slot input[type=file] { font-size: 12px; }
 
-  /* Attachment */
-  .attachment-area { padding:10px; background:#f8f9fb; border:1px solid var(--border); border-radius:var(--radius); }
-  .file-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .file-slot { display:flex; flex-direction:column; }
-  .file-slot label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px; }
-  .file-slot input[type=file] { font-size:11px; }
+  /* Inline file previews */
+  .inline-preview { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .inline-preview-thumb { position: relative; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; cursor: pointer; }
+  .inline-preview-thumb img { width: 56px; height: 56px; object-fit: cover; display: block; }
+  .inline-preview-thumb .pdf-icon { width: 56px; height: 56px; background: #f0f0f5; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-muted); }
+  .inline-preview-thumb .thumb-label { font-size: 9px; text-align: center; padding: 2px 4px; background: #f5f6fa; color: var(--text-muted); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inline-preview-thumb .remove-inline { position: absolute; top: 2px; right: 2px; background: rgba(220,38,38,0.85); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; cursor: pointer; font-size: 9px; display: flex; align-items: center; justify-content: center; }
 
-  .inline-preview { display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
-  .inline-preview-thumb { position:relative; border:1px solid var(--border); border-radius:4px; overflow:hidden; cursor:pointer; }
-  .inline-preview-thumb img { width:50px; height:50px; object-fit:cover; display:block; }
-  .inline-preview-thumb .pdf-icon { width:50px; height:50px; background:#f0f0f5; display:flex; align-items:center; justify-content:center; font-size:20px; }
-  .inline-preview-thumb .thumb-label { font-size:9px; text-align:center; padding:2px 3px; background:#f5f6fa; max-width:50px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .inline-preview-thumb .remove-inline { position:absolute; top:2px; right:2px; background:rgba(220,38,38,0.85); color:white; border:none; border-radius:50%; width:14px; height:14px; cursor:pointer; font-size:8px; display:flex; align-items:center; justify-content:center; }
-
-  .artwork-thumbs-inline { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-  .artwork-thumb { position:relative; border:1px solid var(--border); border-radius:5px; overflow:hidden; cursor:pointer; }
-  .artwork-thumb img { width:64px; height:64px; object-fit:cover; display:block; }
-  .artwork-thumb .thumb-name { font-size:9px; padding:2px 4px; text-align:center; background:#f5f6fa; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .artwork-thumb .remove-thumb { position:absolute; top:2px; right:2px; background:rgba(220,38,38,0.9); color:white; border:none; border-radius:50%; width:16px; height:16px; cursor:pointer; font-size:9px; display:flex; align-items:center; justify-content:center; }
-  .artwork-pdf { width:64px; height:64px; background:#f0f0f5; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:24px; }
+  /* Artwork inline thumbs */
+  .artwork-thumbs-inline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .artwork-thumb { position: relative; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; }
+  .artwork-thumb:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+  .artwork-thumb img { width: 80px; height: 80px; object-fit: cover; display: block; }
+  .artwork-thumb .thumb-name { font-size: 9px; padding: 3px 5px; text-align: center; background: #f5f6fa; color: var(--text-muted); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .artwork-thumb .remove-thumb { position: absolute; top: 3px; right: 3px; background: rgba(220,38,38,0.9); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 9px; display: flex; align-items: center; justify-content: center; }
+  .artwork-pdf { width: 80px; height: 80px; background: #f0f0f5; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 28px; color: var(--text-muted); }
 
   /* SKU rows */
-  .sku-row { margin-bottom:8px; padding:10px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); }
-  .sku-header { display:grid; grid-template-columns:40px 1fr 90px 36px; gap:6px; align-items:end; }
-  .sku-version-num { text-align:center; font-weight:700; font-size:14px; color:var(--accent); padding-top:14px; }
-  .sku-files { display:grid; gap:6px; margin-top:6px; padding-left:40px; }
-  .sku-file-slot label { font-size:9px; }
-  .sku-file-thumb { display:flex; align-items:center; gap:4px; }
-  .sku-file-thumb img { width:28px; height:28px; border-radius:3px; object-fit:cover; border:1px solid var(--border); }
-  .sku-file-thumb span { font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70px; }
+  .sku-row { margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); }
+  .sku-header { display: grid; grid-template-columns: 50px 1fr 100px 40px; gap: 8px; align-items: end; }
+  .sku-version-num { text-align: center; font-weight: 700; font-size: 16px; color: var(--accent); padding-top: 16px; }
+  .sku-files { display: grid; gap: 8px; margin-top: 8px; padding-left: 50px; }
+  .sku-file-slot label { font-size: 10px; }
+  .sku-file-thumb { display: flex; align-items: center; gap: 4px; }
+  .sku-file-thumb img { width: 32px; height: 32px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); }
+  .sku-file-thumb span { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
 
-  .warn-box { background:#fff7e0; border:1px solid #f0b429; border-radius:5px; padding:6px 12px; font-size:11px; color:#92600a; }
-  .info-note { background:#fffbeb; border:1px solid #fcd34d; border-radius:5px; padding:6px 12px; font-size:11px; color:#78350f; margin-bottom:8px; }
+  /* Frame calc */
+  .label-size-box { background: #f0f4ff; border: 1px solid #c7d7f7; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
+  .warn-box { background: #fff7e0; border: 1px solid #f0b429; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #92600a; }
+  .info-note { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #78350f; margin-bottom: 12px; }
 
-  .save-bar { display:flex; justify-content:flex-end; gap:8px; padding-top:12px; border-top:1px solid var(--border); }
+  /* Save bar */
+  .save-bar { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--border); }
 
-  .lightbox { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; }
-  .lightbox.active { display:flex; }
-  .lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
-  .lightbox-close { position:absolute; top:18px; right:22px; background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:50%; width:32px; height:32px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  /* Lightbox */
+  .lightbox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+  .lightbox-close { position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 
-  @media (max-width:900px) {
-    .row4 { grid-template-columns:1fr 1fr; }
-    .row5 { grid-template-columns:1fr 1fr 1fr; }
-  }
-  @media (max-width:600px) {
-    .row3,.row4,.row5 { grid-template-columns:1fr; }
+  @media (max-width: 768px) {
+    .form-grid-2 { grid-template-columns: 1fr; }
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    .jt-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .file-grid { grid-template-columns: 1fr; }
   }
 `;
 
-// ─── State ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────
 let editingOrderId = null;
 let editingDbId = null;
-let artworkDataList = [];
+let artworkDataList = []; // { name, type, dataUrl, role }
 let singleFileData = { white: null, uv: null, foil: null };
 let skuList = [];
 let rushApproved = false;
 
-// ─── Init ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   populateProductTypes();
+  populateAccountManagers();
+  stampCreationDate();
+
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
   if (orderId) {
@@ -451,6 +526,78 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// Account Manager dropdown
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Creation date stamp + due date countdown
+// ─────────────────────────────────────────────────────────────
+let _creationDate = null;
+
+function stampCreationDate() {
+  const el = document.getElementById('creationDateStamp');
+  if (!el) return;
+  if (!_creationDate) _creationDate = new Date();
+  el.textContent = _creationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  updateDueDateCountdown();
+}
+
+function updateDueDateCountdown() {
+  const el = document.getElementById('dueDateCountdown');
+  if (!el) return;
+  const dueVal = document.getElementById('dueDate')?.value;
+  if (!dueVal) { el.innerHTML = ''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueVal + 'T12:00:00');
+  const diff = Math.round((due - today) / 86400000);
+  if (diff < 0) {
+    el.innerHTML = `<span style="color:var(--red);">&#9203; ${Math.abs(diff)}d OVERDUE</span>`;
+  } else if (diff === 0) {
+    el.innerHTML = `<span style="color:var(--red);">&#9203; DUE TODAY</span>`;
+  } else if (diff <= 2) {
+    el.innerHTML = `<span style="color:#d97706;">&#9203; ${diff}d left</span>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--green);">&#9203; ${diff}d left</span>`;
+  }
+}
+
+function populateAccountManagers() {
+  const sel = document.getElementById('accountManager');
+  if (!sel) return;
+  const reps = Object.entries(OPERATOR_PROFILES)
+    .filter(([, p]) => p.role === 'account-manager' || p.role === 'supervisor')
+    .sort(([a], [b]) => a.localeCompare(b));
+  // Group: supervisors first, then account managers
+  const supervisors = reps.filter(([, p]) => p.role === 'supervisor');
+  const managers = reps.filter(([, p]) => p.role === 'account-manager');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">— Select Rep —</option>';
+  if (supervisors.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'Supervisors';
+    supervisors.forEach(([name]) => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  }
+  if (managers.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'Account Managers';
+    managers.forEach(([name]) => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  }
+  if (currentVal) sel.value = currentVal;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Product type dropdown
+// ─────────────────────────────────────────────────────────────
 function populateProductTypes() {
   const sel = document.getElementById('productType');
   const facility = document.getElementById('facility').value;
@@ -464,6 +611,9 @@ function populateProductTypes() {
   if (currentVal) sel.value = currentVal;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Facility change
+// ─────────────────────────────────────────────────────────────
 function onFacilityChange() {
   populateProductTypes();
   const productType = document.getElementById('productType').value;
@@ -473,23 +623,36 @@ function onFacilityChange() {
   checkDueDate();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Auto-expand textarea
+// ─────────────────────────────────────────────────────────────
+function autoExpandNotes(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
 function updateFrameSheetLabels() {
   const facility = document.getElementById('facility').value;
   const frameWord = facility === '16th-street' ? 'Frame' : 'Sheet';
   const framesWord = facility === '16th-street' ? 'Frames' : 'Sheets';
   document.getElementById('frameSheetLabel').textContent = framesWord;
-  document.getElementById('ppsLabel').textContent = `Pcs / ${frameWord}`;
-  document.getElementById('scLabel').textContent = `${frameWord} Count`;
+  document.getElementById('ppsLabel').textContent = `Pieces per ${frameWord}`;
+  document.getElementById('scLabel').textContent = `${frameWord} Count (needed)`;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Product type change
+// ─────────────────────────────────────────────────────────────
 function onProductTypeChange() {
   const productType = document.getElementById('productType').value;
   document.getElementById('otherProductRow').style.display = productType === 'Other' ? 'block' : 'none';
   if (!productType) return;
   const info = PRODUCT_TYPES[productType];
   if (!info) return;
+
   const matSel = document.getElementById('material');
   matSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType);
+
   document.getElementById('printType').value = info.defaultPrintType || 'Sheet';
   onPrintTypeChange();
   updateLabelSizeSection();
@@ -498,12 +661,14 @@ function onProductTypeChange() {
   updateFrameSheetLabels();
   checkDueDate();
   autoDetectWorkflow();
+  // recalculate capacity hint when product type changes
+  updateCapacityHint();
 }
 
 function onPrintTypeChange() {
   const printType = document.getElementById('printType').value;
   const isRoll = printType === 'Roll';
-  document.getElementById('rollDirectionRow').style.display = isRoll ? 'grid' : 'none';
+  document.getElementById('rollDirectionRow').style.display = isRoll ? 'block' : 'none';
   const batchingOn = document.getElementById('customBatching').checked;
   document.getElementById('unitsPerRollRow').style.display = (isRoll && batchingOn) ? 'block' : 'none';
   updateLabelSizeSection();
@@ -519,26 +684,45 @@ function toggleCustomBatching() {
 }
 
 function toggleSpecialColor() {
-  const show = document.getElementById('hasSpecialColor').checked;
-  document.getElementById('specialColorField').style.display = show ? 'block' : 'none';
+  document.getElementById('specialColorField').style.display = document.getElementById('hasSpecialColor').checked ? 'block' : 'none';
 }
 
-function updateLabelSizeSection() { calcLabelFit(); }
+// ─────────────────────────────────────────────────────────────
+// Label size
+// ─────────────────────────────────────────────────────────────
+function updateLabelSizeSection() {
+  // Size fields are always visible now
+  // Auto-calc (pieces per frame) only runs for 6K label products
+  calcLabelFit();
+}
 
 function calcLabelFit() {
   const w = parseFloat(document.getElementById('labelWidth').value) || 0;
   const h = parseFloat(document.getElementById('labelHeight').value) || 0;
   const result = document.getElementById('labelFitResult');
   const warnBox = document.getElementById('labelFitWarning');
+
   if (!w || !h) { result.textContent = ''; warnBox.style.display = 'none'; return; }
+
+  // Check if this is a 6K label product (auto-calc pieces per frame)
   const facility = document.getElementById('facility').value;
   const productType = document.getElementById('productType').value;
-  const is6KLabel = facility === '16th-street' && ['Labels (Roll)','Labels (Sheet)','Stickers','Diecut Stickers'].includes(productType);
+  const is6KLabel = facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Stickers', 'Diecut Stickers'].includes(productType);
+
   if (is6KLabel) {
-    const adjW = w + 0.24, adjH = h + 0.24;
-    const acrossCount = Math.floor(12 / adjW), downCount = Math.floor(39 / adjH);
+    const adjW = w + 0.24;
+    const adjH = h + 0.24;
+    const maxW = 12;
+    const maxH = 39;
+    const acrossCount = Math.floor(maxW / adjW);
+    const downCount = Math.floor(maxH / adjH);
     const perFrame = acrossCount * downCount;
-    result.innerHTML = `${w}" × ${h}" → <strong>${acrossCount}×${downCount} = ${perFrame} pcs/frame</strong>`;
+
+    result.innerHTML = `
+      <strong>${w}" × ${h}"</strong> + 0.24" bleed → <strong>${adjW.toFixed(3)}" × ${adjH.toFixed(3)}"</strong><br>
+      Fits <strong>${acrossCount}</strong> across × <strong>${downCount}</strong> down = <strong style="color:var(--accent)">${perFrame} pieces/frame</strong>
+    `;
+
     if (perFrame > 0) {
       const ppsField = document.getElementById('piecesPerSheet');
       if (!ppsField.dataset.manualOverride) ppsField.value = perFrame;
@@ -546,6 +730,7 @@ function calcLabelFit() {
     }
     checkLabelFitMismatch(perFrame);
   } else {
+    // Non-6K products: just show the size, no auto-calc
     result.innerHTML = `<strong>${w}" × ${h}"</strong>`;
     warnBox.style.display = 'none';
   }
@@ -557,16 +742,24 @@ function checkLabelFitMismatch(expectedPerFrame) {
   if (!expectedPerFrame || !pps) { warnBox.style.display = 'none'; return; }
   if (pps !== expectedPerFrame) {
     warnBox.style.display = 'block';
-    warnBox.textContent = `⚠️ Pieces per frame is ${pps}, but auto-calc expects ${expectedPerFrame}. Verify or override manually.`;
-  } else { warnBox.style.display = 'none'; }
+    warnBox.textContent = `⚠️ Warning: Pieces per frame is ${pps}, but auto-calc expects ${expectedPerFrame}. Verify label size or override manually.`;
+  } else {
+    warnBox.style.display = 'none';
+  }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Frame / Sheet calculation (no recommended overs shown to rep)
+// ─────────────────────────────────────────────────────────────
 function calcFrames() {
   const qty = parseInt(document.getElementById('quantity').value) || 0;
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
   const needed = qty > 0 ? Math.ceil(qty / pps) : 0;
   document.getElementById('sheetCount').value = needed || '';
+
   if (needed === 0) return;
+
+  // Still calculate overs internally (stored in hidden fields for operator use later)
   const facility = document.getElementById('facility').value;
   const hasUV = document.getElementById('hasUV')?.checked || false;
   const foilType = document.getElementById('foilType')?.value || 'None';
@@ -575,27 +768,42 @@ function calcFrames() {
   const overs = calculateRecommendedOvers({ facility, productType, printType, sheetCount: needed, hasUV, foilType });
   document.getElementById('extraFrames').value = overs.extraFrames || overs.extraSheets || 0;
   document.getElementById('makeReadyFrames').value = overs.makeReady || 0;
-  calcLabelFit();
+
+  if (document.getElementById('labelSizeSection').style.display !== 'none') calcLabelFit();
   autoDetectWorkflow();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Color mode change — show/hide white layer file slot
+// ─────────────────────────────────────────────────────────────
 function onColorModeChange() {
   const isWhite = document.getElementById('colorMode').value === 'CMYK+White';
   document.getElementById('whiteFileSlot').style.display = isWhite ? 'block' : 'none';
   if (skuList.length > 0) renderSKUs();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Finishing toggles — show/hide file slots & foil options
+// ─────────────────────────────────────────────────────────────
 function onFinishingChange() {
   const hasUV = document.getElementById('hasUV').checked;
   const hasFoil = document.getElementById('hasFoil').checked;
+
+  // UV file slot
   document.getElementById('uvFileSlot').style.display = hasUV ? 'block' : 'none';
+
+  // Foil section + file slot
   document.getElementById('foilSection').style.display = hasFoil ? 'block' : 'none';
   document.getElementById('foilFileSlot').style.display = hasFoil ? 'block' : 'none';
+
   updateJetFXNote();
   calcFrames();
   if (skuList.length > 0) renderSKUs();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Due Date & Rush
+// ─────────────────────────────────────────────────────────────
 function checkDueDate() {
   const dueDate = document.getElementById('dueDate').value;
   const productType = document.getElementById('productType').value;
@@ -603,21 +811,44 @@ function checkDueDate() {
   const hint = document.getElementById('leadTimeHint');
   const warning = document.getElementById('rushWarning');
   const approvalSection = document.getElementById('rushApprovalSection');
+
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('dueDate').min = today;
+  updateCapacityHint();
+  updateDueDateCountdown();
+
   const lt = LEAD_TIMES[productType];
   hint.textContent = lt ? `Standard: ${lt.label}` : 'Standard: 3–5 business days';
+
   if (!dueDate) { warning.style.display = 'none'; approvalSection.style.display = 'none'; return; }
+
   const check = checkDueDateRush(productType, quantity, dueDate);
+
   if (check.isPast) {
-    warning.style.display = 'block'; warning.style.background = '#fde8e8'; warning.style.borderColor = 'var(--red)'; warning.style.color = '#b91c1c';
-    warning.innerHTML = '🚫 Due date cannot be in the past.'; approvalSection.style.display = 'none'; rushApproved = false; return;
+    warning.style.display = 'block';
+    warning.style.background = '#fde8e8';
+    warning.style.borderColor = 'var(--red)';
+    warning.style.color = '#b91c1c';
+    warning.innerHTML = '🚫 Due date cannot be in the past.';
+    approvalSection.style.display = 'none';
+    rushApproved = false;
+    return;
   }
+
   if (check.isRush) {
-    warning.style.display = 'block'; warning.style.background = '#fef3cd'; warning.style.borderColor = '#f59e0b'; warning.style.color = '#92600a';
-    warning.innerHTML = `⚠️ ${check.message}`; approvalSection.style.display = 'block'; rushApproved = false; return;
+    warning.style.display = 'block';
+    warning.style.background = '#fef3cd';
+    warning.style.borderColor = '#f59e0b';
+    warning.style.color = '#92600a';
+    warning.innerHTML = `⚠️ ${check.message}`;
+    approvalSection.style.display = 'block';
+    rushApproved = false;
+    return;
   }
-  warning.style.display = 'none'; approvalSection.style.display = 'none'; rushApproved = false;
+
+  warning.style.display = 'none';
+  approvalSection.style.display = 'none';
+  rushApproved = false;
 }
 
 function verifyRushCode() {
@@ -625,33 +856,131 @@ function verifyRushCode() {
   const result = document.getElementById('rushCodeResult');
   if (code.length >= 4) {
     rushApproved = true;
-    result.innerHTML = '<span style="color:var(--green);font-weight:600;">✅ Rush approved.</span>';
+    result.innerHTML = '<span style="color:var(--green);font-weight:600;">✅ Rush approved. Job will be marked as RUSH.</span>';
+    document.getElementById('rushApprovalSection').style.background = '#d4edda';
+    document.getElementById('rushApprovalSection').style.borderColor = 'var(--green)';
   } else {
-    result.innerHTML = '<span style="color:var(--red);">Invalid code.</span>';
+    result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
     rushApproved = false;
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Capacity Calendar Hint — shows machine load for selected date
+// ─────────────────────────────────────────────────────────────
+let _capacityHintTimer = null;
+async function updateCapacityHint() {
+  const hintEl = document.getElementById('capacityCalHint');
+  if (!hintEl) return;
+  const dueDate = document.getElementById('dueDate').value;
+  const productType = document.getElementById('productType').value;
+  const quantity = parseInt(document.getElementById('quantity').value) || 0;
+  if (!dueDate || !productType || !quantity) { hintEl.innerHTML = ''; return; }
+
+  // Determine primary machine from workflow template, or guess from product type
+  const workflowKey = document.getElementById('workflowTemplate').value;
+  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  let primaryMachine = tpl?.steps?.[0] || null;
+  if (!primaryMachine) {
+    // Fallback: guess machine from product type
+    const pt = productType;
+    if (['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Diecut Stickers'].includes(pt)) primaryMachine = 'HP Indigo 6K';
+    else if (['Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets'].includes(pt)) primaryMachine = 'HP Indigo 15K';
+    else if (['Vinyl Banners','Canvas Prints','Foam Board','Yard Signs','Window Graphics','Floor Graphics','Car Wraps'].includes(pt)) primaryMachine = 'Canon Colorado';
+    else { hintEl.innerHTML = ''; return; }
+  }
+  const cap = MACHINE_CAPACITY[primaryMachine];
+  if (!cap) { hintEl.innerHTML = ''; return; }
+
+  // Count active orders on this machine due on or before selected date
+  let allOrders;
+  try { allOrders = await getAllOrders(); } catch(e) { return; }
+
+  const sel = new Date(dueDate + 'T12:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const bdays = countBusinessDays(today, sel);
+
+  // Sum up sheets/units queued on primary machine
+  let queuedSheets = 0;
+  allOrders.forEach(o => {
+    if (['completed','shipped','received','cancelled'].includes(o.status)) return;
+    const steps = o.workflowSteps || [];
+    const hasMachine = steps.some(s => s.machine === primaryMachine && s.status !== 'completed');
+    if (!hasMachine) return;
+    const sheets = o.sheetCount || Math.ceil((o.quantity || 0) / (o.piecesPerSheet || 1));
+    queuedSheets += sheets;
+  });
+
+  const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || 1;
+  const totalCap = dailyCap * bdays;
+  const thisOrderSheets = parseInt(document.getElementById('sheetCount')?.value) ||
+    Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet')?.value) || 1));
+  const afterThis = queuedSheets + thisOrderSheets;
+  const pct = totalCap > 0 ? Math.round((afterThis / totalCap) * 100) : 0;
+
+  let color, icon, label;
+  if (pct < 70) { color = 'var(--green)'; icon = '🟢'; label = `${primaryMachine}: ~${pct}% loaded — looks good`; }
+  else if (pct < 100) { color = '#d97706'; icon = '🟡'; label = `${primaryMachine}: ~${pct}% loaded — tight`; }
+  else { color = 'var(--red)'; icon = '🔴'; label = `${primaryMachine}: ~${pct}% loaded — OVERBOOKED. Rush approval or push date.`; }
+
+  hintEl.innerHTML = `<span style="color:${color};font-weight:600;">${icon} ${label}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cutting options
+// ─────────────────────────────────────────────────────────────
 function updateCutMethodOptions() {
   const productType = document.getElementById('productType').value;
   const facility = document.getElementById('facility').value;
   const sel = document.getElementById('cutMethod');
   const currentVal = sel.value;
-  const is6KProduct = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers'].includes(productType);
-  const is15KProduct = ['Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets'].includes(productType);
+
+  const is6KProduct = ['Labels (Roll)', 'Labels (Sheet)', 'Pouches', 'Stickers'].includes(productType);
+  const is15KProduct = ['Folding Cartons / Boxes', 'Business Cards', 'Flyers / Postcards', 'Booklets'].includes(productType);
   const isBoyd = facility === 'boyd-street';
-  let options = [{ value:'none', label:'No Cut Required' }];
-  if (productType === 'Other') {
-    options = options.concat([{value:'gm-die',label:'GM Die Cutter w/ JetFX'},{value:'gm-laser',label:'GM Laser Cutter w/ JetFX'},{value:'die-cut',label:'Die Cut (Moll Brothers)'},{value:'guillotine',label:'Guillotine'},{value:'duplo',label:'Duplo Flatbed'},{value:'graphtec-large',label:'Graphtec Flatbed (Boyd)'},{value:'graphtec-vinyl',label:'Graphtec Vinyl Cutter'}]);
+  const isOther = productType === 'Other';
+
+  let options = [{ value: 'none', label: 'No Cut Required' }];
+
+  if (isOther) {
+    options = options.concat([
+      { value: 'gm-die', label: 'GM Die Cutter w/ JetFX' },
+      { value: 'gm-laser', label: 'GM Laser Cutter w/ JetFX' },
+      { value: 'die-cut', label: 'Die Cut (Moll Brothers)' },
+      { value: 'guillotine', label: 'Guillotine' },
+      { value: 'duplo', label: 'Duplo Flatbed' },
+      { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+      { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
+    ]);
   } else if (isBoyd) {
-    options = options.concat([{value:'graphtec-large',label:'Graphtec Flatbed (Boyd)'},{value:'graphtec-vinyl',label:'Graphtec Vinyl Cutter'}]);
+    options = options.concat([
+      { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+      { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
+    ]);
   } else if (is6KProduct) {
-    options = options.concat([{value:'gm-die',label:'GM Die Cutter w/ JetFX'},{value:'gm-laser',label:'GM Laser Cutter w/ JetFX'}]);
+    options = options.concat([
+      { value: 'gm-die', label: 'GM Die Cutter w/ JetFX' },
+      { value: 'gm-laser', label: 'GM Laser Cutter w/ JetFX' },
+    ]);
   } else if (is15KProduct) {
-    options = options.concat([{value:'die-cut',label:'Die Cut (Moll Brothers)'},{value:'guillotine',label:'Guillotine'},{value:'duplo',label:'Duplo Flatbed'},{value:'graphtec-large',label:'Graphtec Flatbed (Boyd)'}]);
+    options = options.concat([
+      { value: 'die-cut', label: 'Die Cut (Moll Brothers)' },
+      { value: 'guillotine', label: 'Guillotine' },
+      { value: 'duplo', label: 'Duplo Flatbed' },
+      { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+    ]);
   } else {
-    options = options.concat([{value:'gm-die',label:'GM Die Cutter w/ JetFX'},{value:'gm-laser',label:'GM Laser Cutter w/ JetFX'},{value:'die-cut',label:'Die Cut (Moll Brothers)'},{value:'guillotine',label:'Guillotine'},{value:'duplo',label:'Duplo Flatbed'},{value:'graphtec-large',label:'Graphtec Flatbed (Boyd)'},{value:'graphtec-vinyl',label:'Graphtec Vinyl Cutter'}]);
+    options = options.concat([
+      { value: 'gm-die', label: 'GM Die Cutter w/ JetFX' },
+      { value: 'gm-laser', label: 'GM Laser Cutter w/ JetFX' },
+      { value: 'die-cut', label: 'Die Cut (Moll Brothers)' },
+      { value: 'guillotine', label: 'Guillotine' },
+      { value: 'duplo', label: 'Duplo Flatbed' },
+      { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+      { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
+    ]);
   }
+
   sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
   if (currentVal && options.some(o => o.value === currentVal)) sel.value = currentVal;
   onCutMethodChange();
@@ -659,7 +988,7 @@ function updateCutMethodOptions() {
 
 function onCutMethodChange() {
   const cutMethod = document.getElementById('cutMethod').value;
-  const requiresDie = ['die-cut','gm-die'].includes(cutMethod);
+  const requiresDie = ['die-cut', 'gm-die'].includes(cutMethod);
   document.getElementById('dieStatusRow').style.display = requiresDie ? 'block' : 'none';
   onDieStatusChange();
   autoDetectWorkflow();
@@ -668,23 +997,33 @@ function onCutMethodChange() {
 function onDieStatusChange() {
   const cutMethod = document.getElementById('cutMethod').value;
   const dieStatus = document.getElementById('dieStatus').value;
-  const requiresDie = ['die-cut','gm-die'].includes(cutMethod);
+  const requiresDie = ['die-cut', 'gm-die'].includes(cutMethod);
   document.getElementById('dieBarcodeRow').style.display = (requiresDie && dieStatus === 'existing') ? 'block' : 'none';
   autoDetectWorkflow();
 }
 
 function updateJetFXNote() {
   const productType = document.getElementById('productType').value;
+  const hasUV = document.getElementById('hasUV')?.checked || false;
+  const hasFoil = document.getElementById('hasFoil')?.checked || false;
   const cutMethod = document.getElementById('cutMethod')?.value || '';
+  const is6K = ['Labels (Roll)', 'Labels (Sheet)', 'Pouches', 'Diecut Stickers'].includes(productType);
   const hintsDiv = document.getElementById('productionHints');
   const hints = [];
-  if (productType === 'Pouches') hints.push({ icon:'📋', title:'Pouch Production', text:'Cosmetic Web only. 6K Print → GM Cut/Finish → Karlville Poucher.' });
-  if (cutMethod === 'gm-die' || cutMethod === 'die-cut') hints.push({ icon:'🎯', title:'Die Required', text:'Operator must scan die barcode before the cutting step.' });
+
+  // JetFX, Foil Process, UV+Foil hints removed — operator-only info
+  // Scodix two-pass hint removed — operator-only info
+  if (productType === 'Pouches') hints.push({ icon: '📋', title: 'Pouch Production', text: 'Cosmetic Web only. Process: 6K Print → GM Cut/Finish → Karlville Poucher.' });
+  if (cutMethod === 'gm-die' || cutMethod === 'die-cut') hints.push({ icon: '🎯', title: 'Die Required', text: 'Operator must scan die barcode before starting the cutting step.' });
+
   if (hints.length === 0) { hintsDiv.style.display = 'none'; return; }
   hintsDiv.style.display = 'block';
-  hintsDiv.innerHTML = hints.map(h => `<div class="info-note">${h.icon} <strong>${h.title}:</strong> ${h.text}</div>`).join('');
+  hintsDiv.innerHTML = hints.map(h => `<div class="info-note" style="margin-bottom:6px;">${h.icon} <strong>${h.title}:</strong> ${h.text}</div>`).join('');
 }
 
+// ─────────────────────────────────────────────────────────────
+// Workflow auto-detection (internal — not shown to rep)
+// ─────────────────────────────────────────────────────────────
 function autoDetectWorkflow() {
   const productType = document.getElementById('productType').value;
   const cutMethod = document.getElementById('cutMethod').value;
@@ -692,107 +1031,222 @@ function autoDetectWorkflow() {
   const printType = document.getElementById('printType').value;
   const sheetCount = parseInt(document.getElementById('sheetCount').value) || 0;
   const material = document.getElementById('material').value;
+
   let detectedKey = '';
-  if (productType === 'Other') { document.getElementById('workflowTemplate').value = ''; return; }
+
+  if (productType === 'Other') {
+    document.getElementById('workflowTemplate').value = '';
+    return;
+  }
+
   if (facility === 'boyd-street') {
-    detectedKey = (material && material.toLowerCase().includes('matte')) ? 'boyd-vinyl-matte' : 'boyd-sheet';
+    if (printType === 'Roll') {
+      detectedKey = (material && material.toLowerCase().includes('matte')) ? 'boyd-vinyl-matte' : 'boyd-vinyl-gloss';
+    } else {
+      detectedKey = (material && material.toLowerCase().includes('matte')) ? 'boyd-sheet-matte' : 'boyd-sheet';
+    }
   } else if (productType === 'Pouches') {
     detectedKey = cutMethod === 'gm-die' ? '6k-pouches-die' : '6k-pouches-laser';
-  } else if (['Labels (Roll)','Labels (Sheet)','Stickers'].includes(productType)) {
+  } else if (['Labels (Roll)', 'Labels (Sheet)', 'Stickers'].includes(productType)) {
     detectedKey = cutMethod === 'gm-die' ? '6k-labels-die' : '6k-labels-laser';
   } else if (productType === 'Folding Cartons / Boxes') {
     if (cutMethod === 'die-cut') detectedKey = '15k-box-die';
     else if (cutMethod === 'duplo') detectedKey = '15k-box-duplo';
-    else detectedKey = sheetCount <= 200 ? '15k-box-duplo' : '15k-box-die';
-  } else if (['Business Cards','Flyers / Postcards'].includes(productType)) {
+    else if (cutMethod === 'graphtec-large') detectedKey = '15k-box-boyd';
+    else detectedKey = sheetCount > 0 && sheetCount <= 200 ? '15k-box-duplo' : '15k-box-die';
+  } else if (['Business Cards', 'Flyers / Postcards'].includes(productType)) {
     detectedKey = cutMethod === 'guillotine' ? '15k-flat-guillotine' : '15k-flat-die';
   } else if (productType === 'Booklets') {
     detectedKey = '15k-booklet';
   }
+
   document.getElementById('workflowTemplate').value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
+  // update capacity hint now that workflow is known
+  updateCapacityHint();
 }
 
-// ─── SKU Management ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// SKU / Version Management
+// ─────────────────────────────────────────────────────────────
 function addSKU() {
+  // First SKU added: transition from single to multi mode
   if (skuList.length === 0) {
+    // Grab current single-SKU values as the first SKU
     const qty = parseInt(document.getElementById('quantity').value) || 0;
-    skuList.push({ name:'', quantity:qty, artworkDataUrl:null, artworkName:'', whiteDataUrl:null, whiteName:'', uvDataUrl:null, uvName:'', foilDataUrl:null, foilName:'' });
+    skuList.push({
+      name: '',
+      quantity: qty,
+      artworkDataUrl: null, artworkName: '',
+      whiteDataUrl: null, whiteName: '',
+      uvDataUrl: null, uvName: '',
+      foilDataUrl: null, foilName: '',
+    });
   }
-  skuList.push({ name:'', quantity:0, artworkDataUrl:null, artworkName:'', whiteDataUrl:null, whiteName:'', uvDataUrl:null, uvName:'', foilDataUrl:null, foilName:'' });
-  showMultiSkuMode(); renderSKUs();
+  // Add new empty SKU
+  skuList.push({
+    name: '', quantity: 0,
+    artworkDataUrl: null, artworkName: '',
+    whiteDataUrl: null, whiteName: '',
+    uvDataUrl: null, uvName: '',
+    foilDataUrl: null, foilName: '',
+  });
+  showMultiSkuMode();
+  renderSKUs();
 }
 
 function removeSKU(idx) {
   skuList.splice(idx, 1);
   if (skuList.length <= 1) {
-    if (skuList.length === 1) { document.getElementById('quantity').value = skuList[0].quantity || ''; calcFrames(); }
-    skuList = []; showSingleSkuMode();
-  } else { renderSKUs(); }
+    // Back to single mode
+    if (skuList.length === 1) {
+      document.getElementById('quantity').value = skuList[0].quantity || '';
+      calcFrames();
+    }
+    skuList = [];
+    showSingleSkuMode();
+  } else {
+    renderSKUs();
+  }
 }
 
-function showMultiSkuMode() { document.getElementById('singleSkuSection').style.display = 'none'; document.getElementById('multiSkuSection').style.display = 'block'; }
-function showSingleSkuMode() { document.getElementById('singleSkuSection').style.display = 'block'; document.getElementById('multiSkuSection').style.display = 'none'; document.getElementById('skuSummary').style.display = 'none'; }
+function showMultiSkuMode() {
+  document.getElementById('singleSkuSection').style.display = 'none';
+  document.getElementById('multiSkuSection').style.display = 'block';
+}
 
-function updateSKU(idx, field, value) { skuList[idx][field] = field === 'quantity' ? (parseInt(value) || 0) : value; updateSKUSummary(); }
+function showSingleSkuMode() {
+  document.getElementById('singleSkuSection').style.display = 'block';
+  document.getElementById('multiSkuSection').style.display = 'none';
+  document.getElementById('skuSummary').style.display = 'none';
+}
+
+function updateSKU(idx, field, value) {
+  skuList[idx][field] = field === 'quantity' ? (parseInt(value) || 0) : value;
+  updateSKUSummary();
+}
 
 function handleSKUFile(idx, type, input) {
-  const file = input.files[0]; if (!file) return;
+  const file = input.files[0];
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => { skuList[idx][type+'DataUrl'] = e.target.result; skuList[idx][type+'Name'] = file.name; renderSKUs(); };
+  reader.onload = (e) => {
+    skuList[idx][type + 'DataUrl'] = e.target.result;
+    skuList[idx][type + 'Name'] = file.name;
+    renderSKUs();
+  };
   reader.readAsDataURL(file);
 }
 
 function renderSKUs() {
   const container = document.getElementById('skuList');
   if (skuList.length === 0) { container.innerHTML = ''; return; }
+
   const hasWhite = document.getElementById('colorMode')?.value === 'CMYK+White';
   const hasUV = document.getElementById('hasUV')?.checked || false;
   const hasFoil = document.getElementById('hasFoil')?.checked || false;
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
   const facility = document.getElementById('facility').value;
   const fw = facility === '16th-street' ? 'frames' : 'sheets';
-  let fileCols = 1;
-  if (hasWhite) fileCols++; if (hasUV) fileCols++; if (hasFoil) fileCols++;
-  const thumbHTML = (url, name) => url ? `<div class="sku-file-thumb"><img src="${url}" alt="${name}"><span>${name}</span></div>` : '';
+
+  // Count file columns for grid
+  let fileCols = 1; // always main artwork
+  if (hasWhite) fileCols++;
+  if (hasUV) fileCols++;
+  if (hasFoil) fileCols++;
+
   container.innerHTML = skuList.map((sku, i) => {
+    const thumbHTML = (url, name) => url
+      ? `<div class="sku-file-thumb"><img src="${url}" alt="${name}"><span>${name}</span></div>`
+      : '';
+
     const frameCount = sku.quantity > 0 ? Math.ceil(sku.quantity / pps) : 0;
-    return `<div class="sku-row">
+
+    return `
+    <div class="sku-row">
       <div class="sku-header">
-        <div class="sku-version-num">V${i+1}</div>
-        <div class="field"><label>SKU / Version</label><input type="text" value="${sku.name}" placeholder="e.g. Strawberry" onchange="updateSKU(${i},'name',this.value)"></div>
-        <div class="field"><label>Qty</label><input type="number" value="${sku.quantity||''}" min="0" style="text-align:center;" onchange="updateSKU(${i},'quantity',this.value)">${frameCount>0?`<div style="font-size:9px;color:var(--text-muted);text-align:center;">${frameCount} ${fw}</div>`:''}</div>
-        <div><button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" style="padding:5px 7px;">✕</button></div>
+        <div class="sku-version-num">V${i + 1}</div>
+        <div class="field">
+          <label>SKU / Version Name</label>
+          <input type="text" value="${sku.name}" placeholder="e.g. Strawberry, Version A" onchange="updateSKU(${i},'name',this.value)">
+        </div>
+        <div class="field">
+          <label>Qty</label>
+          <input type="number" value="${sku.quantity || ''}" min="0" placeholder="0" style="text-align:center;" onchange="updateSKU(${i},'quantity',this.value)">
+          ${frameCount > 0 ? `<div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:2px;">${frameCount} ${fw}</div>` : ''}
+        </div>
+        <div><button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" style="padding:6px 8px;">✕</button></div>
       </div>
-      <div class="sku-files" style="grid-template-columns:repeat(${fileCols},1fr);">
-        <div class="sku-file-slot"><label>🎨 Main</label>${sku.artworkDataUrl?thumbHTML(sku.artworkDataUrl,sku.artworkName):`<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'artwork',this)" style="font-size:10px;">`}</div>
-        ${hasWhite?`<div class="sku-file-slot"><label>⬜ White</label>${sku.whiteDataUrl?thumbHTML(sku.whiteDataUrl,sku.whiteName):`<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'white',this)" style="font-size:10px;">`}</div>`:''}
-        ${hasUV?`<div class="sku-file-slot"><label>☀️ UV</label>${sku.uvDataUrl?thumbHTML(sku.uvDataUrl,sku.uvName):`<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'uv',this)" style="font-size:10px;">`}</div>`:''}
-        ${hasFoil?`<div class="sku-file-slot"><label>✨ Foil</label>${sku.foilDataUrl?thumbHTML(sku.foilDataUrl,sku.foilName):`<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'foil',this)" style="font-size:10px;">`}</div>`:''}
-      </div></div>`;
+      <div class="sku-files" style="grid-template-columns:repeat(${fileCols}, 1fr);">
+        <div class="sku-file-slot">
+          <label>🎨 Main Artwork</label>
+          ${sku.artworkDataUrl
+            ? thumbHTML(sku.artworkDataUrl, sku.artworkName)
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'artwork',this)" style="font-size:10px;">`
+          }
+        </div>
+        ${hasWhite ? `<div class="sku-file-slot">
+          <label>⬜ White Layer</label>
+          ${sku.whiteDataUrl
+            ? thumbHTML(sku.whiteDataUrl, sku.whiteName)
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'white',this)" style="font-size:10px;">`
+          }
+        </div>` : ''}
+        ${hasUV ? `<div class="sku-file-slot">
+          <label>☀️ UV File</label>
+          ${sku.uvDataUrl
+            ? thumbHTML(sku.uvDataUrl, sku.uvName)
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'uv',this)" style="font-size:10px;">`
+          }
+        </div>` : ''}
+        ${hasFoil ? `<div class="sku-file-slot">
+          <label>✨ Foil File</label>
+          ${sku.foilDataUrl
+            ? thumbHTML(sku.foilDataUrl, sku.foilName)
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'foil',this)" style="font-size:10px;">`
+          }
+        </div>` : ''}
+      </div>
+    </div>`;
   }).join('');
+
   updateSKUSummary();
 }
 
 function updateSKUSummary() {
   const summary = document.getElementById('skuSummary');
   if (skuList.length === 0) { summary.style.display = 'none'; return; }
-  const totalQty = skuList.reduce((s, sku) => s + (sku.quantity || 0), 0);
+
+  const totalSkuQty = skuList.reduce((s, sku) => s + (sku.quantity || 0), 0);
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
-  const totalFrames = Math.ceil(totalQty / pps);
+  const totalFrames = Math.ceil(totalSkuQty / pps);
   const facility = document.getElementById('facility').value;
   const fw = facility === '16th-street' ? 'frames' : 'sheets';
-  document.getElementById('quantity').value = totalQty;
+
+  // Sync total quantity to the hidden field for the rest of the system
+  document.getElementById('quantity').value = totalSkuQty;
   document.getElementById('sheetCount').value = totalFrames;
+  // Recalc overs internally
   calcFrames();
+
   summary.style.display = 'block';
-  summary.innerHTML = `<strong>${skuList.length} versions</strong> | Total: <strong style="color:var(--accent);">${totalQty.toLocaleString()} pcs</strong> | <strong>${totalFrames.toLocaleString()} ${fw}</strong>`;
+  summary.innerHTML = `
+    <strong>${skuList.length} version${skuList.length > 1 ? 's' : ''}</strong> |
+    Total: <strong style="color:var(--accent);">${totalSkuQty.toLocaleString()} pcs</strong> |
+    <strong>${totalFrames.toLocaleString()} ${fw}</strong>
+  `;
 }
 
-// ─── Artwork / File uploads ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Artwork — main files (single SKU mode)
+// ─────────────────────────────────────────────────────────────
 function handleArtworkUpload(input) {
-  Array.from(input.files).forEach(file => {
+  const files = Array.from(input.files);
+  files.forEach(file => {
     const reader = new FileReader();
-    reader.onload = (e) => { artworkDataList.push({ name:file.name, type:file.type, dataUrl:e.target.result, role:'main' }); renderArtworkThumbs(); };
+    reader.onload = (e) => {
+      artworkDataList.push({ name: file.name, type: file.type, dataUrl: e.target.result, role: 'main' });
+      renderArtworkThumbs();
+    };
     reader.readAsDataURL(file);
   });
   input.value = '';
@@ -802,22 +1256,41 @@ function renderArtworkThumbs() {
   const container = document.getElementById('artworkThumbnails');
   container.innerHTML = artworkDataList.filter(a => a.role === 'main').map((art, idx) => {
     const isImage = art.type && art.type.startsWith('image/');
-    return `<div class="artwork-thumb">${isImage?`<img src="${art.dataUrl}" alt="${art.name}" onclick="openLightbox('${art.dataUrl}')">`:`<div class="artwork-pdf" onclick="openLightbox('${art.dataUrl}')">📄</div>`}<div class="thumb-name" title="${art.name}">${art.name}</div><button type="button" class="remove-thumb" onclick="removeArtwork(${idx})">✕</button></div>`;
+    return `
+      <div class="artwork-thumb">
+        ${isImage
+          ? `<img src="${art.dataUrl}" alt="${art.name}" onclick="openLightbox('${art.dataUrl}')">`
+          : `<div class="artwork-pdf" onclick="openLightbox('${art.dataUrl}')">📄</div>`
+        }
+        <div class="thumb-name" title="${art.name}">${art.name}</div>
+        <button type="button" class="remove-thumb" onclick="removeArtwork(${idx})" title="Remove">✕</button>
+      </div>
+    `;
   }).join('');
 }
 
 function removeArtwork(idx) {
   const mainOnly = artworkDataList.filter(a => a.role === 'main');
   const removed = mainOnly[idx];
-  if (removed) artworkDataList = artworkDataList.filter(a => a !== removed);
+  if (removed) {
+    artworkDataList = artworkDataList.filter(a => a !== removed);
+  }
   renderArtworkThumbs();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Single file uploads (white layer, UV, foil) — single SKU mode
+// ─────────────────────────────────────────────────────────────
 function handleSingleFileUpload(inputId, previewId, role) {
   const input = document.getElementById(inputId);
-  const file = input.files[0]; if (!file) return;
+  const file = input.files[0];
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => { const data = { name:file.name, type:file.type, dataUrl:e.target.result, role }; singleFileData[role] = data; renderInlinePreview(previewId, data, role); };
+  reader.onload = (e) => {
+    const data = { name: file.name, type: file.type, dataUrl: e.target.result, role };
+    singleFileData[role] = data;
+    renderInlinePreview(previewId, data, role);
+  };
   reader.readAsDataURL(file);
 }
 
@@ -825,58 +1298,158 @@ function renderInlinePreview(previewId, data, role) {
   const container = document.getElementById(previewId);
   if (!data) { container.innerHTML = ''; return; }
   const isImage = data.type && data.type.startsWith('image/');
-  container.innerHTML = `<div class="inline-preview-thumb">${isImage?`<img src="${data.dataUrl}" alt="${data.name}" onclick="openLightbox('${data.dataUrl}')">`:`<div class="pdf-icon">📄</div>`}<div class="thumb-label" title="${data.name}">${data.name}</div><button type="button" class="remove-inline" onclick="clearSingleFile('${role}','${previewId}')">✕</button></div>`;
+  container.innerHTML = `
+    <div class="inline-preview-thumb">
+      ${isImage
+        ? `<img src="${data.dataUrl}" alt="${data.name}" onclick="openLightbox('${data.dataUrl}')">`
+        : `<div class="pdf-icon">📄</div>`
+      }
+      <div class="thumb-label" title="${data.name}">${data.name}</div>
+      <button type="button" class="remove-inline" onclick="clearSingleFile('${role}', '${previewId}')" title="Remove">✕</button>
+    </div>
+  `;
 }
 
-function clearSingleFile(role, previewId) { singleFileData[role] = null; document.getElementById(previewId).innerHTML = ''; }
+function clearSingleFile(role, previewId) {
+  singleFileData[role] = null;
+  document.getElementById(previewId).innerHTML = '';
+}
 
-function openLightbox(dataUrl) { if (!dataUrl || !dataUrl.startsWith('data:image')) return; document.getElementById('lightboxImg').src = dataUrl; document.getElementById('lightbox').classList.add('active'); }
-function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+// ─────────────────────────────────────────────────────────────
+// Lightbox
+// ─────────────────────────────────────────────────────────────
+function openLightbox(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:image')) return;
+  document.getElementById('lightboxImg').src = dataUrl;
+  document.getElementById('lightbox').classList.add('active');
+}
 
-// ─── Save Ticket ───────────────────────────────────────────────────────────
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Save Ticket
+// ─────────────────────────────────────────────────────────────
 async function saveTicket() {
   const customerName = document.getElementById('customerName').value.trim();
   const productType = document.getElementById('productType').value;
   const facility = document.getElementById('facility').value;
   const quantity = parseInt(document.getElementById('quantity').value) || 0;
+
   if (!facility) { alert('Please select a Facility.'); return; }
   if (!customerName) { alert('Please enter a Customer Name.'); return; }
   if (!productType) { alert('Please select a Product Type.'); return; }
   if (!quantity) { alert('Please enter Quantity.'); return; }
-  if (skuList.length === 0 && artworkDataList.filter(a => a.role === 'main').length === 0) { alert('📎 Please upload at least one artwork file.'); return; }
+
+  // Artwork check
+  if (skuList.length === 0) {
+    const mainArtFiles = artworkDataList.filter(a => a.role === 'main');
+    if (mainArtFiles.length === 0) {
+      alert('📎 Please upload at least one artwork file before saving.');
+      return;
+    }
+  }
+
+  // Due date validation
   const dueDate = document.getElementById('dueDate').value;
   if (!dueDate) { alert('Please set a Due Date.'); return; }
   const dueDateCheck = checkDueDateRush(productType, quantity, dueDate);
   if (dueDateCheck.isPast) { alert('❌ Due date cannot be in the past.'); return; }
-  if (dueDateCheck.isRush && !rushApproved) { alert('🚨 Rush order requires supervisor approval.'); document.getElementById('rushApprovalSection').scrollIntoView({ behavior:'smooth' }); return; }
-  if (productType === 'Other' && !document.getElementById('otherProductDesc').value.trim()) { alert('Please describe the product type.'); return; }
+  if (dueDateCheck.isRush && !rushApproved) {
+    alert('🚨 This is a rush order. You must get supervisor approval before saving.\n\nEnter the supervisor code in the Rush Approval section.');
+    document.getElementById('rushApprovalSection').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  if (productType === 'Other') {
+    const desc = document.getElementById('otherProductDesc').value.trim();
+    if (!desc) { alert('Please describe the product type.'); return; }
+  }
 
   const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving...';
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
 
   try {
     const workflowKey = document.getElementById('workflowTemplate').value;
     const workflowTpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
-    const workflowSteps = workflowTpl ? workflowTpl.steps.map((machine, i) => ({ id:generateStepId(), machine, operation:(MACHINES[machine]?.operations?.[0])||'Processing', status:'pending', assignedTo:null, startedAt:null, completedAt:null, unitsLost:0, notes:'', stepIndex:i })) : [];
 
+    const workflowSteps = workflowTpl ? workflowTpl.steps.map((machine, i) => ({
+      id: generateStepId(),
+      machine,
+      operation: (MACHINES[machine]?.operations?.[0]) || 'Processing',
+      status: 'pending',
+      assignedTo: null,
+      startedAt: null,
+      completedAt: null,
+      unitsLost: 0,
+      notes: '',
+      stepIndex: i
+    })) : [];
+
+    // Production Capacity Check
     let capOrder = {};
     if (workflowSteps.length > 0 && !editingDbId) {
-      capOrder = { quantity, sheetCount:parseInt(document.getElementById('sheetCount').value)||0, piecesPerSheet:parseInt(document.getElementById('piecesPerSheet').value)||1, hasWhiteLayer:document.getElementById('colorMode')?.value==='CMYK+White', hasUV:document.getElementById('hasUV')?.checked||false, foilType:document.getElementById('hasFoil')?.checked?(document.getElementById('foilType')?.value||'Gold'):'None', dueDate, productType };
+      capOrder = {
+        quantity,
+        sheetCount: parseInt(document.getElementById('sheetCount').value) || 0,
+        piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
+        hasWhiteLayer: document.getElementById('colorMode')?.value === 'CMYK+White',
+        hasUV: document.getElementById('hasUV')?.checked || false,
+        foilType: document.getElementById('hasFoil')?.checked ? (document.getElementById('foilType')?.value || 'Gold') : 'None',
+        dueDate,
+        productType,
+      };
       const capacity = await checkProductionCapacity(capOrder, workflowSteps);
+
       if (!capacity.fits) {
-        btn.disabled = false; btn.textContent = '💾 Save Job Ticket';
-        alert(`⚠️ CAPACITY WARNING\n\nCannot complete by due date.\nBottleneck: ${capacity.bottleneckMachine} — ${capacity.bottleneckDays} days needed.\n\n${capacity.suggestedAction}\n\nTicket will save as "Pending Confirmation".`);
+        btn.disabled = false;
+        btn.textContent = '💾 Save Job Ticket';
+
+        const detailLines = capacity.machineDetails.map(m => {
+          const icon = m.fits ? '✅' : '🔴';
+          return `${icon} ${m.machine}: ${m.queuedJobs} jobs queued (${m.queueHours}hr) + this order (${m.orderHours}hr) = ${m.daysNeeded} days needed`;
+        }).join('\n');
+
+        const msg = `⚠️ PRODUCTION CAPACITY WARNING\n\n` +
+          `This order cannot be completed by the due date with the current workload.\n\n` +
+          `Available work days: ${capacity.availableWorkDays}\n` +
+          `Bottleneck: ${capacity.bottleneckMachine} — needs ${capacity.bottleneckDays} days\n\n` +
+          `Machine breakdown:\n${detailLines}\n\n` +
+          `${capacity.suggestedAction}\n\n` +
+          `Job ticket will be saved with status "Pending Confirmation" — needs supervisor approval.`;
+
+        alert(msg);
         capOrder._capacityOverride = true;
+        capOrder._capacityDetails = capacity;
       }
     }
 
+    // Material Availability Check
     const materialVal = document.getElementById('material')?.value;
     if (materialVal && !editingDbId) {
-      const matCheck = await checkMaterialForOrder({ material:materialVal, facility, quantity, sheetCount:parseInt(document.getElementById('sheetCount').value)||0, piecesPerSheet:parseInt(document.getElementById('piecesPerSheet').value)||1, printType:document.getElementById('printType')?.value||'Sheet' });
-      if (matCheck.warnings.filter(w => w.level === 'critical').length > 0) {
-        const msg = matCheck.warnings.filter(w=>w.level==='critical').map(w=>w.message+'\n'+(w.details||'')).join('\n\n');
-        alert(`🔴 MATERIAL SHORTAGE\n\n${msg}\n\nTicket will save as "Pending Confirmation".`);
-        capOrder._materialShortage = true;
+      const matCheck = await checkMaterialForOrder({
+        material: materialVal,
+        facility,
+        quantity,
+        sheetCount: parseInt(document.getElementById('sheetCount').value) || Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet').value) || 1)),
+        piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
+        printType: document.getElementById('printType')?.value || 'Sheet',
+      });
+
+      if (matCheck.warnings.length > 0) {
+        const critical = matCheck.warnings.filter(w => w.level === 'critical');
+        const others = matCheck.warnings.filter(w => w.level !== 'critical');
+        if (critical.length > 0) {
+          const msg = critical.map(w => w.message + '\n' + (w.details || '')).join('\n\n');
+          // Always save — just flag it. No blocking prompt.
+          alert(`🔴 MATERIAL SHORTAGE\n\n${msg}\n\nJob ticket will be saved with status "Pending Confirmation" — needs approval from supervisor before production.`);
+          capOrder._materialShortage = true;
+          capOrder._materialShortageDetails = matCheck.availability;
+        } else if (others.length > 0) {
+          alert(others.map(w => w.message).join('\n\n'));
+        }
       }
     }
 
@@ -884,107 +1457,179 @@ async function saveTicket() {
     const hasFoil = document.getElementById('hasFoil').checked;
     const customBatching = document.getElementById('customBatching').checked;
     const printType = document.getElementById('printType').value;
+
+    // Collect all artwork files (single mode + layer files)
     const allArtwork = [...artworkDataList];
     if (singleFileData.white) allArtwork.push(singleFileData.white);
     if (singleFileData.uv) allArtwork.push(singleFileData.uv);
     if (singleFileData.foil) allArtwork.push(singleFileData.foil);
 
     const order = {
-      orderId: document.getElementById('jobTicketNumber').value.trim() || null,
-      customer: customerName, customerName,
+      orderId: document.getElementById('jobTicketNumber').value.trim() || null, // will auto-generate if null
+      customer: customerName,
+      customerName,
       accountManager: document.getElementById('accountManager').value.trim(),
       jobDescription: document.getElementById('jobDescription').value.trim(),
-      productType, otherProductDesc: productType === 'Other' ? document.getElementById('otherProductDesc').value.trim() : '',
-      facility, material: document.getElementById('material').value,
-      quantity, piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value)||1,
-      sheetCount: parseInt(document.getElementById('sheetCount').value)||0,
-      extraFrames: parseInt(document.getElementById('extraFrames').value)||0,
-      makeReadyFrames: parseInt(document.getElementById('makeReadyFrames').value)||0,
-      framesWasted: 0, printType,
+      productType,
+      otherProductDesc: productType === 'Other' ? document.getElementById('otherProductDesc').value.trim() : '',
+      facility,
+      material: document.getElementById('material').value,
+      quantity,
+      piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
+      sheetCount: parseInt(document.getElementById('sheetCount').value) || 0,
+      extraFrames: parseInt(document.getElementById('extraFrames').value) || 0,
+      makeReadyFrames: parseInt(document.getElementById('makeReadyFrames').value) || 0,
+      framesWasted: 0,
+      printType,
       sides: document.getElementById('sides').value,
-      colorMode, colors: colorMode, hasWhiteLayer: colorMode === 'CMYK+White',
+      colorMode,
+      colors: colorMode,
+      hasWhiteLayer: colorMode === 'CMYK+White',
       hasSpecialColor: document.getElementById('hasSpecialColor').checked,
       specialColorDetails: document.getElementById('hasSpecialColor').checked ? document.getElementById('specialColorDetails').value.trim() : '',
       lamination: document.getElementById('lamination').value,
       hasUV: document.getElementById('hasUV').checked,
-      hasFoil, foilType: hasFoil ? document.getElementById('foilType').value : 'None',
+      hasFoil,
+      foilType: hasFoil ? document.getElementById('foilType').value : 'None',
       foilNotes: hasFoil ? document.getElementById('foilNotes').value.trim() : '',
       finishingNotes: document.getElementById('finishingNotes').value.trim(),
       cutMethod: document.getElementById('cutMethod').value,
       dieStatus: document.getElementById('dieStatus').value,
       dieName: document.getElementById('dieName').value.trim(),
-      labelWidth: document.getElementById('labelWidth').value||'',
-      labelHeight: document.getElementById('labelHeight').value||'',
+      labelWidth: document.getElementById('labelWidth').value || '',
+      labelHeight: document.getElementById('labelHeight').value || '',
       rollDirection: document.getElementById('rollDirection').value,
       customBatching,
-      unitsPerRoll: customBatching && printType === 'Roll' ? (parseInt(document.getElementById('unitsPerRoll').value)||null) : null,
+      unitsPerRoll: customBatching && printType === 'Roll' ? (parseInt(document.getElementById('unitsPerRoll').value) || null) : null,
       packagingInstructions: customBatching ? document.getElementById('packagingInstructions').value.trim() : '',
-      dueDate, specialNotes: document.getElementById('specialNotes').value.trim(),
-      workflowTemplate: workflowKey, workflowSteps, currentStep: 0,
-      status: (capOrder?._materialShortage || capOrder?._capacityOverride) ? 'pending-confirmation' : dueDateCheck.isRush ? 'on-hold' : 'new',
+      dueDate,
+      specialNotes: document.getElementById('specialNotes').value.trim(),
+      workflowTemplate: workflowKey,
+      workflowSteps,
+      currentStep: 0,
+      status: (capOrder?._materialShortage || capOrder?._capacityOverride) ? 'pending-confirmation'
+        : dueDateCheck.isRush ? 'on-hold'
+        : 'new',
       isRush: dueDateCheck.isRush || false,
       rushApprovedBy: rushApproved ? 'Supervisor' : null,
       capacityOverride: capOrder?._capacityOverride || false,
       materialShortage: capOrder?._materialShortage || false,
       needsConfirmation: !!(capOrder?._materialShortage || capOrder?._capacityOverride),
-      confirmationReason: capOrder?._materialShortage ? 'Material shortage' : capOrder?._capacityOverride ? 'Capacity overload' : '',
+      confirmationReason: capOrder?._materialShortage ? 'Material shortage — needs supervisor confirmation'
+        : capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
+        : '',
       holdReason: dueDateCheck.isRush ? 'Rush order — approved by supervisor' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
-      whiteLayerFile: singleFileData.white, uvFile: singleFileData.uv, foilFile: singleFileData.foil,
-      skus: skuList.length > 0 ? skuList : null, skuCount: skuList.length || 0,
+      whiteLayerFile: singleFileData.white,
+      uvFile: singleFileData.uv,
+      foilFile: singleFileData.foil,
+      skus: skuList.length > 0 ? skuList : null,
+      skuCount: skuList.length || 0,
     };
 
     if (editingDbId) {
       await updateOrder(editingDbId, order);
-      await addActivity({ orderId: editingOrderId, type:'edit', message:'Job ticket edited', by: order.accountManager||'User' });
+      await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
       if (!order.orderId) order.orderId = await generateOrderId();
       await addOrder(order);
-      await addActivity({ orderId: order.orderId, type:'create', message:`Job ticket created for ${customerName}`, by: order.accountManager||'User' });
+      await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
       window.location.href = `production-manager.html`;
     }
   } catch (err) {
     console.error(err);
-    alert('Error saving: ' + err.message);
-    btn.disabled = false; btn.textContent = '💾 Save Job Ticket';
+    alert('Error saving job ticket: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = '💾 Save Job Ticket';
   }
 }
 
-// ─── Load Order into Form (edit mode) ─────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Load order into form (editing mode)
+// ─────────────────────────────────────────────────────────────
 async function loadOrderIntoForm(order) {
   document.getElementById('facility').value = order.facility || '';
   await new Promise(r => setTimeout(r, 10));
-  populateProductTypes(); updateFrameSheetLabels();
+  populateProductTypes();
+  updateFrameSheetLabels();
+
+  // Restore creation date from saved order
+  if (order.createdAt) {
+    _creationDate = new Date(order.createdAt);
+    const el = document.getElementById('creationDateStamp');
+    if (el) el.textContent = _creationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   document.getElementById('customerName').value = order.customerName || order.customer || '';
   document.getElementById('jobDescription').value = order.jobDescription || '';
   document.getElementById('accountManager').value = order.accountManager || '';
   document.getElementById('jobTicketNumber').value = order.orderId || '';
+
+  // Product type
   document.getElementById('productType').value = order.productType || '';
-  if (order.productType === 'Other') { document.getElementById('otherProductRow').style.display = 'block'; document.getElementById('otherProductDesc').value = order.otherProductDesc || ''; }
-  if (order.productType) { document.getElementById('material').innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(order.productType); }
+  if (order.productType === 'Other') {
+    document.getElementById('otherProductRow').style.display = 'block';
+    document.getElementById('otherProductDesc').value = order.otherProductDesc || '';
+  }
+
+  // Material
+  if (order.productType) {
+    document.getElementById('material').innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(order.productType);
+  }
   document.getElementById('material').value = order.material || '';
+
+  // Quantity & frames
   document.getElementById('quantity').value = order.quantity || '';
   document.getElementById('piecesPerSheet').value = order.piecesPerSheet || 1;
   document.getElementById('sheetCount').value = order.sheetCount || '';
+
+  // Print type / sides
   document.getElementById('printType').value = order.printType || 'Sheet';
   document.getElementById('sides').value = order.sides || '1';
   onPrintTypeChange();
+
   if (order.printType === 'Roll') document.getElementById('rollDirection').value = order.rollDirection || '1';
+
+  // Label size
   if (order.labelWidth) document.getElementById('labelWidth').value = order.labelWidth;
   if (order.labelHeight) document.getElementById('labelHeight').value = order.labelHeight;
   updateLabelSizeSection();
+
+  // Color mode
   document.getElementById('colorMode').value = order.colorMode || (order.hasWhiteLayer ? 'CMYK+White' : 'CMYK');
   onColorModeChange();
+
+  // Special color
   document.getElementById('hasSpecialColor').checked = order.hasSpecialColor || false;
-  if (order.hasSpecialColor) { document.getElementById('specialColorField').style.display = 'block'; document.getElementById('specialColorDetails').value = order.specialColorDetails || ''; }
+  if (order.hasSpecialColor) {
+    document.getElementById('specialColorField').style.display = 'block';
+    document.getElementById('specialColorDetails').value = order.specialColorDetails || '';
+  }
+
+  // Lamination
   document.getElementById('lamination').value = order.lamination || 'None';
+
+  // UV & Foil
   document.getElementById('hasUV').checked = order.hasUV || false;
   document.getElementById('hasFoil').checked = order.hasFoil || false;
-  if (order.hasFoil) { document.getElementById('foilType').value = order.foilType || 'Gold'; document.getElementById('foilNotes').value = order.foilNotes || ''; }
+  if (order.hasFoil) {
+    document.getElementById('foilType').value = order.foilType || 'Gold';
+    document.getElementById('foilNotes').value = order.foilNotes || '';
+  }
   onFinishingChange();
+
   document.getElementById('finishingNotes').value = order.finishingNotes || '';
-  if (order.customBatching) { document.getElementById('customBatching').checked = true; toggleCustomBatching(); if (order.unitsPerRoll) document.getElementById('unitsPerRoll').value = order.unitsPerRoll; if (order.packagingInstructions) document.getElementById('packagingInstructions').value = order.packagingInstructions; }
+
+  // Custom Batching
+  if (order.customBatching) {
+    document.getElementById('customBatching').checked = true;
+    toggleCustomBatching();
+    if (order.unitsPerRoll) document.getElementById('unitsPerRoll').value = order.unitsPerRoll;
+    if (order.packagingInstructions) document.getElementById('packagingInstructions').value = order.packagingInstructions;
+  }
+
+  // Cutting
   await new Promise(r => setTimeout(r, 10));
   onProductTypeChange();
   document.getElementById('cutMethod').value = order.cutMethod || 'none';
@@ -992,13 +1637,38 @@ async function loadOrderIntoForm(order) {
   document.getElementById('dieStatus').value = order.dieStatus || 'existing';
   onDieStatusChange();
   document.getElementById('dieName').value = order.dieName || '';
+
+  // Due date / notes
   document.getElementById('dueDate').value = order.dueDate || '';
   document.getElementById('specialNotes').value = order.specialNotes || '';
-  if (order.artworkFiles && order.artworkFiles.length > 0) { artworkDataList = order.artworkFiles.map(a => ({ ...a, role: a.role||'main' })); renderArtworkThumbs(); }
-  if (order.whiteLayerFile) { singleFileData.white = order.whiteLayerFile; renderInlinePreview('whiteLayerPreview', order.whiteLayerFile, 'white'); }
-  if (order.uvFile) { singleFileData.uv = order.uvFile; renderInlinePreview('uvFilePreview', order.uvFile, 'uv'); }
-  if (order.foilFile) { singleFileData.foil = order.foilFile; renderInlinePreview('foilFilePreview', order.foilFile, 'foil'); }
-  if (order.skus && order.skus.length > 0) { skuList = order.skus; showMultiSkuMode(); renderSKUs(); }
+
+  // Artwork
+  if (order.artworkFiles && order.artworkFiles.length > 0) {
+    artworkDataList = order.artworkFiles.map(a => ({ ...a, role: a.role || 'main' }));
+    renderArtworkThumbs();
+  }
+
+  // Layer file previews
+  if (order.whiteLayerFile) {
+    singleFileData.white = order.whiteLayerFile;
+    renderInlinePreview('whiteLayerPreview', order.whiteLayerFile, 'white');
+  }
+  if (order.uvFile) {
+    singleFileData.uv = order.uvFile;
+    renderInlinePreview('uvFilePreview', order.uvFile, 'uv');
+  }
+  if (order.foilFile) {
+    singleFileData.foil = order.foilFile;
+    renderInlinePreview('foilFilePreview', order.foilFile, 'foil');
+  }
+
+  // SKUs
+  if (order.skus && order.skus.length > 0) {
+    skuList = order.skus;
+    showMultiSkuMode();
+    renderSKUs();
+  }
+
   calcFrames();
 }
 </script>
