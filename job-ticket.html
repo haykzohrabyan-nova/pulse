@@ -37,8 +37,9 @@
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
           </div>
           <div class="field" style="max-width:260px;">
-            <label style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;">📎 Parent Order # <span style="font-weight:400;font-size:11px;">(optional)</span></label>
-            <input type="text" id="parentOrderInput" placeholder="e.g. 18000" style="font-size:15px;" onblur="linkParentOrder()" onkeydown="if(event.key==='Enter'){event.preventDefault();linkParentOrder();}">
+            <label style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;">📎 Part of existing order? <span style="font-weight:400;font-size:11px;">(optional)</span></label>
+            <input type="text" id="parentOrderInput" placeholder="Type parent # e.g. 18000, then press Tab" style="font-size:14px;" onblur="linkParentOrder()" onkeydown="if(event.key==='Enter'){event.preventDefault();linkParentOrder();}">
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Leave blank if this is the first ticket for this order</div>
             <div id="parentOrderStatus" style="font-size:11px;margin-top:3px;"></div>
           </div>
           <div style="display:flex;gap:20px;align-items:center;margin-top:18px;font-size:12px;">
