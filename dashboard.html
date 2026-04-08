@@ -198,7 +198,7 @@
     return days + 'd';
   }
 
-  function renderJobCard(order, line) {
+  function renderJobCard(order, line, subProgress) {
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
     // Production estimate
     const estDays = estimateTotalProductionDays(order);
@@ -237,6 +237,24 @@
       statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
     }
 
+    // Sub-ticket progress bar (for parent orders)
+    let subProgressHTML = '';
+    if (subProgress && subProgress.total > 0) {
+      const pct = Math.round(subProgress.done / subProgress.total * 100);
+      subProgressHTML = `<div style="margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:2px;">
+          <span>🗂 Sub-tickets</span><span>${subProgress.done}/${subProgress.total} done</span>
+        </div>
+        <div style="background:#e5e7eb;height:5px;border-radius:3px;overflow:hidden;">
+          <div style="background:${pct===100?'#16a34a':'#2563eb'};height:5px;border-radius:3px;width:${pct}%;transition:width 0.3s;"></div>
+        </div>
+      </div>`;
+    }
+    // Parent link (for sub-tickets)
+    const parentLinkHTML = order.parentOrderId
+      ? `<div style="font-size:10px;color:#2563eb;margin-top:3px;">📎 Sub-ticket of <strong>#${order.parentOrderId}</strong></div>`
+      : '';
+
     return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="card-order">${statusDot}#${order.orderId}</span>
@@ -244,6 +262,7 @@
       </div>
       <div class="card-customer">${order.customer || '—'}</div>
       <div class="card-desc">${order.jobDescription || order.productType || '—'}</div>
+      ${parentLinkHTML}
       ${holdHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
@@ -251,11 +270,25 @@
       </div>
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
+      ${subProgressHTML}
     </div>`;
   }
 
+  // Sub-ticket progress map (orderId -> { total, done }) built during refresh
+  let _subProgressMap = {};
+
   async function refresh() {
     const allOrders = await getAllOrders();
+
+    // Build sub-ticket progress map
+    _subProgressMap = {};
+    allOrders.forEach(o => {
+      if (o.parentOrderId) {
+        if (!_subProgressMap[o.parentOrderId]) _subProgressMap[o.parentOrderId] = { total: 0, done: 0 };
+        _subProgressMap[o.parentOrderId].total++;
+        if (['completed','shipped','received','ready-to-ship'].includes(o.status)) _subProgressMap[o.parentOrderId].done++;
+      }
+    });
 
     // Classify orders by production line
     const classified = allOrders.map(o => ({ ...o, _line: getProductionLine(o) }));
@@ -456,7 +489,7 @@
                 ${loadBarHTML}
               </div>
               <div class="stage-cards">
-                ${jobs.map(o => renderJobCard(o, lineKey)).join('')}
+                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId])).join('')}
               </div>
             </div>`;
           }).join('')}
@@ -558,6 +591,8 @@
       <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
         <span class="card-line-tag tag-${line}" style="font-size:12px;padding:3px 10px;">${lineConfig.name}</span>
         <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
+        <a href="job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
+        ${o.parentOrderId ? `<a href="job-ticket.html?order=${o.parentOrderId}" class="btn btn-sm" style="text-decoration:none;font-size:11px;">📎 Parent #${o.parentOrderId}</a>` : ''}
         ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
         ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
       </div>

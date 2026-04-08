@@ -1358,6 +1358,25 @@ function getOrder(id) { return _get('orders', id); }
 function getAllOrders() { return _getAll('orders'); }
 function updateOrder(id, changes) { return _update('orders', id, changes); }
 
+// ── Sub-ticket helpers ────────────────────────────────────
+async function getSubTickets(parentOrderId) {
+  const all = await getAllOrders();
+  return all.filter(o => o.parentOrderId === parentOrderId);
+}
+
+async function getSubTicketProgress(parentOrderId) {
+  const subs = await getSubTickets(parentOrderId);
+  if (subs.length === 0) return null;
+  const done = subs.filter(o => ['completed','shipped','received','ready-to-ship'].includes(o.status)).length;
+  return { total: subs.length, done };
+}
+
+async function generateSubTicketId(parentOrderId) {
+  const subs = await getSubTickets(parentOrderId);
+  const nextNum = subs.length + 1;
+  return `${parentOrderId}-${nextNum}`;
+}
+
 function getOrderByOrderId(orderId) {
   return openDB().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction('orders', 'readonly');
