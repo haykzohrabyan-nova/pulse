@@ -103,9 +103,9 @@
     .job-card.line-6k { border-left: 3px solid #2563eb; }
     .job-card.line-15k { border-left: 3px solid #7c3aed; }
     /* Queue visualization */
-    .job-card.card-active { background: #fffdf0; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+    .job-card.card-active { background: #f0fdf4; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.20); }
     .job-card.card-hold { background: #fff5f5; border-color: var(--red); }
-    .job-card.card-pending { background: #fafafa; border-color: #d1d5db; opacity: 0.85; }
+    .job-card.card-pending { background: #fffbeb; border-color: #f59e0b; opacity: 0.90; }
     .card-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
     .job-card.line-boyd { border-left: 3px solid #d97706; }
     .job-card.overdue { border-left-color: var(--red) !important; background: #fff5f5; }
@@ -224,13 +224,13 @@
     let statusDot = '';
     if (order.status === 'in-production') {
       queueClass = 'card-active';
-      statusDot = '<span class="card-status-dot" style="background:#f59e0b;"></span>';
+      statusDot = '<span class="card-status-dot" style="background:#16a34a;"></span>';
     } else if (order.status === 'on-hold') {
       queueClass = 'card-hold';
       statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
     } else if (['pending-review','new','waiting-approval'].includes(order.status)) {
       queueClass = 'card-pending';
-      statusDot = '<span class="card-status-dot" style="background:#9ca3af;"></span>';
+      statusDot = '<span class="card-status-dot" style="background:#f59e0b;"></span>';
     } else if (order.status === 'qc-checkout') {
       statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
     } else if (order.status === 'ready-to-ship') {
