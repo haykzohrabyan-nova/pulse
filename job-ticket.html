@@ -1652,7 +1652,9 @@ async function saveTicket() {
       if (!order.orderId) order.orderId = await generateOrderId();
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
-      window.location.href = `production-manager.html`;
+      // Show sub-ticket prompt instead of immediately redirecting
+      showAfterSavePrompt(order.orderId, customerName, order.accountManager);
+      return;
     }
   } catch (err) {
     console.error(err);
@@ -1787,6 +1789,24 @@ async function loadOrderIntoForm(order) {
   }
 
   calcFrames();
+}
+
+// ─── After-Save Sub-Ticket Prompt ──────────────────────────────
+function showAfterSavePrompt(savedOrderId, customerName, rep) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:32px 36px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+      <div style="font-size:36px;margin-bottom:12px;">✅</div>
+      <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Job Ticket #${savedOrderId} Saved!</h2>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">${customerName || 'Order'} — ${rep || ''}</p>
+      <p style="font-weight:600;font-size:14px;margin-bottom:20px;">Does this order have more items?<br><span style="font-weight:400;font-size:12px;color:#6b7280;">e.g. boxes, different material, different size</span></p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button onclick="window.location.href='production-manager.html'" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;font-size:14px;font-weight:600;cursor:pointer;">No, I'm Done</button>
+        <button onclick="window.location.href='job-ticket.html?parent=${savedOrderId}'" style="padding:12px 24px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">➕ Add Sub-Ticket</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 </script>
 </body>
