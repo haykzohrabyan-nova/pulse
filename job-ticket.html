@@ -757,9 +757,12 @@ async function renderOrderNavigator(parentId, currentOrderId) {
   // Starts collapsed (minimized) — sits at the bottom above the save bar
   nav.style.cssText = 'background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;margin-top:16px;overflow:hidden;';
   nav.innerHTML = `
-    <div onclick="toggleOrderNav()" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;">
-      <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order #${parentId} — ${customer || ''} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''} · click to expand</span></div>
-      <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9650;</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
+      <div onclick="toggleOrderNav()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex:1;">
+        <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9650;</span>
+        <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order #${parentId} — ${customer || ''} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''}</span></div>
+      </div>
+      <a href="job-ticket.html?order=${parentId}" style="font-size:12px;padding:4px 12px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;white-space:nowrap;">✏️ Edit Parent</a>
     </div>
     <div id="orderNavBody" style="padding:0 10px 10px;display:none;">${rows}</div>
   `;
@@ -771,9 +774,10 @@ async function renderOrderNavigator(parentId, currentOrderId) {
 function toggleOrderNav() {
   const body  = document.getElementById('orderNavBody');
   const arrow = document.getElementById('orderNavArrow');
-  const open  = body.style.display !== 'none';
-  body.style.display  = open ? 'none' : '';
-  arrow.innerHTML     = open ? '&#9650;' : '&#9660;';
+  if (!body || !arrow) return;
+  const isHidden = body.style.display === 'none' || body.style.display === '';
+  body.style.display  = isHidden ? 'block' : 'none';
+  arrow.innerHTML     = isHidden ? '&#9660;' : '&#9650;';
 }
 
 async function renderSubTicketSection(orderId) {
