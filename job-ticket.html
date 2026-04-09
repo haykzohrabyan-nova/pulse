@@ -1704,7 +1704,18 @@ async function saveTicket(suppressRedirect = false) {
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
-      if (!order.orderId) order.orderId = await generateOrderId();
+      // Always regenerate sub-ticket ID fresh at save time to prevent duplicates
+      if (_parentOrderId) {
+        order.orderId = await generateSubTicketId(_parentOrderId);
+        document.getElementById('jobTicketNumber').value = order.orderId;
+      } else if (!order.orderId) {
+        order.orderId = await generateOrderId();
+      }
+      // Final collision check
+      const existing = await getOrderByOrderId(order.orderId);
+      if (existing) {
+        throw new Error(`Order ID ${order.orderId} already exists. Please refresh the page and try again.`);
+      }
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
       _lastSavedOrderId = order.orderId;
