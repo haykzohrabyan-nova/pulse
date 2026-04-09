@@ -12,8 +12,7 @@
 
 <!-- Split view wrapper -->
 <div id="splitWrapper" style="display:flex;gap:0;min-height:100vh;">
-<!-- ═══ QUEUE PANE (left side) ══════════════════════════════ -->
-<div id="queuePane">
+<div id="formPane" style="flex:1;min-width:0;">
   <div class="qp-header">
     <div style="font-size:13px;font-weight:700;color:#1e293b;">📋 Job Queue</div>
     <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:16px;color:#6b7280;" title="Collapse">◀</button>
@@ -464,10 +463,59 @@
   </form>
 </div><!-- /jt-container -->
 </div><!-- /formPane -->
+
+<!-- ═══ QUEUE PANE (right side) ══════════════════════════════ -->
+<div id="queuePane">
+  <div class="qp-header">
+    <div style="font-size:13px;font-weight:700;color:#1e293b;">📋 Placed Orders</div>
+    <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:16px;color:#6b7280;" title="Collapse">▶</button>
+  </div>
+  <div class="qp-filters">
+    <button class="qp-filter-btn active" data-qfilter="all" onclick="setQFilter('all')">All Active</button>
+    <button class="qp-filter-btn" data-qfilter="today" onclick="setQFilter('today')">Today</button>
+    <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">This Week</button>
+    <button class="qp-filter-btn" data-qfilter="overdue" onclick="setQFilter('overdue')">Past Due</button>
+    <button class="qp-filter-btn" data-qfilter="on-hold" onclick="setQFilter('on-hold')">On Hold</button>
+    <button class="qp-filter-btn" data-qfilter="closed" onclick="setQFilter('closed')">Closed</button>
+    <button class="qp-filter-btn" data-qfilter="16th" onclick="setQFilter('16th')">16th St</button>
+    <button class="qp-filter-btn" data-qfilter="boyd" onclick="setQFilter('boyd')">Boyd</button>
+  </div>
+  <div style="padding:6px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;">
+  </div>
+  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:6px;">
+    <select id="queueRepFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="">All Reps</option>
+    </select>
+    <select id="queueMachineFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="">All Machines</option>
+      <option value="HP Indigo 6K">6K Press</option>
+      <option value="HP Indigo 15K">15K Press</option>
+      <option value="GM Die Cutter w/ JetFX">GM Die</option>
+      <option value="Karlville Poucher">Poucher</option>
+      <option value="Scodix">Scodix</option>
+      <option value="Canon Colorado">Canon</option>
+    </select>
+  </div>
+  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <select id="queueMaterialFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="">All Materials</option>
+      <option value="White BOPP">White BOPP</option>
+      <option value="Silver BOPP">Silver BOPP</option>
+      <option value="Clear BOPP">Clear BOPP</option>
+      <option value="Kraft Paper">Kraft Paper</option>
+      <option value="White Matte">White Matte</option>
+      <option value="Gloss Paper">Gloss Paper</option>
+      <option value="Cardstock">Cardstock</option>
+      <option value="Vinyl">Vinyl</option>
+    </select>
+  </div>
+  <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
+</div>
 </div><!-- /splitWrapper -->
 
 <!-- Expand button (shows when queue is collapsed) -->
-<button id="showQueueBtn" onclick="toggleQueuePane()" style="display:none;position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;background:#2563eb;color:#fff;border:none;border-radius:0 8px 8px 0;padding:12px 6px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:2px 0 8px rgba(0,0,0,0.15);writing-mode:vertical-rl;">▶ Queue</button>
+<button id="showQueueBtn" onclick="toggleQueuePane()" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:100;background:#2563eb;color:#fff;border:none;border-radius:8px 0 0 8px;padding:12px 6px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:-2px 0 8px rgba(0,0,0,0.15);writing-mode:vertical-rl;">◀ Queue</button>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -481,9 +529,8 @@ document.getElementById('nav').innerHTML = renderNav('job-ticket');
 
 document.getElementById('page-styles').textContent = `
   .jt-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
-  #queuePane { width: 300px; min-width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
+  #queuePane { width: 320px; min-width: 300px; background: #f8fafc; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
   #queuePane.collapsed { width: 0; min-width: 0; border: none; overflow: hidden; }
-  #formPane { order: 2; }
   .qp-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .qp-filters { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
   .qp-filter-btn { padding: 3px 10px; border-radius: 12px; border: 1px solid #d1d5db; background: #fff; font-size: 11px; cursor: pointer; }
@@ -757,14 +804,19 @@ async function renderOrderNavigator(parentId, currentOrderId) {
   // Starts collapsed (minimized) — sits at the bottom above the save bar
   nav.style.cssText = 'background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;margin-top:16px;overflow:hidden;';
   nav.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
-      <div onclick="toggleOrderNav()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex:1;">
+    <div onclick="toggleOrderNav()" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;">
+      <div style="display:flex;align-items:center;gap:8px;">
         <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9650;</span>
-        <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order #${parentId} — ${customer || ''} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''}</span></div>
+        <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order #${parentId} — ${customer || ''} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''} · click to expand</span></div>
       </div>
-      <a href="job-ticket.html?order=${parentId}" style="font-size:12px;padding:4px 12px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;white-space:nowrap;">✏️ Edit Parent</a>
+      <span style="font-size:11px;color:#6b7280;">&#9660;</span>
     </div>
-    <div id="orderNavBody" style="padding:0 10px 10px;display:none;">${rows}</div>
+    <div id="orderNavBody" style="padding:0 10px 12px;display:none;">
+      ${rows}
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e0e7ff;">
+        <a href="job-ticket.html?order=${parentId}" target="_blank" style="font-size:12px;color:#2563eb;text-decoration:none;">↗ Open #${parentId} in new tab to edit</a>
+      </div>
+    </div>
   `;
   // Insert before the save bar (at the bottom of the form)
   const saveBar = document.querySelector('.save-bar');
@@ -2017,15 +2069,15 @@ async function saveAndAddSubTicket() {
 
 // ─── After-Save Sub-Ticket Prompt ───────────────────────────────
 // ─── Queue Pane ──────────────────────────────────────────────────
-let _qFilter = 'today';
-let _queuePaneVisible = true; // visible by default on left side
+let _qFilter = 'all';
+let _queuePaneVisible = true; // visible by default on right side
 
 function toggleQueuePane() {
   _queuePaneVisible = !_queuePaneVisible;
   document.getElementById('queuePane').classList.toggle('collapsed', !_queuePaneVisible);
   document.getElementById('showQueueBtn').style.display = _queuePaneVisible ? 'none' : '';
   const btn = document.getElementById('queueCollapseBtn');
-  if (btn) btn.textContent = _queuePaneVisible ? '\u25c0' : '\u25b6';
+  if (btn) btn.textContent = _queuePaneVisible ? '\u25b6' : '\u25c0';
   if (_queuePaneVisible) renderQueuePane();
 }
 
