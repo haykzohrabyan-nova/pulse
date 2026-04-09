@@ -1373,7 +1373,16 @@ async function getSubTicketProgress(parentOrderId) {
 
 async function generateSubTicketId(parentOrderId) {
   const subs = await getSubTickets(parentOrderId);
-  const nextNum = subs.length + 1;
+  // Use max existing suffix + 1 (not count) to avoid duplicates if any were deleted
+  let maxNum = 0;
+  subs.forEach(s => {
+    const parts = s.orderId.split('-');
+    const suffix = parseInt(parts[parts.length - 1]) || 0;
+    if (suffix > maxNum) maxNum = suffix;
+  });
+  // Also check if the generated ID already exists to be safe
+  let nextNum = maxNum + 1;
+  while (subs.some(s => s.orderId === `${parentOrderId}-${nextNum}`)) nextNum++;
   return `${parentOrderId}-${nextNum}`;
 }
 
