@@ -144,7 +144,8 @@
 
 <script>
 injectThemeCSS();
-injectNav('quotes');
+document.getElementById('nav').innerHTML = renderNav('quotes');
+document.getElementById('page-styles').textContent = ``;
 
 let _quotes = [];
 let _editingQuoteId = null;

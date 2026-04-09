@@ -132,7 +132,8 @@
 
 <script>
 injectThemeCSS();
-injectNav('machine-issues');
+document.getElementById('nav').innerHTML = renderNav('machine-issues');
+document.getElementById('page-styles').textContent = ``;
 
 let _issues = [];
 let _machineFilter = 'all';

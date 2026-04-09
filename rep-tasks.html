@@ -28,7 +28,14 @@
   <div id="taskStatsBar" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;"></div>
 
   <!-- Task board -->
-  <div id="taskBoard"></div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+    <div id="taskBoard"></div>
+    <!-- Activity feed sidebar -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);position:sticky;top:16px;">
+      <div style="padding:12px 14px;border-bottom:1px solid #e5e7eb;font-weight:700;font-size:13px;">📜 Recent Activity</div>
+      <div id="activityFeed" style="max-height:500px;overflow-y:auto;padding:8px;"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Proof Modal -->
@@ -74,10 +81,15 @@
 
 <script>
 injectThemeCSS();
-injectNav('rep-tasks');
+document.getElementById('nav').innerHTML = renderNav('rep-tasks');
+document.getElementById('page-styles').textContent = `
+  .rt-container { max-width:1200px; margin:0 auto; padding:24px; }
+  .rt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .rt-header h2 { margin:0; font-size:22px; font-weight:700; }
+`;
 
 const TASK_STATUSES = ['needs-proof','proof-sent','approved','change-requested','in-production','ready-to-ship','completed'];
-const STATUS_LABELS = {
+const TASK_STATUS_LABELS = {
   'needs-proof':       { label: '📎 Needs Proof',     color: '#d97706', bg: '#fef3c7' },
   'proof-sent':        { label: '📤 Proof Sent',       color: '#2563eb', bg: '#dbeafe' },
   'approved':          { label: '✅ Approved',          color: '#16a34a', bg: '#dcfce7' },
@@ -111,6 +123,37 @@ async function populateRepDropdown() {
 async function refreshAll() {
   _allOrders = await getAllOrders();
   loadRepTasks();
+  await loadActivityFeed();
+}
+
+async function loadActivityFeed() {
+  const el = document.getElementById('activityFeed');
+  if (!el) return;
+  try {
+    // Get activity log for all orders of current rep
+    const orderIds = _allOrders
+      .filter(o => !_currentRep || o.accountManager === _currentRep)
+      .map(o => o.orderId);
+    const allActs = [];
+    for (const oid of orderIds.slice(0, 20)) {
+      try {
+        const acts = await getActivityLog(oid);
+        allActs.push(...(acts||[]));
+      } catch(e) {}
+    }
+    allActs.sort((a,b) => new Date(b.timestamp||b.createdAt||0) - new Date(a.timestamp||a.createdAt||0));
+    const recent = allActs.slice(0, 30);
+    if (recent.length === 0) { el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:12px;">No activity yet.</div>'; return; }
+    const typeIcon = { 'create':'🎫','edit':'✏️','proof-sent':'📤','approved':'✅','change-request':'✏️','shipped':'�ude9a','application-assigned':'🏷️' };
+    el.innerHTML = recent.map(a => `<div style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-size:11px;">
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-weight:600;">${typeIcon[a.type]||'📌'} #${a.orderId}</span>
+        <span style="color:#9ca3af;">${a.by||''}</span>
+      </div>
+      <div style="color:#374151;margin-top:2px;">${a.message||''}</div>
+      <div style="color:#9ca3af;margin-top:1px;">${a.timestamp ? new Date(a.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
+    </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:12px;">Unable to load activity.</div>'; }
 }
 
 function loadRepTasks() {
@@ -176,7 +219,7 @@ function renderTaskRow(o) {
   else if (o.proofSentAt) taskStatus = 'proof-sent';
   else if (!o.proofSentAt) taskStatus = 'needs-proof';
 
-  const st = STATUS_LABELS[taskStatus] || STATUS_LABELS['in-production'];
+  const st = TASK_STATUS_LABELS[taskStatus] || TASK_STATUS_LABELS['in-production'];
   const hasParent = o.parentOrderId;
   const subTag = hasParent ? `<span style="font-size:10px;color:#6b7280;">↳ #${o.parentOrderId}</span>` : '';
   const changeNote = o.lastChangeRequest ? `<div style="font-size:10px;color:#7c3aed;margin-top:2px;background:#ede9fe;padding:2px 6px;border-radius:4px;">✏️ ${o.lastChangeRequest.slice(0,60)}${o.lastChangeRequest.length>60?'…':''}</div>` : '';

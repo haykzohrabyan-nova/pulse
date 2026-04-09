@@ -104,7 +104,8 @@
 
 <script>
 injectThemeCSS();
-injectNav('application-dept');
+document.getElementById('nav').innerHTML = renderNav('application-dept');
+document.getElementById('page-styles').textContent = ``;
 
 let _routeOrderId = null;
 let _routeOrderDbId = null;
