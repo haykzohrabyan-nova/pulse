@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Dept — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div style="max-width:1100px;margin:0 auto;padding:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div>
+      <h2 style="margin:0;font-size:22px;font-weight:700;">🏷️ Application Department</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Post-QC workflow — route orders to Ship or Application</p>
+    </div>
+    <button class="btn btn-primary" onclick="refresh()">🔄 Refresh</button>
+  </div>
+
+  <!-- Stats -->
+  <div id="appStatsBar" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;"></div>
+
+  <!-- Two column layout -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <!-- Left: Needs Routing (QC Passed, not yet routed) -->
+    <div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding:8px 12px;background:#fef3c7;border-radius:8px;border:1px solid #fcd34d;">
+        🔀 Needs Routing <span id="routingCount" style="font-weight:400;color:#92600a;font-size:12px;margin-left:6px;"></span>
+      </div>
+      <div id="routingList"></div>
+    </div>
+
+    <!-- Right: In Application -->
+    <div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding:8px 12px;background:#cffafe;border-radius:8px;border:1px solid #67e8f9;">
+        ⚙️ In Application <span id="inAppCount" style="font-weight:400;color:#0891b2;font-size:12px;margin-left:6px;"></span>
+      </div>
+      <div id="inApplicationList"></div>
+    </div>
+  </div>
+
+  <!-- Ready to Ship section -->
+  <div style="margin-top:20px;">
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding:8px 12px;background:#dcfce7;border-radius:8px;border:1px solid #86efac;">
+      📦 Ready to Ship <span id="shipCount" style="font-weight:400;color:#16a34a;font-size:12px;margin-left:6px;"></span>
+    </div>
+    <div id="readyToShipList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
+  </div>
+</div>
+
+<!-- Route Modal -->
+<div id="routeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:17px;">🔀 Route Order</h3>
+    <div id="routeOrderLabel" style="color:#6b7280;font-size:13px;margin-bottom:20px;"></div>
+    <p style="font-weight:600;font-size:14px;margin-bottom:16px;">What happens next for this order?</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="routeOrder('ship')" style="padding:14px 20px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:14px;font-weight:700;cursor:pointer;min-width:160px;">
+        📦 Ready to Ship<br><span style="font-size:11px;font-weight:400;">No application needed</span>
+      </button>
+      <button onclick="routeOrder('application')" style="padding:14px 20px;border-radius:10px;border:2px solid #0891b2;background:#ecfeff;color:#0891b2;font-size:14px;font-weight:700;cursor:pointer;min-width:160px;">
+        🏷️ Needs Application<br><span style="font-size:11px;font-weight:400;">Labels on jars/bags/tubes</span>
+      </button>
+    </div>
+    <div id="appDetailsSection" style="display:none;margin-top:16px;">
+      <div class="field" style="margin-bottom:10px;">
+        <label>Container Type</label>
+        <select id="containerType" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="">— Select Container —</option>
+          <option value="mylar-bags">Mylar Bags</option>
+          <option value="jars-small">Jars — Small (2oz)</option>
+          <option value="jars-medium">Jars — Medium (4oz)</option>
+          <option value="jars-large">Jars — Large (8oz+)</option>
+          <option value="plastic-tubes">Plastic Tubes</option>
+          <option value="glass-tubes">Glass Tubes</option>
+          <option value="boxes">Boxes / Cartons</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Container Quantity</label>
+        <input type="number" id="containerQty" placeholder="e.g. 500" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Assigned To (Application Team)</label>
+        <select id="appAssignee" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="">— Assign operator —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Application Notes</label>
+        <textarea id="appNotes" rows="2" placeholder="Any special instructions..." style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
+      </div>
+      <button onclick="confirmApplication()" class="btn btn-primary" style="width:100%;">✅ Confirm Application Job</button>
+    </div>
+    <div style="margin-top:14px;text-align:center;">
+      <button onclick="closeRouteModal()" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+injectNav('application-dept');
+
+let _routeOrderId = null;
+let _routeOrderDbId = null;
+let _allOrders = [];
+
+window.addEventListener('DOMContentLoaded', refresh);
+
+async function refresh() {
+  _allOrders = await getAllOrders();
+  renderAll();
+}
+
+function renderAll() {
+  const needsRouting    = _allOrders.filter(o => o.status === 'qc-checkout' && !o.applicationRoute);
+  const inApplication   = _allOrders.filter(o => o.applicationRoute === 'application' && o.status !== 'ready-to-ship' && o.status !== 'shipped');
+  const readyToShip     = _allOrders.filter(o => o.status === 'ready-to-ship').sort((a,b) => new Date(a.dueDate||'2099') - new Date(b.dueDate||'2099'));
+
+  document.getElementById('routingCount').textContent  = `(${needsRouting.length})`;
+  document.getElementById('inAppCount').textContent    = `(${inApplication.length})`;
+  document.getElementById('shipCount').textContent     = `(${readyToShip.length})`;
+
+  document.getElementById('appStatsBar').innerHTML = `
+    <div class="stat-item"><div class="stat-value" style="color:#d97706;">${needsRouting.length}</div><div class="stat-label">Needs Routing</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#0891b2;">${inApplication.length}</div><div class="stat-label">In Application</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#16a34a;">${readyToShip.length}</div><div class="stat-label">Ready to Ship</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#6b7280;">${_allOrders.filter(o=>o.status==='shipped').length}</div><div class="stat-label">Shipped Today</div></div>
+  `;
+
+  document.getElementById('routingList').innerHTML = needsRouting.length
+    ? needsRouting.map(o => routingCard(o)).join('')
+    : '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center;">No orders waiting for routing.</div>';
+
+  document.getElementById('inApplicationList').innerHTML = inApplication.length
+    ? inApplication.map(o => applicationCard(o)).join('')
+    : '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center;">No orders in application.</div>';
+
+  document.getElementById('readyToShipList').innerHTML = readyToShip.length
+    ? readyToShip.map(o => shipCard(o)).join('')
+    : '<div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center;grid-column:1/-1;">No orders ready to ship yet.</div>';
+}
+
+function routingCard(o) {
+  return `<div style="background:#fff;border:1px solid #fcd34d;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div style="font-weight:700;color:#2563eb;">#${o.orderId}</div>
+        <div style="font-size:13px;color:#374151;margin-top:2px;">${o.customerName||o.customer||'—'}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${o.productType||'—'} · ${(o.quantity||0).toLocaleString()} pcs</div>
+        ${o.material ? `<div style="font-size:11px;color:#9ca3af;">${o.material}</div>` : ''}
+      </div>
+      <span class="badge badge-qc-checkout" style="font-size:10px;">QC Passed</span>
+    </div>
+    <button onclick="openRouteModal('${o.orderId}',${o.id})" class="btn btn-primary" style="width:100%;margin-top:10px;font-size:13px;">🔀 Route This Order</button>
+  </div>`;
+}
+
+function applicationCard(o) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dueD = o.dueDate ? new Date(o.dueDate+'T12:00:00') : null;
+  const diffDays = dueD ? Math.ceil((dueD-today)/86400000) : null;
+  const dueColor = diffDays === null ? '#9ca3af' : diffDays < 0 ? '#dc2626' : diffDays <= 2 ? '#d97706' : '#16a34a';
+  return `<div style="background:#fff;border:1px solid #67e8f9;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div style="font-weight:700;color:#2563eb;">#${o.orderId}</div>
+        <div style="font-size:13px;color:#374151;">${o.customerName||o.customer||'—'}</div>
+        <div style="font-size:11px;color:#6b7280;">${o.productType||'—'} · ${(o.quantity||0).toLocaleString()} pcs</div>
+        ${o.containerType ? `<div style="font-size:11px;color:#0891b2;margin-top:2px;">📦 ${o.containerType} · ${(o.containerQty||0).toLocaleString()} units</div>` : ''}
+        ${o.appAssignee ? `<div style="font-size:11px;color:#6b7280;">👤 ${o.appAssignee}</div>` : ''}
+        ${o.appNotes ? `<div style="font-size:11px;color:#92600a;background:#fef3c7;padding:2px 6px;border-radius:4px;margin-top:4px;">${o.appNotes}</div>` : ''}
+      </div>
+      <div style="font-size:12px;font-weight:600;color:${dueColor};">${diffDays !== null ? (diffDays < 0 ? Math.abs(diffDays)+'d late' : diffDays+'d left') : '—'}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <button onclick="markAppDone('${o.orderId}',${o.id})" class="btn btn-primary" style="flex:1;font-size:12px;">✅ Application Done → Ship</button>
+    </div>
+  </div>`;
+}
+
+function shipCard(o) {
+  return `<div style="background:#fff;border:1px solid #86efac;border-radius:8px;padding:12px 14px;">
+    <div style="font-weight:700;color:#2563eb;">#${o.orderId}</div>
+    <div style="font-size:13px;color:#374151;">${o.customerName||o.customer||'—'}</div>
+    <div style="font-size:11px;color:#6b7280;">${o.productType||'—'} · ${(o.quantity||0).toLocaleString()} pcs</div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button onclick="markShipped('${o.orderId}',${o.id})" class="btn btn-sm" style="flex:1;background:#16a34a;color:#fff;border:none;font-size:12px;">🚚 Mark Shipped</button>
+      <button onclick="markPickup('${o.orderId}',${o.id})" class="btn btn-sm" style="flex:1;font-size:12px;">🏪 Customer Pickup</button>
+    </div>
+  </div>`;
+}
+
+// ── Route Modal ──────────────────────────────────────────
+function openRouteModal(orderId, dbId) {
+  _routeOrderId = orderId;
+  _routeOrderDbId = dbId;
+  const o = _allOrders.find(x => x.id === dbId);
+  document.getElementById('routeOrderLabel').textContent = `#${orderId} — ${o?.customerName||o?.customer||''} — ${o?.productType||''}`;
+  document.getElementById('appDetailsSection').style.display = 'none';
+  // Populate assignees
+  const sel = document.getElementById('appAssignee');
+  sel.innerHTML = '<option value="">— Assign operator —</option>';
+  Object.entries(OPERATOR_PROFILES).filter(([,p]) => p.role === 'operator').forEach(([name]) => {
+    const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+  });
+  document.getElementById('routeModal').style.display = 'flex';
+}
+function closeRouteModal() { document.getElementById('routeModal').style.display = 'none'; }
+
+function routeOrder(route) {
+  if (route === 'ship') {
+    confirmShipRoute();
+  } else {
+    document.getElementById('appDetailsSection').style.display = '';
+  }
+}
+
+async function confirmShipRoute() {
+  const o = _allOrders.find(x => x.id === _routeOrderDbId);
+  if (!o) return;
+  await updateOrder(_routeOrderDbId, { ...o, status: 'ready-to-ship', applicationRoute: 'ship' });
+  await addActivity({ orderId: _routeOrderId, type: 'routed', message: 'Routed to Ready to Ship', by: 'Application Dept' });
+  closeRouteModal();
+  await refresh();
+}
+
+async function confirmApplication() {
+  const container = document.getElementById('containerType').value;
+  const qty = document.getElementById('containerQty').value;
+  const assignee = document.getElementById('appAssignee').value;
+  const notes = document.getElementById('appNotes').value.trim();
+  const o = _allOrders.find(x => x.id === _routeOrderDbId);
+  if (!o) return;
+  await updateOrder(_routeOrderDbId, { ...o, applicationRoute: 'application', containerType: container, containerQty: parseInt(qty)||0, appAssignee: assignee, appNotes: notes, status: 'in-production' });
+  await addActivity({ orderId: _routeOrderId, type: 'application-assigned', message: `Application job: ${container||'—'}, ${qty||0} units${assignee?' → '+assignee:''}`, by: 'Application Dept' });
+  closeRouteModal();
+  await refresh();
+}
+
+async function markAppDone(orderId, dbId) {
+  const o = _allOrders.find(x => x.id === dbId);
+  if (!o) return;
+  await updateOrder(dbId, { ...o, status: 'ready-to-ship', applicationDoneAt: new Date().toISOString() });
+  await addActivity({ orderId, type: 'application-done', message: 'Application complete — ready to ship', by: 'Application Dept' });
+  await refresh();
+}
+
+async function markShipped(orderId, dbId) {
+  const o = _allOrders.find(x => x.id === dbId);
+  if (!o) return;
+  await updateOrder(dbId, { ...o, status: 'shipped', shippedAt: new Date().toISOString() });
+  await addActivity({ orderId, type: 'shipped', message: 'Order shipped', by: 'Application Dept' });
+  await refresh();
+}
+
+async function markPickup(orderId, dbId) {
+  const o = _allOrders.find(x => x.id === dbId);
+  if (!o) return;
+  await updateOrder(dbId, { ...o, status: 'waiting-pickup' });
+  await addActivity({ orderId, type: 'pickup', message: 'Waiting for customer pickup', by: 'Application Dept' });
+  await refresh();
+}
+</script>
+</body>
+</html>

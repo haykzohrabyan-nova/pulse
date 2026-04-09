@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rep Tasks — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="rt-container">
+  <div class="rt-header">
+    <div>
+      <h2>📋 Rep Daily Task List</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:0;">Monday.com style — track every active order per rep</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <select id="repSelect" onchange="loadRepTasks()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <option value="">— Select Rep —</option>
+      </select>
+      <button class="btn btn-primary" onclick="refreshAll()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="taskStatsBar" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;"></div>
+
+  <!-- Task board -->
+  <div id="taskBoard"></div>
+</div>
+
+<!-- Proof Modal -->
+<div id="proofModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 16px;font-size:16px;">📤 Send Proof to Customer</h3>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Customer Email</label>
+      <input type="email" id="proofEmail" placeholder="customer@email.com">
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Message</label>
+      <textarea id="proofMessage" rows="4" style="resize:vertical;"></textarea>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Attach Proof File</label>
+      <input type="file" id="proofFile" accept=".pdf,.jpg,.png,.ai">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeProofModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="sendProof()">📤 Send Proof</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Request Modal -->
+<div id="changeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px;max-width:520px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:16px;">✏️ Customer Change Request</h3>
+    <div id="changeOrderLabel" style="color:#6b7280;font-size:12px;margin-bottom:14px;"></div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Customer Message / Change Details</label>
+      <textarea id="changeInput" rows="4" placeholder="Paste or type what the customer said..." style="resize:vertical;"></textarea>
+    </div>
+    <div id="aiSummaryBox" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeChangeModal()">Cancel</button>
+      <button class="btn" onclick="summarizeChange()" style="background:#7c3aed;color:#fff;border:none;">🤖 AI Summarize</button>
+      <button class="btn btn-primary" onclick="saveChangeRequest()">💾 Save Task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+injectNav('rep-tasks');
+
+const TASK_STATUSES = ['needs-proof','proof-sent','approved','change-requested','in-production','ready-to-ship','completed'];
+const STATUS_LABELS = {
+  'needs-proof':       { label: '📎 Needs Proof',     color: '#d97706', bg: '#fef3c7' },
+  'proof-sent':        { label: '📤 Proof Sent',       color: '#2563eb', bg: '#dbeafe' },
+  'approved':          { label: '✅ Approved',          color: '#16a34a', bg: '#dcfce7' },
+  'change-requested':  { label: '✏️ Change Requested',  color: '#7c3aed', bg: '#ede9fe' },
+  'in-production':     { label: '⚙️ In Production',    color: '#0891b2', bg: '#cffafe' },
+  'ready-to-ship':     { label: '📦 Ready to Ship',    color: '#16a34a', bg: '#dcfce7' },
+  'completed':         { label: '🏁 Completed',         color: '#6b7280', bg: '#f3f4f6' },
+};
+
+let _currentRep = '';
+let _proofOrderId = null;
+let _changeOrderId = null;
+let _allOrders = [];
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await populateRepDropdown();
+  await refreshAll();
+});
+
+async function populateRepDropdown() {
+  _allOrders = await getAllOrders();
+  const reps = [...new Set(_allOrders.map(o => o.accountManager).filter(Boolean))].sort();
+  const sel = document.getElementById('repSelect');
+  reps.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r; opt.textContent = r;
+    sel.appendChild(opt);
+  });
+}
+
+async function refreshAll() {
+  _allOrders = await getAllOrders();
+  loadRepTasks();
+}
+
+function loadRepTasks() {
+  const rep = document.getElementById('repSelect').value;
+  _currentRep = rep;
+  const orders = rep
+    ? _allOrders.filter(o => o.accountManager === rep)
+    : _allOrders;
+
+  const active = orders.filter(o => !['completed','shipped','received'].includes(o.status));
+  const done   = orders.filter(o =>  ['completed','shipped','received'].includes(o.status));
+
+  // Stats
+  const stats = {
+    total: active.length,
+    needsProof: active.filter(o => !o.proofSentAt && !o.approvedAt).length,
+    proofSent: active.filter(o => o.proofSentAt && !o.approvedAt).length,
+    changeReq: active.filter(o => o.changeRequestedAt).length,
+    readyToShip: active.filter(o => o.status === 'ready-to-ship').length,
+  };
+
+  document.getElementById('taskStatsBar').innerHTML = `
+    <div class="stat-item"><div class="stat-value" style="color:var(--accent);">${stats.total}</div><div class="stat-label">Active Orders</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#d97706;">${stats.needsProof}</div><div class="stat-label">Needs Proof</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#2563eb;">${stats.proofSent}</div><div class="stat-label">Proof Sent</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#7c3aed;">${stats.changeReq}</div><div class="stat-label">Change Requests</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#16a34a;">${stats.readyToShip}</div><div class="stat-label">Ready to Ship</div></div>
+  `;
+
+  // Sort: change-requested first, then by due date
+  active.sort((a, b) => {
+    const aPriority = a.changeRequestedAt ? 0 : !a.proofSentAt ? 1 : 2;
+    const bPriority = b.changeRequestedAt ? 0 : !b.proofSentAt ? 1 : 2;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01');
+  });
+
+  const rows = active.map(o => renderTaskRow(o)).join('');
+
+  document.getElementById('taskBoard').innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);">
+      <div style="display:grid;grid-template-columns:90px 1fr 130px 120px 110px 130px 160px;background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:8px 12px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;gap:8px;">
+        <div>Order</div><div>Customer / Product</div><div>Material</div><div>Qty</div><div>Due</div><div>Status</div><div>Actions</div>
+      </div>
+      <div id="taskRows">${rows || '<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px;">No active orders' + (rep ? ' for ' + rep : '') + '.</div>'}</div>
+    </div>
+    ${done.length > 0 ? `<div style="margin-top:12px;color:#9ca3af;font-size:12px;text-align:right;">${done.length} completed order${done.length!==1?'s':''} hidden</div>` : ''}
+  `;
+}
+
+function renderTaskRow(o) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dueD = o.dueDate ? new Date(o.dueDate+'T12:00:00') : null;
+  const diffDays = dueD ? Math.ceil((dueD - today) / 86400000) : null;
+  const dueColor = diffDays === null ? '#9ca3af' : diffDays < 0 ? '#dc2626' : diffDays <= 2 ? '#d97706' : '#16a34a';
+  const dueText = diffDays === null ? '—' : diffDays < 0 ? Math.abs(diffDays)+'d late' : diffDays === 0 ? 'Today' : diffDays+'d';
+
+  // Determine task status
+  let taskStatus = 'in-production';
+  if (o.status === 'ready-to-ship') taskStatus = 'ready-to-ship';
+  else if (o.changeRequestedAt) taskStatus = 'change-requested';
+  else if (o.approvedAt) taskStatus = 'approved';
+  else if (o.proofSentAt) taskStatus = 'proof-sent';
+  else if (!o.proofSentAt) taskStatus = 'needs-proof';
+
+  const st = STATUS_LABELS[taskStatus] || STATUS_LABELS['in-production'];
+  const hasParent = o.parentOrderId;
+  const subTag = hasParent ? `<span style="font-size:10px;color:#6b7280;">↳ #${o.parentOrderId}</span>` : '';
+  const changeNote = o.lastChangeRequest ? `<div style="font-size:10px;color:#7c3aed;margin-top:2px;background:#ede9fe;padding:2px 6px;border-radius:4px;">✏️ ${o.lastChangeRequest.slice(0,60)}${o.lastChangeRequest.length>60?'…':''}</div>` : '';
+
+  return `<div style="display:grid;grid-template-columns:90px 1fr 130px 120px 110px 130px 160px;padding:10px 12px;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;font-size:13px;" id="taskrow-${o.id}">
+    <div><a href="job-ticket.html?order=${o.orderId}" style="color:#2563eb;font-weight:700;text-decoration:none;">#${o.orderId}</a><div style="font-size:10px;color:#9ca3af;">${subTag}</div></div>
+    <div>
+      <div style="font-weight:600;color:#1e293b;">${o.customerName||o.customer||'—'}</div>
+      <div style="font-size:11px;color:#6b7280;">${o.productType||'—'}</div>
+      ${changeNote}
+    </div>
+    <div style="font-size:12px;color:#374151;">${o.material||'—'}</div>
+    <div style="font-size:12px;">${(o.quantity||0).toLocaleString()}</div>
+    <div style="font-size:12px;font-weight:600;color:${dueColor};">${dueText}</div>
+    <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${st.bg};color:${st.color};font-weight:600;">${st.label}</span></div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button onclick="openProofModal('${o.orderId}')" class="btn btn-sm" style="font-size:11px;padding:3px 8px;">📤 Proof</button>
+      <button onclick="openChangeModal('${o.orderId}','${(o.customerName||o.customer||'').replace(/'/g,'')}')" class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;">✏️ Change</button>
+      <button onclick="markApproved('${o.orderId}',${o.id})" class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;">✅</button>
+    </div>
+  </div>`;
+}
+
+// ── Proof Modal ────────────────────────────────────────────
+function openProofModal(orderId) {
+  _proofOrderId = orderId;
+  const o = _allOrders.find(x => x.orderId === orderId);
+  document.getElementById('proofEmail').value = o?.customerEmail || '';
+  document.getElementById('proofMessage').value = `Hi ${o?.customerName||o?.customer||''},\n\nPlease find your proof for order #${orderId} attached.\n\nKindly review and reply with your approval or any changes needed.\n\nThank you,\nBazaar Printing`;
+  document.getElementById('proofModal').style.display = 'flex';
+}
+function closeProofModal() { document.getElementById('proofModal').style.display = 'none'; }
+
+async function sendProof() {
+  const email = document.getElementById('proofEmail').value.trim();
+  if (!email) { alert('Enter customer email.'); return; }
+  const o = _allOrders.find(x => x.orderId === _proofOrderId);
+  if (!o) return;
+  // Mark proof as sent in DB
+  await updateOrder(o.id, { ...o, proofSentAt: new Date().toISOString(), status: o.status });
+  await addActivity({ orderId: _proofOrderId, type: 'proof-sent', message: `Proof sent to ${email}`, by: _currentRep || 'Rep' });
+  closeProofModal();
+  await refreshAll();
+  alert(`✅ Proof logged as sent to ${email}. Use your email client to send the actual file.`);
+}
+
+// ── Change Request Modal ────────────────────────────────────
+function openChangeModal(orderId, customerName) {
+  _changeOrderId = orderId;
+  document.getElementById('changeOrderLabel').textContent = `Order #${orderId} — ${customerName}`;
+  document.getElementById('changeInput').value = '';
+  document.getElementById('aiSummaryBox').style.display = 'none';
+  document.getElementById('changeModal').style.display = 'flex';
+}
+function closeChangeModal() { document.getElementById('changeModal').style.display = 'none'; }
+
+function summarizeChange() {
+  const text = document.getElementById('changeInput').value.trim();
+  if (!text) { alert('Paste the customer message first.'); return; }
+  // Simple local extraction (no API needed) — pull key phrases
+  const lower = text.toLowerCase();
+  const changes = [];
+  if (lower.includes('color') || lower.includes('colour')) changes.push('Color change requested');
+  if (lower.includes('size') || lower.includes('dimension')) changes.push('Size/dimension change');
+  if (lower.includes('font') || lower.includes('text') || lower.includes('wording')) changes.push('Text/font change');
+  if (lower.includes('logo')) changes.push('Logo update');
+  if (lower.includes('bleed') || lower.includes('margin')) changes.push('Bleed/margin adjustment');
+  if (lower.includes('rush') || lower.includes('urgent') || lower.includes('asap')) changes.push('⚠️ Rush requested');
+  if (lower.includes('quantity') || lower.includes('qty')) changes.push('Quantity change');
+  if (changes.length === 0) changes.push('General revision — review full message');
+  const summary = changes.join(' · ');
+  const box = document.getElementById('aiSummaryBox');
+  box.style.display = '';
+  box.innerHTML = `<strong>📋 AI Summary:</strong> ${summary}<br><span style="font-size:11px;color:#6b7280;margin-top:4px;display:block;">Next step: Update artwork and re-send proof</span>`;
+}
+
+async function saveChangeRequest() {
+  const text = document.getElementById('changeInput').value.trim();
+  if (!text) { alert('Enter the change request details.'); return; }
+  const o = _allOrders.find(x => x.orderId === _changeOrderId);
+  if (!o) return;
+  await updateOrder(o.id, { ...o, changeRequestedAt: new Date().toISOString(), lastChangeRequest: text, proofSentAt: null });
+  await addActivity({ orderId: _changeOrderId, type: 'change-request', message: `Change requested: ${text.slice(0,100)}`, by: _currentRep || 'Rep' });
+  closeChangeModal();
+  await refreshAll();
+}
+
+async function markApproved(orderId, dbId) {
+  const o = _allOrders.find(x => x.id === dbId);
+  if (!o) return;
+  await updateOrder(dbId, { ...o, approvedAt: new Date().toISOString(), changeRequestedAt: null });
+  await addActivity({ orderId, type: 'approved', message: 'Proof approved by customer', by: _currentRep || 'Rep' });
+  await refreshAll();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quotes — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div style="max-width:1100px;margin:0 auto;padding:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div>
+      <h2 style="margin:0;font-size:22px;font-weight:700;">💬 Quotes & Orders</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Create a quote, save it, convert to job ticket when confirmed</p>
+    </div>
+    <button class="btn btn-primary" onclick="showNewQuoteForm()">+ New Quote</button>
+  </div>
+
+  <!-- Quote list -->
+  <div id="quoteListSection">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="qp-filter-btn active" data-qf="all" onclick="setQuoteFilter('all')">All</button>
+      <button class="qp-filter-btn" data-qf="draft" onclick="setQuoteFilter('draft')">Drafts</button>
+      <button class="qp-filter-btn" data-qf="sent" onclick="setQuoteFilter('sent')">Sent</button>
+      <button class="qp-filter-btn" data-qf="approved" onclick="setQuoteFilter('approved')">Approved</button>
+      <button class="qp-filter-btn" data-qf="converted" onclick="setQuoteFilter('converted')">Converted</button>
+      <input id="quoteSearch" type="text" placeholder="Search..." oninput="renderQuoteList()" style="padding:4px 10px;border:1px solid var(--border);border-radius:12px;font-size:12px;margin-left:auto;">
+    </div>
+    <div id="quoteList"></div>
+  </div>
+
+  <!-- New/Edit Quote Form -->
+  <div id="quoteFormSection" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 id="quoteFormTitle" style="margin:0;font-size:17px;font-weight:700;">New Quote</h3>
+      <button class="btn" onclick="showQuoteList()">← Back to Quotes</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Left -->
+      <div>
+        <div class="form-section">
+          <h3 class="section-title">👤 Customer Info</h3>
+          <div class="form-row">
+            <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Customer Email</label><input type="email" id="q_email" placeholder="customer@email.com"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Phone</label><input type="tel" id="q_phone" placeholder="(xxx) xxx-xxxx"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Account Manager / Rep</label>
+              <select id="q_rep">
+                <option value="">— Select Rep —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">📋 Quote Details</h3>
+          <div class="form-row">
+            <div class="field"><label>Facility</label>
+              <select id="q_facility">
+                <option value="">— Select —</option>
+                <option value="16th-street">16th Street</option>
+                <option value="boyd-street">Boyd Street</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Quoted Due Date</label><input type="date" id="q_due"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Quote Notes / Scope</label><textarea id="q_notes" rows="3" placeholder="Describe what the customer wants..." style="resize:vertical;"></textarea></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Add-ons</label>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_design"> Design job included</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_application"> Label application (jars/tubes/bags)</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_scodix"> Scodix embellishment</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_rush"> Rush order</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Line items -->
+      <div>
+        <div class="form-section">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 class="section-title" style="margin:0;">📦 Line Items (SKUs)</h3>
+            <button class="btn btn-sm" onclick="addLineItem()">+ Add SKU</button>
+          </div>
+          <div id="lineItems"></div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+              <span>Subtotal</span><span id="q_subtotal">$0.00</span>
+            </div>
+            <div class="field" style="margin-bottom:8px;">
+              <label style="font-size:11px;">Discount ($)</label>
+              <input type="number" id="q_discount" value="0" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;">
+              <span>Total</span><span id="q_total" style="color:var(--accent);">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">📊 Quote Status</h3>
+          <div class="form-row">
+            <div class="field"><label>Status</label>
+              <select id="q_status">
+                <option value="draft">Draft</option>
+                <option value="sent">Sent to Customer</option>
+                <option value="approved">Approved</option>
+                <option value="declined">Declined</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Internal Notes</label><textarea id="q_internal" rows="2" placeholder="Internal notes (not shown to customer)..." style="resize:vertical;"></textarea></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <button class="btn" onclick="showQuoteList()">Cancel</button>
+      <button class="btn" onclick="saveQuote('draft')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;">💾 Save Draft</button>
+      <button class="btn btn-primary" onclick="saveQuote(document.getElementById('q_status').value)">💾 Save Quote</button>
+      <button class="btn" id="convertBtn" style="display:none;background:#16a34a;color:#fff;border:none;" onclick="convertToJobTicket()">🎫 Convert to Job Ticket</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+injectNav('quotes');
+
+let _quotes = [];
+let _editingQuoteId = null;
+let _quoteFilter = 'all';
+let _lineItemCount = 0;
+
+const PRODUCT_TYPES_SIMPLE = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets','Vinyl Banners','Canvas Prints','Other'];
+const MATERIALS_SIMPLE = ['White BOPP','Silver BOPP','Clear BOPP','Kraft Paper','White Matte','Gloss Paper','Cardstock','Vinyl','Other'];
+
+window.addEventListener('DOMContentLoaded', async () => {
+  loadQuotes();
+  renderQuoteList();
+  populateRepDropdown();
+  addLineItem(); // start with one line item
+});
+
+function loadQuotes() {
+  try { _quotes = JSON.parse(localStorage.getItem('pulse_quotes') || '[]'); } catch(e) { _quotes = []; }
+}
+function saveQuotes() { localStorage.setItem('pulse_quotes', JSON.stringify(_quotes)); }
+
+function populateRepDropdown() {
+  const sel = document.getElementById('q_rep');
+  Object.entries(OPERATOR_PROFILES).filter(([,p]) => p.role === 'account-manager' || p.role === 'supervisor').forEach(([name]) => {
+    const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+  });
+}
+
+function setQuoteFilter(f) {
+  _quoteFilter = f;
+  document.querySelectorAll('.qp-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.qf === f));
+  renderQuoteList();
+}
+
+function renderQuoteList() {
+  loadQuotes();
+  const q = (document.getElementById('quoteSearch')?.value || '').toLowerCase();
+  let list = _quotes;
+  if (_quoteFilter !== 'all') list = list.filter(x => x.status === _quoteFilter);
+  if (q) list = list.filter(x => (x.customer||'').toLowerCase().includes(q) || String(x.quoteId||'').includes(q));
+  list = [...list].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const STATUS_COLORS = { draft:'#9ca3af', sent:'#2563eb', approved:'#16a34a', declined:'#dc2626', converted:'#7c3aed' };
+
+  document.getElementById('quoteList').innerHTML = list.length === 0
+    ? '<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No quotes yet. Click + New Quote to start.</div>'
+    : `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        ${list.map(qt => `
+          <div style="display:grid;grid-template-columns:90px 1fr 120px 120px 130px 180px;padding:10px 14px;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;font-size:13px;">
+            <div style="font-weight:700;color:var(--accent);">#${qt.quoteId||'—'}</div>
+            <div>
+              <div style="font-weight:600;">${qt.customer||'—'}</div>
+              <div style="font-size:11px;color:#6b7280;">${(qt.lineItems||[]).map(li=>li.product).filter(Boolean).join(', ')||qt.notes?.slice(0,40)||'—'}</div>
+            </div>
+            <div style="font-size:12px;">${qt.rep||'—'}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent);">${qt.total ? '$'+Number(qt.total).toLocaleString() : '—'}</div>
+            <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${STATUS_COLORS[qt.status]||'#9ca3af'}22;color:${STATUS_COLORS[qt.status]||'#9ca3af'};font-weight:600;">${qt.status}</span></div>
+            <div style="display:flex;gap:4px;">
+              <button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
+              ${qt.status === 'approved' && qt.status !== 'converted' ? `<button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">🎫 Convert</button>` : ''}
+              ${qt.status === 'converted' ? '<span style="font-size:11px;color:#7c3aed;">✓ Converted</span>' : ''}
+            </div>
+          </div>`).join('')}
+      </div>`;
+}
+
+function showNewQuoteForm() {
+  _editingQuoteId = null;
+  document.getElementById('quoteFormTitle').textContent = 'New Quote';
+  document.getElementById('q_customer').value = '';
+  document.getElementById('q_email').value = '';
+  document.getElementById('q_phone').value = '';
+  document.getElementById('q_rep').value = '';
+  document.getElementById('q_facility').value = '';
+  document.getElementById('q_due').value = '';
+  document.getElementById('q_notes').value = '';
+  document.getElementById('q_internal').value = '';
+  document.getElementById('q_discount').value = '0';
+  document.getElementById('q_status').value = 'draft';
+  document.getElementById('q_addon_design').checked = false;
+  document.getElementById('q_addon_application').checked = false;
+  document.getElementById('q_addon_scodix').checked = false;
+  document.getElementById('q_addon_rush').checked = false;
+  document.getElementById('convertBtn').style.display = 'none';
+  _lineItemCount = 0;
+  document.getElementById('lineItems').innerHTML = '';
+  addLineItem();
+  document.getElementById('quoteListSection').style.display = 'none';
+  document.getElementById('quoteFormSection').style.display = '';
+}
+
+function editQuote(quoteId) {
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  if (!qt) return;
+  _editingQuoteId = quoteId;
+  document.getElementById('quoteFormTitle').textContent = `Edit Quote #${quoteId}`;
+  document.getElementById('q_customer').value = qt.customer || '';
+  document.getElementById('q_email').value = qt.email || '';
+  document.getElementById('q_phone').value = qt.phone || '';
+  document.getElementById('q_rep').value = qt.rep || '';
+  document.getElementById('q_facility').value = qt.facility || '';
+  document.getElementById('q_due').value = qt.due || '';
+  document.getElementById('q_notes').value = qt.notes || '';
+  document.getElementById('q_internal').value = qt.internal || '';
+  document.getElementById('q_discount').value = qt.discount || 0;
+  document.getElementById('q_status').value = qt.status || 'draft';
+  document.getElementById('q_addon_design').checked = qt.addons?.design || false;
+  document.getElementById('q_addon_application').checked = qt.addons?.application || false;
+  document.getElementById('q_addon_scodix').checked = qt.addons?.scodix || false;
+  document.getElementById('q_addon_rush').checked = qt.addons?.rush || false;
+  document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
+  _lineItemCount = 0;
+  document.getElementById('lineItems').innerHTML = '';
+  (qt.lineItems || [{}]).forEach(li => addLineItem(li));
+  calcTotal();
+  document.getElementById('quoteListSection').style.display = 'none';
+  document.getElementById('quoteFormSection').style.display = '';
+}
+
+function editQuoteAndConvert(quoteId) { editQuote(quoteId); convertToJobTicket(); }
+function showQuoteList() {
+  document.getElementById('quoteListSection').style.display = '';
+  document.getElementById('quoteFormSection').style.display = 'none';
+  renderQuoteList();
+}
+
+function addLineItem(data = {}) {
+  _lineItemCount++;
+  const id = _lineItemCount;
+  const div = document.createElement('div');
+  div.id = `li_${id}`;
+  div.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-weight:600;font-size:13px;">SKU #${id}</span>
+      <button onclick="document.getElementById('li_${id}').remove();calcTotal();" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:16px;">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field"><label style="font-size:11px;">Product Type</label>
+        <select id="li_product_${id}" onchange="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="">—</option>${PRODUCT_TYPES_SIMPLE.map(p=>`<option value="${p}" ${data.product===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label style="font-size:11px;">Material</label>
+        <select id="li_material_${id}" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="">—</option>${MATERIALS_SIMPLE.map(m=>`<option value="${m}" ${data.material===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label style="font-size:11px;">Quantity</label>
+        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </div>
+      <div class="field"><label style="font-size:11px;">Unit Price ($)</label>
+        <input type="number" id="li_price_${id}" value="${data.price||''}" placeholder="0.00" step="0.01" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </div>
+      <div class="field" style="grid-column:span 2;"><label style="font-size:11px;">Size / Notes</label>
+        <input type="text" id="li_notes_${id}" value="${data.notes||''}" placeholder='e.g. 3"x4", white BOPP, matte lam' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </div>
+    </div>
+    <div style="text-align:right;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;" id="li_subtotal_${id}"></div>
+  `;
+  document.getElementById('lineItems').appendChild(div);
+  calcTotal();
+}
+
+function getLineItems() {
+  const items = [];
+  document.querySelectorAll('[id^="li_product_"]').forEach(el => {
+    const id = el.id.replace('li_product_', '');
+    const qty = parseFloat(document.getElementById(`li_qty_${id}`)?.value) || 0;
+    const price = parseFloat(document.getElementById(`li_price_${id}`)?.value) || 0;
+    const sub = qty * price;
+    const subEl = document.getElementById(`li_subtotal_${id}`);
+    if (subEl) subEl.textContent = sub > 0 ? `Line total: $${sub.toLocaleString(undefined,{minimumFractionDigits:2})}` : '';
+    items.push({
+      product: document.getElementById(`li_product_${id}`)?.value || '',
+      material: document.getElementById(`li_material_${id}`)?.value || '',
+      qty, price,
+      notes: document.getElementById(`li_notes_${id}`)?.value || '',
+      subtotal: sub
+    });
+  });
+  return items;
+}
+
+function calcTotal() {
+  const items = getLineItems();
+  const subtotal = items.reduce((s, li) => s + li.subtotal, 0);
+  const discount = parseFloat(document.getElementById('q_discount')?.value) || 0;
+  const total = Math.max(0, subtotal - discount);
+  document.getElementById('q_subtotal').textContent = '$' + subtotal.toLocaleString(undefined,{minimumFractionDigits:2});
+  document.getElementById('q_total').textContent = '$' + total.toLocaleString(undefined,{minimumFractionDigits:2});
+  return total;
+}
+
+function saveQuote(status) {
+  loadQuotes();
+  const total = calcTotal();
+  const quoteId = _editingQuoteId || ('Q' + Date.now().toString().slice(-6));
+  const qt = {
+    quoteId,
+    customer: document.getElementById('q_customer').value.trim(),
+    email: document.getElementById('q_email').value.trim(),
+    phone: document.getElementById('q_phone').value.trim(),
+    rep: document.getElementById('q_rep').value,
+    facility: document.getElementById('q_facility').value,
+    due: document.getElementById('q_due').value,
+    notes: document.getElementById('q_notes').value.trim(),
+    internal: document.getElementById('q_internal').value.trim(),
+    discount: parseFloat(document.getElementById('q_discount').value)||0,
+    status: status || document.getElementById('q_status').value,
+    addons: {
+      design: document.getElementById('q_addon_design').checked,
+      application: document.getElementById('q_addon_application').checked,
+      scodix: document.getElementById('q_addon_scodix').checked,
+      rush: document.getElementById('q_addon_rush').checked,
+    },
+    lineItems: getLineItems(),
+    total,
+    createdAt: _editingQuoteId ? (_quotes.find(x=>x.quoteId===_editingQuoteId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  if (_editingQuoteId) {
+    const idx = _quotes.findIndex(x => x.quoteId === _editingQuoteId);
+    if (idx >= 0) _quotes[idx] = qt; else _quotes.unshift(qt);
+  } else {
+    _quotes.unshift(qt);
+    _editingQuoteId = quoteId;
+  }
+  saveQuotes();
+  document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
+  alert(`✅ Quote #${quoteId} saved as "${qt.status}".`);
+}
+
+async function convertToJobTicket() {
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === _editingQuoteId);
+  if (!qt) { saveQuote('approved'); return; }
+  if (!qt.customer) { alert('Enter a customer name before converting.'); return; }
+  if (!confirm(`Convert quote #${qt.quoteId} to job ticket(s)? This will open the job ticket form pre-filled with customer info.`)) return;
+  // Mark as converted
+  const idx = _quotes.findIndex(x => x.quoteId === qt.quoteId);
+  _quotes[idx].status = 'converted';
+  _quotes[idx].convertedAt = new Date().toISOString();
+  saveQuotes();
+  // Build URL params for first line item
+  const li = qt.lineItems?.[0] || {};
+  const params = new URLSearchParams({
+    customer: qt.customer,
+    rep: qt.rep || '',
+    facility: qt.facility || '',
+    due: qt.due || '',
+    product: li.product || '',
+    material: li.material || '',
+    qty: li.qty || '',
+    fromQuote: qt.quoteId,
+  });
+  window.location.href = `job-ticket.html?${params.toString()}`;
+}
+</script>
+</body>
+</html>

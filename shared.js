@@ -1985,6 +1985,13 @@ const THEME_CSS = `
   .data-table th { background: #f8f9fb; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 1; }
   .data-table td { padding: 8px 12px; border-bottom: 1px solid #eef0f3; vertical-align: middle; }
   .data-table tr:hover td { background: #f8fafc; }
+  .stat-item { text-align:center; padding:8px 14px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); }
+  .stat-value { font-size:22px; font-weight:700; }
+  .stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .qp-filter-btn { padding:4px 12px; border-radius:12px; border:1px solid #d1d5db; background:#fff; font-size:12px; cursor:pointer; }
+  .qp-filter-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+  .rt-container { max-width:1200px; margin:0 auto; padding:24px; }
+  .rt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
 `;
 
 function injectThemeCSS() {
@@ -1995,12 +2002,16 @@ function injectThemeCSS() {
 
 function renderNav(activePage) {
   const pages = [
-    { id: 'dashboard', label: '🏠 Dashboard', href: 'dashboard.html' },
-    { id: 'job-ticket', label: 'Job Ticket', href: 'job-ticket.html' },
-    { id: 'production-manager', label: 'Production Manager', href: 'production-manager.html' },
-    { id: 'operator-terminal', label: 'Operator Terminal', href: 'operator-terminal.html' },
-    { id: 'qc-checkout', label: 'QC Checkout', href: 'qc-checkout.html' },
-    { id: 'admin', label: 'Admin', href: 'admin.html' },
+    { id: 'dashboard',          label: '🏠 Dashboard',         href: 'dashboard.html' },
+    { id: 'job-ticket',          label: '🎫 Job Ticket',         href: 'job-ticket.html' },
+    { id: 'quotes',              label: '💬 Quotes',             href: 'quotes.html' },
+    { id: 'production-manager',  label: '⚙️ Production',         href: 'production-manager.html' },
+    { id: 'operator-terminal',   label: '👷 Operator',           href: 'operator-terminal.html' },
+    { id: 'qc-checkout',         label: '🔍 QC',                 href: 'qc-checkout.html' },
+    { id: 'application-dept',    label: '🏷️ Application',        href: 'application-dept.html' },
+    { id: 'rep-tasks',           label: '📋 Rep Tasks',          href: 'rep-tasks.html' },
+    { id: 'machine-issues',      label: '🔧 Machines',           href: 'machine-issues.html' },
+    { id: 'admin',               label: '⚙️ Admin',              href: 'admin.html' },
   ];
   return `
     <nav class="top-nav">
