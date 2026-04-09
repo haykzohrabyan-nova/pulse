@@ -649,15 +649,18 @@ async function renderOrderNavigator(parentId, currentOrderId) {
 
   const nav = document.createElement('div');
   nav.id = 'orderNavigator';
-  nav.style.cssText = 'background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:14px;overflow:hidden;';
+  // Starts collapsed (minimized) — sits at the bottom above the save bar
+  nav.style.cssText = 'background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;margin-top:16px;overflow:hidden;';
   nav.innerHTML = `
     <div onclick="toggleOrderNav()" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;">
-      <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order Group — ${customer || '#'+parentId} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''}</span></div>
-      <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9660;</span>
+      <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order #${parentId} — ${customer || ''} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''} · click to expand</span></div>
+      <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9650;</span>
     </div>
-    <div id="orderNavBody" style="padding:0 10px 10px;">${rows}</div>
+    <div id="orderNavBody" style="padding:0 10px 10px;display:none;">${rows}</div>
   `;
-  document.querySelector('.jt-container').insertBefore(nav, document.querySelector('.jt-header').nextSibling);
+  // Insert before the save bar (at the bottom of the form)
+  const saveBar = document.querySelector('.save-bar');
+  saveBar.parentNode.insertBefore(nav, saveBar);
 }
 
 function toggleOrderNav() {
