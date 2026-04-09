@@ -427,6 +427,16 @@
     <button class="qp-filter-btn active" data-qfilter="today" onclick="setQFilter('today')">Today</button>
     <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">This Week</button>
     <button class="qp-filter-btn" data-qfilter="all" onclick="setQFilter('all')">All Active</button>
+    <button class="qp-filter-btn" data-qfilter="overdue" onclick="setQFilter('overdue')">Past Due</button>
+    <button class="qp-filter-btn" data-qfilter="on-hold" onclick="setQFilter('on-hold')">On Hold</button>
+    <button class="qp-filter-btn" data-qfilter="closed" onclick="setQFilter('closed')">Closed</button>
+    <button class="qp-filter-btn" data-qfilter="16th" onclick="setQFilter('16th')">16th St</button>
+    <button class="qp-filter-btn" data-qfilter="boyd" onclick="setQFilter('boyd')">Boyd</button>
+  </div>
+  <div style="padding:6px 12px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <select id="queueRepFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+      <option value="">All Reps</option>
+    </select>
   </div>
   <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input id="queueSearch" type="text" placeholder="Search order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;">
@@ -436,7 +446,7 @@
 </div><!-- /splitWrapper -->
 
 <!-- Toggle button (shows when queue is hidden) -->
-<button id="showQueueBtn" onclick="toggleQueuePane()" style="display:none;position:fixed;right:16px;top:80px;z-index:100;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);">📋 Queue</button>
+<button id="showQueueBtn" onclick="toggleQueuePane()" style="position:fixed;right:16px;top:80px;z-index:100;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);">📋 Queue</button>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -1945,12 +1955,13 @@ async function saveAndAddSubTicket() {
 // ─── After-Save Sub-Ticket Prompt ───────────────────────────────
 // ─── Queue Pane ──────────────────────────────────────────────────
 let _qFilter = 'today';
-let _queuePaneVisible = true;
+let _queuePaneVisible = false; // hidden by default — toggle to open
 
 function toggleQueuePane() {
   _queuePaneVisible = !_queuePaneVisible;
   document.getElementById('queuePane').classList.toggle('collapsed', !_queuePaneVisible);
   document.getElementById('showQueueBtn').style.display = _queuePaneVisible ? 'none' : '';
+  if (_queuePaneVisible) renderQueuePane(); // refresh on open
 }
 
 function setQFilter(f) {
@@ -1972,70 +1983,80 @@ async function renderQueuePane() {
   const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
   const doneStatuses = ['completed','shipped','received','waiting-pickup'];
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
+  const repFilter = document.getElementById('queueRepFilter')?.value || '';
 
-  let orders = allOrders.filter(o => !doneStatuses.includes(o.status));
+  // Populate rep dropdown once
+  const repSel = document.getElementById('queueRepFilter');
+  if (repSel && repSel.options.length <= 1) {
+    const reps = [...new Set(allOrders.map(o => o.accountManager).filter(Boolean))].sort();
+    reps.forEach(r => { const opt = document.createElement('option'); opt.value = r; opt.textContent = r; repSel.appendChild(opt); });
+  }
 
-  // Filter by time
+  let orders;
+  if (_qFilter === 'closed') {
+    orders = allOrders.filter(o => doneStatuses.includes(o.status));
+  } else {
+    orders = allOrders.filter(o => !doneStatuses.includes(o.status));
+  }
+
   if (_qFilter === 'today') {
-    orders = orders.filter(o => {
-      if (!o.dueDate) return false;
-      const d = new Date(o.dueDate + 'T12:00:00');
-      return d <= new Date(today.getTime() + 86400000);
-    });
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d <= new Date(today.getTime()+86400000); });
   } else if (_qFilter === 'week') {
-    orders = orders.filter(o => {
-      if (!o.dueDate) return false;
-      const d = new Date(o.dueDate + 'T12:00:00');
-      return d >= today && d <= weekEnd;
-    });
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d <= weekEnd; });
+  } else if (_qFilter === 'overdue') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') < today; });
+  } else if (_qFilter === 'on-hold') {
+    orders = orders.filter(o => o.status === 'on-hold');
+  } else if (_qFilter === '16th') {
+    orders = orders.filter(o => o.facility === '16th-street');
+  } else if (_qFilter === 'boyd') {
+    orders = orders.filter(o => o.facility === 'boyd-street');
   }
 
-  // Search
-  if (q) {
-    orders = orders.filter(o =>
-      String(o.orderId).toLowerCase().includes(q) ||
-      (o.customerName || o.customer || '').toLowerCase().includes(q)
-    );
-  }
-
-  // Sort by due date
-  orders.sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
+  if (repFilter) orders = orders.filter(o => o.accountManager === repFilter);
+  if (q) orders = orders.filter(o => String(o.orderId).toLowerCase().includes(q) || (o.customerName||o.customer||'').toLowerCase().includes(q));
+  orders.sort((a, b) => new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01'));
 
   if (orders.length === 0) {
-    list.innerHTML = `<div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">No tickets match.</div>`;
+    list.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">No tickets match.</div>';
     return;
   }
 
-  const baseUrl = window.location.origin + window.location.pathname.replace('job-ticket.html', '');
+  const baseUrl = window.location.origin + window.location.pathname.replace('job-ticket.html','');
 
   list.innerHTML = orders.map(o => {
-    const ticketUrl = `${baseUrl}job-ticket.html?order=${o.orderId}`;
-    const qrUrl = qrDataURL(ticketUrl, 56);
-    const dueD = o.dueDate ? new Date(o.dueDate + 'T12:00:00') : null;
-    const todayMs = today.getTime();
-    const diffDays = dueD ? Math.ceil((dueD.getTime() - todayMs) / 86400000) : null;
+    const operatorUrl = baseUrl + 'operator-terminal.html?order=' + o.orderId;
+    const qrUrl = qrDataURL(operatorUrl, 56);
+    const dueD = o.dueDate ? new Date(o.dueDate+'T12:00:00') : null;
+    const diffDays = dueD ? Math.ceil((dueD.getTime() - today.getTime()) / 86400000) : null;
     const dueColor = diffDays === null ? '#9ca3af' : diffDays < 0 ? '#dc2626' : diffDays <= 1 ? '#d97706' : '#16a34a';
-    const dueText = diffDays === null ? '—' : diffDays < 0 ? `${Math.abs(diffDays)}d overdue` : diffDays === 0 ? 'Due today' : `${diffDays}d left`;
-    const statusColors = { 'in-production': '#16a34a', 'on-hold': '#dc2626', 'new': '#d97706', 'pending-review': '#d97706', 'ready-to-ship': '#2563eb' };
+    const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
+    const statusColors = {'in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
-    return `<div class="qp-card" onclick="window.location.href='job-ticket.html?order=${o.orderId}'">
-      <div class="qp-card-info">
-        <div class="qp-card-id">#${o.orderId} <span style="font-size:10px;font-weight:400;color:${sColor};">● ${o.status}</span></div>
-        <div class="qp-card-customer">${o.customerName || o.customer || '—'}</div>
-        <div class="qp-card-meta">${o.productType || '—'} &middot; ${(o.quantity||0).toLocaleString()} pcs</div>
-        <div class="qp-card-meta" style="color:${dueColor};font-weight:600;">${dueText}</div>
-      </div>
-      <div class="qp-qr">
-        <img src="${qrUrl}" width="56" height="56" title="Scan to open #${o.orderId}" style="border-radius:4px;border:1px solid #e5e7eb;" loading="lazy">
-        <div style="font-size:9px;color:#9ca3af;text-align:center;margin-top:2px;">scan</div>
-      </div>
-    </div>`;
+    const facilityTag = o.facility === 'boyd-street'
+      ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
+      : o.facility === '16th-street'
+      ? '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;margin-left:4px;">16th</span>' : '';
+    return '<div class="qp-card" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
+      + '<div class="qp-card-info">'
+      + '<div class="qp-card-id">#' + o.orderId + facilityTag + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
+      + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
+      + '<div class="qp-card-meta">' + (o.productType||'\u2014') + ' \u00b7 ' + (o.quantity||0).toLocaleString() + ' pcs' + (o.accountManager ? ' \u00b7 '+o.accountManager : '') + '</div>'
+      + '<div class="qp-card-meta" style="color:' + dueColor + ';font-weight:600;">' + dueText + '</div>'
+      + '</div>'
+      + '<div class="qp-qr" title="Scan \u2192 operator terminal">'
+      + '<img src="' + qrUrl + '" width="56" height="56" style="border-radius:4px;border:1px solid #e5e7eb;" loading="lazy">'
+      + '<div style="font-size:9px;color:#9ca3af;text-align:center;margin-top:2px;">scan</div>'
+      + '</div></div>';
   }).join('');
 }
 
-// Init queue pane on load
+
+// Init queue pane — hidden by default, toggle button always visible
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(renderQueuePane, 500); // slight delay so orders DB is ready
+  document.getElementById('queuePane').classList.add('collapsed');
+  document.getElementById('showQueueBtn').style.display = '';
+  _queuePaneVisible = false;
 }, { once: false });
 
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
