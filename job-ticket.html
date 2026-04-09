@@ -579,6 +579,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('jobTicketNumber').readOnly = true;
     document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
     document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
+    // Hide the manual parent order field — not needed in sub-ticket flow
+    const parentField = document.getElementById('parentOrderInput');
+    if (parentField) parentField.closest('.field').style.display = 'none';
 
     // Pre-fill from URL params (Save & Add flow) or from DB
     const parent = await getOrderByOrderId(parentId);
@@ -1879,8 +1882,10 @@ async function saveAndAddSubTicket() {
     // Run normal save
     await saveTicket(true); // pass flag to suppress redirect
 
-    // _lastSavedOrderId is set by saveTicket when flag=true
-    const parentId = _lastSavedOrderId;
+    // Always use the ROOT parent — not the just-saved ticket
+    // If we're already in a sub-ticket flow, _parentOrderId is the root
+    // If this is the first ticket, _lastSavedOrderId is the root
+    const parentId = _parentOrderId || _lastSavedOrderId;
     if (!parentId) { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Save & Add Next Item \u2795'; return; }
 
     // Navigate to new ticket pre-filled via URL params
