@@ -13,53 +13,6 @@
 <!-- Split view wrapper -->
 <div id="splitWrapper" style="display:flex;gap:0;min-height:100vh;">
 <div id="formPane" style="flex:1;min-width:0;">
-  <div class="qp-header">
-    <div style="font-size:13px;font-weight:700;color:#1e293b;">📋 Job Queue</div>
-    <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:16px;color:#6b7280;" title="Collapse">◀</button>
-  </div>
-  <div class="qp-filters">
-    <button class="qp-filter-btn active" data-qfilter="today" onclick="setQFilter('today')">Today</button>
-    <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">This Week</button>
-    <button class="qp-filter-btn" data-qfilter="all" onclick="setQFilter('all')">All Active</button>
-    <button class="qp-filter-btn" data-qfilter="overdue" onclick="setQFilter('overdue')">Past Due</button>
-    <button class="qp-filter-btn" data-qfilter="on-hold" onclick="setQFilter('on-hold')">On Hold</button>
-    <button class="qp-filter-btn" data-qfilter="closed" onclick="setQFilter('closed')">Closed</button>
-    <button class="qp-filter-btn" data-qfilter="16th" onclick="setQFilter('16th')">16th St</button>
-    <button class="qp-filter-btn" data-qfilter="boyd" onclick="setQFilter('boyd')">Boyd</button>
-  </div>
-  <div style="padding:6px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
-    <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;">
-  </div>
-  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:6px;">
-    <select id="queueRepFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Reps</option>
-    </select>
-    <select id="queueMachineFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Machines</option>
-      <option value="HP Indigo 6K">6K Press</option>
-      <option value="HP Indigo 15K">15K Press</option>
-      <option value="GM Die Cutter w/ JetFX">GM Die</option>
-      <option value="Karlville Poucher">Poucher</option>
-      <option value="Scodix">Scodix</option>
-      <option value="Canon Colorado">Canon</option>
-    </select>
-  </div>
-  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
-    <select id="queueMaterialFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Materials</option>
-      <option value="White BOPP">White BOPP</option>
-      <option value="Silver BOPP">Silver BOPP</option>
-      <option value="Clear BOPP">Clear BOPP</option>
-      <option value="Kraft Paper">Kraft Paper</option>
-      <option value="White Matte">White Matte</option>
-      <option value="Gloss Paper">Gloss Paper</option>
-      <option value="Cardstock">Cardstock</option>
-      <option value="Vinyl">Vinyl</option>
-    </select>
-  </div>
-  <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
-</div>
-<div id="formPane" style="flex:1;min-width:0;">
 <div class="jt-container">
   <div class="jt-header">
     <div>
@@ -464,58 +417,29 @@
 </div><!-- /jt-container -->
 </div><!-- /formPane -->
 
-<!-- ═══ QUEUE PANE (right side) ══════════════════════════════ -->
+<!-- ═══ QUEUE PANE (right side, narrow) ══════════════════════ -->
 <div id="queuePane">
   <div class="qp-header">
-    <div style="font-size:13px;font-weight:700;color:#1e293b;">📋 Placed Orders</div>
-    <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:16px;color:#6b7280;" title="Collapse">▶</button>
+    <div style="font-size:12px;font-weight:700;color:#1e293b;">📋 Placed Orders</div>
+    <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:14px;color:#6b7280;padding:2px 4px;" title="Collapse">▶</button>
   </div>
-  <div class="qp-filters">
-    <button class="qp-filter-btn active" data-qfilter="all" onclick="setQFilter('all')">All Active</button>
+  <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
+  </div>
+  <div class="qp-filters" style="padding:6px 8px;">
+    <button class="qp-filter-btn active" data-qfilter="all" onclick="setQFilter('all')">All</button>
     <button class="qp-filter-btn" data-qfilter="today" onclick="setQFilter('today')">Today</button>
-    <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">This Week</button>
+    <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">Week</button>
     <button class="qp-filter-btn" data-qfilter="overdue" onclick="setQFilter('overdue')">Past Due</button>
     <button class="qp-filter-btn" data-qfilter="on-hold" onclick="setQFilter('on-hold')">On Hold</button>
     <button class="qp-filter-btn" data-qfilter="closed" onclick="setQFilter('closed')">Closed</button>
-    <button class="qp-filter-btn" data-qfilter="16th" onclick="setQFilter('16th')">16th St</button>
-    <button class="qp-filter-btn" data-qfilter="boyd" onclick="setQFilter('boyd')">Boyd</button>
-  </div>
-  <div style="padding:6px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
-    <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;">
-  </div>
-  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:6px;">
-    <select id="queueRepFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Reps</option>
-    </select>
-    <select id="queueMachineFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Machines</option>
-      <option value="HP Indigo 6K">6K Press</option>
-      <option value="HP Indigo 15K">15K Press</option>
-      <option value="GM Die Cutter w/ JetFX">GM Die</option>
-      <option value="Karlville Poucher">Poucher</option>
-      <option value="Scodix">Scodix</option>
-      <option value="Canon Colorado">Canon</option>
-    </select>
-  </div>
-  <div style="padding:4px 10px;border-bottom:1px solid #e2e8f0;background:#fff;">
-    <select id="queueMaterialFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="">All Materials</option>
-      <option value="White BOPP">White BOPP</option>
-      <option value="Silver BOPP">Silver BOPP</option>
-      <option value="Clear BOPP">Clear BOPP</option>
-      <option value="Kraft Paper">Kraft Paper</option>
-      <option value="White Matte">White Matte</option>
-      <option value="Gloss Paper">Gloss Paper</option>
-      <option value="Cardstock">Cardstock</option>
-      <option value="Vinyl">Vinyl</option>
-    </select>
   </div>
   <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
 </div>
 </div><!-- /splitWrapper -->
 
 <!-- Expand button (shows when queue is collapsed) -->
-<button id="showQueueBtn" onclick="toggleQueuePane()" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:100;background:#2563eb;color:#fff;border:none;border-radius:8px 0 0 8px;padding:12px 6px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:-2px 0 8px rgba(0,0,0,0.15);writing-mode:vertical-rl;">◀ Queue</button>
+<button id="showQueueBtn" onclick="toggleQueuePane()" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:100;background:#2563eb;color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 5px;font-size:11px;font-weight:600;cursor:pointer;box-shadow:-2px 0 8px rgba(0,0,0,0.15);writing-mode:vertical-rl;">◀ Orders</button>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -529,7 +453,7 @@ document.getElementById('nav').innerHTML = renderNav('job-ticket');
 
 document.getElementById('page-styles').textContent = `
   .jt-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
-  #queuePane { width: 320px; min-width: 300px; background: #f8fafc; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
+  #queuePane { width: 260px; min-width: 240px; background: #f8fafc; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
   #queuePane.collapsed { width: 0; min-width: 0; border: none; overflow: hidden; }
   .qp-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .qp-filters { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
@@ -2100,16 +2024,6 @@ async function renderQueuePane() {
   const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
   const doneStatuses = ['completed','shipped','received','waiting-pickup'];
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
-  const repFilter = document.getElementById('queueRepFilter')?.value || '';
-  const machineFilter = document.getElementById('queueMachineFilter')?.value || '';
-  const materialFilter = document.getElementById('queueMaterialFilter')?.value || '';
-
-  // Populate rep dropdown once
-  const repSel = document.getElementById('queueRepFilter');
-  if (repSel && repSel.options.length <= 1) {
-    const reps = [...new Set(allOrders.map(o => o.accountManager).filter(Boolean))].sort();
-    reps.forEach(r => { const opt = document.createElement('option'); opt.value = r; opt.textContent = r; repSel.appendChild(opt); });
-  }
 
   let orders;
   if (_qFilter === 'closed') {
@@ -2132,9 +2046,6 @@ async function renderQueuePane() {
     orders = orders.filter(o => o.facility === 'boyd-street');
   }
 
-  if (repFilter) orders = orders.filter(o => o.accountManager === repFilter);
-  if (machineFilter) orders = orders.filter(o => (o.machine||o.assignedMachine||'').includes(machineFilter));
-  if (materialFilter) orders = orders.filter(o => (o.material||'').includes(materialFilter));
   if (q) orders = orders.filter(o => String(o.orderId).toLowerCase().includes(q) || (o.customerName||o.customer||'').toLowerCase().includes(q));
   orders.sort((a, b) => new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01'));
 
