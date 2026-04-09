@@ -246,7 +246,7 @@
         <!-- Lamination -->
         <div class="field">
           <label>Lamination</label>
-          <select id="lamination">
+          <select id="lamination" onchange="onFinishingChange()">
             <option value="None">None</option>
             <option value="Gloss">Gloss</option>
             <option value="Matte">Matte</option>
@@ -280,7 +280,7 @@
           </div>
         </div>
       </div>
-      <div class="form-row" style="margin-top:8px;">
+      <div class="form-row" id="finishingNotesRow" style="margin-top:8px;display:none;">
         <div class="field">
           <label>Finishing Notes</label>
           <textarea id="finishingNotes" rows="1" placeholder="Additional finishing instructions" oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
@@ -1070,6 +1070,7 @@ function onColorModeChange() {
 function onFinishingChange() {
   const hasUV = document.getElementById('hasUV').checked;
   const hasFoil = document.getElementById('hasFoil').checked;
+  const lamination = document.getElementById('lamination').value;
 
   // UV file slot
   document.getElementById('uvFileSlot').style.display = hasUV ? 'block' : 'none';
@@ -1077,6 +1078,11 @@ function onFinishingChange() {
   // Foil section + file slot
   document.getElementById('foilSection').style.display = hasFoil ? 'block' : 'none';
   document.getElementById('foilFileSlot').style.display = hasFoil ? 'block' : 'none';
+
+  // Finishing Notes — only show when at least one finishing option is selected
+  const hasAnyFinishing = hasUV || hasFoil || (lamination && lamination !== 'None');
+  const notesRow = document.getElementById('finishingNotesRow');
+  if (notesRow) notesRow.style.display = hasAnyFinishing ? '' : 'none';
 
   updateJetFXNote();
   calcFrames();
