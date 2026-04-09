@@ -1372,18 +1372,20 @@ async function getSubTicketProgress(parentOrderId) {
 }
 
 async function generateSubTicketId(parentOrderId) {
-  const subs = await getSubTickets(parentOrderId);
-  // Use max existing suffix + 1 (not count) to avoid duplicates if any were deleted
+  const all = await getAllOrders();
+  const allIds = new Set(all.map(o => String(o.orderId)));
+  const prefix = String(parentOrderId) + '-';
   let maxNum = 0;
-  subs.forEach(s => {
-    const parts = s.orderId.split('-');
-    const suffix = parseInt(parts[parts.length - 1]) || 0;
-    if (suffix > maxNum) maxNum = suffix;
+  all.forEach(o => {
+    const id = String(o.orderId);
+    if (id.startsWith(prefix)) {
+      const suffix = parseInt(id.slice(prefix.length)) || 0;
+      if (suffix > maxNum) maxNum = suffix;
+    }
   });
-  // Also check if the generated ID already exists to be safe
   let nextNum = maxNum + 1;
-  while (subs.some(s => s.orderId === `${parentOrderId}-${nextNum}`)) nextNum++;
-  return `${parentOrderId}-${nextNum}`;
+  while (allIds.has(prefix + nextNum)) nextNum++;
+  return prefix + nextNum;
 }
 
 function getOrderByOrderId(orderId) {

@@ -1704,17 +1704,19 @@ async function saveTicket(suppressRedirect = false) {
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
-      // Always regenerate sub-ticket ID fresh at save time to prevent duplicates
+      // Always regenerate IDs fresh at save time to prevent duplicates
       if (_parentOrderId) {
         order.orderId = await generateSubTicketId(_parentOrderId);
         document.getElementById('jobTicketNumber').value = order.orderId;
       } else if (!order.orderId) {
         order.orderId = await generateOrderId();
       }
-      // Final collision check
-      const existing = await getOrderByOrderId(order.orderId);
-      if (existing) {
-        throw new Error(`Order ID ${order.orderId} already exists. Please refresh the page and try again.`);
+      // Final collision check via full scan (reliable for hyphenated IDs)
+      const allOrders = await getAllOrders();
+      const collision = allOrders.some(o => String(o.orderId) === String(order.orderId));
+      if (collision) {
+        if (_parentOrderId) order.orderId = await generateSubTicketId(_parentOrderId);
+        else order.orderId = await generateOrderId();
       }
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
