@@ -568,55 +568,37 @@ window.addEventListener('DOMContentLoaded', async () => {
   const parentId = params.get('parent');
 
   if (parentId) {
-    // Creating a sub-ticket — pre-fill from parent
     _parentOrderId = parentId;
-
-    // If URL has inline params (from Save & Add flow), use them directly
     const urlCustomer = params.get('customer');
-    const urlRep = params.get('rep');
+    const urlRep     = params.get('rep');
     const urlFacility = params.get('facility');
-    const urlDue = params.get('due');
-    if (urlCustomer || urlRep || urlFacility || urlDue) {
-      const subId = await generateSubTicketId(parentId);
-      document.getElementById('jobTicketNumber').value = subId;
-      document.getElementById('jobTicketNumber').readOnly = true;
-      document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
-      document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
-      if (urlCustomer) document.getElementById('customerName').value = urlCustomer;
-      if (urlRep) document.getElementById('accountManager').value = urlRep;
-      if (urlFacility) { document.getElementById('facility').value = urlFacility; onFacilityChange(); }
-      if (urlDue) { document.getElementById('dueDate').value = urlDue; checkDueDate(); }
-      const banner = document.createElement('div');
-      banner.style.cssText = 'background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;';
-      banner.innerHTML = `📎 <strong>Sub-Ticket ${subId}</strong> — linked to order <strong>#${parentId}</strong>. Customer &amp; rep pre-filled. Fill in product details below.`;
-      document.querySelector('.jt-container').insertBefore(banner, document.querySelector('.jt-header').nextSibling);
-    }
+    const urlDue     = params.get('due');
 
+    const subId = await generateSubTicketId(parentId);
+    document.getElementById('jobTicketNumber').value = subId;
+    document.getElementById('jobTicketNumber').readOnly = true;
+    document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
+    document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
+
+    // Pre-fill from URL params (Save & Add flow) or from DB
     const parent = await getOrderByOrderId(parentId);
-    if (parent && !urlCustomer) {
-      document.getElementById('pageTitle').textContent = `New Sub-Ticket for #${parentId}`;
-      document.getElementById('orderIdDisplay').textContent = `Sub-ticket of Order #${parentId}`;
-      // Generate sub-ticket ID
-      const subId = await generateSubTicketId(parentId);
-      document.getElementById('jobTicketNumber').value = subId;
-      document.getElementById('jobTicketNumber').readOnly = true;
-      // Pre-fill from parent
-      document.getElementById('customerName').value = parent.customerName || parent.customer || '';
-      document.getElementById('accountManager').value = parent.accountManager || '';
-      if (parent.dueDate) document.getElementById('dueDate').value = parent.dueDate;
-      if (parent.facility) { document.getElementById('facility').value = parent.facility; onFacilityChange(); }
-      // Show parent banner
-      const banner = document.createElement('div');
-      banner.style.cssText = 'background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;';
-      banner.innerHTML = `📎 <strong>Sub-Ticket</strong> — linked to parent order <a href="job-ticket.html?order=${parentId}" style="color:#2563eb;font-weight:700;">#${parentId}</a> (${parent.customerName || parent.customer || ''}). Customer name, rep, facility &amp; due date pre-filled.`;
-      document.querySelector('.jt-container').insertBefore(banner, document.querySelector('.jt-header').nextSibling);
-      // Trigger checkDueDate
-      if (parent.dueDate) checkDueDate();
-    }
+    const customer = urlCustomer || parent?.customerName || parent?.customer || '';
+    const rep      = urlRep      || parent?.accountManager || '';
+    const facility = urlFacility || parent?.facility || '';
+    const due      = urlDue      || parent?.dueDate || '';
+
+    if (customer) document.getElementById('customerName').value = customer;
+    if (rep)      document.getElementById('accountManager').value = rep;
+    if (facility) { document.getElementById('facility').value = facility; onFacilityChange(); }
+    if (due)      { document.getElementById('dueDate').value = due; checkDueDate(); }
+
+    // Show order navigator
+    await renderOrderNavigator(parentId, null);
+
   } else if (orderId) {
     const order = await getOrderByOrderId(orderId);
     if (order) {
-      editingDbId = order.id;
+      editingDbId    = order.id;
       editingOrderId = order.orderId;
       document.getElementById('pageTitle').textContent = `Edit Job #${orderId}`;
       document.getElementById('orderIdDisplay').textContent = `Order ID: ${orderId}`;
@@ -625,18 +607,66 @@ window.addEventListener('DOMContentLoaded', async () => {
       const subBtn = document.getElementById('addSubTicketBtn');
       subBtn.href = `job-ticket.html?parent=${orderId}`;
       subBtn.style.display = '';
-      // If this is a parent order, show sub-ticket section
+      // Show sub-ticket section (for parent orders)
       await renderSubTicketSection(orderId);
-      // If this is itself a sub-ticket, show parent link
-      if (order.parentOrderId) {
-        const parentBanner = document.createElement('div');
-        parentBanner.style.cssText = 'background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;';
-        parentBanner.innerHTML = `📎 <strong>Sub-Ticket</strong> of <a href="job-ticket.html?order=${order.parentOrderId}" style="color:#2563eb;font-weight:700;">#${order.parentOrderId}</a>`;
-        document.querySelector('.jt-container').insertBefore(parentBanner, document.querySelector('.jt-header').nextSibling);
-      }
+      // Show order navigator (for parent OR sub-ticket)
+      const navParentId = order.parentOrderId || orderId;
+      await renderOrderNavigator(navParentId, orderId);
     }
   }
 });
+
+// ─── Order Navigator (collapsible) ─────────────────────────────────
+async function renderOrderNavigator(parentId, currentOrderId) {
+  const parent = await getOrderByOrderId(parentId);
+  const subs   = await getSubTickets(parentId);
+  const customer = parent?.customerName || parent?.customer || '';
+  const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
+
+  // Build ticket list: parent first, then subs
+  const allTickets = [];
+  if (parent) allTickets.push({ ...parent, _isParent: true });
+  subs.forEach(s => allTickets.push(s));
+
+  if (allTickets.length === 0) return;
+
+  const rows = allTickets.map(t => {
+    const isCurrent = t.orderId === currentOrderId;
+    const isDone = doneStatuses.includes(t.status);
+    const label = t._isParent ? `#${t.orderId} <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:8px;margin-left:4px;">PARENT</span>` : `#${t.orderId}`;
+    const product = t.productType || t.jobDescription || '—';
+    const statusColor = isDone ? '#16a34a' : t.status === 'on-hold' ? '#dc2626' : '#d97706';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:${isCurrent ? '#eff6ff' : 'transparent'};border:${isCurrent ? '1px solid #bfdbfe' : '1px solid transparent'};">
+      <span style="font-size:11px;font-weight:${isCurrent?'700':'400'};min-width:80px;">${label}</span>
+      <span style="font-size:11px;color:#6b7280;flex:1;">${product}</span>
+      <span style="font-size:10px;color:${statusColor};font-weight:600;">${t.status || 'new'}</span>
+      ${isCurrent
+        ? `<span style="font-size:11px;color:#2563eb;font-weight:600;">← you are here</span>`
+        : `<a href="job-ticket.html?order=${t.orderId}" style="font-size:11px;color:#2563eb;text-decoration:none;padding:2px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#fff;">Open</a>`
+      }
+    </div>`;
+  }).join('');
+
+  const nav = document.createElement('div');
+  nav.id = 'orderNavigator';
+  nav.style.cssText = 'background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:14px;overflow:hidden;';
+  nav.innerHTML = `
+    <div onclick="toggleOrderNav()" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;">
+      <div style="font-size:13px;font-weight:600;color:#1d4ed8;">📂 Order Group — ${customer || '#'+parentId} &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${allTickets.length} ticket${allTickets.length!==1?'s':''}</span></div>
+      <span id="orderNavArrow" style="font-size:13px;color:#6b7280;">&#9660;</span>
+    </div>
+    <div id="orderNavBody" style="padding:0 10px 10px;">${rows}</div>
+  `;
+  document.querySelector('.jt-container').insertBefore(nav, document.querySelector('.jt-header').nextSibling);
+}
+
+function toggleOrderNav() {
+  const body  = document.getElementById('orderNavBody');
+  const arrow = document.getElementById('orderNavArrow');
+  const open  = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : '';
+  arrow.innerHTML     = open ? '&#9650;' : '&#9660;';
+}
 
 async function renderSubTicketSection(orderId) {
   const subs = await getSubTickets(orderId);
