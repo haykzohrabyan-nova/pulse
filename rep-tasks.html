@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rep Tasks — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -82,6 +83,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('rep-tasks');
+initAuth('rep-tasks');
 document.getElementById('page-styles').textContent = `
   .rt-container { max-width:1200px; margin:0 auto; padding:24px; }
   .rt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }

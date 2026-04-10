@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -19,6 +20,8 @@
     <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
     <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
+    <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
+    <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
   </div>
 
@@ -135,7 +138,46 @@
     </div>
 
     <!-- ══════════════════════════════════════ SETTINGS ══ -->
-    <div class="tab-pane" id="tab-settings">
+    <!-- ═══ QA SIGN-OFF RULES TAB ═════════════════════════════════ -->
+<div class="tab-pane" id="tab-qa-rules">
+  <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h2>✅ QA Sign-off Rules</h2>
+      <p style="color:#6b7280;font-size:13px;margin:4px 0 0;">Configure when a supervisor must sign off at specific production stages.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openQARuleModal()">+ Add Rule</button>
+  </div>
+
+  <div style="background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;">
+    ⚠️ Rules are evaluated when a job ticket is created or updated. If a rule matches, the assigned supervisor must sign off before the job advances past the specified stages.
+  </div>
+
+  <div id="qaRulesList"></div>
+</div>
+
+<!-- ═══ ROLES & PERMISSIONS TAB ═══════════════════════════════ -->
+<div class="tab-pane" id="tab-roles">
+  <div class="pane-header">
+    <h2>🔐 Roles & Permissions</h2>
+    <p style="color:#6b7280;font-size:13px;margin:4px 0 0;">What each role can see and do in Pulse.</p>
+  </div>
+  <table class="data-table" style="font-size:13px;">
+    <thead><tr><th>Role</th><th>Job Ticket Access</th><th>Can Edit Others' Tickets</th><th>Production Pages</th><th>Admin Access</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Admin</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+      <tr><td><strong>Supervisor</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+      <tr><td><strong>Production Manager</strong></td><td>View only</td><td>❌ No</td><td>✅ Yes</td><td>❌ No</td></tr>
+      <tr><td><strong>Account Manager</strong></td><td>Own tickets only</td><td>❌ No (own only)</td><td>❌ No</td><td>❌ No</td></tr>
+      <tr><td><strong>Operator</strong></td><td>None</td><td>❌ No</td><td>Operator Terminal, QC, Application only</td><td>❌ No</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:24px;">
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Current User Assignments</h3>
+    <div id="roleUserList"></div>
+  </div>
+</div>
+
+<div class="tab-pane" id="tab-settings">
       <div class="pane-header">
         <h2>System Settings</h2>
       </div>
@@ -371,6 +413,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('admin');
+initAuth('admin');
 
 document.getElementById('page-styles').textContent = `
   .admin-layout { display: flex; flex-direction: column; height: calc(100vh - 52px); overflow: hidden; }
@@ -444,6 +487,226 @@ async function loadTab(tab) {
   else if (tab === 'machines') renderMachines();
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'settings') await loadSettings();
+  else if (tab === 'qa-rules') renderQARules();
+  else if (tab === 'roles') renderRoles();
+}
+
+// ────────────────────────────────────────────────────────────────
+// QA Sign-off Rules
+// ────────────────────────────────────────────────────────────────
+
+const QA_RULE_FIELDS = [
+  { value: 'quantity',     label: 'Quantity (pcs)' },
+  { value: 'customer',     label: 'Customer Name (contains)' },
+  { value: 'productType',  label: 'Product Type' },
+  { value: 'material',     label: 'Material' },
+  { value: 'facility',     label: 'Facility' },
+  { value: 'accountManager', label: 'Account Manager / Rep' },
+  { value: 'lamination',   label: 'Lamination' },
+  { value: 'hasUV',        label: 'Has UV Coating' },
+  { value: 'hasFoil',      label: 'Has Foil' },
+];
+
+const QA_OPERATORS = [
+  { value: 'gt',       label: '> greater than' },
+  { value: 'gte',      label: '>= at least' },
+  { value: 'lt',       label: '< less than' },
+  { value: 'lte',      label: '<= at most' },
+  { value: 'eq',       label: '= equals' },
+  { value: 'contains', label: 'contains' },
+  { value: 'is-true',  label: 'is checked / true' },
+];
+
+const QA_STAGES = [
+  { value: 'prepress',            label: 'Prepress sign-off' },
+  { value: 'press-start',         label: 'Press start sign-off' },
+  { value: 'mid-run-check',       label: 'Mid-run check' },
+  { value: 'finishing-start',     label: 'Finishing start sign-off' },
+  { value: 'qc-checkout',         label: 'QC checkout approval' },
+  { value: 'ready-to-ship',       label: 'Ready-to-ship approval' },
+];
+
+function loadQARules() {
+  try { return JSON.parse(localStorage.getItem('pulse_qa_rules') || '[]'); } catch(e) { return []; }
+}
+function saveQARules(rules) { localStorage.setItem('pulse_qa_rules', JSON.stringify(rules)); }
+
+function renderQARules() {
+  const rules = loadQARules();
+  const el = document.getElementById('qaRulesList');
+  if (!el) return;
+  if (rules.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;">
+      No QA rules configured yet.<br>Click <strong>+ Add Rule</strong> to create the first one.
+    </div>`;
+    return;
+  }
+  el.innerHTML = rules.map(r => {
+    const fieldLabel = QA_RULE_FIELDS.find(f => f.value === r.condition.field)?.label || r.condition.field;
+    const opLabel = QA_OPERATORS.find(o => o.value === r.condition.op)?.label || r.condition.op;
+    const stageLabels = (r.stages||[]).map(s => QA_STAGES.find(x => x.value === s)?.label || s).join(', ');
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-weight:700;font-size:14px;color:#1e293b;">${r.name}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${r.active?'#dcfce7':'#f3f4f6'};color:${r.active?'#15803d':'#6b7280'};font-weight:600;">${r.active ? 'Active' : 'Disabled'}</span>
+        </div>
+        <div style="font-size:13px;color:#374151;margin-bottom:4px;">Trigger: <strong>${fieldLabel} ${opLabel} ${r.condition.value||''}</strong></div>
+        <div style="font-size:12px;color:#6b7280;">Requires supervisor sign-off at: ${stageLabels || '(no stages set)'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="toggleQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;">${r.active ? 'Disable' : 'Enable'}</button>
+        <button onclick="editQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
+        <button onclick="deleteQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _editingRuleId = null;
+
+function openQARuleModal(ruleId) {
+  _editingRuleId = ruleId || null;
+  const rule = ruleId ? loadQARules().find(r => r.id === ruleId) : null;
+
+  const fieldOpts = QA_RULE_FIELDS.map(f => `<option value="${f.value}" ${rule?.condition.field===f.value?'selected':''}>${f.label}</option>`).join('');
+  const opOpts = QA_OPERATORS.map(o => `<option value="${o.value}" ${rule?.condition.op===o.value?'selected':''}>${o.label}</option>`).join('');
+  const stageChecks = QA_STAGES.map(s => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;">
+      <input type="checkbox" value="${s.value}" ${rule?.stages?.includes(s.value)?'checked':''}>
+      ${s.label}
+    </label>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'qaRuleOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:28px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+      <h3 style="margin:0 0 20px;font-size:17px;">${rule ? 'Edit' : 'New'} QA Rule</h3>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Rule Name *</label>
+        <input type="text" id="qa_name" value="${rule?.name||''}" placeholder="e.g. Large Order Supervisor Check" style="padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Trigger Condition</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="field">
+            <label style="font-size:11px;">Field</label>
+            <select id="qa_field" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">${fieldOpts}</select>
+          </div>
+          <div class="field">
+            <label style="font-size:11px;">Condition</label>
+            <select id="qa_op" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">${opOpts}</select>
+          </div>
+          <div class="field">
+            <label style="font-size:11px;">Value</label>
+            <input type="text" id="qa_value" value="${rule?.condition.value||''}" placeholder="e.g. 1000000" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Require supervisor sign-off at these stages:</div>
+        <div id="qa_stages">${stageChecks}</div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+          <input type="checkbox" id="qa_active" ${rule ? (rule.active ? 'checked' : '') : 'checked'}>
+          Rule is active
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn" onclick="document.getElementById('qaRuleOverlay').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveQARule()">Save Rule</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function editQARule(id) { openQARuleModal(id); }
+
+function saveQARule() {
+  const name = document.getElementById('qa_name').value.trim();
+  if (!name) { alert('Enter a rule name.'); return; }
+  const field = document.getElementById('qa_field').value;
+  const op = document.getElementById('qa_op').value;
+  const value = document.getElementById('qa_value').value.trim();
+  const stages = [...document.querySelectorAll('#qa_stages input:checked')].map(c => c.value);
+  const active = document.getElementById('qa_active').checked;
+
+  const rules = loadQARules();
+  const rule = {
+    id: _editingRuleId || ('QAR-' + Date.now()),
+    name, active,
+    condition: { field, op, value },
+    stages,
+    createdAt: _editingRuleId ? rules.find(r=>r.id===_editingRuleId)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (_editingRuleId) {
+    const idx = rules.findIndex(r => r.id === _editingRuleId);
+    if (idx >= 0) rules[idx] = rule; else rules.unshift(rule);
+  } else {
+    rules.unshift(rule);
+  }
+  saveQARules(rules);
+  document.getElementById('qaRuleOverlay').remove();
+  renderQARules();
+}
+
+function toggleQARule(id) {
+  const rules = loadQARules();
+  const idx = rules.findIndex(r => r.id === id);
+  if (idx >= 0) { rules[idx].active = !rules[idx].active; saveQARules(rules); }
+  renderQARules();
+}
+
+function deleteQARule(id) {
+  if (!confirm('Delete this QA rule?')) return;
+  const rules = loadQARules().filter(r => r.id !== id);
+  saveQARules(rules);
+  renderQARules();
+}
+
+// Evaluate rules against a ticket — returns matching rule(s)
+function evaluateQARules(ticket) {
+  const rules = loadQARules().filter(r => r.active);
+  return rules.filter(r => {
+    const { field, op, value } = r.condition;
+    const ticketVal = ticket[field];
+    const numVal = parseFloat(value);
+    if (op === 'gt')       return parseFloat(ticketVal) > numVal;
+    if (op === 'gte')      return parseFloat(ticketVal) >= numVal;
+    if (op === 'lt')       return parseFloat(ticketVal) < numVal;
+    if (op === 'lte')      return parseFloat(ticketVal) <= numVal;
+    if (op === 'eq')       return String(ticketVal) === String(value);
+    if (op === 'contains') return String(ticketVal||'').toLowerCase().includes(value.toLowerCase());
+    if (op === 'is-true')  return !!ticketVal;
+    return false;
+  });
+}
+
+// Roles tab
+function renderRoles() {
+  const el = document.getElementById('roleUserList');
+  if (!el) return;
+  const rows = Object.entries(OPERATOR_PROFILES)
+    .concat([['Hayk Zohrabyan', { role: 'admin', notes: 'Owner / Admin' }]])
+    .map(([name, p]) => {
+      const cfg = typeof ROLE_CONFIG !== 'undefined' ? (ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' }) : { label: p.role, color: '#6b7280' };
+      return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="font-weight:600;min-width:160px;">${name}</span>
+        <span style="padding:2px 10px;border-radius:10px;background:${cfg.color}22;color:${cfg.color};font-size:11px;font-weight:600;">${cfg.label || p.role}</span>
+        <span style="color:#9ca3af;font-size:11px;">${p.notes || ''}</span>
+      </div>`;
+    }).join('');
+  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows}</div>`;
 }
 
 // ── Init ──────────────────────────────────────────────────

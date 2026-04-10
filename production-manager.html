@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -249,6 +250,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('production-manager');
+initAuth('production-manager');
 
 document.getElementById('page-styles').textContent = `
   .pm-layout { display: flex; height: calc(100vh - 52px); overflow: hidden; }

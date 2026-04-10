@@ -2001,23 +2001,25 @@ function injectThemeCSS() {
 }
 
 function renderNav(activePage) {
+  // access: 'all' | 'admin' | 'production' | 'operator' | 'account-manager'
   const pages = [
-    { id: 'dashboard',          label: '🏠 Dashboard',         href: 'dashboard.html' },
-    { id: 'job-ticket',          label: '🎫 Job Ticket',         href: 'job-ticket.html' },
-    { id: 'quotes',              label: '💬 Quotes',             href: 'quotes.html' },
-    { id: 'production-manager',  label: '⚙️ Production',         href: 'production-manager.html' },
-    { id: 'operator-terminal',   label: '👷 Operator',           href: 'operator-terminal.html' },
-    { id: 'qc-checkout',         label: '🔍 QC',                 href: 'qc-checkout.html' },
-    { id: 'application-dept',    label: '🏷️ Application',        href: 'application-dept.html' },
-    { id: 'rep-tasks',           label: '📋 Rep Tasks',          href: 'rep-tasks.html' },
-    { id: 'machine-issues',      label: '🔧 Machines',           href: 'machine-issues.html' },
-    { id: 'admin',               label: '⚙️ Admin',              href: 'admin.html' },
+    { id: 'dashboard',          label: '\uD83C\uDFE0 Dashboard',         href: 'dashboard.html',           access: 'all' },
+    { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
+    { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
+    { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
+    { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
+    { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },
+    { id: 'application-dept',   label: '\uD83C\uDFF7\uFE0F Application',  href: 'application-dept.html',    access: 'production' },
+    { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
+    { id: 'machine-issues',     label: '\uD83D\uDD27 Machines',           href: 'machine-issues.html',      access: 'production' },
+    { id: 'admin',              label: '\u2699\uFE0F Admin',              href: 'admin.html',               access: 'admin' },
   ];
+  const accessClass = { 'all': '', 'admin': 'nav-admin-only', 'production': 'nav-production-only', 'operator': 'nav-operator-only' };
   return `
     <nav class="top-nav">
       <a href="dashboard.html"><img src="pulse-logo.png" alt="Pulse" style="height:88px;width:auto;display:block;"></a>
       <div class="nav-links">
-        ${pages.map(p => `<a href="${p.href}" class="${p.id === activePage ? 'active' : ''}">${p.label}</a>`).join('')}
+        ${pages.map(p => `<a href="${p.href}" class="${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
       </div>
     </nav>
   `;

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QC Checkout — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -107,6 +108,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('qc-checkout');
+initAuth('qc-checkout');
 
 document.getElementById('page-styles').textContent = `
   .qc-container { max-width: 900px; margin: 0 auto; padding: 24px; }

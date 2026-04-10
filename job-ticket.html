@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -450,6 +451,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('job-ticket');
+initAuth('job-ticket');
 
 document.getElementById('page-styles').textContent = `
   .jt-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
@@ -2033,7 +2035,7 @@ async function renderQueuePane() {
   }
 
   if (_qFilter === 'today') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d <= new Date(today.getTime()+86400000); });
+    orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d <= new Date(today.getTime()+86400000); });
   } else if (_qFilter === 'week') {
     orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d <= weekEnd; });
   } else if (_qFilter === 'overdue') {

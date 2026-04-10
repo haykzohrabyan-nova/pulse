@@ -1,0 +1,260 @@
+// ============================================================
+// auth.js — Pulse Role-Based Access Control
+// Session stored in sessionStorage: pulse_session
+// ============================================================
+
+const ROLE_CONFIG = {
+  admin: {
+    label: 'Admin',
+    color: '#7c3aed',
+    pages: ['all'],
+    canEditAllTickets: true,
+    canViewAdmin: true,
+    canViewProduction: true,
+    canViewOperator: true,
+  },
+  supervisor: {
+    label: 'Supervisor',
+    color: '#0891b2',
+    pages: ['dashboard','job-ticket','production-manager','qc-checkout','operator-terminal','application-dept','rep-tasks','machine-issues','quotes','admin'],
+    canEditAllTickets: true,
+    canViewAdmin: true,
+    canViewProduction: true,
+    canViewOperator: true,
+  },
+  'production-manager': {
+    label: 'Production Manager',
+    color: '#16a34a',
+    pages: ['dashboard','production-manager','qc-checkout','operator-terminal','application-dept','machine-issues'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: true,
+    canViewOperator: true,
+  },
+  'account-manager': {
+    label: 'Account Manager',
+    color: '#d97706',
+    pages: ['dashboard','job-ticket','quotes','rep-tasks'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+    ownTicketsOnly: true,
+  },
+  operator: {
+    label: 'Operator',
+    color: '#6b7280',
+    pages: ['operator-terminal','qc-checkout','application-dept'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: true,
+  },
+  prepress: {
+    label: 'Prepress',
+    color: '#6b7280',
+    pages: ['dashboard','job-ticket','production-manager'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: true,
+    canViewOperator: false,
+  },
+};
+
+// ── Session helpers ───────────────────────────────────────
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('pulse_session') || 'null'); } catch(e) { return null; }
+}
+function setSession(name, role) {
+  sessionStorage.setItem('pulse_session', JSON.stringify({ name, role, loginTime: Date.now() }));
+}
+function clearSession() {
+  sessionStorage.removeItem('pulse_session');
+}
+function getCurrentUser() { return getSession(); }
+function getCurrentRole() { return getSession()?.role || null; }
+function getCurrentName() { return getSession()?.name || null; }
+
+// ── Permission helpers ─────────────────────────────────────
+function canAccessPage(pageId) {
+  const role = getCurrentRole();
+  if (!role) return false;
+  const config = ROLE_CONFIG[role];
+  if (!config) return false;
+  if (config.pages.includes('all')) return true;
+  return config.pages.includes(pageId);
+}
+
+function canEditTicket(ticket) {
+  const session = getSession();
+  if (!session) return false;
+  const config = ROLE_CONFIG[session.role];
+  if (!config) return false;
+  if (config.canEditAllTickets) return true;
+  // Account managers can only edit their own tickets
+  if (config.ownTicketsOnly) {
+    const repName = ticket?.accountManager || ticket?.rep || '';
+    return repName === session.name;
+  }
+  return false;
+}
+
+function isAdminOrSupervisor() {
+  const role = getCurrentRole();
+  return role === 'admin' || role === 'supervisor';
+}
+
+// ── Login modal ───────────────────────────────────────────
+function injectLoginModal() {
+  // Build user list from OPERATOR_PROFILES
+  const users = Object.entries(OPERATOR_PROFILES).map(([name, p]) => ({ name, role: p.role }));
+  // Add Hayk as admin
+  const allUsers = [{ name: 'Hayk Zohrabyan', role: 'admin' }, ...users];
+
+  const grouped = {};
+  allUsers.forEach(u => {
+    const r = u.role || 'operator';
+    if (!grouped[r]) grouped[r] = [];
+    grouped[r].push(u);
+  });
+
+  const roleOrder = ['admin','supervisor','production-manager','account-manager','prepress','operator'];
+
+  const userButtons = roleOrder
+    .filter(r => grouped[r])
+    .map(r => {
+      const cfg = ROLE_CONFIG[r] || { label: r, color: '#6b7280' };
+      return `<div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${cfg.label}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${grouped[r].map(u => `
+            <button onclick="selectUser('${u.name.replace(/'/g,"\\'")}','${u.role}')"
+              style="padding:7px 14px;border:1px solid ${cfg.color}44;background:${cfg.color}11;color:#1e293b;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:background 0.15s;"
+              onmouseover="this.style.background='${cfg.color}22'" onmouseout="this.style.background='${cfg.color}11'">
+              ${u.name}
+            </button>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'loginOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,36,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:520px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <img src="pulse-logo.png" alt="Pulse" style="height:32px;">
+      </div>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 20px;">Select your name to continue</p>
+      ${userButtons}
+      <p style="font-size:11px;color:#9ca3af;margin-top:16px;text-align:center;">Access is restricted based on your role. Contact admin if your name is missing.</p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function selectUser(name, role) {
+  setSession(name, role);
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.remove();
+  // Re-apply access control after login
+  applyRoleAccess(document.body.dataset.page || '');
+  if (typeof renderQueuePane === 'function') renderQueuePane();
+}
+
+// ── Nav user badge + logout ───────────────────────────────
+function injectUserBadge() {
+  const session = getSession();
+  if (!session) return;
+  const cfg = ROLE_CONFIG[session.role] || { label: session.role, color: '#6b7280' };
+  const badge = document.createElement('div');
+  badge.id = 'userBadge';
+  badge.style.cssText = 'position:fixed;top:10px;right:12px;z-index:9999;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);font-size:12px;';
+  badge.innerHTML = `
+    <span style="width:8px;height:8px;border-radius:50%;background:${cfg.color};flex-shrink:0;"></span>
+    <span style="font-weight:600;color:#1e293b;">${session.name.split(' ')[0]}</span>
+    <span style="color:${cfg.color};font-size:10px;font-weight:600;">${cfg.label.toUpperCase()}</span>
+    <button onclick="logoutUser()" style="border:none;background:none;color:#9ca3af;cursor:pointer;font-size:11px;padding:0 0 0 4px;" title="Log out">✕</button>
+  `;
+  document.body.appendChild(badge);
+}
+
+function logoutUser() {
+  clearSession();
+  location.reload();
+}
+
+// ── Page access control ───────────────────────────────────
+function applyRoleAccess(pageId) {
+  const session = getSession();
+  const role = session?.role;
+  const config = ROLE_CONFIG[role] || {};
+
+  // Hide admin nav item for non-admins/supervisors
+  document.querySelectorAll('.nav-admin-only').forEach(el => {
+    el.style.display = (config.canViewAdmin) ? '' : 'none';
+  });
+  // Hide production nav items for account managers/operators
+  document.querySelectorAll('.nav-production-only').forEach(el => {
+    el.style.display = (config.canViewProduction) ? '' : 'none';
+  });
+  // Hide operator nav items for account managers
+  document.querySelectorAll('.nav-operator-only').forEach(el => {
+    el.style.display = (config.canViewOperator) ? '' : 'none';
+  });
+}
+
+// ── Job ticket: lock fields if not authorized ─────────────
+function applyTicketEditLock(ticket) {
+  if (canEditTicket(ticket)) return; // allowed — do nothing
+  // Read-only mode
+  document.querySelectorAll('.jt-container input, .jt-container select, .jt-container textarea').forEach(el => {
+    el.disabled = true;
+    el.style.opacity = '0.7';
+    el.style.cursor = 'not-allowed';
+  });
+  // Hide save buttons
+  document.querySelectorAll('.save-bar button').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.title = 'You can only edit your own job tickets';
+  });
+  // Show read-only banner
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px;';
+  banner.innerHTML = '🔒 <strong>Read-only.</strong> This ticket belongs to ' + (ticket?.accountManager || 'another rep') + '. You can view but not edit.';
+  const header = document.querySelector('.jt-header');
+  if (header?.nextSibling) header.parentNode.insertBefore(banner, header.nextSibling);
+}
+
+// ── Init — called on every page load ─────────────────────
+function initAuth(pageId) {
+  document.body.dataset.page = pageId;
+
+  // Check if logged in
+  const session = getSession();
+  if (!session) {
+    // Don't block operator terminal (has its own login)
+    if (pageId === 'operator-terminal') return;
+    injectLoginModal();
+    return;
+  }
+
+  // Check page access
+  if (!canAccessPage(pageId) && pageId !== 'operator-terminal') {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;font-family:Inter,sans-serif;">
+        <div style="text-align:center;padding:40px;">
+          <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+          <h2 style="margin:0 0 8px;color:#1e293b;">Access Restricted</h2>
+          <p style="color:#6b7280;margin-bottom:20px;">Your role (${ROLE_CONFIG[session.role]?.label || session.role}) does not have access to this page.</p>
+          <button onclick="logoutUser()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Switch User</button>
+          <a href="dashboard.html" style="display:block;margin-top:12px;color:#6b7280;font-size:13px;">← Back to Dashboard</a>
+        </div>
+      </div>`;
+    return;
+  }
+
+  applyRoleAccess(pageId);
+  injectUserBadge();
+}

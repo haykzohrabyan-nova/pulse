@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Application Dept — Bazaar Print</title>
   <script src="shared.js"></script>
+  <script src="auth.js"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -105,6 +106,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('application-dept');
+initAuth('application-dept');
 document.getElementById('page-styles').textContent = ``;
 
 let _routeOrderId = null;
