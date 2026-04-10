@@ -2178,7 +2178,14 @@ async function renderQueuePane() {
   }
 
   if (q) orders = orders.filter(o => String(o.orderId).toLowerCase().includes(q) || (o.customerName||o.customer||'').toLowerCase().includes(q));
-  orders.sort((a, b) => new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01'));
+  orders.sort((a, b) => {
+    // Orders with no due date: sort by createdAt DESC (newest first, grouped at top)
+    const aHasDue = !!a.dueDate; const bHasDue = !!b.dueDate;
+    if (!aHasDue && !bHasDue) return new Date(b.createdAt||0) - new Date(a.createdAt||0);
+    if (!aHasDue) return -1; // no due date floats above orders with due dates
+    if (!bHasDue) return 1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
 
   if (orders.length === 0) {
     list.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">No tickets match.</div>';

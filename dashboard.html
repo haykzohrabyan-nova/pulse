@@ -848,8 +848,16 @@
   function renderUpcoming(upcomingOrders) {
     if (upcomingOrders.length === 0) {
       document.getElementById('upcomingBody').innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0;">No upcoming jobs.</p>';
+      // Collapse when empty
+      document.getElementById('upcomingBody').classList.remove('open');
+      document.getElementById('upcomingToggle').textContent = '\u25bc';
+      upcomingOpen = false;
       return;
     }
+    // Auto-open when there are upcoming orders
+    upcomingOpen = true;
+    document.getElementById('upcomingBody').classList.add('open');
+    document.getElementById('upcomingToggle').textContent = '\u25b2';
     document.getElementById('upcomingBody').innerHTML = `<div class="upcoming-grid">
       ${upcomingOrders.map(o => {
         const line = o._line;
@@ -858,8 +866,8 @@
             <span class="card-order">#${o.orderId}</span>
             <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
           </div>
-          <div class="card-customer">${o.customer || '—'}</div>
-          <div class="card-desc">${o.jobDescription || o.productType || '—'}</div>
+          <div class="card-customer">${o.customerName || o.customer || '—'}</div>
+          <div class="card-desc">${o.productType || o.jobDescription || '—'}</div>
           <div class="card-meta">
             <span class="card-qty">${(o.quantity || 0).toLocaleString()} pcs</span>
             <span class="card-due ${dueClass(o.dueDate)}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span>
