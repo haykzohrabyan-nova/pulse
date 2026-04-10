@@ -279,8 +279,8 @@
         <span class="card-order">${statusDot}#${order.orderId}</span>
         <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
       </div>
-      <div class="card-customer">${order.customer || '—'}</div>
-      <div class="card-desc">${order.jobDescription || order.productType || '—'}</div>
+      <div class="card-customer">${order.customerName || order.customer || '—'}</div>
+      <div class="card-desc">${order.productType || order.jobDescription || '—'}</div>
       ${parentLinkHTML}
       ${holdHTML}
       <div class="card-meta">
@@ -290,6 +290,7 @@
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
       ${subProgressHTML}
+      ${order.status === 'prepress' ? `<button onclick="event.stopPropagation();approvePrepressOrder(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Approve → Production</button>` : ''}
     </div>`;
   }
 
@@ -336,9 +337,9 @@
     });
 
     // Split: active (in production pipeline) vs upcoming (new/waiting)
-    const pipelineStatuses = ['pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const pipelineStatuses = ['prepress', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
     const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
-    const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))
+    const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
       .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
     const completedRecent = filtered.filter(o => ['shipped', 'waiting-pickup', 'received', 'completed'].includes(o.status))
       .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
@@ -418,7 +419,11 @@
         const currentStepIdx = order.currentStep || 0;
         const currentStep = steps[currentStepIdx];
 
-        if (order.status === 'ready-to-ship') {
+        if (order.status === 'prepress') {
+          // Newly created — always lands in Prepress column
+          stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
+          stageBuckets['Prepress'].push(order);
+        } else if (order.status === 'ready-to-ship') {
           stageBuckets['Ready to Ship'] = stageBuckets['Ready to Ship'] || [];
           stageBuckets['Ready to Ship'].push(order);
         } else if (order.status === 'qc-checkout' || order.status === 'qc-failed') {
@@ -843,6 +848,14 @@
     const total = filtered.length;
     document.getElementById('tableSearchCount').textContent = q ? `${total} result${total!==1?'s':''} found` : '';
     document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:24px;">No orders match.</td></tr>';
+  }
+
+  async function approvePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    await updateOrder(dbId, { ...order, status: 'in-production', prepressApprovedAt: new Date().toISOString(), prepressApprovedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress' });
+    await addActivity({ orderId, type: 'prepress-approved', message: 'Prepress approved — moved to production', by: (typeof getCurrentName === 'function' ? getCurrentName() : 'Prepress') });
+    await refresh();
   }
 
   function renderUpcoming(upcomingOrders) {

@@ -1857,7 +1857,7 @@ async function saveTicket(suppressRedirect = false) {
       currentStep: 0,
       status: (capOrder?._materialShortage || capOrder?._capacityOverride) ? 'pending-confirmation'
         : dueDateCheck.isRush ? 'on-hold'
-        : 'new',
+        : 'prepress',  // all new tickets start at prepress for Hrach to review & approve
       isRush: dueDateCheck.isRush || false,
       rushApprovedBy: rushApproved ? 'Supervisor' : null,
       capacityOverride: capOrder?._capacityOverride || false,
