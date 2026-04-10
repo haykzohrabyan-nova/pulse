@@ -37,7 +37,7 @@
         <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
           <div class="field" style="max-width:300px;">
             <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
-            <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;">
+            <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;" oninput="clearOrderIdError()">
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
           </div>
           <div class="field" style="max-width:260px;">
@@ -811,6 +811,13 @@ async function renderSubTicketSection(orderId) {
 // Creation date stamp + due date countdown
 // ─────────────────────────────────────────────────────────────
 let _creationDate = null;
+
+function clearOrderIdError() {
+  const el = document.getElementById('orderIdError');
+  if (el) el.remove();
+  const field = document.getElementById('jobTicketNumber');
+  if (field) field.style.border = '';
+}
 
 function stampCreationDate() {
   const el = document.getElementById('creationDateStamp');
@@ -1873,19 +1880,42 @@ async function saveTicket(suppressRedirect = false) {
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
-      // Always regenerate IDs fresh at save time to prevent duplicates
+      const allOrders = await getAllOrders();
+      const userTypedId = document.getElementById('jobTicketNumber').value.trim();
+
       if (_parentOrderId) {
+        // Sub-ticket: always auto-generate
         order.orderId = await generateSubTicketId(_parentOrderId);
         document.getElementById('jobTicketNumber').value = order.orderId;
-      } else if (!order.orderId) {
+      } else if (userTypedId) {
+        // User typed a specific order number — check if it already exists
+        const collision = allOrders.some(o => String(o.orderId) === String(userTypedId));
+        if (collision) {
+          btn.disabled = false;
+          btn.textContent = '\uD83D\uDCBE Save Job Ticket';
+          // Show inline error
+          const errEl = document.getElementById('orderIdError') || (() => {
+            const el = document.createElement('div');
+            el.id = 'orderIdError';
+            el.style.cssText = 'background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:13px;color:#dc2626;';
+            document.getElementById('jobTicketNumber').parentNode.appendChild(el);
+            return el;
+          })();
+          errEl.innerHTML = `\u274C Order <strong>#${userTypedId}</strong> already exists in the system. Clear the field to auto-generate the next available number, or enter a different order number.`;
+          document.getElementById('jobTicketNumber').focus();
+          document.getElementById('jobTicketNumber').style.border = '2px solid #dc2626';
+          return;
+        }
+        order.orderId = userTypedId;
+      } else {
+        // Blank — auto-generate
         order.orderId = await generateOrderId();
       }
-      // Final collision check via full scan (reliable for hyphenated IDs)
-      const allOrders = await getAllOrders();
-      const collision = allOrders.some(o => String(o.orderId) === String(order.orderId));
-      if (collision) {
-        if (_parentOrderId) order.orderId = await generateSubTicketId(_parentOrderId);
-        else order.orderId = await generateOrderId();
+
+      // Final safety collision check
+      const finalCollision = allOrders.some(o => String(o.orderId) === String(order.orderId));
+      if (finalCollision) {
+        order.orderId = await generateOrderId();
       }
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
