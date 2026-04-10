@@ -434,21 +434,24 @@
   <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
-  <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
-    <select id="queueDateFilter" onchange="onQueueDateFilterChange()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="all">All Active</option>
+  <div style="padding:5px 8px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:5px;">
+    <select id="queueDateFilter" onchange="onQueueDateFilterChange()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="all">📅 All Dates</option>
       <option value="today">Today</option>
       <option value="yesterday">Yesterday</option>
       <option value="last-week">Last Week</option>
       <option value="last-month">Last Month</option>
-      <option value="overdue">Past Due</option>
-      <option value="on-hold">On Hold</option>
-      <option value="closed">Closed</option>
-      <option value="custom">Custom Date…</option>
+      <option value="custom">Custom…</option>
     </select>
-    <div id="queueCustomDateRow" style="display:none;margin-top:5px;">
-      <input type="date" id="queueCustomDate" onchange="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
-    </div>
+    <select id="queueStatusFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="active">🟢 Active</option>
+      <option value="overdue">🔴 Past Due</option>
+      <option value="on-hold">⏸️ On Hold</option>
+      <option value="closed">✓ Closed</option>
+    </select>
+  </div>
+  <div id="queueCustomDateRow" style="display:none;padding:4px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <input type="date" id="queueCustomDate" onchange="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
   <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
 </div>
@@ -2114,29 +2117,34 @@ async function renderQueuePane() {
   const doneStatuses = ['completed','shipped','received','waiting-pickup'];
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
   const customDate = document.getElementById('queueCustomDate')?.value || '';
+  const dateFilter = document.getElementById('queueDateFilter')?.value || 'all';
+  const statusFilter = document.getElementById('queueStatusFilter')?.value || 'active';
 
+  // Status filter first
   let orders;
-  if (_qFilter === 'closed') {
+  if (statusFilter === 'closed') {
     orders = allOrders.filter(o => doneStatuses.includes(o.status));
+  } else if (statusFilter === 'on-hold') {
+    orders = allOrders.filter(o => o.status === 'on-hold');
+  } else if (statusFilter === 'overdue') {
+    orders = allOrders.filter(o => !doneStatuses.includes(o.status) && o.dueDate && new Date(o.dueDate+'T12:00:00') < today);
   } else {
+    // active
     orders = allOrders.filter(o => !doneStatuses.includes(o.status));
   }
 
-  if (_qFilter === 'today') {
+  // Date filter (on top of status filter)
+  if (dateFilter === 'today') {
     orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d < new Date(today.getTime()+86400000); });
-  } else if (_qFilter === 'yesterday') {
+  } else if (dateFilter === 'yesterday') {
     orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= yesterday && d < today; });
-  } else if (_qFilter === 'last-week') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= weekStart && d < today; });
-  } else if (_qFilter === 'last-month') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= monthStart && d < today; });
-  } else if (_qFilter === 'custom' && customDate) {
+  } else if (dateFilter === 'last-week') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= weekStart; });
+  } else if (dateFilter === 'last-month') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= monthStart; });
+  } else if (dateFilter === 'custom' && customDate) {
     const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
     orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= cStart && d <= cEnd; });
-  } else if (_qFilter === 'overdue') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') < today; });
-  } else if (_qFilter === 'on-hold') {
-    orders = orders.filter(o => o.status === 'on-hold');
   }
 
   if (q) orders = orders.filter(o => String(o.orderId).toLowerCase().includes(q) || (o.customerName||o.customer||'').toLowerCase().includes(q));
