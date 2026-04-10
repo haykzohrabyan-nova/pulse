@@ -255,17 +255,24 @@
         <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">📐 Size</div>
         <div class="form-row-3">
           <div class="field">
-            <label>Width (inches)</label>
+            <label id="widthLabel">Width (inches)</label>
             <input type="number" id="labelWidth" step="0.01" min="0.1" placeholder='e.g. 3.5' oninput="calcLabelFit()">
           </div>
           <div class="field">
-            <label>Height (inches)</label>
+            <label id="heightLabel">Height / Length (inches)</label>
             <input type="number" id="labelHeight" step="0.01" min="0.1" placeholder='e.g. 2.5' oninput="calcLabelFit()">
+          </div>
+          <!-- Pouch gusset field (shown only for Pouches) -->
+          <div class="field" id="gussetField" style="display:none;">
+            <label>Gusset (inches)</label>
+            <input type="number" id="pouchGusset" step="0.01" min="0" placeholder='e.g. 2' oninput="calcLabelFit()">
           </div>
           <div class="field" style="justify-content:flex-end;">
             <div id="labelFitResult" style="font-size:12px;color:var(--text-muted);margin-top:20px;line-height:1.6;"></div>
           </div>
         </div>
+        <!-- Pouch calc summary (shown only for Pouches) -->
+        <div id="pouchCalcBox" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#15803d;"></div>
       </div>
       <!-- Hidden: keeps the label size section logic working (always "shown" now) -->
       <div id="labelSizeSection" style="display:block;"></div>
@@ -427,13 +434,21 @@
   <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
-  <div class="qp-filters" style="padding:6px 8px;">
-    <button class="qp-filter-btn active" data-qfilter="all" onclick="setQFilter('all')">All</button>
-    <button class="qp-filter-btn" data-qfilter="today" onclick="setQFilter('today')">Today</button>
-    <button class="qp-filter-btn" data-qfilter="week" onclick="setQFilter('week')">Week</button>
-    <button class="qp-filter-btn" data-qfilter="overdue" onclick="setQFilter('overdue')">Past Due</button>
-    <button class="qp-filter-btn" data-qfilter="on-hold" onclick="setQFilter('on-hold')">On Hold</button>
-    <button class="qp-filter-btn" data-qfilter="closed" onclick="setQFilter('closed')">Closed</button>
+  <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <select id="queueDateFilter" onchange="onQueueDateFilterChange()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="all">All Active</option>
+      <option value="today">Today</option>
+      <option value="yesterday">Yesterday</option>
+      <option value="last-week">Last Week</option>
+      <option value="last-month">Last Month</option>
+      <option value="overdue">Past Due</option>
+      <option value="on-hold">On Hold</option>
+      <option value="closed">Closed</option>
+      <option value="custom">Custom Date…</option>
+    </select>
+    <div id="queueCustomDateRow" style="display:none;margin-top:5px;">
+      <input type="date" id="queueCustomDate" onchange="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
+    </div>
   </div>
   <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
 </div>
@@ -906,6 +921,16 @@ function updateFrameSheetLabels() {
 function onProductTypeChange() {
   const productType = document.getElementById('productType').value;
   document.getElementById('otherProductRow').style.display = productType === 'Other' ? 'block' : 'none';
+
+  // Show/hide pouch gusset field
+  const isPouch = productType === 'Pouches';
+  document.getElementById('gussetField').style.display = isPouch ? '' : 'none';
+  document.getElementById('pouchCalcBox').style.display = isPouch ? '' : 'none';
+  const wLabel = document.getElementById('widthLabel');
+  const hLabel = document.getElementById('heightLabel');
+  if (wLabel) wLabel.textContent = isPouch ? 'Bag Width (inches)' : 'Width (inches)';
+  if (hLabel) hLabel.textContent = isPouch ? 'Bag Length (inches)' : 'Height / Length (inches)';
+
   if (!productType) return;
   const info = PRODUCT_TYPES[productType];
   if (!info) return;
@@ -962,11 +987,44 @@ function calcLabelFit() {
   const result = document.getElementById('labelFitResult');
   const warnBox = document.getElementById('labelFitWarning');
 
-  if (!w || !h) { result.textContent = ''; warnBox.style.display = 'none'; return; }
+  if (!w || !h) { result.textContent = ''; if(warnBox) warnBox.style.display = 'none'; return; }
 
-  // Check if this is a 6K label product (auto-calc pieces per frame)
   const facility = document.getElementById('facility').value;
   const productType = document.getElementById('productType').value;
+
+  // ─── POUCH calculation ─────────────────────────────────────────
+  if (productType === 'Pouches') {
+    const gusset = parseFloat(document.getElementById('pouchGusset')?.value) || 0;
+    const BLEED = 0.24;
+    const FRAME_WIDTH = 13.5;  // Karlville frame width (inches)
+    const FRAME_LENGTH = 39;   // Karlville frame length (inches)
+    // Flat/open bag width = front + back + gusset = w×2 + gusset
+    const flatWidth = w * 2 + gusset;
+    const flatWidthBleed = flatWidth + BLEED;
+    const lengthBleed = h + BLEED;
+    const acrossCount = Math.max(1, Math.floor(FRAME_WIDTH / flatWidthBleed));
+    const downCount = Math.max(1, Math.floor(FRAME_LENGTH / lengthBleed));
+    const perFrame = acrossCount * downCount;
+
+    result.innerHTML = `<strong>${w}"×${h}"</strong>${gusset ? ' G:'+gusset+'"' : ''}`;
+
+    const box = document.getElementById('pouchCalcBox');
+    if (box) {
+      box.style.display = '';
+      box.innerHTML = `
+        🧄 Flat/open width: <strong>${w}×2 + ${gusset}" gusset = ${flatWidth}"</strong> + ${BLEED}" bleed = <strong>${flatWidthBleed.toFixed(2)}"</strong><br>
+        📐 Frame fit: <strong>${acrossCount}</strong> across (${FRAME_WIDTH}"/${flatWidthBleed.toFixed(2)}") × <strong>${downCount}</strong> down (${FRAME_LENGTH}"/${lengthBleed.toFixed(2)}") = <strong style="color:#15803d;">${perFrame} pouches/frame</strong><br>
+        🤖 Machine: <strong>Karlville Poucher</strong>
+      `;
+    }
+    if (perFrame > 0) {
+      const ppsField = document.getElementById('piecesPerSheet');
+      if (ppsField && !ppsField.dataset.manualOverride) { ppsField.value = perFrame; calcFrames(); }
+    }
+    return;
+  }
+
+  // Check if this is a 6K label product (auto-calc pieces per frame)
   const is6KLabel = facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Stickers', 'Diecut Stickers'].includes(productType);
 
   if (is6KLabel) {
@@ -1206,7 +1264,18 @@ function updateCutMethodOptions() {
   const isBoyd = facility === 'boyd-street';
   const isOther = productType === 'Other';
 
-  let options = [{ value: 'none', label: 'No Cut Required' }];
+  let options = [
+    { value: 'none', label: 'No Cut Required' },
+    { value: 'na-roll', label: 'N/A — Printed Roll (no cutting)' },
+  ];
+
+  // Pouches go straight to Karlville — no cut method needed
+  if (productType === 'Pouches') {
+    sel.innerHTML = `<option value="karlville">Karlville Poucher</option><option value="na-roll">N/A — Printed Roll</option>`;
+    if (!sel.value || !['karlville','na-roll'].includes(sel.value)) sel.value = 'karlville';
+    onCutMethodChange();
+    return;
+  }
 
   if (isOther) {
     options = options.concat([
@@ -1766,6 +1835,7 @@ async function saveTicket(suppressRedirect = false) {
       dieName: document.getElementById('dieName').value.trim(),
       labelWidth: document.getElementById('labelWidth').value || '',
       labelHeight: document.getElementById('labelHeight').value || '',
+      pouchGusset: document.getElementById('pouchGusset')?.value || '',
       rollDirection: document.getElementById('rollDirection').value,
       customBatching,
       unitsPerRoll: customBatching && printType === 'Roll' ? (parseInt(document.getElementById('unitsPerRoll').value) || null) : null,
@@ -1879,6 +1949,7 @@ async function loadOrderIntoForm(order) {
   // Label size
   if (order.labelWidth) document.getElementById('labelWidth').value = order.labelWidth;
   if (order.labelHeight) document.getElementById('labelHeight').value = order.labelHeight;
+  if (order.pouchGusset) { const gEl = document.getElementById('pouchGusset'); if(gEl) gEl.value = order.pouchGusset; }
   updateLabelSizeSection();
 
   // Color mode
@@ -1996,7 +2067,21 @@ async function saveAndAddSubTicket() {
 // ─── After-Save Sub-Ticket Prompt ───────────────────────────────
 // ─── Queue Pane ──────────────────────────────────────────────────
 let _qFilter = 'all';
-let _queuePaneVisible = true; // visible by default on right side
+let _queuePaneVisible = true;
+
+function onQueueDateFilterChange() {
+  _qFilter = document.getElementById('queueDateFilter').value;
+  const customRow = document.getElementById('queueCustomDateRow');
+  if (customRow) customRow.style.display = _qFilter === 'custom' ? '' : 'none';
+  renderQueuePane();
+}
+
+function setQFilter(f) {
+  _qFilter = f;
+  const sel = document.getElementById('queueDateFilter');
+  if (sel) sel.value = f;
+  renderQueuePane();
+}
 
 function toggleQueuePane() {
   _queuePaneVisible = !_queuePaneVisible;
@@ -2023,9 +2108,12 @@ async function renderQueuePane() {
   if (!list) return;
   const allOrders = await getAllOrders();
   const today = new Date(); today.setHours(0,0,0,0);
-  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
   const doneStatuses = ['completed','shipped','received','waiting-pickup'];
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
+  const customDate = document.getElementById('queueCustomDate')?.value || '';
 
   let orders;
   if (_qFilter === 'closed') {
@@ -2035,17 +2123,20 @@ async function renderQueuePane() {
   }
 
   if (_qFilter === 'today') {
-    orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d <= new Date(today.getTime()+86400000); });
-  } else if (_qFilter === 'week') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d <= weekEnd; });
+    orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d < new Date(today.getTime()+86400000); });
+  } else if (_qFilter === 'yesterday') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= yesterday && d < today; });
+  } else if (_qFilter === 'last-week') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= weekStart && d < today; });
+  } else if (_qFilter === 'last-month') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= monthStart && d < today; });
+  } else if (_qFilter === 'custom' && customDate) {
+    const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= cStart && d <= cEnd; });
   } else if (_qFilter === 'overdue') {
     orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') < today; });
   } else if (_qFilter === 'on-hold') {
     orders = orders.filter(o => o.status === 'on-hold');
-  } else if (_qFilter === '16th') {
-    orders = orders.filter(o => o.facility === '16th-street');
-  } else if (_qFilter === 'boyd') {
-    orders = orders.filter(o => o.facility === 'boyd-street');
   }
 
   if (q) orders = orders.filter(o => String(o.orderId).toLowerCase().includes(q) || (o.customerName||o.customer||'').toLowerCase().includes(q));
