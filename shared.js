@@ -845,6 +845,7 @@ const OPERATOR_PROFILES = {
   'Gary Gharibyan':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
   'Ernesto Flores':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
   'Bob Werner':       { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
+  'Tiko':             { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
   'Tigran Zohrabyan': { facility: 'all', machines: [], role: 'supervisor', shift: '—', notes: 'Supervisor / Sales Manager' },
 };
 
