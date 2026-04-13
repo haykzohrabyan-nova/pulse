@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing Calculator — Pulse</title>
+  <script src="shared.js?v=20260413-0226"></script>
+  <script src="auth.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <h2>💲 Pricing Calculator</h2>
+      <p>Pulse wrapper for the standalone sales calculator. Update the standalone file once, and this page will reflect the same calculator.</p>
+    </div>
+  </div>
+
+  <div class="callout callout-blue">
+    <strong>Single source of truth:</strong> edit <code>pricing-calculator-sales.html</code> for calculator changes. This Pulse page simply loads that same calculator inside the app shell.
+  </div>
+
+  <div class="frame-shell">
+    <iframe id="salesCalculatorFrame" title="Standalone Pricing Calculator" loading="eager"></iframe>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('pricing-calculator');
+initAuth('pricing-calculator');
+
+document.getElementById('page-styles').textContent = `
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+  .page-header h2 { margin:0; font-size:24px; }
+  .page-header p { margin:6px 0 0; color: var(--text-muted); max-width: 900px; }
+  .callout { border-radius:12px; padding:12px 14px; font-size:13px; margin-bottom:16px; line-height:1.5; }
+  .callout-blue { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
+  .callout code { background:rgba(255,255,255,0.7); border-radius:6px; padding:2px 6px; }
+  .frame-shell { background:#fff; border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(15,23,42,0.04); }
+  #salesCalculatorFrame { width:100%; min-height:calc(100vh - 250px); border:none; display:block; background:#f8fafc; }
+  @media (max-width: 820px) {
+    .page-wrap { padding: 16px; }
+    #salesCalculatorFrame { min-height:calc(100vh - 220px); }
+  }
+`;
+
+const iframe = document.getElementById('salesCalculatorFrame');
+iframe.src = `pricing-calculator-sales.html?v=${Date.now()}`;
+</script>
+</body>
+</html>
