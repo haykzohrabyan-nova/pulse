@@ -65,6 +65,9 @@
           <div class="field checkbox-field">
             <label class="checkbox-label"><input type="checkbox" id="hasFoil" onchange="calculateEstimate()"> Foil</label>
           </div>
+          <div class="field checkbox-field" id="doubleSidedRow" style="display:none;">
+            <label class="checkbox-label"><input type="checkbox" id="doubleSided" onchange="calculateEstimate()"> Double-sided printing</label>
+          </div>
           <div class="field" id="pouchFoilPassesRow" style="display:none;">
             <label>Foil Passes (pouches)</label>
             <select id="pouchFoilPasses" onchange="calculateEstimate()">
@@ -471,6 +474,7 @@ function handleModeChange() {
   renderDimensionFields();
   togglePouchPricingOptions();
   toggleDirectionalInputs();
+  toggleDoubleSidedOptions();
   toggleManualPricingInputs();
   calculateEstimate();
 }
@@ -523,6 +527,28 @@ function toggleDirectionalInputs() {
     select.options[0].textContent = 'Width goes on web, height goes on length';
     select.options[1].textContent = 'Height goes on web, width goes on length';
   }
+}
+
+function getDoubleSidedPercent(mode = getMode()) {
+  const facility = $('facility').value;
+  const productType = $('productType').value;
+
+  if (facility === 'boyd-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Diecut Stickers'].includes(productType)) return 0;
+  if (mode === '6k-label') return 0.20;
+  if (mode === '6k-pouch') return 0.20;
+  if (['15k-box-manual', 'boyd-box-manual'].includes(mode)) return 0.20;
+  if (mode === '15k-flat' && ['Business Cards', 'Flyers / Postcards'].includes(productType)) return 0.10;
+  if (mode === '15k-booklet') return 0.10;
+  return 0;
+}
+
+function toggleDoubleSidedOptions() {
+  const row = $('doubleSidedRow');
+  const input = $('doubleSided');
+  if (!row || !input) return;
+  const supported = getDoubleSidedPercent() > 0;
+  row.style.display = supported ? '' : 'none';
+  if (!supported) input.checked = false;
 }
 
 function toggleManualPricingInputs() {
@@ -1126,6 +1152,7 @@ function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = nul
   let uvCharge = $('hasUV').checked ? neededUnits * rates.uv : 0;
   let foilCharge = $('hasFoil').checked ? neededUnits * rates.foil : 0;
   let pouchCharge = getMode() === '6k-pouch' ? neededUnits * rates.pouching : 0;
+  let doubleSidedCharge = 0;
 
   if (!labelTier && !pouchTier && !indigoBoxTier && !indigoFlatTier && !boydBoxTier && neededUnits > 0 && manualRatesTotal === 0) {
     tierLabel = 'Pricing table not wired yet';
@@ -1196,7 +1223,10 @@ function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = nul
     laminationCharge = 0;
   }
 
-  const total = rates.setup + printCharge + materialCharge + (neededUnits * rates.cut) + laminationCharge + uvCharge + foilCharge + pouchCharge;
+  const doubleSidedPercent = $('doubleSided')?.checked ? getDoubleSidedPercent(mode) : 0;
+  doubleSidedCharge = printCharge * doubleSidedPercent;
+
+  const total = rates.setup + printCharge + materialCharge + (neededUnits * rates.cut) + laminationCharge + uvCharge + foilCharge + pouchCharge + doubleSidedCharge;
 
   return {
     setup: rates.setup,
@@ -1207,6 +1237,7 @@ function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = nul
     uv: uvCharge,
     foil: foilCharge,
     pouching: pouchCharge,
+    doubleSided: doubleSidedCharge,
     billableUnits,
     tierLabel,
     total,
@@ -1224,6 +1255,7 @@ function renderSummary({ mode, profile, material, footprint, fitsPerUnit, needed
   if (lamination && lamination !== 'None') finishSelections.push(lamination + ' lamination');
   if ($('hasUV')?.checked) finishSelections.push('UV');
   if ($('hasFoil')?.checked) finishSelections.push(mode === '6k-pouch' && $('pouchFoilPasses')?.value === '2' ? 'Foil (2 pass)' : 'Foil');
+  if ($('doubleSided')?.checked && getDoubleSidedPercent(mode) > 0) finishSelections.push('Double-sided print');
   $('selectionBrief').textContent = finishSelections.length ? finishSelections.join(' • ') : 'Base material only';
 
   $('priceTotal').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.total);
