@@ -850,27 +850,14 @@ function populateAccountManagers() {
   const sel = document.getElementById('accountManager');
   if (!sel) return;
   const reps = Object.entries(OPERATOR_PROFILES)
-    .filter(([, p]) => p.role === 'account-manager' || p.role === 'supervisor')
+    .filter(([, p]) => p.role === 'account-manager')
     .sort(([a], [b]) => a.localeCompare(b));
-  // Group: supervisors first, then account managers
-  const supervisors = reps.filter(([, p]) => p.role === 'supervisor');
-  const managers = reps.filter(([, p]) => p.role === 'account-manager');
   const currentVal = sel.value;
   sel.innerHTML = '<option value="">— Select Rep —</option>';
-  if (supervisors.length) {
-    const grp = document.createElement('optgroup');
-    grp.label = 'Supervisors';
-    supervisors.forEach(([name]) => {
-      const o = document.createElement('option');
-      o.value = name; o.textContent = name;
-      grp.appendChild(o);
-    });
-    sel.appendChild(grp);
-  }
-  if (managers.length) {
+  if (reps.length) {
     const grp = document.createElement('optgroup');
     grp.label = 'Account Managers';
-    managers.forEach(([name]) => {
+    reps.forEach(([name]) => {
       const o = document.createElement('option');
       o.value = name; o.textContent = name;
       grp.appendChild(o);
