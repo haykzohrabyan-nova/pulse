@@ -1060,8 +1060,8 @@ const PRODUCT_TYPES = {
   'Folding Cartons / Boxes': {
     materials: ['Cardstock'],
     defaultPrintType: 'Sheet',
-    facilities: ['16th-street'],
-    notes: 'Boxes — 15K → Lamination → Scodix → Moll Brothers'
+    facilities: ['16th-street', 'boyd-street'],
+    notes: 'Boxes — 15K at 16th Street or Boyd box workflow depending facility'
   },
   'Business Cards': {
     materials: ['Cardstock', 'Cover Stock'],
@@ -2005,12 +2005,14 @@ function renderNav(activePage) {
   const pages = [
     { id: 'dashboard',          label: '\uD83C\uDFE0 Dashboard',         href: 'dashboard.html',           access: 'all' },
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
+    { id: 'pricing-calculator', label: '\uD83D\uDCB2 Pricing',            href: 'pricing-calculator.html',  access: 'all' },
     { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
     { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },
     { id: 'application-dept',   label: '\uD83C\uDFF7\uFE0F Application',  href: 'application-dept.html',    access: 'production' },
     { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
+    { id: 'instagram-leads',    label: '\uD83D\uDCF8 Instagram',           href: 'instagram-leads.html',     access: 'all' },
     { id: 'machine-issues',     label: '\uD83D\uDD27 Machines',           href: 'machine-issues.html',      access: 'production' },
     { id: 'admin',              label: '\u2699\uFE0F Admin',              href: 'admin.html',               access: 'admin' },
   ];

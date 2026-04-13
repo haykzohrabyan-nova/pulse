@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Instagram Leads — Pulse</title>
-  <script src="shared.js"></script>
+  <script src="shared.js?v=20260413-0226"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f6fa; color: #1a1a2e; }
@@ -137,7 +137,7 @@
 
     <!-- Config Banner -->
     <div class="config-banner" id="configBanner">
-      ⚠️ Instagram API not connected yet — leads can be added manually. <a onclick="openSettings()">Configure integrations →</a>
+      ⏳ Instagram API connected — awaiting Meta App Review approval for live DMs. Leads can be added manually in the meantime. <a onclick="openSettings()">Settings →</a>
     </div>
 
     <!-- Stats -->
@@ -237,13 +237,12 @@
   <script>
     // ── Nav ──
     document.getElementById('nav').innerHTML = renderNav('instagram-leads');
-    injectStyles();
+    injectThemeCSS();
 
     // ── Config ──
     const CONFIG = {
       hubspotToken: localStorage.getItem('ig_hubspot_token') || '',
       slackWebhook: localStorage.getItem('ig_slack_webhook') || '',
-      openclawToken: '00165a693b81a43495d4036eb2ebc0ea04f218eb06d28340',
     };
 
     function openSettings() {
@@ -563,16 +562,18 @@ What's your name and company? And what's the best way to follow up — email or 
       };
 
       try {
-        await fetch(CONFIG.slackWebhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        updateStatus(id, 'replied');
-        toast('✅ Sent to Slack for approval!');
+        // Route through local proxy to avoid CORS
+        payload._webhook = CONFIG.slackWebhook;
+        const r = await fetch('http://localhost:8879/proxy/slack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (r.ok) {
+          updateStatus(id, 'replied');
+          toast('✅ Sent to Slack for approval!');
+        } else {
+          toast('⚠️ Slack send failed — check proxy is running');
+        }
       } catch (e) {
-        // CORS will block this from browser — need backend proxy
-        toast('⚠️ Slack requires backend proxy — see console');
-        console.warn('Slack send error (CORS expected from browser):', e);
-        // Still mark as sent for workflow purposes
-        updateStatus(id, 'replied');
-        toast('Draft ready — copy and send manually via Slack');
+        toast('⚠️ Proxy not running — start it with: node proxy.js');
+        console.warn('Proxy error:', e);
       }
     }
 
@@ -594,10 +595,11 @@ What's your name and company? And what's the best way to follow up — email or 
       toast('Pushing to HubSpot...');
 
       try {
-        const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
+        // Route through local proxy to avoid CORS
+        const res = await fetch('http://localhost:8879/proxy/hubspot/contacts', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${CONFIG.hubspotToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ properties: {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _token: CONFIG.hubspotToken, properties: {
             firstname: l.name.split(' ')[0] || '',
             lastname: l.name.split(' ').slice(1).join(' ') || '',
             company: l.company,
