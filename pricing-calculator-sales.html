@@ -132,7 +132,7 @@
     </div>
 
     <div class="sidebar-column">
-      <div class="summary-card sticky-card">
+      <div class="summary-card sticky-card sales-clean-card">
         <div class="summary-header">
           <div>
             <div class="eyebrow">Live Summary</div>
@@ -143,27 +143,12 @@
 
         <div class="summary-block">
           <div class="summary-subtitle">Selection</div>
-          <div id="selectionBrief" class="selection-brief">—</div>
-          <div class="summary-row"><span>Pricing tier</span><strong id="summaryTier">—</strong></div>
-          <div class="summary-row detail-row"><span>Press / format</span><strong id="summaryPress">—</strong></div>
-          <div class="summary-row detail-row"><span>Material</span><strong id="summaryMaterial">—</strong></div>
-          <div class="summary-row detail-row"><span>Print footprint</span><strong id="summaryFootprint">—</strong></div>
-          <div class="summary-row detail-row"><span>Fits per unit</span><strong id="summaryFits">—</strong></div>
-          <div class="summary-row detail-row"><span>Needed units</span><strong id="summaryUnits">—</strong></div>
-          <div class="summary-row detail-row"><span>Billable units</span><strong id="summaryBillableUnits">—</strong></div>
+          <div id="selectionBrief" class="selection-brief">Base material only</div>
         </div>
 
         <div class="summary-block">
-          <div class="summary-row detail-row"><span>Setup</span><strong id="priceSetup">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Print</span><strong id="pricePrint">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Material uplift</span><strong id="priceMaterial">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Cut / conversion</span><strong id="priceCut">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Lamination</span><strong id="priceLamination">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>UV</span><strong id="priceUV">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Foil</span><strong id="priceFoil">$0.00</strong></div>
-          <div class="summary-row detail-row"><span>Pouching</span><strong id="pricePouching">$0.00</strong></div>
           <div class="summary-total"><span>Total Price</span><strong id="priceTotal">$0.00</strong></div>
-          <div class="summary-row"><span id="pricePerPieceLabel">Price per piece</span><strong id="pricePerPiece">—</strong></div>
+          <div class="summary-row compact-price-row"><span id="pricePerPieceLabel">Price per piece</span><strong id="pricePerPiece">—</strong></div>
         </div>
 
         <div id="summaryWarnings" class="callout callout-amber" style="display:none;"></div>
@@ -214,7 +199,7 @@ document.getElementById('page-styles').textContent = `
 body { margin:0; background:#f8fafc; color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .page-wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
   .standalone-header p { margin:6px 0 0; color: var(--text-muted); font-size:14px; }
-  .selection-brief { font-size:14px; font-weight:600; color:var(--text); line-height:1.5; }
+  .selection-brief { font-size:15px; font-weight:600; color:var(--text); line-height:1.7; }
   .detail-row { display:none; }
   .page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
   .page-header h2 { margin:0; font-size:24px; }
@@ -264,6 +249,9 @@ body { margin:0; background:#f8fafc; color:var(--text); font-family: Inter, ui-s
   .summary-row span { color:var(--text-muted); }
   .summary-total { margin-top:10px; padding-top:12px; border-top:1px solid var(--border); font-size:16px; font-weight:700; }
   .summary-total strong { color:var(--accent); }
+  .sales-clean-card .summary-total { font-size:18px; }
+  .sales-clean-card .summary-total strong { font-size:44px; line-height:1; }
+  .compact-price-row { padding-top:10px; }
   .summary-subtitle { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px; }
   .assumption-list { margin:0; padding-left:18px; color:var(--text-muted); font-size:13px; line-height:1.6; }
   .sticky-card { position:sticky; top:14px; }
@@ -1230,13 +1218,6 @@ function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = nul
 function renderSummary({ mode, profile, material, footprint, fitsPerUnit, neededUnits, modeLabel, explanation, warnings, pricing }) {
   $('summaryTitle').textContent = $('productType').value || 'Pricing ready';
   $('calcModeBadge').textContent = modeLabel;
-  $('summaryPress').textContent = `${profile.label} · ${profile.fullSizeLabel}`;
-  $('summaryMaterial').textContent = material;
-  $('summaryFootprint').textContent = footprint;
-  $('summaryFits').textContent = fitsPerUnit ? `${fitsPerUnit} per ${profile.unitLabel}` : '—';
-  $('summaryUnits').textContent = neededUnits ? `${neededUnits} ${profile.unitLabel}${neededUnits === 1 ? '' : 's'}` : '—';
-  $('summaryBillableUnits').textContent = pricing.billableUnits ? `${pricing.billableUnits} ${profile.unitLabel}${pricing.billableUnits === 1 ? '' : 's'}` : '—';
-  $('summaryTier').textContent = pricing.tierLabel || '—';
   const finishSelections = [];
   if (material && material !== '—') finishSelections.push(material);
   const lamination = $('lamination')?.value;
@@ -1245,14 +1226,6 @@ function renderSummary({ mode, profile, material, footprint, fitsPerUnit, needed
   if ($('hasFoil')?.checked) finishSelections.push(mode === '6k-pouch' && $('pouchFoilPasses')?.value === '2' ? 'Foil (2 pass)' : 'Foil');
   $('selectionBrief').textContent = finishSelections.length ? finishSelections.join(' • ') : 'Base material only';
 
-  $('priceSetup').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.setup);
-  $('pricePrint').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.print);
-  $('priceMaterial').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.material);
-  $('priceCut').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.cut);
-  $('priceLamination').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.lamination);
-  $('priceUV').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.uv);
-  $('priceFoil').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.foil);
-  $('pricePouching').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.pouching);
   $('priceTotal').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.total);
   const qty = toNumber('quantity');
   $('pricePerPieceLabel').textContent = mode === '6k-label' ? 'Price per label' : mode === '6k-pouch' ? 'Price per pouch' : mode === '15k-booklet' ? 'Price per booklet' : 'Price per piece';
