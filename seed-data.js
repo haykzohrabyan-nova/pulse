@@ -1,4 +1,11 @@
 (async function seedData() {
+  const shouldSeed = new URLSearchParams(window.location.search).get('seedDemo') === '1'
+    || localStorage.getItem('pulse_seed_demo') === '1';
+  if (!shouldSeed) {
+    console.log('Seed skipped — demo seeding disabled');
+    return;
+  }
+
   // Check if data already exists — skip if so
   var existing = await getAllOrders();
   if (existing && existing.length > 0) { console.log('Seed skipped — ' + existing.length + ' orders already exist'); return; }
