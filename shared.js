@@ -5,7 +5,7 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v2026.04.13.2342';
+const PULSE_UI_VERSION = 'v13';
 
 // ── Constants ──────────────────────────────────────────────
 
