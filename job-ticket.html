@@ -449,6 +449,9 @@
     </select>
     <select id="queueStatusFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
       <option value="active">🟢 Active</option>
+      <option value="prepress">📝 Prepress, Not Started</option>
+      <option value="prepress-active">▶ Prepress, Started</option>
+      <option value="prepress-paused">⏸️ Prepress, Paused</option>
       <option value="overdue">🔴 Past Due</option>
       <option value="on-hold">⏸️ On Hold</option>
       <option value="closed">✓ Closed</option>
@@ -2167,6 +2170,12 @@ async function renderQueuePane() {
     orders = allOrders.filter(o => doneStatuses.includes(o.status));
   } else if (statusFilter === 'on-hold') {
     orders = allOrders.filter(o => o.status === 'on-hold');
+  } else if (statusFilter === 'prepress') {
+    orders = allOrders.filter(o => o.status === 'prepress');
+  } else if (statusFilter === 'prepress-active') {
+    orders = allOrders.filter(o => o.status === 'prepress-active');
+  } else if (statusFilter === 'prepress-paused') {
+    orders = allOrders.filter(o => o.status === 'prepress-paused');
   } else if (statusFilter === 'overdue') {
     orders = allOrders.filter(o => !doneStatuses.includes(o.status) && o.dueDate && new Date(o.dueDate+'T12:00:00') < today);
   } else {
@@ -2212,7 +2221,7 @@ async function renderQueuePane() {
     const diffDays = dueD ? Math.ceil((dueD.getTime() - today.getTime()) / 86400000) : null;
     const dueColor = diffDays === null ? '#9ca3af' : diffDays < 0 ? '#dc2626' : diffDays <= 1 ? '#d97706' : '#16a34a';
     const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
-    const statusColors = {'in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
+    const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'

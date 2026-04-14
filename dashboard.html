@@ -231,6 +231,13 @@
     // On hold / shortage indicators
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
     const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
+    const prepressHTML = order.status === 'prepress-active'
+      ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
+      : order.status === 'prepress-paused'
+      ? `<div style="font-size:10px;color:#b45309;margin-top:2px;">⏸ Prepress paused</div>`
+      : order.status === 'prepress'
+      ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
+      : '';
 
     // Queue visualization classes
     let queueClass = '';
@@ -238,15 +245,18 @@
     if (order.materialShortage) {
       queueClass = 'card-hold';
       statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
-    } else if (order.status === 'in-production') {
+    } else if (order.status === 'prepress-active' || order.status === 'in-production') {
       queueClass = 'card-active';
       statusDot = '<span class="card-status-dot" style="background:#16a34a;"></span>';
     } else if (order.status === 'on-hold') {
       queueClass = 'card-hold';
       statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
-    } else if (['pending-review','new','waiting-approval'].includes(order.status)) {
+    } else if (order.status === 'prepress-paused') {
       queueClass = 'card-pending';
-      statusDot = '<span class="card-status-dot" style="background:#f59e0b;"></span>';
+      statusDot = '<span class="card-status-dot" style="background:#d97706;"></span>';
+    } else if (['prepress','pending-review','new','waiting-approval'].includes(order.status)) {
+      queueClass = 'card-pending';
+      statusDot = '<span class="card-status-dot" style="background:#2563eb;"></span>';
     } else if (order.status === 'qc-checkout') {
       statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
     } else if (order.status === 'ready-to-ship') {
@@ -288,6 +298,7 @@
       ${parentLinkHTML}
       ${holdHTML}
       ${shortageHTML}
+      ${prepressHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
         <span class="card-due ${dueClass(order.dueDate)}">${dueLabel(order.dueDate)}</span>
@@ -295,7 +306,9 @@
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
       ${subProgressHTML}
-      ${order.status === 'prepress' ? `<button onclick="event.stopPropagation();approvePrepressOrder(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Approve → Production</button>` : ''}
+      ${order.status === 'prepress' ? `<button onclick="event.stopPropagation();startPrepressOrder(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Start Prepress</button>` : ''}
+      ${order.status === 'prepress-active' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();pausePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">⏸ Pause</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
+      ${order.status === 'prepress-paused' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();resumePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Resume</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
     </div>`;
   }
 
@@ -342,7 +355,7 @@
     });
 
     // Split: active (in production pipeline) vs upcoming (new/waiting)
-    const pipelineStatuses = ['prepress', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
     const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
     const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
       .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
@@ -424,8 +437,8 @@
         const currentStepIdx = order.currentStep || 0;
         const currentStep = steps[currentStepIdx];
 
-        if (order.status === 'prepress') {
-          // Newly created — always lands in Prepress column
+        if (isPrepressStatus(order.status)) {
+          // Prepress queue stays in the Prepress column until Hrach completes it
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
         } else if (order.status === 'ready-to-ship') {
@@ -554,7 +567,7 @@
   // ─── Orders View ───────────────────────────────────────────────────────────
   function renderOrders(allOrders) {
     const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
-    const activeStatuses = ['new','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
+    const activeStatuses = ['new','prepress','prepress-active','prepress-paused','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
 
     // Group: parents + their sub-tickets; standalone orders treated as own group
     const parents = {}; // parentOrderId -> { parent, subs[] }
@@ -757,7 +770,7 @@
 
     // Sort
     const dir = _tableSortDir === 'asc' ? 1 : -1;
-    const statusWeight = { 'in-production': 0, 'pending-review': 1, 'on-hold': 2, 'qc-checkout': 3, 'ready-to-ship': 4 };
+    const statusWeight = { 'prepress-active': 0, 'in-production': 1, 'prepress-paused': 2, 'prepress': 3, 'pending-review': 4, 'on-hold': 5, 'qc-checkout': 6, 'ready-to-ship': 7 };
     let sorted = [...filtered].sort((a, b) => {
       if (_tableSortCol === 'order') return dir * ((parseInt(a.orderId)||0) - (parseInt(b.orderId)||0));
       if (_tableSortCol === 'customer') return dir * (a.customer||'').localeCompare(b.customer||'');
@@ -855,11 +868,39 @@
     document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:24px;">No orders match.</td></tr>';
   }
 
-  async function approvePrepressOrder(dbId, orderId) {
+  async function startPrepressOrder(dbId, orderId) {
     const order = await getOrder(dbId);
     if (!order) return;
-    await updateOrder(dbId, { ...order, status: 'in-production', prepressApprovedAt: new Date().toISOString(), prepressApprovedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress' });
-    await addActivity({ orderId, type: 'prepress-approved', message: 'Prepress approved — moved to production', by: (typeof getCurrentName === 'function' ? getCurrentName() : 'Prepress') });
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-active', prepressStartedAt: new Date().toISOString(), prepressStartedBy: by });
+    await addActivity({ orderId, type: 'prepress-started', message: 'Prepress started', by });
+    await refresh();
+  }
+
+  async function pausePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-paused', prepressPausedAt: new Date().toISOString(), prepressPausedBy: by });
+    await addActivity({ orderId, type: 'prepress-paused', message: 'Prepress paused', by });
+    await refresh();
+  }
+
+  async function resumePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-active', prepressResumedAt: new Date().toISOString(), prepressResumedBy: by });
+    await addActivity({ orderId, type: 'prepress-resumed', message: 'Prepress resumed', by });
+    await refresh();
+  }
+
+  async function completePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'pending-review', prepressCompletedAt: new Date().toISOString(), prepressCompletedBy: by });
+    await addActivity({ orderId, type: 'prepress-completed', message: 'Prepress completed — queued for production', by });
     await refresh();
   }
 
@@ -922,6 +963,9 @@
         <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
         <a href="job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
         ${o.parentOrderId ? `<a href="job-ticket.html?order=${o.parentOrderId}" class="btn btn-sm" style="text-decoration:none;font-size:11px;">📎 Parent #${o.parentOrderId}</a>` : ''}
+        ${o.status === 'prepress' ? `<button class="btn btn-primary btn-sm" onclick="startPrepressOrder(${o.id},'${o.orderId}')">▶️ Start Prepress</button>` : ''}
+        ${o.status === 'prepress-active' ? `<button class="btn btn-warning btn-sm" onclick="pausePrepressOrder(${o.id},'${o.orderId}')">⏸️ Pause Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'prepress-paused' ? `<button class="btn btn-primary btn-sm" onclick="resumePrepressOrder(${o.id},'${o.orderId}')">▶️ Resume Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
         ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
         ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
       </div>
@@ -962,13 +1006,19 @@
   }
 
   async function resumeOrder(id) {
-    await updateOrder(id, { status: 'in-production', holdReason: '' });
+    const order = await getOrder(id);
+    if (!order) return;
+    const resumeStatus = order.holdPreviousStatus || 'pending-review';
+    await updateOrder(id, { status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor' });
     closeDetail(); refresh();
   }
   async function holdOrder(id) {
-    const reason = prompt('Hold reason:');
-    if (reason === null) return;
-    await updateOrder(id, { status: 'on-hold', holdReason: reason });
+    const order = await getOrder(id);
+    if (!order) return;
+    const patch = await buildHoldPatch(order);
+    if (!patch) return;
+    await updateOrder(id, { ...order, ...patch });
+    await addActivity({ orderId: order.orderId, type: 'hold', message: `Order put on hold${patch.holdReason ? ` — ${patch.holdReason}` : ''}`, by: patch.holdRequestedBy || 'Supervisor' });
     closeDetail(); refresh();
   }
   function closeDetail() { document.getElementById('detailModal').classList.remove('active'); }

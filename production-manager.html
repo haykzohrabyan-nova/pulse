@@ -18,6 +18,9 @@
       <div class="sidebar-label">Filter by Status</div>
       <button class="filter-btn active" data-status="all" onclick="setStatusFilter('all')">All Orders</button>
       <button class="filter-btn" data-status="new" onclick="setStatusFilter('new')">New</button>
+      <button class="filter-btn" data-status="prepress" onclick="setStatusFilter('prepress')">Prepress, Not Started</button>
+      <button class="filter-btn" data-status="prepress-active" onclick="setStatusFilter('prepress-active')">Prepress, Started</button>
+      <button class="filter-btn" data-status="prepress-paused" onclick="setStatusFilter('prepress-paused')">Prepress, Paused</button>
       <button class="filter-btn" data-status="pending-review" onclick="setStatusFilter('pending-review')">Pending Review</button>
       <button class="filter-btn" data-status="in-production" onclick="setStatusFilter('in-production')">In Production</button>
       <button class="filter-btn" data-status="on-hold" onclick="setStatusFilter('on-hold')">On Hold</button>
@@ -530,6 +533,19 @@ function getActionButtons(order) {
   const btns = [];
   btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
 
+  if (order.status === 'prepress') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress-active')">▶ Start Prepress</button>`);
+  }
+  if (order.status === 'prepress-active') {
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'prepress-paused')">⏸ Pause Prepress</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'pending-review')">✅ Complete Prepress</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
+  }
+  if (order.status === 'prepress-paused') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress-active')">▶ Resume Prepress</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'pending-review')">✅ Complete Prepress</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
+  }
   if (order.status === 'new' || order.status === 'pending-review') {
     btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">▶ Start Production</button>`);
   }
@@ -539,7 +555,7 @@ function getActionButtons(order) {
     btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'qc-checkout')">🔍 Send to QC</button>`);
   }
   if (order.status === 'on-hold') {
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'in-production')">▶ Resume Production</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'resume')">▶ Resume Production</button>`);
   }
   if (order.status === 'qc-checkout') {
     btns.push(`<a href="qc-checkout.html?order=${order.orderId}" class="btn btn-sm btn-primary">🔍 Go to QC</a>`);
@@ -588,8 +604,32 @@ function getDueClass(dueDate) {
 async function changeStatus(dbId, newStatus) {
   const order = allOrders.find(o => o.id === dbId);
   if (!order) return;
-  await updateOrder(dbId, { status: newStatus });
-  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by: 'Manager' });
+
+  if (newStatus === 'on-hold') {
+    const patch = await buildHoldPatch(order);
+    if (!patch) return;
+    await updateOrder(dbId, { ...order, ...patch });
+    await addActivity({ orderId: order.orderId, type: 'hold', message: `Order put on hold${patch.holdReason ? ` — ${patch.holdReason}` : ''}`, by: patch.holdRequestedBy || 'Manager' });
+    await loadOrders();
+    return;
+  }
+
+  if (newStatus === 'resume') {
+    const resumeStatus = order.holdPreviousStatus || 'pending-review';
+    await updateOrder(dbId, { ...order, status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager' });
+    await addActivity({ orderId: order.orderId, type: 'resume', message: `Order resumed to ${STATUS_LABELS[resumeStatus] || resumeStatus}`, by: (typeof getCurrentName === 'function' ? getCurrentName() : 'Manager') });
+    await loadOrders();
+    return;
+  }
+
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  const patch = { ...order, status: newStatus };
+  if (newStatus === 'prepress-active' && order.status === 'prepress') patch.prepressStartedAt = new Date().toISOString(), patch.prepressStartedBy = by;
+  if (newStatus === 'prepress-paused') patch.prepressPausedAt = new Date().toISOString(), patch.prepressPausedBy = by;
+  if (newStatus === 'prepress-active' && order.status === 'prepress-paused') patch.prepressResumedAt = new Date().toISOString(), patch.prepressResumedBy = by;
+  if (newStatus === 'pending-review' && ['prepress-active','prepress-paused'].includes(order.status)) patch.prepressCompletedAt = new Date().toISOString(), patch.prepressCompletedBy = by;
+  await updateOrder(dbId, patch);
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by });
   await loadOrders();
 }
 

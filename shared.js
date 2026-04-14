@@ -1007,7 +1007,7 @@ const POINTS_RULES = {
 };
 
 const ORDER_STATUSES = [
-  'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'on-hold',
+  'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'prepress', 'prepress-active', 'prepress-paused', 'on-hold',
   'in-production', 'reprint', 'qc-checkout', 'qc-failed', 'ready-to-ship',
   'shipped', 'waiting-pickup', 'received', 'completed'
 ];
@@ -1147,6 +1147,9 @@ const STATUS_LABELS = {
   'new': 'New',
   'pending-confirmation': 'Pending Confirmation',
   'pending-review': 'Pending Review',
+  'prepress': 'Prepress, Not Started',
+  'prepress-active': 'Prepress, Started',
+  'prepress-paused': 'Prepress, Paused',
   'in-production': 'In Production',
   'on-hold': 'On Hold',
   'qc-checkout': 'QC Checkout',
@@ -1164,6 +1167,9 @@ const STATUS_COLORS = {
   'new': '#58a6ff',
   'pending-confirmation': '#ea580c',
   'pending-review': '#d29922',
+  'prepress': '#2563eb',
+  'prepress-active': '#16a34a',
+  'prepress-paused': '#d97706',
   'in-production': '#3fb950',
   'on-hold': '#f85149',
   'qc-checkout': '#bc8cff',
@@ -1193,6 +1199,63 @@ function broadcastUpdate(store, id) {
 
 function onDBUpdate(callback) {
   _dbUpdateCallbacks.push(callback);
+}
+
+function isValidAccessCode(code) {
+  return /^\d{4,}$/.test(String(code || '').trim());
+}
+
+function isPrepressStatus(status) {
+  return ['prepress', 'prepress-active', 'prepress-paused'].includes(status);
+}
+
+function isActivelyWorkedStatus(status) {
+  return ['prepress-active', 'in-production'].includes(status);
+}
+
+async function buildHoldPatch(order) {
+  const reason = prompt('Why is this job being put on hold?');
+  if (!reason || !reason.trim()) return null;
+
+  const initiator = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+  const initiatorRole = (typeof getCurrentRole === 'function' ? getCurrentRole() : null) || 'unknown';
+  const initiatorCode = prompt(`Enter ${initiator}'s code to confirm this hold.`);
+  if (!isValidAccessCode(initiatorCode)) {
+    alert('A valid 4+ digit code is required to put this job on hold.');
+    return null;
+  }
+
+  const approvals = [{ name: initiator, role: initiatorRole, kind: 'initiator', at: new Date().toISOString() }];
+
+  if (isActivelyWorkedStatus(order.status)) {
+    const ownerName = order.status === 'prepress-active'
+      ? (order.prepressStartedBy || 'Prepress')
+      : (order.currentOperator || order.workflowSteps?.[order.currentStep || 0]?.assignedTo || 'Current Operator');
+    const ownerCode = prompt(`This job is actively being worked. Enter ${ownerName}'s code to approve the hold.`);
+    if (!isValidAccessCode(ownerCode)) {
+      alert('Current owner/operator approval is required for active jobs.');
+      return null;
+    }
+    approvals.push({ name: ownerName, role: order.status === 'prepress-active' ? 'prepress' : 'operator', kind: 'current-owner', at: new Date().toISOString() });
+
+    if (initiator === 'Tigran Zohrabyan' && order.accountManager) {
+      const amCode = prompt(`Enter ${order.accountManager}'s code to confirm this hold.`);
+      if (!isValidAccessCode(amCode)) {
+        alert('Account manager approval is required when Tigran places an active job on hold.');
+        return null;
+      }
+      approvals.push({ name: order.accountManager, role: 'account-manager', kind: 'account-manager', at: new Date().toISOString() });
+    }
+  }
+
+  return {
+    status: 'on-hold',
+    holdReason: reason.trim(),
+    holdPreviousStatus: order.status || 'pending-review',
+    holdRequestedBy: initiator,
+    holdRequestedAt: new Date().toISOString(),
+    holdApprovals: approvals,
+  };
 }
 
 // ── IndexedDB ──────────────────────────────────────────────
@@ -1938,6 +2001,9 @@ const THEME_CSS = `
   .badge-new { background: #e0edff; color: #1d4ed8; }
   .badge-pending-confirmation { background: #fff1e6; color: #c2410c; }
   .badge-pending-review { background: #fef3cd; color: #92600a; }
+  .badge-prepress { background: #e0edff; color: #1d4ed8; }
+  .badge-prepress-active { background: #d4edda; color: #0f6b2d; }
+  .badge-prepress-paused { background: #fef3cd; color: #92600a; }
   .badge-in-production { background: #d4edda; color: #0f6b2d; }
   .badge-on-hold { background: #fde8e8; color: #b91c1c; }
   .badge-qc-checkout { background: #ede9fe; color: #6d28d9; }

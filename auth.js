@@ -105,10 +105,18 @@ function isAdminOrSupervisor() {
 }
 
 // ── Login modal ───────────────────────────────────────────
+let _selectedLoginUser = null;
+
+function getDefaultPageForRole(role) {
+  const config = ROLE_CONFIG[role];
+  if (!config) return 'dashboard.html';
+  if (config.pages.includes('all')) return 'dashboard.html';
+  const first = config.pages[0] || 'dashboard';
+  return `${first}.html`;
+}
+
 function injectLoginModal() {
-  // Build user list from OPERATOR_PROFILES
   const users = Object.entries(OPERATOR_PROFILES).map(([name, p]) => ({ name, role: p.role }));
-  // Add Hayk as admin
   const allUsers = [{ name: 'Hayk Zohrabyan', role: 'admin' }, ...users];
 
   const grouped = {};
@@ -128,9 +136,8 @@ function injectLoginModal() {
         <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${cfg.label}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
           ${grouped[r].map(u => `
-            <button onclick="selectUser('${u.name.replace(/'/g,"\\'")}','${u.role}')"
-              style="padding:7px 14px;border:1px solid ${cfg.color}44;background:${cfg.color}11;color:#1e293b;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:background 0.15s;"
-              onmouseover="this.style.background='${cfg.color}22'" onmouseout="this.style.background='${cfg.color}11'">
+            <button class="login-user-btn" data-name="${u.name.replace(/'/g,"&#39;")}" data-role="${u.role}" onclick="selectUser('${u.name.replace(/'/g,"\\'")}','${u.role}', this)"
+              style="padding:7px 14px;border:1px solid ${cfg.color}44;background:${cfg.color}11;color:#1e293b;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:background 0.15s;">
               ${u.name}
             </button>`).join('')}
         </div>
@@ -141,24 +148,69 @@ function injectLoginModal() {
   overlay.id = 'loginOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,36,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:520px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+    <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:560px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <img src="pulse-logo.png" alt="Pulse" style="height:32px;">
       </div>
-      <p style="color:#6b7280;font-size:13px;margin:0 0 20px;">Select your name to continue</p>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 12px;">Select your name, enter your access code, and Pulse will only show the pages for your role.</p>
+      <div id="loginSelectedUser" style="display:none;margin-bottom:12px;padding:12px 14px;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;font-size:13px;"></div>
       ${userButtons}
-      <p style="font-size:11px;color:#9ca3af;margin-top:16px;text-align:center;">Access is restricted based on your role. Contact admin if your name is missing.</p>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Access Code</label>
+          <input id="loginAccessCode" type="password" inputmode="numeric" placeholder="Enter 4+ digit code" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <button onclick="submitLogin()" style="padding:10px 18px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">Sign In</button>
+      </div>
+      <div id="loginError" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;"></div>
+      <p style="font-size:11px;color:#9ca3af;margin-top:16px;text-align:center;">Role-based access is enforced after login. Contact admin if your name is missing.</p>
     </div>
   `;
   document.body.appendChild(overlay);
+  const codeInput = document.getElementById('loginAccessCode');
+  if (codeInput) codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitLogin();
+  });
 }
 
-function selectUser(name, role) {
-  setSession(name, role);
+function selectUser(name, role, btn) {
+  _selectedLoginUser = { name, role };
+  document.querySelectorAll('.login-user-btn').forEach(el => {
+    el.style.outline = 'none';
+    el.style.boxShadow = 'none';
+  });
+  if (btn) btn.style.boxShadow = '0 0 0 2px rgba(37,99,235,0.35)';
+  const cfg = ROLE_CONFIG[role] || { label: role, color: '#6b7280' };
+  const box = document.getElementById('loginSelectedUser');
+  if (box) {
+    box.style.display = 'block';
+    box.innerHTML = `<strong>${name}</strong><div style="font-size:12px;color:${cfg.color};margin-top:2px;">${cfg.label}</div>`;
+  }
+  const err = document.getElementById('loginError');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+}
+
+function submitLogin() {
+  const err = document.getElementById('loginError');
+  if (!_selectedLoginUser) {
+    if (err) { err.style.display = 'block'; err.textContent = 'Select your name first.'; }
+    return;
+  }
+  const code = document.getElementById('loginAccessCode')?.value || '';
+  if (typeof isValidAccessCode === 'function' && !isValidAccessCode(code)) {
+    if (err) { err.style.display = 'block'; err.textContent = 'Enter a valid 4+ digit access code.'; }
+    return;
+  }
+  setSession(_selectedLoginUser.name, _selectedLoginUser.role);
   const overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
-  // Re-apply access control after login
-  applyRoleAccess(document.body.dataset.page || '');
+  const currentPage = document.body.dataset.page || '';
+  if (currentPage && !canAccessPage(currentPage)) {
+    window.location.href = getDefaultPageForRole(_selectedLoginUser.role);
+    return;
+  }
+  applyRoleAccess(currentPage);
+  injectUserBadge();
   if (typeof renderQueuePane === 'function') renderQueuePane();
 }
 
