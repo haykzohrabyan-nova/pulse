@@ -228,13 +228,17 @@
         dieHTML = `<span class="card-die no-die">⚠️ No die</span>`;
       }
     }
-    // On hold indicator
+    // On hold / shortage indicators
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
+    const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
 
     // Queue visualization classes
     let queueClass = '';
     let statusDot = '';
-    if (order.status === 'in-production') {
+    if (order.materialShortage) {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (order.status === 'in-production') {
       queueClass = 'card-active';
       statusDot = '<span class="card-status-dot" style="background:#16a34a;"></span>';
     } else if (order.status === 'on-hold') {
@@ -283,6 +287,7 @@
       <div class="card-desc">${order.productType || order.jobDescription || '—'}</div>
       ${parentLinkHTML}
       ${holdHTML}
+      ${shortageHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
         <span class="card-due ${dueClass(order.dueDate)}">${dueLabel(order.dueDate)}</span>

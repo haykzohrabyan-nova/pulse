@@ -1777,7 +1777,7 @@ async function saveTicket(suppressRedirect = false) {
         if (critical.length > 0) {
           const msg = critical.map(w => w.message + '\n' + (w.details || '')).join('\n\n');
           // Always save — just flag it. No blocking prompt.
-          alert(`🔴 MATERIAL SHORTAGE\n\n${msg}\n\nJob ticket will be saved with status "Pending Confirmation" — needs approval from supervisor before production.`);
+          alert(`🔴 MATERIAL SHORTAGE\n\n${msg}\n\nJob ticket will still be saved. Pulse will flag it for admin/inventory follow-up and highlight it for review.`);
           capOrder._materialShortage = true;
           capOrder._materialShortageDetails = matCheck.availability;
         } else if (others.length > 0) {
@@ -1842,16 +1842,16 @@ async function saveTicket(suppressRedirect = false) {
       workflowTemplate: workflowKey,
       workflowSteps,
       currentStep: 0,
-      status: (capOrder?._materialShortage || capOrder?._capacityOverride) ? 'pending-confirmation'
+      status: capOrder?._capacityOverride ? 'pending-confirmation'
         : dueDateCheck.isRush ? 'on-hold'
         : 'prepress',  // all new tickets start at prepress for Hrach to review & approve
       isRush: dueDateCheck.isRush || false,
       rushApprovedBy: rushApproved ? 'Supervisor' : null,
       capacityOverride: capOrder?._capacityOverride || false,
       materialShortage: capOrder?._materialShortage || false,
-      needsConfirmation: !!(capOrder?._materialShortage || capOrder?._capacityOverride),
-      confirmationReason: capOrder?._materialShortage ? 'Material shortage — needs supervisor confirmation'
-        : capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
+      materialShortageDetails: capOrder?._materialShortageDetails || null,
+      needsConfirmation: !!capOrder?._capacityOverride,
+      confirmationReason: capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
         : '',
       holdReason: dueDateCheck.isRush ? 'Rush order — approved by supervisor' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
@@ -1906,6 +1906,9 @@ async function saveTicket(suppressRedirect = false) {
       }
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
+      if (order.materialShortage) {
+        await addActivity({ orderId: order.orderId, type: 'alert', message: `Low stock alert for ${order.material || 'material'} at ${FACILITIES[order.facility]?.name || order.facility}`, by: order.accountManager || 'User' });
+      }
       _lastSavedOrderId = order.orderId;
       if (suppressRedirect) return; // saveAndAddSubTicket handles navigation
       // Show sub-ticket prompt instead of immediately redirecting

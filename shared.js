@@ -4,7 +4,7 @@
 // ============================================================
 
 const DB_NAME = 'BazaarPrintDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 // ── Constants ──────────────────────────────────────────────
 
