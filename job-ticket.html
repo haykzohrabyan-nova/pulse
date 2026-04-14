@@ -262,6 +262,10 @@
             <label id="heightLabel">Height / Length (inches)</label>
             <input type="number" id="labelHeight" step="0.01" min="0.1" placeholder='e.g. 2.5' oninput="calcLabelFit()">
           </div>
+          <div class="field" id="boxDepthField" style="display:none;">
+            <label id="boxDepthLabel">Box Height (inches)</label>
+            <input type="number" id="boxDepth" step="0.01" min="0.1" placeholder='e.g. 1.75' oninput="calcLabelFit()">
+          </div>
           <!-- Pouch gusset field (shown only for Pouches) -->
           <div class="field" id="gussetField" style="display:none;">
             <label>Gusset (inches)</label>
@@ -905,8 +909,10 @@ function autoExpandNotes(el) {
 
 function updateFrameSheetLabels() {
   const facility = document.getElementById('facility').value;
-  const frameWord = facility === '16th-street' ? 'Frame' : 'Sheet';
-  const framesWord = facility === '16th-street' ? 'Frames' : 'Sheets';
+  const productType = document.getElementById('productType')?.value || '';
+  const usesFrames = facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Stickers', 'Diecut Stickers', 'Pouches'].includes(productType);
+  const frameWord = usesFrames ? 'Frame' : 'Sheet';
+  const framesWord = usesFrames ? 'Frames' : 'Sheets';
   document.getElementById('frameSheetLabel').textContent = framesWord;
   document.getElementById('ppsLabel').textContent = `Pieces per ${frameWord}`;
   document.getElementById('scLabel').textContent = `${frameWord} Count (needed)`;
@@ -921,12 +927,14 @@ function onProductTypeChange() {
 
   // Show/hide pouch gusset field
   const isPouch = productType === 'Pouches';
+  const isBox = productType === 'Folding Cartons / Boxes';
   document.getElementById('gussetField').style.display = isPouch ? '' : 'none';
+  document.getElementById('boxDepthField').style.display = isBox ? '' : 'none';
   document.getElementById('pouchCalcBox').style.display = isPouch ? '' : 'none';
   const wLabel = document.getElementById('widthLabel');
   const hLabel = document.getElementById('heightLabel');
-  if (wLabel) wLabel.textContent = isPouch ? 'Bag Width (inches)' : 'Width (inches)';
-  if (hLabel) hLabel.textContent = isPouch ? 'Bag Length (inches)' : 'Height / Length (inches)';
+  if (wLabel) wLabel.textContent = isPouch ? 'Bag Width (inches)' : isBox ? 'Box Width (inches)' : 'Width (inches)';
+  if (hLabel) hLabel.textContent = isPouch ? 'Bag Length (inches)' : isBox ? 'Box Length (inches)' : 'Height / Length (inches)';
 
   if (!productType) return;
   const info = PRODUCT_TYPES[productType];
@@ -981,6 +989,7 @@ function updateLabelSizeSection() {
 function calcLabelFit() {
   const w = parseFloat(document.getElementById('labelWidth').value) || 0;
   const h = parseFloat(document.getElementById('labelHeight').value) || 0;
+  const boxDepth = parseFloat(document.getElementById('boxDepth')?.value) || 0;
   const result = document.getElementById('labelFitResult');
   const warnBox = document.getElementById('labelFitWarning');
 
@@ -993,7 +1002,7 @@ function calcLabelFit() {
   if (productType === 'Pouches') {
     const gusset = parseFloat(document.getElementById('pouchGusset')?.value) || 0;
     const BLEED = 0.24;
-    const FRAME_WIDTH = 13.5;  // Karlville frame width (inches)
+    const FRAME_WIDTH = 12.24; // usable pouch web width (same working width as labels, with bleed)
     const FRAME_LENGTH = 39;   // Karlville frame length (inches)
     // Flat/open bag width = front + back + gusset = w×2 + gusset
     const flatWidth = w * 2 + gusset;
@@ -1018,6 +1027,14 @@ function calcLabelFit() {
       const ppsField = document.getElementById('piecesPerSheet');
       if (ppsField && !ppsField.dataset.manualOverride) { ppsField.value = perFrame; calcFrames(); }
     }
+    return;
+  }
+
+  if (productType === 'Folding Cartons / Boxes') {
+    result.innerHTML = boxDepth
+      ? `<strong>${w}" × ${h}" × ${boxDepth}"</strong>`
+      : `<strong>${w}" × ${h}"</strong>`;
+    warnBox.style.display = 'none';
     return;
   }
 
@@ -1405,13 +1422,14 @@ function addSKU() {
   if (skuList.length === 0) {
     // Grab current single-SKU values as the first SKU
     const qty = parseInt(document.getElementById('quantity').value) || 0;
+    const firstArtwork = artworkDataList.find(a => a.role === 'main') || null;
     skuList.push({
       name: '',
       quantity: qty,
-      artworkDataUrl: null, artworkName: '',
-      whiteDataUrl: null, whiteName: '',
-      uvDataUrl: null, uvName: '',
-      foilDataUrl: null, foilName: '',
+      artworkDataUrl: firstArtwork?.dataUrl || null, artworkName: firstArtwork?.name || '',
+      whiteDataUrl: singleFileData.white?.dataUrl || null, whiteName: singleFileData.white?.name || '',
+      uvDataUrl: singleFileData.uv?.dataUrl || null, uvName: singleFileData.uv?.name || '',
+      foilDataUrl: singleFileData.foil?.dataUrl || null, foilName: singleFileData.foil?.name || '',
     });
   }
   // Add new empty SKU
@@ -1477,8 +1495,8 @@ function renderSKUs() {
   const hasUV = document.getElementById('hasUV')?.checked || false;
   const hasFoil = document.getElementById('hasFoil')?.checked || false;
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
-  const facility = document.getElementById('facility').value;
-  const fw = facility === '16th-street' ? 'frames' : 'sheets';
+  const framesLabel = document.getElementById('frameSheetLabel')?.textContent || 'Frames';
+  const fw = framesLabel.toLowerCase();
 
   // Count file columns for grid
   let fileCols = 1; // always main artwork
@@ -1551,8 +1569,8 @@ function updateSKUSummary() {
   const totalSkuQty = skuList.reduce((s, sku) => s + (sku.quantity || 0), 0);
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
   const totalFrames = Math.ceil(totalSkuQty / pps);
-  const facility = document.getElementById('facility').value;
-  const fw = facility === '16th-street' ? 'frames' : 'sheets';
+  const framesLabel = document.getElementById('frameSheetLabel')?.textContent || 'Frames';
+  const fw = framesLabel.toLowerCase();
 
   // Sync total quantity to the hidden field for the rest of the system
   document.getElementById('quantity').value = totalSkuQty;
@@ -1790,12 +1808,13 @@ async function saveTicket(suppressRedirect = false) {
     const hasFoil = document.getElementById('hasFoil').checked;
     const customBatching = document.getElementById('customBatching').checked;
     const printType = document.getElementById('printType').value;
+    const useSingleSkuFiles = skuList.length === 0;
 
     // Collect all artwork files (single mode + layer files)
-    const allArtwork = [...artworkDataList];
-    if (singleFileData.white) allArtwork.push(singleFileData.white);
-    if (singleFileData.uv) allArtwork.push(singleFileData.uv);
-    if (singleFileData.foil) allArtwork.push(singleFileData.foil);
+    const allArtwork = useSingleSkuFiles ? [...artworkDataList] : [];
+    if (useSingleSkuFiles && singleFileData.white) allArtwork.push(singleFileData.white);
+    if (useSingleSkuFiles && singleFileData.uv) allArtwork.push(singleFileData.uv);
+    if (useSingleSkuFiles && singleFileData.foil) allArtwork.push(singleFileData.foil);
 
     const order = {
       orderId: document.getElementById('jobTicketNumber').value.trim() || null, // will auto-generate if null
@@ -1832,6 +1851,7 @@ async function saveTicket(suppressRedirect = false) {
       dieName: document.getElementById('dieName').value.trim(),
       labelWidth: document.getElementById('labelWidth').value || '',
       labelHeight: document.getElementById('labelHeight').value || '',
+      boxDepth: document.getElementById('boxDepth')?.value || '',
       pouchGusset: document.getElementById('pouchGusset')?.value || '',
       rollDirection: document.getElementById('rollDirection').value,
       customBatching,
@@ -1855,9 +1875,9 @@ async function saveTicket(suppressRedirect = false) {
         : '',
       holdReason: dueDateCheck.isRush ? 'Rush order — approved by supervisor' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
-      whiteLayerFile: singleFileData.white,
-      uvFile: singleFileData.uv,
-      foilFile: singleFileData.foil,
+      whiteLayerFile: useSingleSkuFiles ? singleFileData.white : null,
+      uvFile: useSingleSkuFiles ? singleFileData.uv : null,
+      foilFile: useSingleSkuFiles ? singleFileData.foil : null,
       skus: skuList.length > 0 ? skuList : null,
       skuCount: skuList.length || 0,
     };
@@ -1972,6 +1992,7 @@ async function loadOrderIntoForm(order) {
   // Label size
   if (order.labelWidth) document.getElementById('labelWidth').value = order.labelWidth;
   if (order.labelHeight) document.getElementById('labelHeight').value = order.labelHeight;
+  if (order.boxDepth) { const bEl = document.getElementById('boxDepth'); if (bEl) bEl.value = order.boxDepth; }
   if (order.pouchGusset) { const gEl = document.getElementById('pouchGusset'); if(gEl) gEl.value = order.pouchGusset; }
   updateLabelSizeSection();
 
