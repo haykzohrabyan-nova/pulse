@@ -5,6 +5,7 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
+const PULSE_UI_VERSION = 'v2026.04.13.2342';
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -2176,7 +2177,10 @@ function renderNav(activePage) {
   const accessClass = { 'all': '', 'admin': 'nav-admin-only', 'production': 'nav-production-only', 'operator': 'nav-operator-only' };
   return `
     <nav class="top-nav">
-      <a href="dashboard.html"><img src="pulse-logo.png" alt="Pulse" style="height:88px;width:auto;display:block;"></a>
+      <a href="dashboard.html" style="display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;gap:6px;">
+        <img src="pulse-logo.png" alt="Pulse" style="height:88px;width:auto;display:block;">
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:0.02em;">${PULSE_UI_VERSION}</span>
+      </a>
       <div class="nav-links">
         ${pages.map(p => `<a href="${p.href}" class="${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
       </div>
