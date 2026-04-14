@@ -1010,7 +1010,7 @@ const POINTS_RULES = {
 };
 
 const ORDER_STATUSES = [
-  'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'prepress', 'prepress-active', 'prepress-paused', 'on-hold',
+  'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'on-hold',
   'in-production', 'reprint', 'qc-checkout', 'qc-failed', 'ready-to-ship',
   'shipped', 'waiting-pickup', 'received', 'completed'
 ];
@@ -1154,6 +1154,7 @@ const STATUS_LABELS = {
   'prepress': 'Prepress, Not Started',
   'prepress-active': 'Prepress, Started',
   'prepress-paused': 'Prepress, Paused',
+  'pending-account-manager': 'Needs Account Manager Fix',
   'in-production': 'In Production',
   'on-hold': 'On Hold',
   'qc-checkout': 'QC Checkout',
@@ -1174,6 +1175,7 @@ const STATUS_COLORS = {
   'prepress': '#2563eb',
   'prepress-active': '#16a34a',
   'prepress-paused': '#d97706',
+  'pending-account-manager': '#dc2626',
   'in-production': '#3fb950',
   'on-hold': '#f85149',
   'qc-checkout': '#bc8cff',
@@ -1210,7 +1212,7 @@ function isValidAccessCode(code) {
 }
 
 function isPrepressStatus(status) {
-  return ['prepress', 'prepress-active', 'prepress-paused'].includes(status);
+  return ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager'].includes(status);
 }
 
 function isActivelyWorkedStatus(status) {
@@ -2091,6 +2093,7 @@ const THEME_CSS = `
   .badge-prepress { background: #e0edff; color: #1d4ed8; }
   .badge-prepress-active { background: #d4edda; color: #0f6b2d; }
   .badge-prepress-paused { background: #fef3cd; color: #92600a; }
+  .badge-pending-account-manager { background: #fee2e2; color: #b91c1c; }
   .badge-in-production { background: #d4edda; color: #0f6b2d; }
   .badge-on-hold { background: #fde8e8; color: #b91c1c; }
   .badge-qc-checkout { background: #ede9fe; color: #6d28d9; }
@@ -2160,6 +2163,7 @@ function renderNav(activePage) {
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
     { id: 'pricing-calculator', label: '\uD83D\uDCB2 Pricing',            href: 'pricing-calculator.html',  access: 'all' },
     { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
+    { id: 'prepress',           label: '\uD83D\uDCC4 Prepress',          href: 'prepress.html',            access: 'production' },
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
     { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },

@@ -16,7 +16,7 @@ const ROLE_CONFIG = {
   supervisor: {
     label: 'Supervisor',
     color: '#0891b2',
-    pages: ['dashboard','job-ticket','production-manager','qc-checkout','operator-terminal','application-dept','rep-tasks','machine-issues','quotes','admin'],
+    pages: ['dashboard','job-ticket','prepress','production-manager','qc-checkout','operator-terminal','application-dept','rep-tasks','machine-issues','quotes','admin'],
     canEditAllTickets: true,
     canViewAdmin: true,
     canViewProduction: true,
@@ -25,7 +25,7 @@ const ROLE_CONFIG = {
   'production-manager': {
     label: 'Production Manager',
     color: '#16a34a',
-    pages: ['dashboard','production-manager','qc-checkout','operator-terminal','application-dept','machine-issues'],
+    pages: ['dashboard','prepress','production-manager','qc-checkout','operator-terminal','application-dept','machine-issues'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -53,7 +53,7 @@ const ROLE_CONFIG = {
   prepress: {
     label: 'Prepress',
     color: '#6b7280',
-    pages: ['dashboard','job-ticket','production-manager'],
+    pages: ['dashboard','job-ticket','prepress','production-manager'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,

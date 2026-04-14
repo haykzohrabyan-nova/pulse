@@ -452,6 +452,7 @@
       <option value="prepress">📝 Prepress, Not Started</option>
       <option value="prepress-active">▶ Prepress, Started</option>
       <option value="prepress-paused">⏸️ Prepress, Paused</option>
+      <option value="pending-account-manager">🚨 Needs My Fix</option>
       <option value="overdue">🔴 Past Due</option>
       <option value="on-hold">⏸️ On Hold</option>
       <option value="closed">✓ Closed</option>
@@ -460,6 +461,7 @@
   <div id="queueCustomDateRow" style="display:none;padding:4px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input type="date" id="queueCustomDate" onchange="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
+  <div id="queueAttentionBox" style="display:none;padding:8px;border-bottom:1px solid #e2e8f0;background:#fff7ed;"></div>
   <div class="qp-list" id="queueList"><div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">Loading...</div></div>
 </div>
 </div><!-- /splitWrapper -->
@@ -1886,8 +1888,22 @@ async function saveTicket(suppressRedirect = false) {
     };
 
     if (editingDbId) {
+      const previousOrder = await getOrder(editingDbId);
+      if (previousOrder?.status === 'pending-account-manager') {
+        order.status = 'prepress';
+        order.needsAccountManagerAction = false;
+        order.prepressIssueComment = '';
+        order.prepressIssueCategory = '';
+        order.prepressIssueBy = '';
+        order.prepressIssueAt = null;
+        order.prepressResubmittedAt = new Date().toISOString();
+        order.prepressResubmittedBy = order.accountManager || 'Account Manager';
+      }
       await updateOrder(editingDbId, order);
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
+      if (previousOrder?.status === 'pending-account-manager') {
+        await addActivity({ orderId: editingOrderId, type: 'prepress-resubmitted', message: 'Account manager updated ticket and sent it back to prepress', by: order.accountManager || 'Account Manager' });
+      }
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
       const allOrders = await getAllOrders();
@@ -2153,7 +2169,7 @@ function qrDataURL(text, size) {
 async function renderQueuePane() {
   const list = document.getElementById('queueList');
   if (!list) return;
-  const allOrders = await getAllOrders();
+  let allOrders = await getAllOrders();
   const today = new Date(); today.setHours(0,0,0,0);
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
   const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
@@ -2163,6 +2179,33 @@ async function renderQueuePane() {
   const customDate = document.getElementById('queueCustomDate')?.value || '';
   const dateFilter = document.getElementById('queueDateFilter')?.value || 'all';
   const statusFilter = document.getElementById('queueStatusFilter')?.value || 'active';
+  const currentRole = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
+  const currentName = typeof getCurrentName === 'function' ? getCurrentName() : null;
+
+  if (currentRole === 'account-manager' && currentName) {
+    allOrders = allOrders.filter(o => !o.accountManager || o.accountManager === currentName);
+  }
+
+  const attentionOrders = currentRole === 'account-manager' && currentName
+    ? allOrders.filter(o => o.status === 'pending-account-manager' && o.accountManager === currentName)
+    : [];
+  const attentionBox = document.getElementById('queueAttentionBox');
+  if (attentionBox) {
+    if (attentionOrders.length > 0) {
+      attentionBox.style.display = 'block';
+      attentionBox.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Needs your attention</div>
+        ${attentionOrders.slice(0,4).map(o => `
+          <div onclick="window.location.href='job-ticket.html?order=${o.orderId}'" style="cursor:pointer;padding:6px 8px;background:#fff;border:1px solid #fed7aa;border-radius:8px;margin-bottom:6px;">
+            <div style="font-size:12px;font-weight:700;color:#9a3412;">#${o.orderId} • ${o.customerName || o.customer || '—'}</div>
+            <div style="font-size:11px;color:#7c2d12;margin-top:2px;">${o.prepressIssueComment || 'Prepress sent this back for fixes.'}</div>
+          </div>`).join('')}
+      `;
+    } else {
+      attentionBox.style.display = 'none';
+      attentionBox.innerHTML = '';
+    }
+  }
 
   // Status filter first
   let orders;
@@ -2176,6 +2219,8 @@ async function renderQueuePane() {
     orders = allOrders.filter(o => o.status === 'prepress-active');
   } else if (statusFilter === 'prepress-paused') {
     orders = allOrders.filter(o => o.status === 'prepress-paused');
+  } else if (statusFilter === 'pending-account-manager') {
+    orders = allOrders.filter(o => o.status === 'pending-account-manager');
   } else if (statusFilter === 'overdue') {
     orders = allOrders.filter(o => !doneStatuses.includes(o.status) && o.dueDate && new Date(o.dueDate+'T12:00:00') < today);
   } else {
@@ -2221,7 +2266,7 @@ async function renderQueuePane() {
     const diffDays = dueD ? Math.ceil((dueD.getTime() - today.getTime()) / 86400000) : null;
     const dueColor = diffDays === null ? '#9ca3af' : diffDays < 0 ? '#dc2626' : diffDays <= 1 ? '#d97706' : '#16a34a';
     const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
-    const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
+    const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
@@ -2233,6 +2278,7 @@ async function renderQueuePane() {
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
       + '<div class="qp-card-meta">' + (o.productType||'\u2014') + ' \u00b7 ' + (o.quantity||0).toLocaleString() + ' pcs' + '</div>'
       + '<div class="qp-card-meta">' + (o.material ? '\ud83e\uddfe '+o.material : '') + (o.accountManager ? (o.material?' \u00b7 ':'')+o.accountManager : '') + '</div>'
+      + (o.status === 'pending-account-manager' ? '<div class="qp-card-meta" style="color:#b91c1c;font-weight:600;">⚠ ' + (o.prepressIssueComment || 'Prepress sent this back for fixes') + '</div>' : '')
       + '<div class="qp-card-meta" style="color:' + dueColor + ';font-weight:600;">' + dueText + '</div>'
       + '</div>'
       + '<div class="qp-qr" title="Scan \u2192 operator terminal">'

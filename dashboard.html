@@ -232,10 +232,13 @@
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
     const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
     const reprintHTML = order.isReprint ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🔁 Recreated from #${order.reprintOfOrderId || '—'}${order.reprintReason ? ` • ${order.reprintReason}` : ''}</div>` : '';
+    const accountManagerIssueHTML = order.status === 'pending-account-manager' ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">⚠ Waiting on ${order.accountManager || 'account manager'}${order.prepressIssueComment ? ` • ${order.prepressIssueComment}` : ''}</div>` : '';
     const prepressHTML = order.status === 'prepress-active'
       ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
       : order.status === 'prepress-paused'
       ? `<div style="font-size:10px;color:#b45309;margin-top:2px;">⏸ Prepress paused</div>`
+      : order.status === 'pending-account-manager'
+      ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">↩ Sent back to account manager</div>`
       : order.status === 'prepress'
       ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
       : '';
@@ -252,6 +255,9 @@
     } else if (order.status === 'on-hold') {
       queueClass = 'card-hold';
       statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (order.status === 'pending-account-manager') {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:#dc2626;"></span>';
     } else if (order.status === 'prepress-paused') {
       queueClass = 'card-pending';
       statusDot = '<span class="card-status-dot" style="background:#d97706;"></span>';
@@ -300,6 +306,7 @@
       ${holdHTML}
       ${shortageHTML}
       ${reprintHTML}
+      ${accountManagerIssueHTML}
       ${prepressHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
@@ -357,7 +364,7 @@
     });
 
     // Split: active (in production pipeline) vs upcoming (new/waiting)
-    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
     const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
     const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
       .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
@@ -569,7 +576,7 @@
   // ─── Orders View ───────────────────────────────────────────────────────────
   function renderOrders(allOrders) {
     const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
-    const activeStatuses = ['new','prepress','prepress-active','prepress-paused','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
+    const activeStatuses = ['new','prepress','prepress-active','prepress-paused','pending-account-manager','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
 
     // Group: parents + their sub-tickets; standalone orders treated as own group
     const parents = {}; // parentOrderId -> { parent, subs[] }
@@ -772,7 +779,7 @@
 
     // Sort
     const dir = _tableSortDir === 'asc' ? 1 : -1;
-    const statusWeight = { 'prepress-active': 0, 'in-production': 1, 'prepress-paused': 2, 'prepress': 3, 'pending-review': 4, 'on-hold': 5, 'qc-checkout': 6, 'ready-to-ship': 7 };
+    const statusWeight = { 'prepress-active': 0, 'in-production': 1, 'prepress-paused': 2, 'prepress': 3, 'pending-account-manager': 4, 'pending-review': 5, 'on-hold': 6, 'qc-checkout': 7, 'ready-to-ship': 8 };
     let sorted = [...filtered].sort((a, b) => {
       if (_tableSortCol === 'order') return dir * ((parseInt(a.orderId)||0) - (parseInt(b.orderId)||0));
       if (_tableSortCol === 'customer') return dir * (a.customer||'').localeCompare(b.customer||'');

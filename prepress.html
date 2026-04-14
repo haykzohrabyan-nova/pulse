@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prepress — Bazaar Print</title>
+  <script src="shared.js?v=20260413-2308"></script>
+  <script src="auth.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="prepress-layout">
+  <aside class="prepress-queue">
+    <div class="queue-header">
+      <div>
+        <div class="queue-title">📄 Prepress Queue</div>
+        <div class="queue-subtitle" id="queueCount">Loading…</div>
+      </div>
+    </div>
+    <div class="queue-filters">
+      <input id="queueSearch" type="text" placeholder="Search order or customer..." oninput="renderQueue()">
+      <select id="queueStatusFilter" onchange="renderQueue()">
+        <option value="all">All prepress work</option>
+        <option value="prepress">Prepress, Not Started</option>
+        <option value="prepress-active">Prepress, Started</option>
+        <option value="prepress-paused">Prepress, Paused</option>
+        <option value="pending-account-manager">Sent Back to Account Manager</option>
+      </select>
+    </div>
+    <div id="queueList" class="queue-list"></div>
+  </aside>
+
+  <main class="prepress-main">
+    <div id="emptyState" class="empty-state">Select a prepress order to review.</div>
+    <div id="detailWrap" style="display:none;">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" id="detailTitle">Order</div>
+          <div class="detail-subtitle" id="detailSubtitle"></div>
+        </div>
+        <div id="detailStatus"></div>
+      </div>
+      <div class="detail-grid">
+        <section class="detail-card">
+          <h3>Job Details</h3>
+          <div id="detailInfo"></div>
+        </section>
+        <section class="detail-card">
+          <h3>Artwork & Notes</h3>
+          <div id="detailArtwork"></div>
+        </section>
+      </div>
+      <section class="detail-card" style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">Workflow Steps</h3>
+          <a id="detailEditLink" class="btn btn-sm" href="#">Open Job Ticket</a>
+        </div>
+        <div id="detailSteps" class="steps-list" style="margin-top:12px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="prepress-side">
+    <div class="detail-card sticky-card">
+      <h3>Prepress Review</h3>
+      <div class="checklist">
+        <label><input type="checkbox" id="checkDetails"> Ticket details verified</label>
+        <label><input type="checkbox" id="checkArtwork"> Artwork/files checked</label>
+        <label><input type="checkbox" id="checkSizing"> Size / quantity / imposition checked</label>
+        <label><input type="checkbox" id="checkCutting"> Die / cut method checked</label>
+      </div>
+      <div class="field">
+        <label>Issue Category</label>
+        <select id="issueCategory">
+          <option value="">No issue</option>
+          <option value="artwork">Artwork issue</option>
+          <option value="copy">Ticket/detail mismatch</option>
+          <option value="sizing">Size / quantity / fit issue</option>
+          <option value="finishing">Finishing / die / cut issue</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prepress Comment</label>
+        <textarea id="prepressComment" rows="6" placeholder="Explain what prepress found, what needs to be fixed, and any instructions for the account manager."></textarea>
+      </div>
+      <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
+      <div class="action-stack">
+        <button class="btn btn-primary" onclick="saveReview()">💾 Save Review</button>
+        <button class="btn btn-primary" style="background:#2563eb;" onclick="startReview()">▶ Start Review</button>
+        <button class="btn btn-warning" onclick="pauseReview()">⏸ Pause</button>
+        <button class="btn btn-danger" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
+        <button class="btn btn-success" onclick="approveToProduction()">✅ Approve to Production</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('prepress');
+initAuth('prepress');
+
+document.getElementById('page-styles').textContent = `
+  .prepress-layout { display:grid; grid-template-columns:300px minmax(0,1fr) 340px; gap:14px; padding:14px; min-height:calc(100vh - 80px); }
+  .prepress-queue, .detail-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 20px rgba(15,23,42,0.05); }
+  .prepress-queue { display:flex; flex-direction:column; min-height:calc(100vh - 110px); overflow:hidden; }
+  .queue-header { padding:14px; border-bottom:1px solid var(--border); }
+  .queue-title { font-size:16px; font-weight:700; }
+  .queue-subtitle { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .queue-filters { padding:10px 14px; display:grid; gap:8px; border-bottom:1px solid var(--border); }
+  .queue-filters input, .queue-filters select, .field select, .field textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:13px; box-sizing:border-box; }
+  .queue-list { padding:10px; overflow:auto; display:grid; gap:8px; }
+  .queue-item { border:1px solid var(--border); border-radius:12px; padding:10px; cursor:pointer; transition:all .18s ease; }
+  .queue-item:hover, .queue-item.active { border-color:#93c5fd; background:#eff6ff; }
+  .queue-item-title { font-weight:700; font-size:14px; color:#1d4ed8; }
+  .queue-item-meta { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .queue-item-issue { font-size:11px; color:#b91c1c; margin-top:6px; }
+  .prepress-main { min-width:0; }
+  .empty-state { background:#fff; border:1px dashed var(--border); border-radius:14px; padding:40px; color:var(--text-muted); text-align:center; }
+  .detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .detail-title { font-size:22px; font-weight:800; }
+  .detail-subtitle { color:var(--text-muted); font-size:13px; margin-top:4px; }
+  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .detail-card { padding:16px; }
+  .detail-card h3 { margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+  .detail-line { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
+  .detail-line:last-child { border-bottom:none; }
+  .detail-label { color:var(--text-muted); }
+  .art-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .art-thumb, .art-pdf { width:82px; height:82px; border-radius:8px; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f8fafc; }
+  .art-thumb img { width:100%; height:100%; object-fit:cover; cursor:pointer; }
+  .art-pdf { font-size:26px; }
+  .art-name { font-size:10px; color:var(--text-muted); text-align:center; max-width:82px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .steps-list { display:grid; gap:8px; }
+  .step-card { border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; gap:12px; font-size:13px; }
+  .step-card.current { border-color:#93c5fd; background:#eff6ff; }
+  .prepress-side { min-width:0; }
+  .sticky-card { position:sticky; top:14px; }
+  .checklist { display:grid; gap:8px; margin-bottom:14px; font-size:13px; }
+  .checklist label { display:flex; align-items:center; gap:8px; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px; }
+  .action-stack { display:grid; gap:8px; }
+  .issue-box { margin:10px 0 14px; padding:10px 12px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; }
+  @media (max-width: 1200px) { .prepress-layout { grid-template-columns:1fr; } .sticky-card { position:static; } .detail-grid { grid-template-columns:1fr; } }
+`;
+
+let allOrders = [];
+let selectedOrderId = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadOrders();
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders') await loadOrders();
+  });
+});
+
+async function loadOrders() {
+  const orders = await getAllOrders();
+  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+  if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
+  renderQueue();
+  renderDetail();
+}
+
+function renderQueue() {
+  const q = (document.getElementById('queueSearch').value || '').toLowerCase().trim();
+  const status = document.getElementById('queueStatusFilter').value;
+  let orders = allOrders.filter(o => status === 'all' ? true : o.status === status);
+  if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
+  document.getElementById('queueCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+  const list = document.getElementById('queueList');
+  if (!orders.length) {
+    list.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:13px;text-align:center;">No prepress orders match.</div>';
+    return;
+  }
+  list.innerHTML = orders.map(order => `
+    <div class="queue-item ${order.id === selectedOrderId ? 'active' : ''}" onclick="selectOrder(${order.id})">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+        <div class="queue-item-title">#${order.orderId}</div>
+        ${renderStatusBadge(order.status)}
+      </div>
+      <div class="queue-item-meta">${order.customerName || order.customer || '—'}</div>
+      <div class="queue-item-meta">${order.productType || '—'} · ${(order.quantity || 0).toLocaleString()} pcs</div>
+      <div class="queue-item-meta">Rep: ${order.accountManager || '—'}${order.isReprint ? ` · 🔁 from #${order.reprintOfOrderId}` : ''}</div>
+      ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueComment}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function selectOrder(id) {
+  selectedOrderId = id;
+  renderQueue();
+  renderDetail();
+}
+
+function detailLine(label, value) {
+  return `<div class="detail-line"><span class="detail-label">${label}</span><span>${value || '—'}</span></div>`;
+}
+
+function renderArtwork(files = []) {
+  if (!files.length) return '<div style="font-size:13px;color:var(--text-muted);">No artwork uploaded.</div>';
+  return `<div class="art-grid">${files.map(f => `
+    <div>
+      <div class="${f.type?.startsWith('image/') ? 'art-thumb' : 'art-pdf'}">${f.type?.startsWith('image/') ? `<img src="${f.dataUrl}" alt="${f.name}" onclick="openArtworkLightbox('${f.dataUrl}')">` : '📄'}</div>
+      <div class="art-name" title="${f.name}">${f.name}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderDetail() {
+  const order = allOrders.find(o => o.id === selectedOrderId);
+  const empty = document.getElementById('emptyState');
+  const wrap = document.getElementById('detailWrap');
+  if (!order) {
+    empty.style.display = 'block';
+    wrap.style.display = 'none';
+    document.getElementById('lastIssueBox').style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  wrap.style.display = 'block';
+
+  document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
+  document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
+  document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
+  document.getElementById('detailEditLink').href = `job-ticket.html?order=${order.orderId}`;
+
+  document.getElementById('detailInfo').innerHTML = [
+    detailLine('Quantity', `${(order.quantity || 0).toLocaleString()} pcs`),
+    detailLine(order.printType === 'Roll' ? 'Frames' : 'Sheets', order.sheetCount ? order.sheetCount.toLocaleString() : '—'),
+    detailLine('Material', order.material),
+    detailLine('Print Type', order.printType),
+    detailLine('Lamination', order.lamination),
+    detailLine('Foil', order.foilType && order.foilType !== 'None' ? order.foilType : '—'),
+    detailLine('Cut Method', order.cutMethod),
+    detailLine('Die', order.dieName || order.dieStatus || '—'),
+    detailLine('Due Date', order.dueDate ? formatDate(order.dueDate) : '—')
+  ].join('');
+
+  const artworkFiles = [
+    ...(order.artworkFiles || []),
+    ...(order.whiteLayerFile ? [order.whiteLayerFile] : []),
+    ...(order.uvFile ? [order.uvFile] : []),
+    ...(order.foilFile ? [order.foilFile] : [])
+  ];
+  document.getElementById('detailArtwork').innerHTML = `
+    ${order.specialNotes ? `<div style="font-size:13px;margin-bottom:12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
+    ${renderArtwork(artworkFiles)}
+  `;
+
+  const currentStep = order.currentStep || 0;
+  document.getElementById('detailSteps').innerHTML = (order.workflowSteps || []).map((step, i) => `
+    <div class="step-card ${i === currentStep ? 'current' : ''}">
+      <div><strong>Step ${i + 1}</strong> • ${step.machine}<div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${step.operation || '—'}${step.notes ? ` • ${step.notes}` : ''}</div></div>
+      <div>${renderStatusBadge(step.status || 'new')}</div>
+    </div>
+  `).join('') || '<div style="font-size:13px;color:var(--text-muted);">No workflow steps.</div>';
+
+  document.getElementById('checkDetails').checked = !!order.prepressChecklist?.details;
+  document.getElementById('checkArtwork').checked = !!order.prepressChecklist?.artwork;
+  document.getElementById('checkSizing').checked = !!order.prepressChecklist?.sizing;
+  document.getElementById('checkCutting').checked = !!order.prepressChecklist?.cutting;
+  document.getElementById('issueCategory').value = order.prepressIssueCategory || '';
+  document.getElementById('prepressComment').value = order.prepressIssueComment || order.prepressComment || '';
+
+  const issueBox = document.getElementById('lastIssueBox');
+  if (order.prepressIssueComment) {
+    issueBox.style.display = 'block';
+    issueBox.innerHTML = `<strong>Last prepress issue</strong><br>${order.prepressIssueComment}<br><span style="font-size:11px;">${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}</span>`;
+  } else {
+    issueBox.style.display = 'none';
+    issueBox.innerHTML = '';
+  }
+}
+
+function getSelectedOrder() {
+  return allOrders.find(o => o.id === selectedOrderId);
+}
+
+function collectReviewPatch(order) {
+  return {
+    ...order,
+    prepressChecklist: {
+      details: document.getElementById('checkDetails').checked,
+      artwork: document.getElementById('checkArtwork').checked,
+      sizing: document.getElementById('checkSizing').checked,
+      cutting: document.getElementById('checkCutting').checked,
+    },
+    prepressComment: document.getElementById('prepressComment').value.trim(),
+    prepressIssueCategory: document.getElementById('issueCategory').value,
+    prepressLastUpdatedAt: new Date().toISOString(),
+    prepressLastUpdatedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress'
+  };
+}
+
+async function saveReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-review', message: 'Prepress review notes saved', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function startReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'prepress-active';
+  patch.prepressStartedAt = patch.prepressStartedAt || new Date().toISOString();
+  patch.prepressStartedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-started', message: 'Prepress review started', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function pauseReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'prepress-paused';
+  patch.prepressPausedAt = new Date().toISOString();
+  patch.prepressPausedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-paused', message: 'Prepress review paused', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function sendBackToAccountManager() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const comment = document.getElementById('prepressComment').value.trim();
+  const category = document.getElementById('issueCategory').value;
+  if (!comment) {
+    alert('Add a clear prepress comment before sending this back.');
+    return;
+  }
+  const patch = collectReviewPatch(order);
+  patch.status = 'pending-account-manager';
+  patch.needsAccountManagerAction = true;
+  patch.prepressIssueComment = comment;
+  patch.prepressIssueCategory = category;
+  patch.prepressIssueAt = new Date().toISOString();
+  patch.prepressIssueBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function approveToProduction() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'pending-review';
+  patch.needsAccountManagerAction = false;
+  patch.prepressIssueComment = '';
+  patch.prepressIssueCategory = '';
+  patch.prepressIssueAt = null;
+  patch.prepressIssueBy = '';
+  patch.prepressApprovedAt = new Date().toISOString();
+  patch.prepressApprovedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-approved', message: 'Prepress approved and sent to production queue', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+function openArtworkLightbox(dataUrl) {
+  if (!dataUrl) return;
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;display:block;margin:auto;">`);
+}
+</script>
+</body>
+</html>
