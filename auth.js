@@ -16,35 +16,36 @@ const ROLE_CONFIG = {
   supervisor: {
     label: 'Supervisor',
     color: '#0891b2',
-    pages: ['dashboard','job-ticket','prepress','production-manager','qc-checkout','operator-terminal','application-dept','rep-tasks','machine-issues','quotes','admin'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads'],
     canEditAllTickets: true,
-    canViewAdmin: true,
+    canViewAdmin: false,
     canViewProduction: true,
-    canViewOperator: true,
+    canViewOperator: false,
   },
   'production-manager': {
     label: 'Production Manager',
     color: '#16a34a',
-    pages: ['dashboard','prepress','production-manager','qc-checkout','operator-terminal','application-dept','machine-issues'],
+    pages: ['dashboard','prepress','production-manager','operator-terminal','qc-checkout','admin'],
     canEditAllTickets: false,
-    canViewAdmin: false,
+    canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
+    adminTabs: ['dies','inventory'],
   },
   'account-manager': {
     label: 'Account Manager',
     color: '#d97706',
-    pages: ['dashboard','job-ticket','quotes','rep-tasks'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','prepress','application-dept','rep-tasks','instagram-leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
-    canViewProduction: false,
+    canViewProduction: true,
     canViewOperator: false,
     ownTicketsOnly: true,
   },
   operator: {
     label: 'Operator',
     color: '#6b7280',
-    pages: ['operator-terminal','qc-checkout','application-dept'],
+    pages: ['dashboard','operator-terminal'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -53,7 +54,7 @@ const ROLE_CONFIG = {
   prepress: {
     label: 'Prepress',
     color: '#6b7280',
-    pages: ['dashboard','job-ticket','prepress','production-manager'],
+    pages: ['dashboard','prepress'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -241,6 +242,7 @@ function applyRoleAccess(pageId) {
   const session = getSession();
   const role = session?.role;
   const config = ROLE_CONFIG[role] || {};
+  const allowedPages = config.pages || [];
 
   // Hide admin nav item for non-admins/supervisors
   document.querySelectorAll('.nav-admin-only').forEach(el => {
@@ -254,6 +256,31 @@ function applyRoleAccess(pageId) {
   document.querySelectorAll('.nav-operator-only').forEach(el => {
     el.style.display = (config.canViewOperator) ? '' : 'none';
   });
+
+  document.querySelectorAll('.nav-link[data-page-id]').forEach(el => {
+    const targetPage = el.dataset.pageId;
+    const canSee = allowedPages.includes('all') || allowedPages.includes(targetPage);
+    el.style.display = canSee ? '' : 'none';
+  });
+
+  if (pageId === 'admin') {
+    const allowedTabs = config.adminTabs || (config.canViewAdmin ? 'all' : []);
+    if (allowedTabs !== 'all') {
+      document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+        const canSee = allowedTabs.includes(btn.dataset.tab);
+        btn.style.display = canSee ? '' : 'none';
+      });
+      document.querySelectorAll('.tab-pane[id^="tab-"]').forEach(pane => {
+        const tabId = pane.id.replace('tab-', '');
+        const canSee = allowedTabs.includes(tabId);
+        pane.style.display = canSee ? '' : 'none';
+        pane.classList.toggle('active', canSee && tabId === allowedTabs[0]);
+      });
+      if (allowedTabs[0] && typeof switchTab === 'function') {
+        setTimeout(() => switchTab(allowedTabs[0]), 0);
+      }
+    }
+  }
 }
 
 // ── Job ticket: lock fields if not authorized ─────────────

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
   <script src="shared.js?v=20260413-2347"></script>
-  <script src="auth.js"></script>
+  <script src="auth.js?v=20260414-0108"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -382,9 +382,57 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOrders() {
   allOrders = await getAllOrders();
-  allOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  allOrders.sort((a, b) => getPrioritySortValue(a) - getPrioritySortValue(b));
   renderSidebarStats();
   renderList();
+}
+
+function getPrioritySortValue(order) {
+  const dueMs = order.dueDate ? new Date(order.dueDate + 'T12:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+  const statusWeight = {
+    'prepress-active': 0,
+    'prepress-paused': 1,
+    'prepress': 2,
+    'pending-account-manager': 3,
+    'pending-review': 4,
+    'in-production': 5,
+    'qc-checkout': 6,
+    'ready-to-ship': 7,
+    'on-hold': 8,
+  };
+  const weight = statusWeight[order.status] ?? 20;
+  return (weight * 10 ** 15) + dueMs;
+}
+
+function getSmartBatchSuggestions(orders) {
+  const active = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-review','in-production'].includes(o.status));
+  const groups = new Map();
+  active.forEach(order => {
+    const key = [getProductionLine(order), order.facility, order.material, order.printType, order.lamination || 'None'].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(order);
+  });
+
+  return [...groups.values()]
+    .filter(group => group.length > 1 && group[0]?.material)
+    .map(group => {
+      const sorted = [...group].sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
+      const earliest = sorted[0]?.dueDate || null;
+      const latest = sorted[sorted.length - 1]?.dueDate || null;
+      const dueSpreadDays = earliest && latest ? Math.round((new Date(latest) - new Date(earliest)) / 86400000) : 0;
+      return {
+        line: getProductionLine(group[0]),
+        facility: FACILITIES[group[0].facility]?.name || group[0].facility || '—',
+        material: group[0].material,
+        printType: group[0].printType || '—',
+        lamination: group[0].lamination || 'None',
+        orders: sorted,
+        dueSpreadDays,
+      };
+    })
+    .filter(group => group.dueSpreadDays <= 3)
+    .sort((a, b) => new Date(a.orders[0].dueDate || '2099-01-01') - new Date(b.orders[0].dueDate || '2099-01-01'))
+    .slice(0, 4);
 }
 
 function setStatusFilter(status) {
@@ -402,10 +450,19 @@ function setFacilityFilter(facility) {
 function renderSidebarStats() {
   const stats = {};
   allOrders.forEach(o => { stats[o.status] = (stats[o.status] || 0) + 1; });
+  const suggestions = getSmartBatchSuggestions(allOrders);
   document.getElementById('sidebarStats').innerHTML = `
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Order Stats</div>
     <div style="font-size:12px;">Total: <strong>${allOrders.length}</strong></div>
     ${Object.entries(stats).map(([s, c]) => `<div style="font-size:12px;">${STATUS_LABELS[s] || s}: <strong>${c}</strong></div>`).join('')}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 6px;">Smart Batch Suggestions</div>
+    ${suggestions.length > 0 ? suggestions.map(group => `
+      <div style="font-size:11px;padding:8px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:8px;line-height:1.45;">
+        <div style="font-weight:700;color:var(--text);">${group.material} • ${group.printType} • ${group.lamination}</div>
+        <div style="color:var(--text-muted);margin-top:2px;">${group.facility}</div>
+        <div style="color:var(--green);margin-top:4px;">Suggested gang run: ${group.orders.map(o => `#${o.orderId}`).join(', ')}</div>
+        <div style="color:var(--text-muted);margin-top:3px;">Due window: ${group.orders[0].dueDate ? formatDate(group.orders[0].dueDate) : '—'}${group.orders[group.orders.length - 1].dueDate && group.orders[group.orders.length - 1].dueDate !== group.orders[0].dueDate ? ` → ${formatDate(group.orders[group.orders.length - 1].dueDate)}` : ''}</div>
+      </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted);">No same-material batch opportunities in the next 3-day window.</div>'}
   `;
 }
 

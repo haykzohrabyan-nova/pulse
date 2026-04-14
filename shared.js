@@ -2182,7 +2182,7 @@ function renderNav(activePage) {
         <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:0.02em;">${PULSE_UI_VERSION}</span>
       </a>
       <div class="nav-links">
-        ${pages.map(p => `<a href="${p.href}" class="${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
+        ${pages.map(p => `<a href="${p.href}" data-page-id="${p.id}" class="nav-link ${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
       </div>
     </nav>
   `;
