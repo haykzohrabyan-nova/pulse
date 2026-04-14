@@ -27,6 +27,12 @@
     </div>
   </div>
 
+  <div id="accountManagerIssueBanner" style="display:none;margin-bottom:14px;padding:14px 16px;border-radius:14px;border:1px solid #fecaca;background:#fef2f2;">
+    <div style="font-size:12px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#b91c1c;">Returned by Prepress</div>
+    <div id="accountManagerIssueBannerText" style="margin-top:6px;font-size:15px;font-weight:700;color:#7f1d1d;"></div>
+    <div id="accountManagerIssueBannerMeta" style="margin-top:6px;font-size:12px;color:#991b1b;"></div>
+  </div>
+
   <form id="ticketForm" onsubmit="return false;">
 
     <!-- ═══════════════════════════════════════════════════════ -->
@@ -1966,6 +1972,7 @@ async function saveTicket(suppressRedirect = false) {
 // Load order into form (editing mode)
 // ─────────────────────────────────────────────────────────────
 async function loadOrderIntoForm(order) {
+  renderAccountManagerIssueBanner(order);
   document.getElementById('facility').value = order.facility || '';
   await new Promise(r => setTimeout(r, 10));
   populateProductTypes();
@@ -2089,6 +2096,23 @@ async function loadOrderIntoForm(order) {
   }
 
   calcFrames();
+}
+
+function renderAccountManagerIssueBanner(order) {
+  const banner = document.getElementById('accountManagerIssueBanner');
+  const textEl = document.getElementById('accountManagerIssueBannerText');
+  const metaEl = document.getElementById('accountManagerIssueBannerMeta');
+  if (!banner || !textEl || !metaEl) return;
+
+  if (order?.status === 'pending-account-manager') {
+    banner.style.display = 'block';
+    textEl.textContent = order.prepressIssueComment || 'Prepress sent this ticket back for fixes.';
+    metaEl.textContent = `${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}`;
+  } else {
+    banner.style.display = 'none';
+    textEl.textContent = '';
+    metaEl.textContent = '';
+  }
 }
 
 // ─── Save & Add Next Item ───────────────────────────────────────

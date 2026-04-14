@@ -65,10 +65,10 @@
     <div class="detail-card sticky-card">
       <h3>Prepress Review</h3>
       <div class="checklist">
-        <label><input type="checkbox" id="checkDetails"> Ticket details verified</label>
-        <label><input type="checkbox" id="checkArtwork"> Artwork/files checked</label>
-        <label><input type="checkbox" id="checkSizing"> Size / quantity / imposition checked</label>
-        <label><input type="checkbox" id="checkCutting"> Die / cut method checked</label>
+        <label><input type="checkbox" id="checkDetails"><span>Ticket details verified</span></label>
+        <label><input type="checkbox" id="checkArtwork"><span>Artwork/files checked</span></label>
+        <label><input type="checkbox" id="checkSizing"><span>Size / quantity / imposition checked</span></label>
+        <label><input type="checkbox" id="checkCutting"><span>Die / cut method checked</span></label>
       </div>
       <div class="field">
         <label>Issue Category</label>
@@ -138,8 +138,9 @@ document.getElementById('page-styles').textContent = `
   .step-card.current { border-color:#93c5fd; background:#eff6ff; }
   .prepress-side { min-width:0; }
   .sticky-card { position:sticky; top:14px; }
-  .checklist { display:grid; gap:8px; margin-bottom:14px; font-size:13px; }
-  .checklist label { display:flex; align-items:center; gap:8px; }
+  .checklist { display:grid; gap:12px; margin-bottom:14px; font-size:14px; }
+  .checklist label { display:grid !important; grid-template-columns:22px 1fr; align-items:start; justify-content:start; gap:12px; color:#475569; font-weight:600; line-height:1.35; }
+  .checklist input[type="checkbox"] { width:22px; height:22px; margin:1px 0 0; accent-color:#2563eb; }
   .field { margin-bottom:12px; }
   .field label { display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px; }
   .action-stack { display:grid; gap:8px; }
