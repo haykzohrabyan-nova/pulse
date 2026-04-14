@@ -464,6 +464,9 @@
       <option value="closed">✓ Closed</option>
     </select>
   </div>
+  <div id="queueRepFilterRow" style="display:none;padding:5px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
+    <select id="queueRepFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;"></select>
+  </div>
   <div id="queueCustomDateRow" style="display:none;padding:4px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input type="date" id="queueCustomDate" onchange="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
@@ -2155,6 +2158,8 @@ async function saveAndAddSubTicket() {
 // ─── Queue Pane ──────────────────────────────────────────────────
 let _qFilter = 'all';
 let _queuePaneVisible = true;
+let _queueStatusInitialized = false;
+let _queueRepInitialized = false;
 
 function onQueueDateFilterChange() {
   _qFilter = document.getElementById('queueDateFilter').value;
@@ -2202,17 +2207,49 @@ async function renderQueuePane() {
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
   const customDate = document.getElementById('queueCustomDate')?.value || '';
   const dateFilter = document.getElementById('queueDateFilter')?.value || 'all';
-  const statusFilter = document.getElementById('queueStatusFilter')?.value || 'active';
+  const statusSelect = document.getElementById('queueStatusFilter');
+  const repFilterRow = document.getElementById('queueRepFilterRow');
+  const repFilterSelect = document.getElementById('queueRepFilter');
   const currentRole = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
   const currentName = typeof getCurrentName === 'function' ? getCurrentName() : null;
-
-  if (currentRole === 'account-manager' && currentName) {
-    allOrders = allOrders.filter(o => !o.accountManager || o.accountManager === currentName);
-  }
 
   const attentionOrders = currentRole === 'account-manager' && currentName
     ? allOrders.filter(o => o.status === 'pending-account-manager' && o.accountManager === currentName)
     : [];
+
+  if (currentRole === 'account-manager' && statusSelect && !_queueStatusInitialized) {
+    statusSelect.value = attentionOrders.length > 0 ? 'pending-account-manager' : 'active';
+    _queueStatusInitialized = true;
+  }
+
+  if (repFilterRow && repFilterSelect) {
+    if (currentRole === 'account-manager') {
+      repFilterRow.style.display = 'block';
+      const repNames = [...new Set(allOrders.map(o => o.accountManager).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      const wantedDefault = !_queueRepInitialized ? 'mine' : (repFilterSelect.value || 'mine');
+      repFilterSelect.innerHTML = `
+        <option value="mine">👤 My Orders Only</option>
+        <option value="all">👥 All Account Managers</option>
+        ${repNames.map(name => `<option value="${name.replace(/"/g, '&quot;')}">${name}</option>`).join('')}
+      `;
+      repFilterSelect.value = repNames.includes(wantedDefault) || ['mine','all'].includes(wantedDefault) ? wantedDefault : 'mine';
+      _queueRepInitialized = true;
+    } else {
+      repFilterRow.style.display = 'none';
+      repFilterSelect.innerHTML = '';
+    }
+  }
+
+  const repFilter = repFilterSelect?.value || 'all';
+  if (currentRole === 'account-manager') {
+    if (repFilter === 'mine' && currentName) {
+      allOrders = allOrders.filter(o => !o.accountManager || o.accountManager === currentName);
+    } else if (repFilter !== 'all') {
+      allOrders = allOrders.filter(o => o.accountManager === repFilter);
+    }
+  }
+
+  const statusFilter = statusSelect?.value || 'active';
   const attentionBox = document.getElementById('queueAttentionBox');
   if (attentionBox) {
     if (attentionOrders.length > 0) {
