@@ -5,7 +5,14 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v13';
+const PULSE_UI_VERSION = 'v14';
+
+if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
+  const localConfigScript = document.createElement('script');
+  localConfigScript.src = 'notification-config.local.js';
+  localConfigScript.dataset.pulseLocalNotifications = 'true';
+  document.head.appendChild(localConfigScript);
+}
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -1466,6 +1473,159 @@ function getOrderByOrderId(orderId) {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   }));
+}
+
+// ── Rush + Notification helpers ───────────────────────────
+
+const PULSE_NOTIFICATION_CONFIG_KEY = 'notification_settings';
+
+function normalizePhoneNumber(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+function isRushApproved(order) {
+  return !!(order?.isRush && order?.rushApprovedBy);
+}
+
+function isDueToday(dateStr) {
+  if (!dateStr) return false;
+  const today = new Date();
+  const local = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return dateStr === local;
+}
+
+function isProductionStarted(status) {
+  return ['in-production','qc-checkout','ready-to-ship','completed','shipped','received'].includes(status);
+}
+
+function isRushDueTodayAndNotInProduction(order) {
+  return !!(isRushApproved(order) && isDueToday(order?.dueDate) && !isProductionStarted(order?.status));
+}
+
+function compareOrdersByRushDue(a, b) {
+  const rushDelta = Number(isRushApproved(b)) - Number(isRushApproved(a));
+  if (rushDelta !== 0) return rushDelta;
+  const dueA = a?.dueDate ? new Date(`${a.dueDate}T12:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+  const dueB = b?.dueDate ? new Date(`${b.dueDate}T12:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+  if (dueA !== dueB) return dueA - dueB;
+  return new Date(b?.updatedAt || b?.createdAt || 0) - new Date(a?.updatedAt || a?.createdAt || 0);
+}
+
+function renderRushFlag(order) {
+  return isRushApproved(order)
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:800;letter-spacing:0.04em;">🚨 RUSH</span>`
+    : '';
+}
+
+async function getNotificationSettings() {
+  const record = await getConfig(PULSE_NOTIFICATION_CONFIG_KEY).catch(() => null);
+  return {
+    enabled: false,
+    proxyBase: 'http://127.0.0.1:8879',
+    testMode: false,
+    testNumber: '',
+    recipients: {},
+    rushWatchers: [],
+    events: {
+      prepressReturned: true,
+      rushDueTodayNotInProduction: true,
+    },
+    cooldownMinutes: {
+      prepressReturned: 60,
+      rushDueTodayNotInProduction: 180,
+    },
+    ...(window.PULSE_NOTIFICATION_DEFAULTS || {}),
+    ...(record?.value || {}),
+  };
+}
+
+async function setNotificationSettings(value) {
+  return setConfig(PULSE_NOTIFICATION_CONFIG_KEY, {
+    enabled: !!value?.enabled,
+    proxyBase: value?.proxyBase || 'http://127.0.0.1:8879',
+    testMode: !!value?.testMode,
+    testNumber: value?.testNumber || '',
+    recipients: value?.recipients || {},
+    rushWatchers: Array.isArray(value?.rushWatchers) ? value.rushWatchers : [],
+    events: value?.events || {},
+    cooldownMinutes: value?.cooldownMinutes || {},
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function getNotificationMemory() {
+  try {
+    return JSON.parse(localStorage.getItem('pulse_notification_memory') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function rememberNotification(key) {
+  const memory = getNotificationMemory();
+  memory[key] = Date.now();
+  localStorage.setItem('pulse_notification_memory', JSON.stringify(memory));
+}
+
+function hasRecentNotification(key, cooldownMinutes = 60) {
+  const memory = getNotificationMemory();
+  const previous = memory[key];
+  return !!(previous && (Date.now() - previous) < (cooldownMinutes * 60 * 1000));
+}
+
+function resolveNotificationRecipients(eventKey, order, settings) {
+  if (settings.testMode && settings.testNumber) {
+    return [{ name: 'Hayk Test', phone: normalizePhoneNumber(settings.testNumber) }];
+  }
+
+  if (eventKey === 'prepressReturned') {
+    const phone = normalizePhoneNumber(settings.recipients?.[order?.accountManager]);
+    return phone ? [{ name: order.accountManager, phone }] : [];
+  }
+
+  if (eventKey === 'rushDueTodayNotInProduction') {
+    return (settings.rushWatchers || [])
+      .map(name => ({ name, phone: normalizePhoneNumber(settings.recipients?.[name]) }))
+      .filter(r => r.phone);
+  }
+
+  return [];
+}
+
+async function sendSmsViaPulseProxy({ to, message, proxyBase }) {
+  const res = await fetch(`${proxyBase || 'http://127.0.0.1:8879'}/proxy/twilio/sms`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to, message }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `SMS send failed (${res.status})`);
+  return data;
+}
+
+async function triggerOrderSmsAlert(eventKey, order, messageBuilder) {
+  const settings = await getNotificationSettings();
+  if (!settings.enabled) return { ok: false, skipped: 'disabled' };
+  if (!settings.events?.[eventKey]) return { ok: false, skipped: 'event-disabled' };
+  const recipients = resolveNotificationRecipients(eventKey, order, settings);
+  if (!recipients.length) return { ok: false, skipped: 'no-recipient' };
+
+  const dedupeKey = `${eventKey}:${order?.orderId || order?.id}:${recipients.map(r => r.phone).join(',')}`;
+  const cooldown = settings.cooldownMinutes?.[eventKey] ?? 60;
+  if (hasRecentNotification(dedupeKey, cooldown)) return { ok: false, skipped: 'cooldown' };
+
+  const message = typeof messageBuilder === 'function' ? messageBuilder(order, settings) : String(messageBuilder || '').trim();
+  if (!message) return { ok: false, skipped: 'empty-message' };
+
+  for (const recipient of recipients) {
+    await sendSmsViaPulseProxy({ to: recipient.phone, message, proxyBase: settings.proxyBase });
+  }
+  rememberNotification(dedupeKey);
+  return { ok: true, count: recipients.length };
 }
 
 // ── Personnel CRUD ─────────────────────────────────────────

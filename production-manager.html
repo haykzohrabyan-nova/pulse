@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260413-2347"></script>
+  <script src="shared.js?v=20260414-0138"></script>
   <script src="auth.js?v=20260414-0108"></script>
   <style id="page-styles"></style>
 </head>
@@ -400,8 +400,9 @@ function getPrioritySortValue(order) {
     'ready-to-ship': 7,
     'on-hold': 8,
   };
+  const rushWeight = isRushApproved(order) ? -1 : 0;
   const weight = statusWeight[order.status] ?? 20;
-  return (weight * 10 ** 15) + dueMs;
+  return ((rushWeight + weight) * 10 ** 15) + dueMs;
 }
 
 function getSmartBatchSuggestions(orders) {
@@ -505,7 +506,7 @@ function renderOrderRow(order) {
   return `
     <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
       <div class="order-row-header" onclick="toggleOrderRow(${order.id})">
-        <span class="order-id">#${order.orderId}${reprintTag}</span>
+        <span class="order-id">#${order.orderId}${reprintTag} ${renderRushFlag(order)}</span>
         <span class="order-status">${renderStatusBadge(order.status)}</span>
         <span class="order-customer">${order.customer || order.customerName}</span>
         <span class="order-product">${order.productType || ''}${order.material ? ' · ' + order.material : ''}</span>

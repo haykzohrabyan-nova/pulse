@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260413-2347"></script>
+  <script src="shared.js?v=20260414-0138"></script>
   <script src="auth.js?v=20260414-0108"></script>
   <style id="page-styles"></style>
 </head>
@@ -1883,17 +1883,19 @@ async function saveTicket(suppressRedirect = false) {
       workflowSteps,
       currentStep: 0,
       status: capOrder?._capacityOverride ? 'pending-confirmation'
+        : (dueDateCheck.isRush && rushApproved) ? 'prepress'
         : dueDateCheck.isRush ? 'on-hold'
         : 'prepress',  // all new tickets start at prepress for Hrach to review & approve
       isRush: dueDateCheck.isRush || false,
-      rushApprovedBy: rushApproved ? 'Supervisor' : null,
+      rushApprovedBy: rushApproved ? ((typeof getCurrentName === 'function' && getCurrentName()) || 'Supervisor') : null,
+      rushApprovedAt: rushApproved ? new Date().toISOString() : null,
       capacityOverride: capOrder?._capacityOverride || false,
       materialShortage: capOrder?._materialShortage || false,
       materialShortageDetails: capOrder?._materialShortageDetails || null,
       needsConfirmation: !!capOrder?._capacityOverride,
       confirmationReason: capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
         : '',
-      holdReason: dueDateCheck.isRush ? 'Rush order — approved by supervisor' : '',
+      holdReason: (dueDateCheck.isRush && !rushApproved) ? 'Rush order waiting for supervisor approval' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
       whiteLayerFile: useSingleSkuFiles ? singleFileData.white : null,
       uvFile: useSingleSkuFiles ? singleFileData.uv : null,
@@ -1918,6 +1920,15 @@ async function saveTicket(suppressRedirect = false) {
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       if (previousOrder?.status === 'pending-account-manager') {
         await addActivity({ orderId: editingOrderId, type: 'prepress-resubmitted', message: 'Account manager updated ticket and sent it back to prepress', by: order.accountManager || 'Account Manager' });
+      }
+      if (isRushDueTodayAndNotInProduction(order)) {
+        try {
+          await triggerOrderSmsAlert('rushDueTodayNotInProduction', order, (smsOrder) =>
+            `Pulse rush alert: Job #${smsOrder.orderId} for ${smsOrder.customerName || smsOrder.customer || 'customer'} is due today and is still not in production. Current status: ${STATUS_LABELS[smsOrder.status] || smsOrder.status}.`
+          );
+        } catch (e) {
+          console.warn('Rush SMS failed:', e);
+        }
       }
       window.location.href = `production-manager.html?order=${editingOrderId}`;
     } else {
@@ -1962,6 +1973,15 @@ async function saveTicket(suppressRedirect = false) {
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
       if (order.materialShortage) {
         await addActivity({ orderId: order.orderId, type: 'alert', message: `Low stock alert for ${order.material || 'material'} at ${FACILITIES[order.facility]?.name || order.facility}`, by: order.accountManager || 'User' });
+      }
+      if (isRushDueTodayAndNotInProduction(order)) {
+        try {
+          await triggerOrderSmsAlert('rushDueTodayNotInProduction', order, (smsOrder) =>
+            `Pulse rush alert: Job #${smsOrder.orderId} for ${smsOrder.customerName || smsOrder.customer || 'customer'} is due today and is still not in production. Current status: ${STATUS_LABELS[smsOrder.status] || smsOrder.status}.`
+          );
+        } catch (e) {
+          console.warn('Rush SMS failed:', e);
+        }
       }
       _lastSavedOrderId = order.orderId;
       if (suppressRedirect) return; // saveAndAddSubTicket handles navigation

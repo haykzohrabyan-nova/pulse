@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260413-2347"></script>
+  <script src="shared.js?v=20260414-0138"></script>
   <script src="auth.js?v=20260414-0108"></script>
   <style id="page-styles"></style>
 </head>
@@ -161,7 +161,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadOrders() {
   const orders = await getAllOrders();
   allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
-    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+    .sort(compareOrdersByRushDue);
   if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
   renderQueue();
   renderDetail();
@@ -182,7 +182,7 @@ function renderQueue() {
     <div class="queue-item ${order.id === selectedOrderId ? 'active' : ''}" onclick="selectOrder(${order.id})">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
         <div class="queue-item-title">#${order.orderId}</div>
-        ${renderStatusBadge(order.status)}
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${renderRushFlag(order)}${renderStatusBadge(order.status)}</div>
       </div>
       <div class="queue-item-meta">${order.customerName || order.customer || '—'}</div>
       <div class="queue-item-meta">${order.productType || '—'} · ${(order.quantity || 0).toLocaleString()} pcs</div>
@@ -349,6 +349,14 @@ async function sendBackToAccountManager() {
   patch.prepressIssueBy = patch.prepressLastUpdatedBy;
   await updateOrder(order.id, patch);
   await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
+  try {
+    await triggerOrderSmsAlert('prepressReturned', { ...order, ...patch }, (smsOrder) => {
+      const repName = smsOrder.accountManager || 'Account Manager';
+      return `Pulse: Job #${smsOrder.orderId} for ${smsOrder.customerName || smsOrder.customer || 'customer'} was returned by prepress to ${repName}. ${category && category !== 'none' ? `${category}. ` : ''}${comment}`;
+    });
+  } catch (e) {
+    console.warn('Prepress return SMS failed:', e);
+  }
   await loadOrders();
 }
 

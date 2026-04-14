@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260413-2347"></script>
+  <script src="shared.js?v=20260414-0138"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -1147,6 +1147,9 @@ async function refreshQueue() {
     }
   });
 
+  myJobs.sort((a, b) => compareOrdersByRushDue(a.order, b.order));
+  comingJobs.sort((a, b) => compareOrdersByRushDue(a.order, b.order));
+
   document.getElementById('queue-count').textContent = myJobs.length;
 
   const scroll = document.getElementById('queue-scroll');
@@ -1165,7 +1168,7 @@ async function refreshQueue() {
     html += `<div class="queue-item ${isActive ? 'active' : ''}"
       style="border-left-color:${lineColor};"
       onclick="selectJob(${order.id})">
-      <div class="qi-order">#${order.orderId || order.id}</div>
+      <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
       <div class="qi-customer">${escHtml(order.customer || '—')}</div>
       <div class="qi-product">${escHtml(order.productType || '—')}</div>
       <div class="qi-meta">
@@ -1184,7 +1187,7 @@ async function refreshQueue() {
       html += `<div class="queue-item coming"
         style="border-left-color:${lineColor}; opacity:0.75;"
         onclick="selectJob(${order.id})">
-        <div class="qi-order">#${order.orderId || order.id}</div>
+        <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
         <div class="qi-customer">${escHtml(order.customer || '—')}</div>
         <div class="qi-product">${escHtml(order.productType || '—')}</div>
         <div class="qi-meta">
