@@ -405,16 +405,20 @@ function renderSidebarStats() {
 function renderList() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = allOrders.filter(o => {
-    if (currentStatusFilter !== 'all' && o.status !== currentStatusFilter) return false;
+    if (currentStatusFilter === 'reprint') {
+      if (!o.isReprint) return false;
+    } else if (currentStatusFilter !== 'all' && o.status !== currentStatusFilter) {
+      return false;
+    }
     if (currentFacilityFilter !== 'all' && o.facility !== currentFacilityFilter) return false;
     if (search) {
-      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
+      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription, o.reprintOfOrderId, o.reprintReason].join(' ').toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
   });
 
-  document.getElementById('listTitle').textContent = currentStatusFilter === 'all' ? 'All Orders' : (STATUS_LABELS[currentStatusFilter] || currentStatusFilter);
+  document.getElementById('listTitle').textContent = currentStatusFilter === 'all' ? 'All Orders' : (currentStatusFilter === 'reprint' ? 'Reprints / Shortages' : (STATUS_LABELS[currentStatusFilter] || currentStatusFilter));
   document.getElementById('orderCount').textContent = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
 
   const container = document.getElementById('orderList');
@@ -432,11 +436,12 @@ function renderOrderRow(order) {
   const line = getProductionLine(order);
   const lineInfo = PRODUCTION_LINES[line];
   const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
+  const reprintTag = order.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
 
   return `
     <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
       <div class="order-row-header" onclick="toggleOrderRow(${order.id})">
-        <span class="order-id">#${order.orderId}</span>
+        <span class="order-id">#${order.orderId}${reprintTag}</span>
         <span class="order-status">${renderStatusBadge(order.status)}</span>
         <span class="order-customer">${order.customer || order.customerName}</span>
         <span class="order-product">${order.productType || ''}${order.material ? ' · ' + order.material : ''}</span>
@@ -679,22 +684,34 @@ async function submitReprint() {
   const order = allOrders.find(o => o.id === reprintTargetOrderId);
   if (!order) return;
   const qty = parseInt(document.getElementById('reprintQty').value) || 0;
+  const reason = document.getElementById('reprintReason').value;
+  const notes = document.getElementById('reprintNotes').value;
+  const requestedBy = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
   if (!qty) { alert('Please enter a quantity.'); return; }
   if (qty > (order.quantity || 0)) {
     alert(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`);
     return;
   }
+  const recreatedOrder = await createReprintOrderFromSource(order, {
+    quantity: qty,
+    reasonLabel: reason,
+    notes,
+    requestedBy,
+  });
   await addReprint({
     parentOrderId: order.orderId,
-    reason: document.getElementById('reprintReason').value,
+    linkedOrderId: recreatedOrder.orderId,
+    reason,
     quantity: qty,
-    notes: document.getElementById('reprintNotes').value,
-    status: 'new',
-    requestedBy: 'Manager'
+    notes,
+    status: 'queued-in-dashboard',
+    requestedBy
   });
-  await addActivity({ orderId: order.orderId, type: 'reprint', message: `Reprint ticket created: ${qty} units - ${document.getElementById('reprintReason').value}`, by: 'Manager' });
+  await addActivity({ orderId: order.orderId, type: 'reprint', message: `Reprint job #${recreatedOrder.orderId} created for ${qty} units - ${reason}`, by: requestedBy });
+  await addActivity({ orderId: recreatedOrder.orderId, type: 'create', message: `Recreated from #${order.orderId} (${reason})`, by: requestedBy });
   closeReprintModal();
-  alert(`✅ Reprint ticket created for ${qty} units.`);
+  await loadOrders();
+  alert(`✅ Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`);
 }
 
 // ── Assign Modal ──────────────────────────────────────────
@@ -728,6 +745,9 @@ async function confirmAssign() {
 // ── Add Step Modal ────────────────────────────────────────
 function openAddStepModal(dbId) {
   addStepTargetOrderDbId = dbId;
+  document.getElementById('newStepMachine').value = '';
+  document.getElementById('newStepOperation').innerHTML = '<option value="">— Select Operation —</option>';
+  document.getElementById('newStepNotes').value = '';
   document.getElementById('addStepModal').classList.add('active');
 }
 function closeAddStepModal() {

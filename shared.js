@@ -10,6 +10,7 @@ const DB_VERSION = 5;
 
 const FACILITIES = {
   '16th-street': { name: '16th Street — Main Production', machines: [
+    'Prepress',
     'HP Indigo 6K', 'HP Indigo 15K', 'Laminator (Nobelus)', 'Scodix',
     'Karlville Poucher', 'Moll Brothers Cutter', 'Moll Brothers Folder-Gluer',
     'Duplo', 'GM Die Cutter w/ JetFX', 'GM Laser Cutter w/ JetFX',
@@ -23,6 +24,7 @@ const FACILITIES = {
 };
 
 const MACHINES = {
+  'Prepress': { operations: ['File Prep', 'Artwork Fix', 'Preflight', 'Proofing'], facility: '16th-street', notes: 'Prepress review, file correction, proofing, and setup before production restarts.' },
   'HP Indigo 6K': { operations: ['Printing'], facility: '16th-street', products: ['Roll Labels', 'Sheet Labels', 'Pouches'] },
   'HP Indigo 15K': { operations: ['Printing'], facility: '16th-street', products: ['Folding Cartons', 'Boxes', 'Cardstock'] },
   'Laminator (Nobelus)': { operations: ['Laminating'], facility: '16th-street', options: ['Gloss', 'Matte', 'Soft Touch', 'Holo'] },
@@ -131,6 +133,7 @@ function getProductionLine(order) {
 function getStageForStep(step, productionLine) {
   const machine = step.machine || '';
   const op = step.operation || '';
+  if (machine.includes('Prepress') || op.includes('File Prep') || op.includes('Artwork Fix') || op.includes('Preflight') || op.includes('Proofing')) return 'Prepress';
   // Press
   if (machine.includes('6K') && op.includes('Print')) return 'Press 6K';
   if (machine.includes('15K') && op.includes('Print')) return 'Press 15K';
@@ -1030,6 +1033,7 @@ const MATERIALS = [
 ];
 
 const OPERATIONS = [
+  'File Prep', 'Artwork Fix', 'Preflight', 'Proofing',
   'Printing', 'Laminating', 'Spot UV', 'Foil Stamping', 'Embossing', 'Texture',
   'Pouching', 'Cutting', 'Scoring', 'Creasing', 'Folding', 'Gluing',
   'Die Cutting', 'Laser Cutting', 'JetFX Finishing', 'Guillotine Cutting',
@@ -1556,6 +1560,89 @@ async function seedKnowledge() {
 
 function addReprint(reprint) {
   return _add('reprints', { ...reprint, createdAt: new Date().toISOString() });
+}
+
+async function createReprintOrderFromSource(sourceOrder, meta = {}) {
+  if (!sourceOrder) throw new Error('Source order is required');
+
+  const quantity = parseInt(meta.quantity ?? meta.shortfall ?? sourceOrder.quantity) || 0;
+  if (!quantity) throw new Error('Reprint quantity is required');
+
+  const orderId = await generateOrderId();
+  const workflowSteps = (sourceOrder.workflowSteps || []).map((step, idx) => ({
+    ...step,
+    id: generateStepId(),
+    status: 'pending',
+    assignedTo: null,
+    startedAt: null,
+    completedAt: null,
+    startTime: null,
+    endTime: null,
+    pausedAt: null,
+    pausedDuration: 0,
+    unitsLost: 0,
+    lossCount: 0,
+    qtyCompleted: null,
+    completedBy: null,
+    stepIndex: idx,
+    redirectedFrom: null,
+    redirectNotes: null,
+    isSplit: false,
+    splitQuantity: null,
+    splitFromStepId: null,
+  }));
+
+  const piecesPerSheet = parseInt(sourceOrder.piecesPerSheet) || 1;
+  const sheetCount = sourceOrder.printType === 'Roll'
+    ? (parseInt(sourceOrder.sheetCount) || 0)
+    : Math.max(1, Math.ceil(quantity / Math.max(1, piecesPerSheet)));
+
+  const reasonLabel = meta.reasonLabel || meta.reason || 'reprint';
+  const noteBits = [
+    sourceOrder.specialNotes || '',
+    `REPRINT OF #${sourceOrder.orderId} — ${reasonLabel}${meta.notes ? ` — ${meta.notes}` : ''}`
+  ].filter(Boolean);
+
+  const newOrder = {
+    ...sourceOrder,
+    orderId,
+    parentOrderId: null,
+    quantity,
+    sheetCount,
+    workflowSteps,
+    currentStep: 0,
+    status: 'prepress',
+    isReprint: true,
+    reprintOfOrderId: sourceOrder.orderId,
+    reprintReason: reasonLabel,
+    reprintNotes: meta.notes || '',
+    reprintRequestedBy: meta.requestedBy || meta.createdBy || 'Manager',
+    reprintCreatedAt: new Date().toISOString(),
+    holdReason: '',
+    holdPreviousStatus: null,
+    materialShortage: false,
+    materialShortageDetails: null,
+    needsConfirmation: false,
+    confirmationReason: '',
+    prepressStartedAt: null,
+    prepressStartedBy: null,
+    prepressPausedAt: null,
+    prepressPausedBy: null,
+    prepressResumedAt: null,
+    prepressResumedBy: null,
+    prepressCompletedAt: null,
+    prepressCompletedBy: null,
+    qcRecord: null,
+    qcPassedAt: null,
+    qcFailedAt: null,
+    qcInspector: null,
+    qcFailReasons: null,
+    specialNotes: noteBits.join(' | '),
+  };
+
+  delete newOrder.id;
+  await addOrder(newOrder);
+  return newOrder;
 }
 
 function getReprintsForOrder(parentOrderId) {

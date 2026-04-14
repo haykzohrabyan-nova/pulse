@@ -1726,13 +1726,24 @@ async function confirmComplete() {
   // Auto-create reprint if short
   if (net < ordered * 0.97) {
     const shortfall = ordered - net;
+    const reason = `Short on step ${currentStepIdx + 1}: delivered ${net}, needed ${ordered}. Shortfall: ${shortfall}.`;
+    const recreatedOrder = await createReprintOrderFromSource(currentJob, {
+      quantity: shortfall,
+      shortfall,
+      reasonLabel: 'shortage',
+      notes: reason,
+      requestedBy: currentOperator,
+    });
     await addReprint({
       parentOrderId: currentJob.orderId,
-      reason: `Short on step ${currentStepIdx + 1}: delivered ${net}, needed ${ordered}. Shortfall: ${shortfall}.`,
-      shortfall, createdBy: currentOperator, status: 'pending',
+      linkedOrderId: recreatedOrder.orderId,
+      reason,
+      shortfall,
+      createdBy: currentOperator,
+      status: 'queued-in-dashboard',
     });
-    await addActivity({ type: 'reprint-created', orderId: currentJob.orderId, operatorName: currentOperator, shortfall });
-    showToast('yellow', '⚠️ Reprint Queued', `Shortfall of ${shortfall.toLocaleString()} units — reprint job created.`);
+    await addActivity({ type: 'reprint-created', orderId: currentJob.orderId, operatorName: currentOperator, shortfall, message: `Shortage recreated as job #${recreatedOrder.orderId}` });
+    showToast('yellow', '⚠️ Reprint Queued', `Shortfall of ${shortfall.toLocaleString()} units — recreated job #${recreatedOrder.orderId} is now on the dashboard.`);
   }
 
   // Coin awards

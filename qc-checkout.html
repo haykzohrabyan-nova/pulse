@@ -395,13 +395,28 @@ async function submitQC() {
       if (document.getElementById('createReprintCheck').checked) {
         const reprintQty = parseInt(document.getElementById('reprintQtyInput').value) || 0;
         if (reprintQty > 0) {
+          const reason = failReasons[0] || 'qc-fail';
+          const reprintNotes = `QC Failed - ${failReasons.join(', ')}. ${notes}`;
+          const recreatedOrder = await createReprintOrderFromSource(selectedOrder, {
+            quantity: reprintQty,
+            reasonLabel: reason,
+            notes: reprintNotes,
+            requestedBy: inspector,
+          });
           await addReprint({
             parentOrderId: selectedOrder.orderId,
-            reason: failReasons[0] || 'qc-fail',
+            linkedOrderId: recreatedOrder.orderId,
+            reason,
             quantity: reprintQty,
-            notes: `QC Failed - ${failReasons.join(', ')}. ${notes}`,
-            status: 'new',
+            notes: reprintNotes,
+            status: 'queued-in-dashboard',
             requestedBy: inspector
+          });
+          await addActivity({
+            orderId: recreatedOrder.orderId,
+            type: 'create',
+            message: `Recreated from #${selectedOrder.orderId} after QC fail`,
+            by: inspector
           });
         }
       }

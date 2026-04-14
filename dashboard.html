@@ -231,6 +231,7 @@
     // On hold / shortage indicators
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
     const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
+    const reprintHTML = order.isReprint ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🔁 Recreated from #${order.reprintOfOrderId || '—'}${order.reprintReason ? ` • ${order.reprintReason}` : ''}</div>` : '';
     const prepressHTML = order.status === 'prepress-active'
       ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
       : order.status === 'prepress-paused'
@@ -298,6 +299,7 @@
       ${parentLinkHTML}
       ${holdHTML}
       ${shortageHTML}
+      ${reprintHTML}
       ${prepressHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
@@ -834,10 +836,11 @@
       }
       const indent = isSubRow ? 'padding-left:28px;' : '';
       const subTag = isSubRow ? `<span style="font-size:10px;color:#6b7280;margin-left:4px;">└ sub</span>` : '';
+      const reprintTag = o.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
       const rowBg = isSubRow ? 'background:#f8faff;' : '';
       return `<tr class="${overdue ? 'overdue-row' : ''}" style="cursor:pointer;${rowBg}" onclick="showDetail(${o.id})">
         <td><span class="line-dot-sm" style="background:${lineColor};"></span>${line.toUpperCase()}</td>
-        <td style="${indent}"><strong style="color:var(--accent);">#${o.orderId}</strong>${subTag}</td>
+        <td style="${indent}"><strong style="color:var(--accent);">#${o.orderId}</strong>${subTag}${reprintTag}</td>
         <td>${o.customer || o.customerName || '—'}</td>
         <td>${o.productType || o.jobDescription || '—'}</td>
         <td>${(o.quantity || 0).toLocaleString()}</td>
