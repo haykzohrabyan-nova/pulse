@@ -5,7 +5,7 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v14';
+const PULSE_UI_VERSION = 'v15';
 
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
   const localConfigScript = document.createElement('script');
@@ -748,8 +748,15 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
 
     const totalMinutesOnMachine = queueMinutes + orderMinutes;
     const totalHoursOnMachine = totalMinutesOnMachine / 60;
+    const queueHours = queueMinutes / 60;
+    const queueDays = +(queueHours / workHoursPerDay).toFixed(1);
+    const totalDaysExact = +(totalHoursOnMachine / workHoursPerDay).toFixed(1);
     const daysNeeded = Math.ceil(totalHoursOnMachine / workHoursPerDay);
     const daysForJustThisOrder = Math.ceil(orderMinutes / 60 / workHoursPerDay);
+    const overtimeHoursNeededRaw = Math.max(0, totalHoursOnMachine - (availableWorkDays * workHoursPerDay));
+    const overtimePerDayNeeded = !availableWorkDays || overtimeHoursNeededRaw <= 0
+      ? 0
+      : +(overtimeHoursNeededRaw / availableWorkDays).toFixed(1);
 
     totalProductionMinutes += orderMinutes;
 
@@ -764,15 +771,22 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
       machine,
       queuedJobs: queuedOrders.length,
       queueMinutes: Math.round(queueMinutes),
-      queueHours: +(queueMinutes / 60).toFixed(1),
+      queueHours: +queueHours.toFixed(1),
+      queueDays,
       orderMinutes: Math.round(orderMinutes),
       orderHours: +(orderMinutes / 60).toFixed(1),
       totalMinutes: Math.round(totalMinutesOnMachine),
       totalHours: +(totalHoursOnMachine).toFixed(1),
+      totalDaysExact,
       daysNeeded,
       daysForThisOrder: daysForJustThisOrder,
       fits: machineFits,
-      overtimeHoursNeeded: machineFits ? 0 : Math.ceil((totalHoursOnMachine - (availableWorkDays * workHoursPerDay))),
+      backlogClearHours: +queueHours.toFixed(1),
+      backlogClearDays: queueDays,
+      overtimeHoursNeeded: machineFits ? 0 : Math.ceil(overtimeHoursNeededRaw),
+      overtimeHoursNeededExact: +overtimeHoursNeededRaw.toFixed(1),
+      overtimePerDayNeeded,
+      daysLate: machineFits ? 0 : Math.max(0, +(totalDaysExact - availableWorkDays).toFixed(1)),
     });
   }
 
@@ -780,9 +794,14 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
   let suggestedAction = '';
   if (!fits) {
     const overloaded = machineDetails.filter(m => !m.fits);
-    const maxOvertime = Math.max(...overloaded.map(m => m.overtimeHoursNeeded));
+    const primaryOverload = [...overloaded].sort((a, b) => b.overtimeHoursNeededExact - a.overtimeHoursNeededExact)[0];
+    const maxOvertime = Math.max(...overloaded.map(m => m.overtimeHoursNeededExact));
     const extraShiftsNeeded = Math.ceil(maxOvertime / workHoursPerDay);
-    suggestedAction = `⚠️ ${overloaded.length} machine${overloaded.length > 1 ? 's' : ''} overloaded. Bottleneck: ${bottleneckMachine} (${bottleneckDays} days needed, ${availableWorkDays} available). Suggest ${extraShiftsNeeded} overtime shift${extraShiftsNeeded > 1 ? 's' : ''} (~${maxOvertime}hrs extra) or extend due date.`;
+    const extensionDays = Math.max(1, bottleneckDays - availableWorkDays);
+    const overtimePerDay = primaryOverload?.overtimePerDayNeeded
+      ? ` (~${primaryOverload.overtimePerDayNeeded} overtime hrs/day over the next ${availableWorkDays} work day${availableWorkDays === 1 ? '' : 's'})`
+      : '';
+    suggestedAction = `⚠️ ${overloaded.length} machine${overloaded.length > 1 ? 's' : ''} overloaded. Bottleneck: ${bottleneckMachine} (${bottleneckDays} days needed, ${availableWorkDays} available). Suggest ${extraShiftsNeeded} overtime shift${extraShiftsNeeded > 1 ? 's' : ''} (~${maxOvertime.toFixed(1)}hrs extra) on ${primaryOverload?.machine || bottleneckMachine}${overtimePerDay}, or extend the due date by ~${extensionDays} work day${extensionDays === 1 ? '' : 's'}.`;
   }
 
   return {
@@ -1693,14 +1712,22 @@ function getAllKnowledge() { return _getAll('knowledge_base'); }
 function updateKnowledge(id, changes) { return _update('knowledge_base', id, changes); }
 
 // Match knowledge base entries to a specific step (machine + material + operation)
-async function getAlertsForStep(machine, material, operation) {
+async function getAlertsForStep(machine, material, operation, operatorName = '') {
   const all = await getAllKnowledge();
   return all.filter(entry => {
     if (!entry.active) return false;
+    const operatorList = (Array.isArray(entry.operators)
+      ? entry.operators
+      : String(entry.operator || '')
+          .split(',')
+          .map(x => x.trim())
+          .filter(Boolean)
+    ).map(x => x.toLowerCase());
     const matchMachine = !entry.machine || entry.machine === machine || (Array.isArray(entry.machines) && entry.machines.includes(machine));
-    const matchMaterial = !entry.material || material?.includes(entry.material);
+    const matchMaterial = !entry.material || String(material || '').toLowerCase().includes(String(entry.material).toLowerCase());
     const matchOperation = !entry.operation || entry.operation === operation;
-    return matchMachine && matchMaterial && matchOperation;
+    const matchOperator = operatorList.length === 0 || operatorList.includes(String(operatorName || '').trim().toLowerCase());
+    return matchMachine && matchMaterial && matchOperation && matchOperator;
   });
 }
 
@@ -2324,6 +2351,7 @@ function renderNav(activePage) {
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
     { id: 'pricing-calculator', label: '\uD83D\uDCB2 Pricing',            href: 'pricing-calculator.html',  access: 'all' },
     { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
+    { id: 'orders',             label: '\uD83D\uDCE6 Orders',             href: 'orders.html',              access: 'all' },
     { id: 'prepress',           label: '\uD83D\uDCC4 Prepress',          href: 'prepress.html',            access: 'production' },
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
-  <script src="shared.js?v=20260414-0138"></script>
-  <script src="auth.js?v=20260414-0108"></script>
+  <script src="shared.js?v=20260414-1358"></script>
+  <script src="auth.js?v=20260414-1358"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -166,6 +166,7 @@
     <thead><tr><th>Role</th><th>Job Ticket Access</th><th>Can Edit Others' Tickets</th><th>Production Pages</th><th>Admin Access</th></tr></thead>
     <tbody>
       <tr><td><strong>Admin</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+      <tr><td><strong>David Review</strong></td><td>Selected pages</td><td>❌ No</td><td>Dashboard, Job Ticket, Pricing, Prepress, Production, Operator, QC, Machines</td><td>Personnel, Dies, Machines only</td></tr>
       <tr><td><strong>Supervisor</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
       <tr><td><strong>Production Manager</strong></td><td>View only</td><td>❌ No</td><td>✅ Yes</td><td>❌ No</td></tr>
       <tr><td><strong>Account Manager</strong></td><td>Own tickets only</td><td>❌ No (own only)</td><td>❌ No</td><td>❌ No</td></tr>
@@ -389,6 +390,7 @@
         </select>
       </div>
       <div class="field"><label>Material (optional)</label><input type="text" id="kbMaterial" placeholder="e.g. White BOPP"></div>
+      <div class="field"><label>Operator (optional)</label><input type="text" id="kbOperator" placeholder="Exact name or comma-separated names"></div>
       <div class="field"><label>Operation (optional)</label>
         <select id="kbOperation">
           <option value="">Any Operation</option>
@@ -720,6 +722,7 @@ function renderRoles() {
   const el = document.getElementById('roleUserList');
   if (!el) return;
   const rows = Object.entries(OPERATOR_PROFILES)
+    .concat((typeof EXTRA_AUTH_USERS !== 'undefined' ? EXTRA_AUTH_USERS.map(u => [u.name, u]) : []))
     .concat([['Hayk Zohrabyan', { role: 'admin', notes: 'Owner / Admin' }]])
     .map(([name, p]) => {
       const cfg = typeof ROLE_CONFIG !== 'undefined' ? (ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' }) : { label: p.role, color: '#6b7280' };
@@ -1239,6 +1242,7 @@ function openKBModal(entry) {
   document.getElementById('kbTitle').value = entry?.title || '';
   document.getElementById('kbMachine').value = entry?.machine || '';
   document.getElementById('kbMaterial').value = entry?.material || '';
+  document.getElementById('kbOperator').value = entry?.operator || '';
   document.getElementById('kbOperation').value = entry?.operation || '';
   document.getElementById('kbSeverity').value = entry?.severity || 'warning';
   document.getElementById('kbDesc').value = entry?.description || '';
@@ -1265,6 +1269,7 @@ async function saveKBEntry() {
     title,
     machine: document.getElementById('kbMachine').value,
     material: document.getElementById('kbMaterial').value.trim(),
+    operator: document.getElementById('kbOperator').value.trim(),
     operation: document.getElementById('kbOperation').value,
     severity: document.getElementById('kbSeverity').value,
     description: desc,

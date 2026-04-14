@@ -13,10 +13,20 @@ const ROLE_CONFIG = {
     canViewProduction: true,
     canViewOperator: true,
   },
+  'david-review': {
+    label: 'David Review',
+    color: '#2563eb',
+    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','machine-issues','admin'],
+    canEditAllTickets: false,
+    canViewAdmin: true,
+    canViewProduction: true,
+    canViewOperator: true,
+    adminTabs: ['personnel','dies','machines'],
+  },
   supervisor: {
     label: 'Supervisor',
     color: '#0891b2',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads'],
     canEditAllTickets: true,
     canViewAdmin: false,
     canViewProduction: true,
@@ -35,7 +45,7 @@ const ROLE_CONFIG = {
   'account-manager': {
     label: 'Account Manager',
     color: '#d97706',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','prepress','application-dept','rep-tasks','instagram-leads'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','application-dept','rep-tasks','instagram-leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -105,6 +115,10 @@ function isAdminOrSupervisor() {
   return role === 'admin' || role === 'supervisor';
 }
 
+const EXTRA_AUTH_USERS = [
+  { name: 'David Zargaryan', role: 'david-review', notes: 'David review access' },
+];
+
 // ── Login modal ───────────────────────────────────────────
 let _selectedLoginUser = null;
 
@@ -118,7 +132,7 @@ function getDefaultPageForRole(role) {
 
 function injectLoginModal() {
   const users = Object.entries(OPERATOR_PROFILES).map(([name, p]) => ({ name, role: p.role }));
-  const allUsers = [{ name: 'Hayk Zohrabyan', role: 'admin' }, ...users];
+  const allUsers = [{ name: 'Hayk Zohrabyan', role: 'admin' }, ...EXTRA_AUTH_USERS, ...users];
 
   const grouped = {};
   allUsers.forEach(u => {
@@ -127,7 +141,7 @@ function injectLoginModal() {
     grouped[r].push(u);
   });
 
-  const roleOrder = ['admin','supervisor','production-manager','account-manager','prepress','operator'];
+  const roleOrder = ['admin','david-review','supervisor','production-manager','account-manager','prepress','operator'];
 
   const userButtons = roleOrder
     .filter(r => grouped[r])

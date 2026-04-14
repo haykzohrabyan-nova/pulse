@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260414-0138"></script>
-  <script src="auth.js?v=20260414-0108"></script>
+  <script src="shared.js?v=20260414-1358"></script>
+  <script src="auth.js?v=20260414-1358"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -209,7 +209,7 @@
       <h3 class="section-title">✨ Special Finishing</h3>
       <div class="form-grid form-grid-3" style="grid-template-columns: 1fr 1fr 1fr;">
         <!-- Lamination -->
-        <div class="field">
+        <div class="field" id="laminationField">
           <label>Lamination</label>
           <select id="lamination" onchange="onFinishingChange()">
             <option value="None">None</option>
@@ -298,7 +298,7 @@
         <div class="form-row-3">
           <div class="field">
             <label>Quantity (Units) *</label>
-            <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames(); checkDueDate();" required>
+            <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames(); checkDueDate(); calcOrderTotal();" required>
           </div>
           <div class="field">
             <label id="ppsLabel">Pieces per Frame</label>
@@ -424,6 +424,66 @@
       <div class="form-row">
         <div class="field">
           <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Sales & Billing                               -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">💰 Sales &amp; Billing</h3>
+      <div class="form-grid form-grid-2">
+        <div class="field">
+          <label>Customer PO #</label>
+          <input type="text" id="customerPO" placeholder="e.g. PO-20045, 2024-CUST-881">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Customer's purchase order number, if provided</div>
+        </div>
+        <div class="field">
+          <label>Quote Ref #</label>
+          <input type="text" id="quoteRef" placeholder="e.g. Q-2024-0042">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Internal or external quote reference</div>
+        </div>
+      </div>
+      <div class="form-grid form-grid-3" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px;">
+        <div class="field">
+          <label>Price per Unit ($)</label>
+          <input type="number" id="pricePerUnit" min="0" step="0.0001" placeholder="e.g. 0.35" oninput="calcOrderTotal()">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Per label / per box / per unit</div>
+        </div>
+        <div class="field">
+          <label>Order Total ($)</label>
+          <input type="text" id="orderTotalDisplay" placeholder="Auto-calculated" readonly style="background:var(--bg);font-weight:600;color:var(--accent);">
+          <input type="hidden" id="orderTotal">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Qty × Unit price (editable if needed)</div>
+        </div>
+        <div class="field">
+          <label>Payment Terms</label>
+          <select id="paymentTerms">
+            <option value="">— Not set —</option>
+            <option value="net-30">Net 30</option>
+            <option value="net-60">Net 60</option>
+            <option value="net-90">Net 90</option>
+            <option value="due-on-receipt">Due on Receipt</option>
+            <option value="prepaid">Prepaid</option>
+            <option value="cod">COD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid form-grid-2" style="margin-top:8px;">
+        <div class="field">
+          <label>Invoice # <span style="font-weight:400;font-size:11px;color:var(--text-muted);">(fill when invoiced)</span></label>
+          <input type="text" id="invoiceNumber" placeholder="e.g. INV-2024-00391">
+        </div>
+        <div class="field">
+          <label>Invoice Status</label>
+          <select id="invoiceStatus">
+            <option value="not-invoiced">Not Invoiced</option>
+            <option value="invoiced">Invoiced</option>
+            <option value="partially-paid">Partially Paid</option>
+            <option value="paid">Paid</option>
+            <option value="voided">Voided</option>
+          </select>
         </div>
       </div>
     </div>
@@ -948,7 +1008,12 @@ function onProductTypeChange() {
   // Show/hide pouch gusset field
   const isPouch = productType === 'Pouches';
   const isBox = productType === 'Folding Cartons / Boxes';
+  const isLabelSheet = productType === 'Labels (Sheet)';
   document.getElementById('gussetField').style.display = isPouch ? '' : 'none';
+  const laminationField = document.getElementById('laminationField');
+  const laminationSelect = document.getElementById('lamination');
+  if (laminationField) laminationField.style.display = isLabelSheet ? 'none' : '';
+  if (isLabelSheet && laminationSelect) laminationSelect.value = 'None';
   document.getElementById('boxDepthField').style.display = isBox ? '' : 'none';
   document.getElementById('pouchCalcBox').style.display = isPouch ? '' : 'none';
   const wLabel = document.getElementById('widthLabel');
@@ -965,6 +1030,7 @@ function onProductTypeChange() {
 
   document.getElementById('printType').value = info.defaultPrintType || 'Sheet';
   onPrintTypeChange();
+  onFinishingChange();
   updateLabelSizeSection();
   updateCutMethodOptions();
   updateJetFXNote();
@@ -1123,6 +1189,25 @@ function calcFrames() {
 
   if (document.getElementById('labelSizeSection').style.display !== 'none') calcLabelFit();
   autoDetectWorkflow();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Order Total auto-calculation (qty × unit price)
+// ─────────────────────────────────────────────────────────────
+function calcOrderTotal() {
+  const qty = parseInt(document.getElementById('quantity').value) || 0;
+  const unitPrice = parseFloat(document.getElementById('pricePerUnit').value) || 0;
+  const displayEl = document.getElementById('orderTotalDisplay');
+  const hiddenEl = document.getElementById('orderTotal');
+  if (!displayEl || !hiddenEl) return;
+  if (qty > 0 && unitPrice > 0) {
+    const total = qty * unitPrice;
+    displayEl.value = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    hiddenEl.value = total.toFixed(2);
+  } else {
+    displayEl.value = '';
+    hiddenEl.value = '';
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1780,7 +1865,10 @@ async function saveTicket(suppressRedirect = false) {
 
         const detailLines = capacity.machineDetails.map(m => {
           const icon = m.fits ? '✅' : '🔴';
-          return `${icon} ${m.machine}: ${m.queuedJobs} jobs queued (${m.queueHours}hr) + this order (${m.orderHours}hr) = ${m.daysNeeded} days needed`;
+          const overtimeLine = m.fits
+            ? ''
+            : `, needs ~${m.overtimeHoursNeededExact} overtime hrs total${m.overtimePerDayNeeded ? ` (~${m.overtimePerDayNeeded}/day)` : ''}`;
+          return `${icon} ${m.machine}: queue clears in ~${m.backlogClearDays} days (${m.queueHours}hr), this order adds ${m.orderHours}hr, total ${m.totalHours}hr = ${m.totalDaysExact} days${overtimeLine}`;
         }).join('\n');
 
         const msg = `⚠️ PRODUCTION CAPACITY WARNING\n\n` +
@@ -1890,6 +1978,7 @@ async function saveTicket(suppressRedirect = false) {
       rushApprovedBy: rushApproved ? ((typeof getCurrentName === 'function' && getCurrentName()) || 'Supervisor') : null,
       rushApprovedAt: rushApproved ? new Date().toISOString() : null,
       capacityOverride: capOrder?._capacityOverride || false,
+      capacityDetails: capOrder?._capacityDetails || null,
       materialShortage: capOrder?._materialShortage || false,
       materialShortageDetails: capOrder?._materialShortageDetails || null,
       needsConfirmation: !!capOrder?._capacityOverride,
@@ -1902,6 +1991,14 @@ async function saveTicket(suppressRedirect = false) {
       foilFile: useSingleSkuFiles ? singleFileData.foil : null,
       skus: skuList.length > 0 ? skuList : null,
       skuCount: skuList.length || 0,
+      // Sales & Billing
+      customerPO: document.getElementById('customerPO').value.trim(),
+      quoteRef: document.getElementById('quoteRef').value.trim(),
+      pricePerUnit: parseFloat(document.getElementById('pricePerUnit').value) || null,
+      orderTotal: parseFloat(document.getElementById('orderTotal').value) || null,
+      paymentTerms: document.getElementById('paymentTerms').value,
+      invoiceNumber: document.getElementById('invoiceNumber').value.trim(),
+      invoiceStatus: document.getElementById('invoiceStatus').value || 'not-invoiced',
     };
 
     if (editingDbId) {
@@ -2124,6 +2221,15 @@ async function loadOrderIntoForm(order) {
     showMultiSkuMode();
     renderSKUs();
   }
+
+  // Sales & Billing
+  if (document.getElementById('customerPO')) document.getElementById('customerPO').value = order.customerPO || '';
+  if (document.getElementById('quoteRef')) document.getElementById('quoteRef').value = order.quoteRef || '';
+  if (document.getElementById('pricePerUnit')) document.getElementById('pricePerUnit').value = order.pricePerUnit != null ? order.pricePerUnit : '';
+  if (document.getElementById('paymentTerms')) document.getElementById('paymentTerms').value = order.paymentTerms || '';
+  if (document.getElementById('invoiceNumber')) document.getElementById('invoiceNumber').value = order.invoiceNumber || '';
+  if (document.getElementById('invoiceStatus')) document.getElementById('invoiceStatus').value = order.invoiceStatus || 'not-invoiced';
+  calcOrderTotal();
 
   calcFrames();
 }

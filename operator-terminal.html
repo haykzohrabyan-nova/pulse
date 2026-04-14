@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260414-0138"></script>
+  <script src="shared.js?v=20260414-1358"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -1435,7 +1435,7 @@ async function renderJobDetail(order) {
 
   // ── KNOWLEDGE BASE ALERTS ──
   let alerts = [];
-  try { alerts = await getAlertsForStep(machine, order.material || '', step?.operation || ''); } catch (e) {}
+  try { alerts = await getAlertsForStep(machine, order.material || '', step?.operation || '', currentOperator); } catch (e) {}
   if (alerts.length) {
     alerts.forEach(a => {
       const cls = a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info';
