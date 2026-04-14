@@ -138,7 +138,12 @@
       </div>
       <div class="field" style="margin-bottom:12px;">
         <label>Quantity to Reprint</label>
-        <input type="number" id="reprintQty" min="1" placeholder="100">
+        <input type="number" id="reprintQty" min="1" placeholder="100" oninput="syncReprintFromQty()">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label id="reprintSheetQtyLabel">Frames / Sheets to Reprint</label>
+        <input type="number" id="reprintSheetQty" min="1" placeholder="50" oninput="syncReprintFromSheetQty()">
+        <span id="reprintSheetQtyHint" style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;"></span>
       </div>
       <div class="field" style="margin-bottom:12px;">
         <label>Notes</label>
@@ -338,6 +343,7 @@ let currentStatusFilter = 'all';
 let currentFacilityFilter = 'all';
 let activeOrderId = null; // the DB id currently expanded
 let reprintTargetOrderId = null;
+let reprintPiecesPerSheet = 1;
 let assignTargetOrderDbId = null;
 let assignTargetStepId = null;
 let addStepTargetOrderDbId = null;
@@ -669,10 +675,18 @@ function openReprintModal(dbId) {
   reprintTargetOrderId = dbId;
   const order = allOrders.find(o => o.id === dbId);
   const maxQty = order?.quantity || 0;
+  const maxSheetQty = order?.sheetCount || Math.max(1, Math.ceil(maxQty / Math.max(1, parseFloat(order?.piecesPerSheet) || 1)));
+  reprintPiecesPerSheet = parseFloat(order?.piecesPerSheet) || (maxQty && maxSheetQty ? maxQty / maxSheetQty : 1) || 1;
   const qtyInput = document.getElementById('reprintQty');
+  const sheetQtyInput = document.getElementById('reprintSheetQty');
   qtyInput.max = maxQty;
   qtyInput.value = '';
   qtyInput.placeholder = `Max: ${maxQty.toLocaleString()}`;
+  sheetQtyInput.max = maxSheetQty;
+  sheetQtyInput.value = '';
+  sheetQtyInput.placeholder = `Max: ${maxSheetQty.toLocaleString()}`;
+  document.getElementById('reprintSheetQtyLabel').textContent = `${order?.printType === 'Roll' ? 'Frames' : 'Sheets'} to Reprint`;
+  document.getElementById('reprintSheetQtyHint').textContent = `Original job: ${(order?.quantity || 0).toLocaleString()} units ≈ ${(maxSheetQty || 0).toLocaleString()} ${order?.printType === 'Roll' ? 'frames' : 'sheets'} (${reprintPiecesPerSheet.toFixed(2)} units each)`;
   document.getElementById('reprintNotes').value = '';
   document.getElementById('reprintModal').classList.add('active');
 }
@@ -684,6 +698,7 @@ async function submitReprint() {
   const order = allOrders.find(o => o.id === reprintTargetOrderId);
   if (!order) return;
   const qty = parseInt(document.getElementById('reprintQty').value) || 0;
+  const sheetQty = parseInt(document.getElementById('reprintSheetQty').value) || 0;
   const reason = document.getElementById('reprintReason').value;
   const notes = document.getElementById('reprintNotes').value;
   const requestedBy = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
@@ -703,6 +718,7 @@ async function submitReprint() {
     linkedOrderId: recreatedOrder.orderId,
     reason,
     quantity: qty,
+    sheetQuantity: sheetQty || Math.ceil(qty / Math.max(1, reprintPiecesPerSheet)),
     notes,
     status: 'queued-in-dashboard',
     requestedBy
@@ -712,6 +728,26 @@ async function submitReprint() {
   closeReprintModal();
   await loadOrders();
   alert(`✅ Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`);
+}
+
+function syncReprintFromQty() {
+  const qty = parseFloat(document.getElementById('reprintQty').value);
+  const sheetInput = document.getElementById('reprintSheetQty');
+  if (!qty || qty <= 0) {
+    sheetInput.value = '';
+    return;
+  }
+  sheetInput.value = String(Math.ceil(qty / Math.max(1, reprintPiecesPerSheet)));
+}
+
+function syncReprintFromSheetQty() {
+  const sheetQty = parseFloat(document.getElementById('reprintSheetQty').value);
+  const qtyInput = document.getElementById('reprintQty');
+  if (!sheetQty || sheetQty <= 0) {
+    qtyInput.value = '';
+    return;
+  }
+  qtyInput.value = String(Math.round(sheetQty * Math.max(1, reprintPiecesPerSheet)));
 }
 
 // ── Assign Modal ──────────────────────────────────────────
