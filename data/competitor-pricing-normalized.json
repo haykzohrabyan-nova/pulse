@@ -1,0 +1,1738 @@
+{
+  "schema_version": "1.1",
+  "product_scope": "multi-product",
+  "description": "Normalized competitor comparison data keyed by query spec. Covers roll labels, folding cartons, and stand-up pouches. Each query maps to a set of competitor results. Internal label prices are calculated from LABEL_SALES_TIERS. Internal box/pouch prices are pending model documentation.",
+  "last_updated": "2026-04-17",
+  "last_capture_pass": "2026-04-17-multiproduct-pass",
+  "products_covered": [
+    "roll_labels",
+    "folding_cartons",
+    "stand_up_pouches"
+  ],
+  "internal_pricing_basis": {
+    "roll_labels": {
+      "engine": "HP Indigo 6K",
+      "clean_width_in": 12,
+      "clean_height_in": 39,
+      "default_bleed_in": 0.24,
+      "tiers": [
+        {
+          "min_frames": 500,
+          "standard_per_frame": 3.4,
+          "uv_per_frame": 4.4
+        },
+        {
+          "min_frames": 238,
+          "standard_per_frame": 4.2,
+          "uv_per_frame": 5.2
+        },
+        {
+          "min_frames": 120,
+          "standard_per_frame": 5.0,
+          "uv_per_frame": 6.0
+        },
+        {
+          "min_frames": 60,
+          "standard_per_frame": 5.8,
+          "uv_per_frame": 7.3
+        },
+        {
+          "min_frames": 25,
+          "standard_per_frame": 8.5,
+          "uv_per_frame": 12.5
+        },
+        {
+          "min_frames": 13,
+          "standard_per_frame": 12.6,
+          "uv_per_frame": 17.1
+        },
+        {
+          "min_frames": 6,
+          "standard_per_frame": 20.0,
+          "uv_per_frame": 40.0
+        }
+      ],
+      "lamination_adders": {
+        "None": 0,
+        "Gloss": 0,
+        "Matte": 0,
+        "Soft Touch": "10% of print charge",
+        "Holo": 20
+      },
+      "note": "Matte and Gloss lamination are included in frame price. Soft Touch adds 10%. Holo adds flat $20."
+    },
+    "folding_cartons": {
+      "engine": "HP Indigo 15K",
+      "note": "Internal pricing model pending documentation. Flow: 15K \u2192 Nobelus lamination \u2192 Scodix (optional) \u2192 Moll Cutter \u2192 Moll Folder-Gluer. Pricing depends on flat sheet size, substrate (14pt\u201324pt cardstock), coating, and run length."
+    },
+    "stand_up_pouches": {
+      "engine": "HP Indigo 6K + Karlville Poucher",
+      "note": "Internal pricing model pending documentation. Flow: 6K press \u2192 GM Die-Cutter (lamination) \u2192 Karlville Poucher. Pricing depends on pouch dimensions, gusset, material (BOPP/white/clear/foil), and quantity.",
+      "tiers": [
+        {
+          "min_frames": 1100,
+          "frame_price": 3.2
+        },
+        {
+          "min_frames": 550,
+          "frame_price": 4.0
+        },
+        {
+          "min_frames": 275,
+          "frame_price": 6.8
+        },
+        {
+          "min_frames": 110,
+          "frame_price": 9.0
+        },
+        {
+          "min_frames": 55,
+          "frame_price": 13.5
+        }
+      ],
+      "spec_example": {
+        "pouch_width_in": 4.375,
+        "pouch_height_in": 6.0,
+        "gusset_in": 2.0,
+        "flat_footprint_in": "10.99 x 6.24",
+        "fits_per_frame": 6,
+        "web_usable_width_in": 12.24,
+        "frame_height_in": 39
+      }
+    }
+  },
+  "queries": [
+    {
+      "query_id": "3x3-5000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "3\" \u00d7 3\" square label, 5000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 3,
+        "height_in": 3,
+        "quantity": 5000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 36,
+        "frames_needed": 139,
+        "tier_min_frames": 120,
+        "frame_price": 5,
+        "print_charge": 694.44,
+        "lamination_charge": 0,
+        "total": 694.44,
+        "unit_price": 0.1389,
+        "currency": "USD",
+        "note": "Matte lamination included in frame price. 36 fits/frame = floor(12/3.24) \u00d7 floor(39/3.24) = 3 \u00d7 12."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 505.85,
+          "unit_price": 0.1012,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 3\"\u00d73\" White BOPP, 5,000 qty",
+            "total_price": 505.85,
+            "unit_price": 0.1012,
+            "quantity": 5000,
+            "spec_delta": "exact match \u2014 size, material, qty all confirmed",
+            "confidence": "high",
+            "raw_capture_id": "up-3x3-5000"
+          },
+          "confidence": "high",
+          "notes": "Bootstrap dropdown size selection + Angular scope read. 6-day turnaround. Shipping not included."
+        },
+        {
+          "competitor": "vistaprint",
+          "competitor_display": "Vistaprint",
+          "status": "partial",
+          "coverage": "size_unconfirmed",
+          "total_price": 544.86,
+          "unit_price": 0.109,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "closest_data_point": {
+            "description": "Roll Labels Rounded Square W=3/H=3 injected via Cimpress API, 5,000 qty",
+            "total_price": 544.86,
+            "unit_price": 0.109,
+            "quantity": 5000,
+            "spec_delta": "qty=5000 (matches). W=3/H=3 injected via Node.js \u2014 size not DOM-confirmed.",
+            "confidence": "medium",
+            "raw_capture_id": "vp-3x3-5000-d"
+          },
+          "confidence": "medium",
+          "notes": "DIRECTIONAL \u2014 W=3/H=3 injected into Cimpress API alongside Rounded Square selection. Size not confirmed via DOM. To verify: open VP in DevTools, select Rounded Square, check for selections[Custom Width] in Cimpress XHR."
+        },
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "partial",
+          "coverage": "different_size_and_qty_verified",
+          "total_price": null,
+          "unit_price": null,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "closest_data_point": {
+            "description": "Roll Labels 3\" x 4\" (closest available), 250 qty default",
+            "total_price": 112.68,
+            "unit_price": 0.4507,
+            "quantity": 250,
+            "spec_delta": "size=3x4 (not 3x3 \u2014 no 3x3 in configurator); qty=250 (max standard=2500, 5k = custom quote)",
+            "confidence": "high",
+            "raw_capture_id": "axiom-2x3-250"
+          },
+          "confidence": "medium",
+          "notes": "Standard configurator at /product/roll-labels-335 has NO 3x3 option. Available sizes: 2\u00d73, 2\u00d73.5, 2\u00d74, 2\u00d74.5, 3\u00d74, 3\u00d75. Max qty=2500. 5k requires custom quote: 747-888-7777."
+        },
+        {
+          "competitor": "gotprint",
+          "competitor_display": "GotPrint",
+          "status": "partial",
+          "coverage": "configurator_explored_upload_required_for_price",
+          "total_price": null,
+          "unit_price": null,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Square-Rounded / 3\" x 3\" / White BOPP / Matte Finish \u2014 spec 100% confirmed, price blocked by upload wall",
+            "price": null,
+            "spec_delta": "size=3\" x 3\" (EXACT), material=White BOPP (EXACT), qty=5000 available",
+            "confidence": "high"
+          },
+          "confidence": "medium",
+          "notes": "Configurator at /products/roll-labels/order: shape=Square-Rounded, size=3x3 (variantId=32), White BOPP (paper ID=12), Matte Finish, qty=5000 ALL confirmed. Price blocked: Vue.js cascade disables paper/finish selects until upload completes. REST API 401. Manual human click-through needed."
+        },
+        {
+          "competitor": "stickermule",
+          "competitor_display": "Sticker Mule",
+          "status": "partial",
+          "coverage": "starting_price_only",
+          "total_price": null,
+          "unit_price": null,
+          "currency": "USD",
+          "turnaround_days": 4,
+          "shipping_included": true,
+          "closest_data_point": {
+            "description": "Custom labels starting price (any size)",
+            "price": 47,
+            "quantity": "unknown (assumed small qty)",
+            "confidence": "medium",
+            "raw_capture_id": "sm-starting"
+          },
+          "confidence": "low",
+          "notes": "$47 starting price from JSON-LD AggregateOffer. Free shipping, 4-day turnaround included. Upload-first site \u2014 no configure-then-price path. 5k pricing requires manual quote with artwork upload."
+        }
+      ],
+      "comparison_notes": "PRIMARY BENCHMARK. Our price $694.44 vs UPrinting confirmed $505.85 \u2014 we are 37% more expensive. VP directional at $544.86 (unconfirmed size). GotPrint spec 100% confirmed but price wall-blocked. Axiom no 3x3 option. SM upload-first."
+    },
+    {
+      "query_id": "2x2-5000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "2\" \u00d7 2\" square label, 5000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "quantity": 5000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 85,
+        "frames_needed": 59,
+        "tier_min_frames": 25,
+        "frame_price": 8.5,
+        "print_charge": 500.0,
+        "lamination_charge": 0,
+        "total": 500.0,
+        "unit_price": 0.1,
+        "currency": "USD",
+        "note": "85 fits/frame = 5\u00d717. 5000/85 = 58.8 \u2192 59 frames. Tier: 25-frame min at $8.50/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 309.16,
+          "unit_price": 0.06183,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2\"\u00d72\" White BOPP, 5,000 qty",
+            "total_price": 309.16,
+            "unit_price": 0.06183,
+            "quantity": 5000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-2x2-5000"
+          },
+          "confidence": "high",
+          "notes": "Verified via Playwright Bootstrap dropdown + Angular scope read. Shipping not included."
+        }
+      ],
+      "comparison_notes": "Our price $500.00 vs UPrinting $309.16 \u2014 we are 38% more expensive. Our tier at 59 frames (25-frame min, $8.50/frame) vs a deeper tier for larger qty."
+    },
+    {
+      "query_id": "3x3-1000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "3\" \u00d7 3\" square label, 1000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 3,
+        "height_in": 3,
+        "quantity": 1000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 36,
+        "frames_needed": 28,
+        "tier_min_frames": 25,
+        "frame_price": 8.5,
+        "print_charge": 236.11,
+        "lamination_charge": 0,
+        "total": 236.11,
+        "unit_price": 0.2361,
+        "currency": "USD",
+        "note": "36 fits/frame. 1000/36 = 27.8 \u2192 28 frames. Tier: 25-frame min at $8.50/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 222.26,
+          "unit_price": 0.22226,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 3\"\u00d73\" White BOPP, 1,000 qty",
+            "total_price": 222.26,
+            "unit_price": 0.22226,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-3x3-1000"
+          },
+          "confidence": "high",
+          "notes": "Verified via Playwright Bootstrap dropdown + Angular scope read. Shipping not included."
+        }
+      ],
+      "comparison_notes": "Our price $236.11 vs UPrinting $222.26 \u2014 only 6% difference at 1k/3\u00d73. We are relatively competitive at lower quantities."
+    },
+    {
+      "query_id": "2x2-1000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "2\" \u00d7 2\" square label, 1000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "quantity": 1000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 85,
+        "frames_needed": 12,
+        "tier_min_frames": 6,
+        "frame_price": 20.0,
+        "print_charge": 235.29,
+        "lamination_charge": 0,
+        "total": 235.29,
+        "unit_price": 0.2353,
+        "currency": "USD",
+        "note": "85 fits/frame. 1000/85 = 11.76 \u2192 12 frames. Tier: 6-frame min at $20.00/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 131.23,
+          "unit_price": 0.13123,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2\"\u00d72\" White BOPP, 1,000 qty (default configurator state)",
+            "total_price": 131.23,
+            "unit_price": 0.13123,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-2x2-1000"
+          },
+          "confidence": "high",
+          "notes": "Default configurator state. Angular scope read. Shipping not included."
+        },
+        {
+          "competitor": "vistaprint",
+          "competitor_display": "Vistaprint",
+          "status": "partial",
+          "coverage": "different_size_verified",
+          "total_price": null,
+          "unit_price": null,
+          "currency": "USD",
+          "closest_data_point": {
+            "description": "Roll Labels 1\"\u00d71\" White Paper Matte, 1,000 qty",
+            "total_price": 110.24,
+            "unit_price": 0.12,
+            "quantity": 1000,
+            "spec_delta": "qty=1000 (exact); size=1x1 (not 2x2); material=White Paper (not BOPP)",
+            "confidence": "high",
+            "raw_capture_id": "vp-1x1-1000"
+          },
+          "confidence": "medium",
+          "notes": "Closest VP data: 1\u00d71/1k at $110.24 (high confidence). Size and material differ \u2014 expect 2\u00d72 BOPP to be more expensive."
+        }
+      ],
+      "comparison_notes": "UPrinting $131.23 vs our $235.29 \u2014 we are 44% more expensive at 1k/2\u00d72. Small-qty label pricing is where we're least competitive vs UPrinting."
+    },
+    {
+      "query_id": "2x2-1000-gloss-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "2\" \u00d7 2\" square label, 1000 pcs, White BOPP, Gloss lamination, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "quantity": 1000,
+        "material": "White BOPP",
+        "finish": "Gloss",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 85,
+        "frames_needed": 12,
+        "tier_min_frames": 6,
+        "frame_price": 20,
+        "print_charge": 235.29,
+        "lamination_charge": 0,
+        "total": 235.29,
+        "unit_price": 0.2353,
+        "currency": "USD",
+        "note": "Gloss included in frame price (same as matte). Same calc as 2x2-1000-matte."
+      },
+      "competitor_results": [
+        {
+          "competitor": "stickermule",
+          "competitor_display": "Sticker Mule",
+          "status": "partial",
+          "coverage": "starting_price_only",
+          "total_price": null,
+          "unit_price": null,
+          "closest_data_point": {
+            "description": "Custom labels starting price",
+            "price": 47,
+            "quantity": "unknown",
+            "confidence": "medium"
+          },
+          "notes": "Starting price $47 \u2014 plausible ballpark for 1000 small labels. Shipping included."
+        },
+        {
+          "competitor": "gotprint",
+          "competitor_display": "GotPrint",
+          "status": "partial",
+          "coverage": "reference_anchor_only",
+          "total_price": null,
+          "unit_price": null,
+          "closest_data_point": {
+            "description": "2\" circle roll labels (promo reference)",
+            "price": 72.92,
+            "quantity": "unknown",
+            "confidence": "low"
+          },
+          "notes": "Reference only: $72.92 for 2\" circles. Qty unknown, shape differs."
+        }
+      ],
+      "comparison_notes": "No exact-match competitor data. Reference query only."
+    },
+    {
+      "query_id": "1x1-1000-matte-paper-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "1\" \u00d7 1\" square label, 1000 pcs, White Paper, Matte, CMYK (Vistaprint reference anchor)",
+      "spec": {
+        "width_in": 1,
+        "height_in": 1,
+        "quantity": 1000,
+        "material": "White Paper",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "slit_roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 279,
+        "frames_needed": 4,
+        "tier_min_frames": 6,
+        "frame_price": 20.0,
+        "print_charge": 71.68,
+        "lamination_charge": 0,
+        "total": 71.68,
+        "unit_price": 0.0717,
+        "currency": "USD",
+        "note": "279 fits/frame = floor(12/1.24)\u00d7floor(39/1.24) = 9\u00d731. 1000/279 = 3.58\u21924 frames. $20.00/frame. Matte included."
+      },
+      "competitor_results": [
+        {
+          "competitor": "vistaprint",
+          "competitor_display": "Vistaprint",
+          "status": "partial",
+          "coverage": "exact_spec",
+          "total_price": 110.24,
+          "unit_price": 0.12,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "closest_data_point": {
+            "description": "Roll Labels 1\"\u00d71\" White Paper Matte Slit Roll, 1,000 qty",
+            "total_price": 110.24,
+            "unit_price": 0.12,
+            "quantity": 1000,
+            "spec_delta": "exact match for size/qty/material/finish",
+            "confidence": "high",
+            "raw_capture_id": "vp-1x1-1000"
+          },
+          "confidence": "high",
+          "notes": "Intercepted from Cimpress estimatedPrices API. High confidence. Material=White Paper (not BOPP)."
+        }
+      ],
+      "comparison_notes": "Vistaprint $110.24 vs our ~$71.68 \u2014 we are cheaper here. Small/cheap labels where we have a production advantage."
+    },
+    {
+      "query_id": "4x2-10000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "4\" \u00d7 2\" rectangle label, 10000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 4,
+        "height_in": 2,
+        "quantity": 10000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 45,
+        "frames_needed": 223,
+        "tier_min_frames": 120,
+        "frame_price": 5,
+        "print_charge": 1111.11,
+        "lamination_charge": 0,
+        "total": 1111.11,
+        "unit_price": 0.1111,
+        "currency": "USD",
+        "note": "45 fits/frame (height-on-web: floor(12/2.24)\u00d7floor(39/4.24)=5\u00d79). 10000/45=222.2\u2192223 frames. Tier: 120-frame min at $5/frame."
+      },
+      "competitor_results": [],
+      "comparison_notes": "No competitor data captured yet. Placeholder for future capture run."
+    },
+    {
+      "query_id": "box-ste-4x2x5-250-18pt-gloss",
+      "product_type": "folding_cartons",
+      "query_label": "Straight Tuck End Box, 4\"L \u00d7 2\"W \u00d7 5\"D, 250 pcs, 18pt Cardstock, Gloss coating",
+      "spec": {
+        "box_style": "Straight Tuck End",
+        "length_in": 4,
+        "width_in": 2,
+        "depth_in": 5,
+        "quantity": 250,
+        "material": "18pt Cardstock (SBS)",
+        "coating_front": "Gloss",
+        "coating_back": "None",
+        "die_cutting": "Beam Cut and Crease",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": false,
+        "total": null,
+        "unit_price": null,
+        "currency": "USD",
+        "note": "Internal box pricing model pending documentation. HP Indigo 15K \u2192 Nobelus lamination \u2192 Scodix (optional) \u2192 Moll Cutter \u2192 Moll Folder-Gluer. Price depends on flat sheet dimensions, substrate, run length, and finishing steps."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 675,
+          "unit_price": 2.7,
+          "currency": "USD",
+          "turnaround_days": 10,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Straight Tuck End Boxes, L=4\" W=2\" D=5\", 18pt Cardstock, Gloss, 250 pcs",
+            "total_price": 675,
+            "unit_price": 2.7,
+            "quantity": 250,
+            "spec_delta": "exact match \u2014 all dimensions, material, and qty confirmed",
+            "confidence": "high",
+            "raw_capture_id": "up-box-ste-250"
+          },
+          "confidence": "high",
+          "notes": "Angular scope read. Style=Straight Tuck End, L=4/W=2/D=5, 18pt SBS cardstock, Gloss front, 8-10 business day turnaround. Flat sheet: 12.75\"\u00d710.65\". Shipping not included."
+        }
+      ],
+      "comparison_notes": "UPrinting live at $675/250 pcs ($2.70/unit). Our internal price TBD \u2014 needs HP 15K pricing model. Benchmark anchor set."
+    },
+    {
+      "query_id": "box-ste-4x2x5-500-18pt-gloss",
+      "product_type": "folding_cartons",
+      "query_label": "Straight Tuck End Box, 4\"L \u00d7 2\"W \u00d7 5\"D, 500 pcs, 18pt Cardstock, Gloss coating",
+      "spec": {
+        "box_style": "Straight Tuck End",
+        "length_in": 4,
+        "width_in": 2,
+        "depth_in": 5,
+        "quantity": 500,
+        "material": "18pt Cardstock (SBS)",
+        "coating_front": "Gloss",
+        "coating_back": "None",
+        "die_cutting": "Beam Cut and Crease",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": false,
+        "total": null,
+        "unit_price": null,
+        "currency": "USD",
+        "note": "Internal box pricing model pending."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 1180,
+          "unit_price": 2.36,
+          "currency": "USD",
+          "turnaround_days": 10,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Straight Tuck End Boxes, L=4\" W=2\" D=5\", 18pt Cardstock, Gloss, 500 pcs",
+            "total_price": 1180,
+            "unit_price": 2.36,
+            "quantity": 500,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-box-ste-500"
+          },
+          "confidence": "high",
+          "notes": "Angular scope read. Same spec as 250 pcs variant."
+        }
+      ],
+      "comparison_notes": "UPrinting: $1,180/500 pcs ($2.36/unit). Scale from 250 to 500: 75% cost increase for 2\u00d7 qty."
+    },
+    {
+      "query_id": "box-ste-4x2x5-1000-18pt-gloss",
+      "product_type": "folding_cartons",
+      "query_label": "Straight Tuck End Box, 4\"L \u00d7 2\"W \u00d7 5\"D, 1000 pcs, 18pt Cardstock, Gloss coating",
+      "spec": {
+        "box_style": "Straight Tuck End",
+        "length_in": 4,
+        "width_in": 2,
+        "depth_in": 5,
+        "quantity": 1000,
+        "material": "18pt Cardstock (SBS)",
+        "coating_front": "Gloss",
+        "coating_back": "None",
+        "die_cutting": "Beam Cut and Crease",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": false,
+        "total": null,
+        "unit_price": null,
+        "currency": "USD",
+        "note": "Internal box pricing model pending."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 1690,
+          "unit_price": 1.69,
+          "currency": "USD",
+          "turnaround_days": 10,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Straight Tuck End Boxes, L=4\" W=2\" D=5\", 18pt Cardstock, Gloss, 1,000 pcs",
+            "total_price": 1690,
+            "unit_price": 1.69,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-box-ste-1000"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $1,690/1k pcs ($1.69/unit). Qty scaling: 2\u00d7 qty from 500 \u2192 1000 = 43% cost increase."
+    },
+    {
+      "query_id": "box-ste-4x2x5-2000-18pt-gloss",
+      "product_type": "folding_cartons",
+      "query_label": "Straight Tuck End Box, 4\"L \u00d7 2\"W \u00d7 5\"D, 2000 pcs, 18pt Cardstock, Gloss coating",
+      "spec": {
+        "box_style": "Straight Tuck End",
+        "length_in": 4,
+        "width_in": 2,
+        "depth_in": 5,
+        "quantity": 2000,
+        "material": "18pt Cardstock (SBS)",
+        "coating_front": "Gloss",
+        "coating_back": "None",
+        "die_cutting": "Beam Cut and Crease",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": false,
+        "total": null,
+        "unit_price": null,
+        "currency": "USD",
+        "note": "Internal box pricing model pending."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 2020,
+          "unit_price": 1.01,
+          "currency": "USD",
+          "turnaround_days": 10,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Straight Tuck End Boxes, L=4\" W=2\" D=5\", 18pt Cardstock, Gloss, 2,000 pcs",
+            "total_price": 2020,
+            "unit_price": 1.01,
+            "quantity": 2000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-box-ste-2000"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $2,020/2k pcs ($1.01/unit). Volume discount curve flattening \u2014 2\u00d7 qty from 1000 costs only 20% more."
+    },
+    {
+      "query_id": "box-ste-4x2x5-2500-18pt-gloss",
+      "product_type": "folding_cartons",
+      "query_label": "Straight Tuck End Box, 4\"L \u00d7 2\"W \u00d7 5\"D, 2500 pcs, 18pt Cardstock, Gloss coating",
+      "spec": {
+        "box_style": "Straight Tuck End",
+        "length_in": 4,
+        "width_in": 2,
+        "depth_in": 5,
+        "quantity": 2500,
+        "material": "18pt Cardstock (SBS)",
+        "coating_front": "Gloss",
+        "coating_back": "None",
+        "die_cutting": "Beam Cut and Crease",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": false,
+        "total": null,
+        "unit_price": null,
+        "currency": "USD",
+        "note": "Internal box pricing model pending."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 2250,
+          "unit_price": 0.9,
+          "currency": "USD",
+          "turnaround_days": 10,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Straight Tuck End Boxes, L=4\" W=2\" D=5\", 18pt Cardstock, Gloss, 2,500 pcs",
+            "total_price": 2250,
+            "unit_price": 0.9,
+            "quantity": 2500,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-box-ste-2500"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $2,250/2.5k pcs ($0.90/unit). Smallest available qty on UPrinting is 50 pcs ($270, $5.40/unit)."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-500-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 500 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 500,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "zipper": false,
+        "hang_hole": "None",
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 84,
+        "frame_price": 13.5,
+        "print_charge": 1134.0,
+        "lamination_charge": 0,
+        "total": 1134.0,
+        "unit_price": 2.268,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 84 frames x $13.5/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 630.22,
+          "unit_price": 1.26,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, Front Only, 500 pcs",
+            "total_price": 630.22,
+            "unit_price": 1.26,
+            "quantity": 500,
+            "spec_delta": "exact match \u2014 all dimensions, material, qty confirmed",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-500"
+          },
+          "confidence": "high",
+          "notes": "Angular scope read. 6-day turnaround. Perf=Yes, Window=No, Hang Hole=None. Shipping not included."
+        }
+      ],
+      "comparison_notes": "PRIMARY POUCH BENCHMARK. UPrinting $630.22/500 pcs ($1.26/unit). Our price TBD. Full UPrinting pricing curve captured \u2014 see qty range queries below."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-100-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 100 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 100,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 17,
+        "frame_price": 13.5,
+        "print_charge": 229.5,
+        "lamination_charge": 0,
+        "total": 229.5,
+        "unit_price": 2.295,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 17 frames x $13.5/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 434.67,
+          "unit_price": 4.347,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, 100 pcs",
+            "total_price": 434.67,
+            "unit_price": 4.347,
+            "quantity": 100,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-100"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $434.67/100 pcs ($4.35/unit). High per-unit cost at low qty \u2014 setup/tooling dominated."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-250-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 250 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 250,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 42,
+        "frame_price": 13.5,
+        "print_charge": 567.0,
+        "lamination_charge": 0,
+        "total": 567.0,
+        "unit_price": 2.268,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 42 frames x $13.5/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 505.87,
+          "unit_price": 2.023,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, 250 pcs",
+            "total_price": 505.87,
+            "unit_price": 2.023,
+            "quantity": 250,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-250"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $505.87/250 pcs ($2.02/unit)."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-1000-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 1000 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 1000,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 167,
+        "frame_price": 9.0,
+        "print_charge": 1503.0,
+        "lamination_charge": 0,
+        "total": 1503.0,
+        "unit_price": 1.503,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 167 frames x $9.0/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 897.26,
+          "unit_price": 0.897,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, 1,000 pcs",
+            "total_price": 897.26,
+            "unit_price": 0.897,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-1000"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $897.26/1k pcs ($0.90/unit)."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-2500-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 2500 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 2500,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 417,
+        "frame_price": 6.8,
+        "print_charge": 2835.6,
+        "lamination_charge": 0,
+        "total": 2835.6,
+        "unit_price": 1.1342,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 417 frames x $6.8/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 1664.25,
+          "unit_price": 0.666,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, 2,500 pcs",
+            "total_price": 1664.25,
+            "unit_price": 0.666,
+            "quantity": 2500,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-2500"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $1,664.25/2.5k pcs ($0.67/unit)."
+    },
+    {
+      "query_id": "pouch-sup-4375x6-5000-white",
+      "product_type": "stand_up_pouches",
+      "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 5000 pcs, Thick Gauge White",
+      "spec": {
+        "width_in": 4.375,
+        "height_in": 6.0,
+        "gusset_in": 2.0,
+        "quantity": 5000,
+        "material": "Thick Gauge White",
+        "printed_sides": "Front Only",
+        "window": false,
+        "perforation": true,
+        "color_mode": "CMYK"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 6,
+        "frames_needed": 834,
+        "frame_price": 4.0,
+        "print_charge": 3336.0,
+        "lamination_charge": 0,
+        "total": 3336.0,
+        "unit_price": 0.6672,
+        "currency": "USD",
+        "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 834 frames x $4.0/frame."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 2941,
+          "unit_price": 0.588,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Stand-Up Pouch 4.375\"W\u00d76\"H\u00d72\"G, Thick Gauge White, 5,000 pcs",
+            "total_price": 2941,
+            "unit_price": 0.588,
+            "quantity": 5000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-pouch-5000"
+          },
+          "confidence": "high"
+        }
+      ],
+      "comparison_notes": "UPrinting: $2,941/5k pcs ($0.59/unit). Full curve captured: 100\u2192250\u2192500\u21921000\u21922500\u21925000."
+    },
+    {
+      "query_id": "up-2x3-1000-matte-bopp",
+      "product_type": "roll_labels",
+      "query_label": "2\" x 3\" label, 1,000 pcs, White BOPP, Matte, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 1000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 60,
+        "frames_needed": 17,
+        "frame_price": 12.6,
+        "print_charge": 214.2,
+        "lamination_charge": 0,
+        "total": 214.2,
+        "unit_price": 0.2142,
+        "currency": "USD",
+        "note": "60 fits/frame, 17 frames, $12.6/frame tier."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 95.87,
+          "unit_price": 0.09587,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2x3\", 1,000 qty",
+            "total_price": 95.87,
+            "unit_price": 0.09587,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-2x3-1000-matte-bopp"
+          },
+          "confidence": "high",
+          "notes": "Captured via Angular scope read. 2026-04-17 multiproduct pass."
+        }
+      ],
+      "comparison_notes": "Our price $214.2 vs UPrinting $95.87."
+    },
+    {
+      "query_id": "up-2x3-5000-matte-bopp",
+      "product_type": "roll_labels",
+      "query_label": "2\" x 3\" label, 5,000 pcs, White BOPP, Matte, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 5000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 60,
+        "frames_needed": 84,
+        "frame_price": 5.8,
+        "print_charge": 487.2,
+        "lamination_charge": 0,
+        "total": 487.2,
+        "unit_price": 0.0974,
+        "currency": "USD",
+        "note": "60 fits/frame, 84 frames, $5.8/frame tier."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 204.27,
+          "unit_price": 0.04085,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2x3\", 5,000 qty",
+            "total_price": 204.27,
+            "unit_price": 0.04085,
+            "quantity": 5000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-2x3-5000-matte-bopp"
+          },
+          "confidence": "high",
+          "notes": "Captured via Angular scope read. 2026-04-17 multiproduct pass."
+        }
+      ],
+      "comparison_notes": "Our price $487.2 vs UPrinting $204.27."
+    },
+    {
+      "query_id": "up-4x4-1000-matte-bopp",
+      "product_type": "roll_labels",
+      "query_label": "4\" x 4\" label, 1,000 pcs, White BOPP, Matte, CMYK",
+      "spec": {
+        "width_in": 4,
+        "height_in": 4,
+        "quantity": 1000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 18,
+        "frames_needed": 56,
+        "frame_price": 8.5,
+        "print_charge": 476.0,
+        "lamination_charge": 0,
+        "total": 476.0,
+        "unit_price": 0.476,
+        "currency": "USD",
+        "note": "18 fits/frame, 56 frames, $8.5/frame tier."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 268.21,
+          "unit_price": 0.26821,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 4x4\", 1,000 qty",
+            "total_price": 268.21,
+            "unit_price": 0.26821,
+            "quantity": 1000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-4x4-1000-matte-bopp"
+          },
+          "confidence": "high",
+          "notes": "Captured via Angular scope read. 2026-04-17 multiproduct pass."
+        }
+      ],
+      "comparison_notes": "Our price $476.0 vs UPrinting $268.21."
+    },
+    {
+      "query_id": "up-4x4-5000-matte-bopp",
+      "product_type": "roll_labels",
+      "query_label": "4\" x 4\" label, 5,000 pcs, White BOPP, Matte, CMYK",
+      "spec": {
+        "width_in": 4,
+        "height_in": 4,
+        "quantity": 5000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 18,
+        "frames_needed": 278,
+        "frame_price": 4.2,
+        "print_charge": 1167.6,
+        "lamination_charge": 0,
+        "total": 1167.6,
+        "unit_price": 0.2335,
+        "currency": "USD",
+        "note": "18 fits/frame, 278 frames, $4.2/frame tier."
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 789.05,
+          "unit_price": 0.15781,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 4x4\", 5,000 qty",
+            "total_price": 789.05,
+            "unit_price": 0.15781,
+            "quantity": 5000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-4x4-5000-matte-bopp"
+          },
+          "confidence": "high",
+          "notes": "Captured via Angular scope read. 2026-04-17 multiproduct pass."
+        }
+      ],
+      "comparison_notes": "Our price $1167.6 vs UPrinting $789.05."
+    }
+  ],
+  "all_captured_price_points": {
+    "description": "Index of all individual price points. See competitor-pricing-datacenter.html for interactive view.",
+    "last_updated": "2026-04-17",
+    "points": [
+      {
+        "id": "up-2x2-1000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 2,
+        "qty": 1000,
+        "material": "White BOPP",
+        "finish": null,
+        "total": 131.23,
+        "unit": 0.13123,
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-3x3-1000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 3,
+        "h": 3,
+        "qty": 1000,
+        "material": "White BOPP",
+        "finish": null,
+        "total": 222.26,
+        "unit": 0.22226,
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-2x2-5000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 2,
+        "qty": 5000,
+        "material": "White BOPP",
+        "finish": null,
+        "total": 309.16,
+        "unit": 0.06183,
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-3x3-5000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 3,
+        "h": 3,
+        "qty": 5000,
+        "material": "White BOPP",
+        "finish": null,
+        "total": 505.85,
+        "unit": 0.10117,
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "vp-1x1-50",
+        "product_type": "roll_labels",
+        "competitor": "Vistaprint",
+        "w": 1,
+        "h": 1,
+        "qty": 50,
+        "material": "White Paper",
+        "finish": "Matte",
+        "total": 35.99,
+        "unit": 0.72,
+        "confidence": "high",
+        "status": "partial"
+      },
+      {
+        "id": "vp-1x1-1000",
+        "product_type": "roll_labels",
+        "competitor": "Vistaprint",
+        "w": 1,
+        "h": 1,
+        "qty": 1000,
+        "material": "White Paper",
+        "finish": "Matte",
+        "total": 110.24,
+        "unit": 0.12,
+        "confidence": "high",
+        "status": "partial"
+      },
+      {
+        "id": "vp-rs-5000",
+        "product_type": "roll_labels",
+        "competitor": "Vistaprint",
+        "w": null,
+        "h": null,
+        "qty": 5000,
+        "material": null,
+        "finish": null,
+        "total": 219.19,
+        "unit": 0.044,
+        "confidence": "medium",
+        "status": "partial",
+        "note": "Rounded Square default size \u2014 size not confirmed"
+      },
+      {
+        "id": "vp-3x3-5000-d",
+        "product_type": "roll_labels",
+        "competitor": "Vistaprint",
+        "w": 3,
+        "h": 3,
+        "qty": 5000,
+        "material": null,
+        "finish": null,
+        "total": 544.86,
+        "unit": 0.109,
+        "confidence": "medium",
+        "status": "partial",
+        "note": "DIRECTIONAL \u2014 W=3/H=3 injected into Cimpress, size not DOM-confirmed"
+      },
+      {
+        "id": "axiom-2x3-250",
+        "product_type": "roll_labels",
+        "competitor": "Axiom Print",
+        "w": 2,
+        "h": 3,
+        "qty": 250,
+        "material": null,
+        "finish": null,
+        "total": 112.68,
+        "unit": 0.451,
+        "confidence": "high",
+        "status": "partial"
+      },
+      {
+        "id": "axiom-2x3-2500",
+        "product_type": "roll_labels",
+        "competitor": "Axiom Print",
+        "w": 2,
+        "h": 3,
+        "qty": 2500,
+        "material": null,
+        "finish": null,
+        "total": 213.27,
+        "unit": 0.0853,
+        "confidence": "high",
+        "status": "partial"
+      },
+      {
+        "id": "gp-2circ-promo",
+        "product_type": "roll_labels",
+        "competitor": "GotPrint",
+        "w": 2,
+        "h": 2,
+        "qty": null,
+        "material": null,
+        "finish": null,
+        "total": 72.92,
+        "unit": null,
+        "confidence": "low",
+        "status": "partial",
+        "note": "Promo/example, qty unknown"
+      },
+      {
+        "id": "sm-starting",
+        "product_type": "roll_labels",
+        "competitor": "Sticker Mule",
+        "w": null,
+        "h": null,
+        "qty": null,
+        "material": null,
+        "finish": null,
+        "total": 47,
+        "unit": null,
+        "confidence": "medium",
+        "status": "partial",
+        "note": "Starting price only \u2014 free shipping included"
+      },
+      {
+        "id": "up-box-ste-50",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 50,
+        "total": 270,
+        "unit": 5.4,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-100",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 100,
+        "total": 338,
+        "unit": 3.38,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-250",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 250,
+        "total": 675,
+        "unit": 2.7,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-500",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 500,
+        "total": 1180,
+        "unit": 2.36,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-1000",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 1000,
+        "total": 1690,
+        "unit": 1.69,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-2000",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 2000,
+        "total": 2020,
+        "unit": 1.01,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-box-ste-2500",
+        "product_type": "folding_cartons",
+        "competitor": "UPrinting",
+        "qty": 2500,
+        "total": 2250,
+        "unit": 0.9,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "18pt Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-100",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 100,
+        "total": 434.67,
+        "unit": 4.3467,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-250",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 250,
+        "total": 505.87,
+        "unit": 2.0235,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-500",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 500,
+        "total": 630.22,
+        "unit": 1.2604,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-1000",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 1000,
+        "total": 897.26,
+        "unit": 0.8973,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-2500",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 2500,
+        "total": 1664.25,
+        "unit": 0.6657,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "up-pouch-5000",
+        "product_type": "stand_up_pouches",
+        "competitor": "UPrinting",
+        "qty": 5000,
+        "total": 2941,
+        "unit": 0.5882,
+        "dims": "4.375x6x2in_gusset",
+        "material": "Thick Gauge White",
+        "confidence": "high",
+        "status": "live"
+      }
+    ]
+  },
+  "coverage_gaps": {
+    "roll_labels": [
+      {
+        "competitor": "gotprint",
+        "gap": "Price blocked by Vue.js upload wall for all specs. Spec confirmed (3x3 Square-Rounded, White BOPP, Matte, qty 5k). Manual human click-through needed to get price."
+      },
+      {
+        "competitor": "stickermule",
+        "gap": "Upload-first site \u2014 no configure-then-price path. Only $47 starting price available. Manual quote with placeholder artwork needed for real qty pricing."
+      },
+      {
+        "competitor": "vistaprint",
+        "gap": "3x3/5k size not DOM-confirmed. $544.86 is directional from API injection. Need DevTools session to verify Custom Width/Height selections in Cimpress XHR."
+      },
+      {
+        "competitor": "axiomprint",
+        "gap": "No 3x3 in standard configurator. Max qty 2500. Custom quote required for 3x3 and 5k+ qty."
+      }
+    ],
+    "folding_cartons": [
+      {
+        "note": "UPrinting pricing curve fully captured (50-2500 pcs). No other competitor data yet. GotPrint, Vistaprint, Axiom, Sticker Mule all uncaptured for this product type."
+      },
+      {
+        "note": "Internal HP 15K pricing model not yet documented \u2014 can't calculate our_price for comparison."
+      }
+    ],
+    "stand_up_pouches": [
+      {
+        "note": "UPrinting pricing curve fully captured (100-5000 pcs). No other competitor data yet."
+      },
+      {
+        "note": "Internal Karlville poucher pricing model not yet documented \u2014 can't calculate our_price for comparison."
+      }
+    ],
+    "uncaptured_product_types": [
+      "business_cards",
+      "flyers",
+      "postcards",
+      "booklets",
+      "stickers_flat",
+      "vinyl_decals",
+      "banners",
+      "window_decals"
+    ]
+  },
+  "coverage_status_legend": {
+    "live": "Verified exact-spec price from configurator/API interaction",
+    "partial": "Some data captured but not for exact spec (reference anchor, starting price, or directional API result)",
+    "blocked": "Site requires upload or authenticated session; no automated price capture possible",
+    "manual_required": "Requires manual browser interaction or direct vendor inquiry"
+  },
+  "competitor_notes": {
+    "vistaprint_packaging": "Vistaprint does NOT offer folding cartons or stand-up pouches. All packaging URLs 404.",
+    "gotprint_packaging": "GotPrint does not offer folding cartons or pouches (catalog discovery confirmed, only \"Folders\" = presentation folders).",
+    "stickermule_packaging": "Sticker Mule: custom labels only. No folding cartons or pouches.",
+    "packaging_competitor_landscape": "For boxes and pouches, UPrinting is currently the only confirmed benchmark. Other dedicated suppliers (Packlane, noissue, PrintingForLess) would need separate exploration.",
+    "gotprint_roll_labels": "GotPrint roll label price still blocked by Vue.js cascade \u2014 paper/finish selects stay disabled after shape+size dispatch. REST API 401. Configurator selects did not render in headless (no DOM elements found in latest pass). Manual human click-through is the only remaining path.",
+    "stickermule_roll_labels": "Upload-first confirmed. $47 starting price from JSON-LD. 5k pricing requires manual quote with artwork upload."
+  }
+}

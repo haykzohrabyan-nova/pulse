@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competitor Pricing Intelligence — Pulse [INTERNAL]</title>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="page-wrap">
+
+  <!-- Private banner -->
+  <div id="privateBanner" style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px;font-size:13px;color:#7f1d1d;">
+    <span style="font-size:16px;">🔒</span>
+    <div>
+      <strong>INTERNAL USE ONLY — Not visible to reps.</strong>
+      This page is a private prototype for admin preview only. It is not linked in navigation. Do not share the URL with account managers or operators.
+      <span style="color:#991b1b;font-weight:700;margin-left:8px;">PROTOTYPE — Data coverage is partial. See coverage status below.</span>
+    </div>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h2>Competitor Pricing Intelligence</h2>
+      <p>Compare internal pricing against competitor public rates across Roll Labels, Folding Cartons, and Stand-Up Pouches. Data sourced via automated capture where accessible; blocked sites flagged clearly.</p>
+    </div>
+    <div style="text-align:right;font-size:12px;color:#64748b;">
+      <div id="dataFreshnessLabel">Data: <strong>2026-04-17</strong></div>
+      <div style="margin-top:4px;">Scope: <strong>Labels · Boxes · Pouches</strong></div>
+    </div>
+  </div>
+
+  <!-- Product Type Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid #e2e8f0;padding-bottom:0;">
+    <button onclick="switchTab('labels')" id="tab-labels" class="tab-btn tab-active" style="padding:8px 20px;border:none;border-bottom:2px solid #2563eb;margin-bottom:-2px;background:none;font-weight:700;color:#2563eb;cursor:pointer;font-size:14px;">Roll Labels</button>
+    <button onclick="switchTab('boxes')" id="tab-boxes" class="tab-btn" style="padding:8px 20px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;font-weight:600;color:#64748b;cursor:pointer;font-size:14px;">Folding Cartons</button>
+    <button onclick="switchTab('pouches')" id="tab-pouches" class="tab-btn" style="padding:8px 20px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;font-weight:600;color:#64748b;cursor:pointer;font-size:14px;">Stand-Up Pouches</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- LABELS TAB                                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div id="section-labels">
+
+  <!-- Query Builder -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Label Query</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:16px;">
+      <div class="field">
+        <label>Width (inches)</label>
+        <input type="number" id="qWidth" value="3" min="0.5" max="12" step="0.25" oninput="runComparison()">
+      </div>
+      <div class="field">
+        <label>Height (inches)</label>
+        <input type="number" id="qHeight" value="3" min="0.5" max="12" step="0.25" oninput="runComparison()">
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <select id="qQty" onchange="runComparison()">
+          <option value="500">500</option>
+          <option value="1000">1,000</option>
+          <option value="2500">2,500</option>
+          <option value="5000" selected>5,000</option>
+          <option value="10000">10,000</option>
+          <option value="25000">25,000</option>
+          <option value="50000">50,000</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Material</label>
+        <select id="qMaterial" onchange="runComparison()">
+          <option value="White BOPP">White BOPP</option>
+          <option value="Clear BOPP">Clear BOPP</option>
+          <option value="Silver BOPP">Silver BOPP</option>
+          <option value="Gloss Label Sheet">Gloss Label Sheet</option>
+          <option value="Matte Label Sheet">Matte Label Sheet</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Lamination / Finish</label>
+        <select id="qLamination" onchange="runComparison()">
+          <option value="None">None</option>
+          <option value="Gloss">Gloss</option>
+          <option value="Matte" selected>Matte</option>
+          <option value="Soft Touch">Soft Touch</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Color Mode</label>
+        <select id="qColor" onchange="runComparison()">
+          <option value="CMYK">CMYK</option>
+          <option value="CMYK+White">CMYK + White</option>
+        </select>
+      </div>
+    </div>
+    <div id="querySpecLine" style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:8px 12px;"></div>
+  </div>
+
+  <!-- Results grid -->
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;margin-bottom:16px;">
+
+    <!-- Our price card -->
+    <div class="card" id="ourPriceCard" style="border-left:4px solid #2563eb;">
+      <div class="card-title" style="color:#2563eb;">Our Price (Internal)</div>
+      <div id="ourPriceTotal" style="font-size:28px;font-weight:800;color:#0f172a;margin:8px 0 2px;">—</div>
+      <div id="ourPricePerUnit" style="font-size:13px;color:#64748b;margin-bottom:10px;">—</div>
+      <div id="ourPriceDetails" style="font-size:11px;color:#94a3b8;line-height:1.6;"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;">
+        <a href="pricing-calculator.html" target="_blank" style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600;">Open Full Calculator →</a>
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:14px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title" style="margin:0;">Competitor Comparison</div>
+        <div style="font-size:11px;color:#9ca3af;">Prices shown where captured data is available for matching or near-matching spec</div>
+      </div>
+      <table class="data-table" id="competitorTable">
+        <thead>
+          <tr>
+            <th>Competitor</th>
+            <th>Coverage</th>
+            <th>Available Price</th>
+            <th>vs Our Price</th>
+            <th>Turnaround</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="competitorRows">
+          <!-- rendered by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Coverage status + legend -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Coverage Status — April 2026</div>
+      <div id="coverageGrid" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Coverage Legend</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;font-size:13px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span class="cov-badge cov-live">LIVE</span>
+          <span>Exact-spec price from configurator or API interaction</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span class="cov-badge cov-partial">PARTIAL</span>
+          <span>Some data captured — reference anchor or starting price only</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span class="cov-badge cov-blocked">BLOCKED</span>
+          <span>JS configurator required — no price via static fetch</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span class="cov-badge cov-manual">MANUAL</span>
+          <span>Needs headless browser or direct inquiry to capture</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data tools -->
+  <div class="card">
+    <div class="card-title">Data Tools & Next Steps</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;font-size:13px;">
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:#0f172a;">Data Center</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="competitor-pricing-datacenter.html" style="color:#2563eb;text-decoration:none;font-weight:600;">
+            🗂 Competitor Pricing Data Center →
+          </a>
+          <div style="font-size:11px;color:#64748b;">All 12 captured data points · closest-match finder · explicit delta labels · admin only</div>
+        </div>
+        <div style="font-weight:700;margin-bottom:8px;color:#0f172a;margin-top:12px;">Raw Data Files</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="data/competitor-pricing-raw.json" target="_blank" style="color:#2563eb;text-decoration:none;">
+            📄 competitor-pricing-raw.json — All captured data points per site
+          </a>
+          <a href="data/competitor-pricing-normalized.json" target="_blank" style="color:#2563eb;text-decoration:none;">
+            📄 competitor-pricing-normalized.json — Normalized comparison queries + all price point index
+          </a>
+        </div>
+        <div style="margin-top:12px;font-weight:700;margin-bottom:8px;color:#0f172a;">Capture Script</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:#374151;">
+          node scripts/capture-labels.js<br>
+          <span style="color:#9ca3af;"># Updates data/competitor-pricing-raw.json</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:#0f172a;">Next Capture Steps</div>
+        <div style="display:flex;flex-direction:column;gap:8px;color:#374151;">
+          <div>
+            <strong>UPrinting 3×3/5k — DONE ✓</strong> $505.85 confirmed. Bootstrap dropdown size select + Angular scope read. <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">scripts/capture-up-final-sm-schema.js</code>
+          </div>
+          <div>
+            <strong>Vistaprint — size not DOM-confirmed:</strong> $544.86/5k from Cimpress API with W=3/H=3 injected (directional). $219.19/5k was Rounded Square default size. Custom (Die-Cut) clicked — no size inputs appeared. To confirm 3×3: DevTools at VP, watch for <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">selections[Custom Width]</code> in Cimpress XHR.
+          </div>
+          <div>
+            <strong>Axiom Print — no 3×3 option:</strong> Standard configurator does NOT offer 3×3. Available: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. Best available: 3×4 at $112.68/250. 5,000+ = custom quote (747-888-7777).
+          </div>
+          <div>
+            <strong>GotPrint — spec confirmed, price blocked:</strong> Real URL: <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">/products/roll-labels/order</code>. 3"×3" Square-Rounded confirmed, White BOPP + Matte + qty 5k available, variantId=32. Vue cascade keeps paper/finish disabled after shape+size JS dispatch. REST API 401. Price requires completing full human flow or authenticated session.
+          </div>
+          <div>
+            <strong>Sticker Mule — upload-first confirmed:</strong> All visible click paths exhausted. Cookie consent dismissed. GraphQL introspection disabled. No configure-then-price path exists. $47 starting price is the only captured data. Manual quote with placeholder artwork upload is the only path.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- #section-labels -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- FOLDING CARTONS TAB                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div id="section-boxes" style="display:none;">
+    <div class="card" style="margin-bottom:16px;border-left:4px solid #7c3aed;">
+      <div class="card-title" style="color:#7c3aed;">Folding Carton Benchmark — UPrinting vs Internal</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:14px;">
+        Spec: Straight Tuck End (STE) Box · 4"×2"×5" · 18pt Gloss · CMYK · HP Indigo 15K internal.
+        Vistaprint, GotPrint, Sticker Mule do <strong>not offer folding cartons</strong>.
+        UPrinting is the only confirmed benchmark. Internal 15K box pricing requires manual fit — estimate pending.<br>
+        <span style="color:#dc2626;font-weight:600;">Note: Our internal 15K box pricing model requires manual die layout. Exact fits/sheet varies by box template. Contact prepress for quote.</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="boxTable">
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>UPrinting Price</th>
+              <th>UPrinting Unit</th>
+              <th>Turnaround</th>
+              <th>Coverage</th>
+            </tr>
+          </thead>
+          <tbody id="boxRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">Competitor Coverage — Boxes</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;font-size:13px;">
+          <div><span class="cov-badge cov-live">LIVE</span> <strong>UPrinting</strong> — STE 4"×2"×5", 18pt Gloss confirmed via API. Prices: 250/$675 → 2500/$2,250.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>Vistaprint</strong> — Does not offer folding cartons. All product URLs 404.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>GotPrint</strong> — Catalog has "Folders" only (presentation folders, not packaging). No folding cartons.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>Sticker Mule</strong> — Labels only. No packaging products.</div>
+          <div><span class="cov-badge cov-manual">TODO</span> <strong>Packlane / noissue</strong> — Dedicated packaging suppliers not yet explored.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Internal Box Pricing Notes</div>
+        <div style="font-size:13px;color:#374151;line-height:1.7;">
+          <div><strong>Press:</strong> HP Indigo 15K · 6th St</div>
+          <div><strong>Sheet size:</strong> 550mm × 750mm (530mm × 730mm clean)</div>
+          <div><strong>Flow:</strong> 15K → Nobelus Lamination → Scodix (optional) → Moll Cutter → Moll Folder-Gluer</div>
+          <div style="margin-top:8px;"><strong>Pricing tiers (per sheet):</strong></div>
+          <div style="font-size:11px;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-top:4px;line-height:1.8;">
+            ≤25 sheets: $14.00/sheet<br>≤62.5: $10.00 · ≤125: $8.00 · ≤250: $4.80<br>
+            ≤500: $4.00 · ≤1000: $3.60 · ≤2000: $3.40<br>≤3000: $3.20 · ≤4000: $3.00 · ≤5000: $2.80
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:#9ca3af;">Fits/sheet depends on flat die template. Enter manual fit in pricing calculator for exact quote.</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- #section-boxes -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- STAND-UP POUCHES TAB                                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div id="section-pouches" style="display:none;">
+    <div class="card" style="margin-bottom:16px;border-left:4px solid #059669;">
+      <div class="card-title" style="color:#059669;">Stand-Up Pouch Benchmark — UPrinting vs Internal</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:14px;">
+        Spec: 4.375"W × 6"H × 2"G · White BOPP · CMYK · HP Indigo 6K + Karlville Poucher internal.
+        UPrinting confirmed (API capture). Vistaprint/GotPrint/SM do <strong>not offer stand-up pouches</strong>.
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="pouchTable">
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>Our Price</th>
+              <th>Our Unit</th>
+              <th>UPrinting Price</th>
+              <th>UP Unit</th>
+              <th>Delta</th>
+              <th>Coverage</th>
+            </tr>
+          </thead>
+          <tbody id="pouchRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">Competitor Coverage — Pouches</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;font-size:13px;">
+          <div><span class="cov-badge cov-live">LIVE</span> <strong>UPrinting</strong> — 4.375"×6" 2"G White, confirmed. Prices: 100/$434 → 5000/$2,941.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>Vistaprint</strong> — Does not offer stand-up pouches. All pouch URLs 404.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>GotPrint</strong> — No pouch products in catalog.</div>
+          <div><span class="cov-badge cov-blocked">N/A</span> <strong>Sticker Mule</strong> — Custom labels only.</div>
+          <div><span class="cov-badge cov-manual">TODO</span> <strong>Packlane / noissue</strong> — Dedicated pouch suppliers not yet explored.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Internal Pouch Pricing Model</div>
+        <div style="font-size:13px;color:#374151;line-height:1.7;">
+          <div><strong>Press:</strong> HP Indigo 6K + Karlville Poucher · 6th St</div>
+          <div><strong>Web:</strong> 13" × 39" frame, 12.24" usable width</div>
+          <div><strong>Flow:</strong> 6K → GM Die-Cutter (lamination) → Karlville Poucher</div>
+          <div><strong>Spec layout:</strong> 4.375"×6"/2"G → flat 10.99"×6.24" → 1 across × 6 down = 6/frame</div>
+          <div style="margin-top:8px;"><strong>Pricing tiers (per frame):</strong></div>
+          <div style="font-size:11px;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-top:4px;line-height:1.8;">
+            ≥1100 frames: $3.20/frame<br>≥550: $4.00 · ≥275: $6.80<br>≥110: $9.00 · ≥55: $13.50
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:#9ca3af;">We're cheaper at very small runs (&lt;100 pcs), competitive at 250 pcs, and 13–80% more expensive at 500–2500 range. Narrows back at 5000+.</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- #section-pouches -->
+
+  <!-- Refresh timestamp -->
+  <div style="text-align:center;margin-top:20px;font-size:11px;color:#9ca3af;">
+    Competitor Intel · Labels · Boxes · Pouches · Admin Access Only · Last capture: 2026-04-17 (multiproduct pass)
+    · <a href="COMPETITOR-PRICING-NOTES.md" target="_blank" style="color:#9ca3af;">View Notes</a>
+  </div>
+
+</div><!-- .page-wrap -->
+
+<script src="shared.js?v=20260414-0100"></script>
+<script src="auth.js?v=20260414-1358"></script>
+<script>
+
+// ─── Pricing constants (mirrors pricing-calculator-sales.html) ───────────────
+// These are embedded here to keep the page self-contained.
+// If the main pricing tiers change, update here too.
+
+const CP_LABEL_TIERS = [
+  { minFrames: 500, standard: 3.40, uv: 4.40 },
+  { minFrames: 238, standard: 4.20, uv: 5.20 },
+  { minFrames: 120, standard: 5.00, uv: 6.00 },
+  { minFrames: 60,  standard: 5.80, uv: 7.30 },
+  { minFrames: 25,  standard: 8.50, uv: 12.50 },
+  { minFrames: 13,  standard: 12.60, uv: 17.10 },
+  { minFrames: 6,   standard: 20.00, uv: 40.00 }
+];
+
+const CP_PRESS_CLEAN_WIDTH = 12;   // HP Indigo 6K clean print width (inches)
+const CP_PRESS_CLEAN_HEIGHT = 39;  // HP Indigo 6K frame height (inches)
+const CP_DEFAULT_BLEED = 0.24;     // standard bleed added per piece (inches)
+
+/**
+ * Calculate internal label price for given spec.
+ * Returns null if label doesn't fit the press.
+ */
+function calcInternalLabelPrice(widthIn, heightIn, quantity, hasUV) {
+  const pw = widthIn + CP_DEFAULT_BLEED;
+  const ph = heightIn + CP_DEFAULT_BLEED;
+  const across = Math.floor(CP_PRESS_CLEAN_WIDTH / pw);
+  const down   = Math.floor(CP_PRESS_CLEAN_HEIGHT / ph);
+  const fitsPerFrame = across * down;
+  if (!fitsPerFrame || !quantity) return null;
+
+  const framesNeeded = Math.ceil(quantity / fitsPerFrame);
+
+  // Find tier: highest minFrames whose rawMinQty <= quantity
+  let chosenTier = CP_LABEL_TIERS[CP_LABEL_TIERS.length - 1]; // fallback to smallest
+  for (const tier of CP_LABEL_TIERS) {
+    const rawMinQty = tier.minFrames * fitsPerFrame;
+    if (quantity >= rawMinQty) {
+      chosenTier = tier;
+      break;
+    }
+  }
+
+  const framePrice = hasUV ? chosenTier.uv : chosenTier.standard;
+  const perPiecePrice = framePrice / fitsPerFrame;
+  const printCharge = quantity * perPiecePrice;
+
+  return {
+    fitsPerFrame,
+    across,
+    down,
+    framesNeeded,
+    tier: chosenTier.minFrames,
+    framePrice,
+    perPiecePrice,
+    printCharge
+  };
+}
+
+function getLaminationAdder(lamination, printCharge) {
+  if (lamination === 'Soft Touch') return printCharge * 0.10;
+  if (lamination === 'Holo') return 20;
+  return 0; // None, Gloss, Matte all included
+}
+
+// ─── Competitor data (embedded fallback) ────────────────────────────────────
+// Run scripts/capture-labels.js to attempt a fresh fetch, then update this.
+
+// Last headless capture pass: 2026-04-14 — browser-first human click-through pass (GP real URL + spec confirmed, SM upload-first confirmed, VP $544.86 directional)
+const COMPETITOR_DATA = [
+  {
+    id: 'vistaprint',
+    name: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'partial',
+    statusReason: 'Cimpress API: $544.86/5k Rounded Square + W=3/H=3 injected (size not DOM-confirmed) · $219.19/5k default size · $110.24/1k 1×1',
+    capturedPrice: 544.86,
+    capturedSpec: 'Rounded Square + Width=3/Height=3 via Cimpress API, 5,000 qty — directional, size not DOM-confirmed',
+    capturedQty: 5000,
+    turnaround: null,
+    shippingIncluded: null,
+    confidence: 'medium',
+    notes: 'Shape=Rounded Square confirmed via label force-click. $544.86 from Node.js Cimpress call with Width=3/Height=3 injected — pricingContext may not encode those dimensions. $219.19 is Rounded Square default size 5k (smaller). $110.24 = 1×1 Matte 1k. Custom (Die-Cut) clicked — no size inputs appeared even after scrolling. To confirm 3×3: watch for selections[Custom Width] in VP DevTools Cimpress XHR. Product PRD-DF5PWTHC. Capture: playwright + Cimpress API.',
+    verifiedPrices: [
+      { qty: 50, total: 35.99, unit: 0.72, spec: '1×1 White Paper Matte' },
+      { qty: 1000, total: 110.24, unit: 0.12, spec: '1×1 White Paper Matte' },
+      { qty: 5000, total: 219.19, unit: 0.044, spec: 'Rounded Square default size (unconfirmed dimensions)' },
+      { qty: 5000, total: 544.86, unit: 0.109, spec: 'Rounded Square + Width=3/Height=3 injected — directional' }
+    ]
+  },
+  {
+    id: 'axiomprint',
+    name: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial',
+    statusReason: 'Configurator prices captured: 2,500 qty = $213.27 (max qty)',
+    capturedPrice: 213.27,
+    capturedSpec: '2"×3" rectangle roll labels, 2,500 qty (configurator max)',
+    capturedQty: 2500,
+    turnaround: null,
+    shippingIncluded: null,
+    confidence: 'high',
+    notes: 'Real prices via Playwright + Ant Design dropdown. Product at /product/roll-labels-335. Standard configurator max qty = 2,500 — 5,000+ requires custom quote. 250 qty = $112.68; 2,500 qty = $213.27. Materials: White Matte BOPP, Silver Gloss BOPP, Clear Gloss BOPP, 60# Matte Paper, Holographic.',
+    verifiedPrices: [
+      { qty: 250, total: 112.68, unit: 0.451, spec: '2×3 default' },
+      { qty: 2500, total: 213.27, unit: 0.0853, spec: '2×3 default' }
+    ]
+  },
+  {
+    id: 'gotprint',
+    name: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'partial',
+    statusReason: 'Spec CONFIRMED: 3"×3" Square-Rounded, White BOPP, Matte, qty 5k — price blocked by Vue cascade + REST API 401',
+    capturedPrice: null,
+    capturedSpec: '3"×3" Square-Rounded, White BOPP (paper ID 12), Matte Finish (Indoor), variantId=32, qty 5k available',
+    capturedQty: null,
+    turnaround: null,
+    shippingIncluded: null,
+    confidence: 'none',
+    notes: 'Real URL: /products/roll-labels/order (old /store URL redirects to home.html). Browser click-through confirmed: Square-Rounded shape → 3"×3" size → variantId=32, qtys [25,50,100,250,500,...,5000]. White BOPP Label (paper ID 12) and Matte Finish (Indoor) both in spec. Vue.js paper/finish selects stay disabled after JS dispatch shape+size — Vue cascade requires upload to complete. All REST pricing endpoints 401. Price NOT captured.',
+  },
+  {
+    id: 'uprinting',
+    name: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live',
+    statusReason: 'VERIFIED: 3"×3", 5,000 qty = $505.85 (White BOPP, 6-day turnaround)',
+    capturedPrice: 505.85,
+    capturedSpec: '3"×3" White BOPP roll labels, 5,000 qty',
+    capturedQty: 5000,
+    turnaround: 6,
+    shippingIncluded: false,
+    confidence: 'high',
+    notes: 'EXACT SPEC MATCH. Verified via Playwright Bootstrap dropdown interaction: size dropdown → "3" x 3"" selected → qty dropdown → 5,000 selected. Price changed 2×2/1k=$131.23 → 3×3/1k=$222.26 → 3×3/5k=$505.85 ($0.1012/ea). 6-day turnaround. Shipping NOT included (separate charge). Material: White BOPP. 100+ size options available via dropdown (0.5"–12"). Capture: scripts/capture-up-final-sm-schema.js.',
+    verifiedPrices: [
+      { qty: 1000, total: 131.23,  unit: 0.13123,  spec: '2×2 White BOPP (default)' },
+      { qty: 1000, total: 222.26,  unit: 0.22226,  spec: '3×3 White BOPP' },
+      { qty: 1000, total: 95.87,   unit: 0.09587,  spec: '2×3 White BOPP' },
+      { qty: 1000, total: 268.21,  unit: 0.26821,  spec: '4×4 White BOPP' },
+      { qty: 5000, total: 309.16,  unit: 0.06183,  spec: '2×2 White BOPP' },
+      { qty: 5000, total: 505.85,  unit: 0.10117,  spec: '3×3 White BOPP ← TARGET SPEC', turnaround: 6 },
+      { qty: 5000, total: 204.27,  unit: 0.04085,  spec: '2×3 White BOPP' },
+      { qty: 5000, total: 789.05,  unit: 0.15781,  spec: '4×4 White BOPP' }
+    ]
+  },
+  {
+    id: 'stickermule',
+    name: 'Sticker Mule',
+    url: 'https://www.stickermule.com/custom-labels',
+    status: 'partial',
+    statusReason: 'Starting price $47 from JSON-LD schema (any shape/size)',
+    capturedPrice: 47,
+    capturedSpec: 'Any shape/size — starting price (small qty entry point)',
+    capturedQty: null,
+    turnaround: 4,
+    shippingIncluded: true,
+    confidence: 'medium',
+    notes: '$47 starting price from JSON-LD AggregateOffer. Free worldwide shipping + free proof. 4-day turnaround. Cookie consent modal blocks headless configurator — price at 5000 pcs not captured. $47 is almost certainly a small-run entry price.'
+  }
+];
+
+// ─── Rendering ───────────────────────────────────────────────────────────────
+
+function fmtMoney(n) {
+  if (n == null) return '—';
+  return '$' + n.toFixed(2);
+}
+
+function renderStatusBadge(status) {
+  const map = {
+    'live':    { cls: 'cov-live',    label: 'LIVE' },
+    'partial': { cls: 'cov-partial', label: 'PARTIAL' },
+    'blocked': { cls: 'cov-blocked', label: 'BLOCKED' },
+    'manual':  { cls: 'cov-manual',  label: 'MANUAL' }
+  };
+  const s = map[status] || { cls: 'cov-blocked', label: status.toUpperCase() };
+  return `<span class="cov-badge ${s.cls}">${s.label}</span>`;
+}
+
+function runComparison() {
+  const w   = parseFloat(document.getElementById('qWidth').value) || 0;
+  const h   = parseFloat(document.getElementById('qHeight').value) || 0;
+  const qty = parseInt(document.getElementById('qQty').value, 10) || 0;
+  const mat = document.getElementById('qMaterial').value;
+  const lam = document.getElementById('qLamination').value;
+  const col = document.getElementById('qColor').value;
+
+  // Query spec line
+  document.getElementById('querySpecLine').textContent =
+    `Querying: ${w}" × ${h}" square label, ${qty.toLocaleString()} pcs, ${mat}, ${lam} lamination, ${col}`;
+
+  // Our price
+  const hasUV = col === 'CMYK+White'; // treat white ink as UV pass for pricing
+  const result = calcInternalLabelPrice(w, h, qty, hasUV);
+
+  if (!result) {
+    document.getElementById('ourPriceTotal').textContent = 'N/A';
+    document.getElementById('ourPricePerUnit').textContent = 'Label may not fit 6K press at this size';
+    document.getElementById('ourPriceDetails').textContent = '';
+  } else {
+    const lamAdder = getLaminationAdder(lam, result.printCharge);
+    const total = result.printCharge + lamAdder;
+    const perUnit = total / qty;
+
+    document.getElementById('ourPriceTotal').textContent = fmtMoney(total);
+    document.getElementById('ourPricePerUnit').textContent = `${fmtMoney(perUnit)} / label`;
+
+    let lamNote = '';
+    if (lam === 'Soft Touch') lamNote = ` + Soft Touch (+10%)`;
+    else if (lam === 'Holo') lamNote = ` + Holo ($20 flat)`;
+    else if (lam !== 'None') lamNote = ` (${lam} incl.)`;
+
+    document.getElementById('ourPriceDetails').innerHTML = [
+      `${result.fitsPerFrame} fits/frame (${result.across}×${result.down})`,
+      `${result.framesNeeded} frames needed`,
+      `Tier: ${result.tier}-frame min at $${result.framePrice.toFixed(2)}/frame`,
+      `Print charge: ${fmtMoney(result.printCharge)}${lamNote}`,
+      `HP Indigo 6K · 6th St`
+    ].join('<br>');
+
+    renderCompetitorRows(total);
+  }
+}
+
+function renderCompetitorRows(ourTotal) {
+  const tbody = document.getElementById('competitorRows');
+  tbody.innerHTML = COMPETITOR_DATA.map(c => {
+    const statusBadge = renderStatusBadge(c.status);
+
+    let priceCell = '—';
+    let specNote = '';
+    if (c.capturedPrice != null) {
+      priceCell = `<strong>${fmtMoney(c.capturedPrice)}</strong>`;
+      if (c.capturedSpec) specNote = `<div style="font-size:11px;color:#9ca3af;margin-top:2px;">${c.capturedSpec}</div>`;
+    }
+
+    let deltaCell = '—';
+    if (c.capturedPrice != null && ourTotal) {
+      const diff = c.capturedPrice - ourTotal;
+      const pct  = ((diff / ourTotal) * 100).toFixed(1);
+      if (diff > 0) {
+        // competitor is more expensive → we're cheaper
+        deltaCell = `<span style="color:#16a34a;font-weight:700;">We save $${Math.abs(diff).toFixed(0)} (${Math.abs(pct)}% cheaper)</span>`;
+      } else if (diff < 0) {
+        // competitor is cheaper
+        deltaCell = `<span style="color:#dc2626;font-weight:700;">They beat us by $${Math.abs(diff).toFixed(0)} (${Math.abs(pct)}%)</span>`;
+      } else {
+        deltaCell = 'Same';
+      }
+      deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">⚠ Spec mismatch — compare with caution</div>`;
+    }
+
+    const turnaround = c.turnaround ? `${c.turnaround} days` : '—';
+    const shipping   = c.shippingIncluded === true ? ' (free ship)' : c.shippingIncluded === false ? ' (+ ship)' : '';
+
+    return `
+      <tr>
+        <td>
+          <strong>${c.name}</strong>
+          <div style="font-size:11px;margin-top:2px;">
+            <a href="${c.url}" target="_blank" style="color:#94a3b8;text-decoration:none;" title="${c.url}">↗ site</a>
+          </div>
+        </td>
+        <td>${statusBadge}<div style="font-size:11px;color:#94a3b8;margin-top:4px;">${c.statusReason}</div></td>
+        <td>${priceCell}${specNote}</td>
+        <td style="font-size:12px;">${deltaCell}</td>
+        <td style="font-size:12px;">${turnaround}${shipping}</td>
+        <td style="font-size:11px;color:#64748b;max-width:220px;">${c.notes}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCoverageGrid() {
+  const grid = document.getElementById('coverageGrid');
+  const items = [
+    { name: 'Vistaprint',   status: 'partial', detail: '$544.86/5k directional (Rounded Square + W=3/H=3 injected) · $219.19/5k default size · $110.24/1k 1×1 — size not DOM-confirmed' },
+    { name: 'Axiom Print',  status: 'partial', detail: '$112.68/250 · $213.27/2.5k — 2×3 default (Ant Design dropdown) — no 3×3 in standard configurator' },
+    { name: 'GotPrint',     status: 'partial', detail: 'Spec CONFIRMED: 3"×3" Square-Rounded, White BOPP, Matte, qty 5k — price NOT captured (Vue cascade + REST 401)' },
+    { name: 'UPrinting',    status: 'live',    detail: '$222.26/1k · $505.85/5k — 3×3 White BOPP (EXACT SPEC, verified dropdown)' },
+    { name: 'Sticker Mule', status: 'partial', detail: '$47 starting price (JSON-LD only) — upload-first confirmed after exhausting all click paths, no configure-then-price path' }
+  ];
+
+  grid.innerHTML = items.map(item => `
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      ${renderStatusBadge(item.status)}
+      <div>
+        <strong style="font-size:13px;">${item.name}</strong>
+        <div style="font-size:11px;color:#94a3b8;">${item.detail}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Additional styles ────────────────────────────────────────────────────────
+
+function injectCompetitorStyles() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .cov-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cov-live    { background: #dcfce7; color: #15803d; }
+    .cov-partial { background: #fef3c7; color: #92400e; }
+    .cov-blocked { background: #fee2e2; color: #991b1b; }
+    .cov-manual  { background: #f3e8ff; color: #6b21a8; }
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 16px rgba(15,23,42,0.04);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .page-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+    .page-header h2 { margin: 0; font-size: 22px; font-weight: 800; }
+    .page-header p  { margin: 6px 0 0; color: #64748b; font-size: 14px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select { padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 8px; font-size: 14px; background: #fff; color: #0f172a; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th { padding: 9px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #f8fafc; }
+  `;
+  document.head.appendChild(s);
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  ['labels', 'boxes', 'pouches'].forEach(t => {
+    const sec = document.getElementById('section-' + t);
+    const btn = document.getElementById('tab-' + t);
+    if (sec) sec.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      if (t === tab) {
+        btn.style.borderBottomColor = '#2563eb';
+        btn.style.color = '#2563eb';
+        btn.style.fontWeight = '700';
+      } else {
+        btn.style.borderBottomColor = 'transparent';
+        btn.style.color = '#64748b';
+        btn.style.fontWeight = '600';
+      }
+    }
+  });
+}
+
+// ─── Box table rendering ──────────────────────────────────────────────────────
+
+const BOX_UPRINTING_DATA = [
+  { qty: 50,   total: 270,  unit: 5.40 },
+  { qty: 100,  total: 338,  unit: 3.38 },
+  { qty: 250,  total: 675,  unit: 2.70 },
+  { qty: 500,  total: 1180, unit: 2.36 },
+  { qty: 1000, total: 1690, unit: 1.69 },
+  { qty: 2000, total: 2020, unit: 1.01 },
+  { qty: 2500, total: 2250, unit: 0.90 }
+];
+
+function renderBoxTable() {
+  const tbody = document.getElementById('boxRows');
+  if (!tbody) return;
+  tbody.innerHTML = BOX_UPRINTING_DATA.map(r => `
+    <tr>
+      <td><strong>${r.qty.toLocaleString()}</strong></td>
+      <td><strong style="color:#7c3aed;">${fmtMoney(r.total)}</strong></td>
+      <td style="color:#64748b;">${fmtMoney(r.unit)}/box</td>
+      <td>Standard</td>
+      <td><span class="cov-badge cov-live">LIVE</span> STE 4"×2"×5" 18pt Gloss</td>
+    </tr>
+  `).join('');
+}
+
+// ─── Pouch table rendering ────────────────────────────────────────────────────
+
+const POUCH_DATA = [
+  { qty: 100,  ourTotal: 229.50, upTotal: 434.67 },
+  { qty: 250,  ourTotal: 567.00, upTotal: 505.87 },
+  { qty: 500,  ourTotal: 1134.0, upTotal: 630.22 },
+  { qty: 1000, ourTotal: 1503.0, upTotal: 897.26 },
+  { qty: 2500, ourTotal: 2835.6, upTotal: 1664.25 },
+  { qty: 5000, ourTotal: 3336.0, upTotal: 2941.00 }
+];
+
+function renderPouchTable() {
+  const tbody = document.getElementById('pouchRows');
+  if (!tbody) return;
+  tbody.innerHTML = POUCH_DATA.map(r => {
+    const diff = r.upTotal - r.ourTotal;
+    const pct  = ((diff / r.ourTotal) * 100).toFixed(0);
+    let delta;
+    if (diff > 0) {
+      delta = `<span style="color:#16a34a;font-weight:700;">We're cheaper by $${Math.abs(diff).toFixed(0)} (${Math.abs(pct)}%)</span>`;
+    } else if (diff < 0) {
+      delta = `<span style="color:#dc2626;font-weight:700;">UP beats us by $${Math.abs(diff).toFixed(0)} (${Math.abs(pct)}%)</span>`;
+    } else {
+      delta = 'Same';
+    }
+    return `
+      <tr>
+        <td><strong>${r.qty.toLocaleString()}</strong></td>
+        <td><strong style="color:#2563eb;">${fmtMoney(r.ourTotal)}</strong></td>
+        <td style="color:#64748b;">${fmtMoney(r.ourTotal / r.qty)}/ea</td>
+        <td><strong style="color:#059669;">${fmtMoney(r.upTotal)}</strong></td>
+        <td style="color:#64748b;">${fmtMoney(r.upTotal / r.qty)}/ea</td>
+        <td style="font-size:12px;">${delta}</td>
+        <td><span class="cov-badge cov-live">LIVE</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  injectThemeCSS();
+  injectCompetitorStyles();
+  document.getElementById('nav').innerHTML = renderNav('competitor-pricing');
+  initAuth('competitor-pricing');
+
+  renderCoverageGrid();
+  runComparison();
+  renderBoxTable();
+  renderPouchTable();
+
+  // Try to load fresh normalized data from JSON file (works when served via a local server)
+  fetch('data/competitor-pricing-normalized.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const freshDate = data.last_updated;
+      if (freshDate) {
+        document.getElementById('dataFreshnessLabel').innerHTML =
+          `Data: <strong>${freshDate}</strong> <span style="color:#16a34a;font-size:11px;">✓ live file</span>`;
+      }
+    })
+    .catch(() => {
+      // file:// protocol or server not running — embedded data used, that's fine
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,116 @@
+{
+  "run_date": "2026-04-17T22:34:11.006Z",
+  "script": "capture-multiproduct-pass.js",
+  "results": {
+    "up_4x2_label": {
+      "status": "live",
+      "prices": {
+        "qty": 1000,
+        "total": 131.23,
+        "unit": 0.13123,
+        "turnaround": 6
+      },
+      "rawScope": {
+        "qty": 1000,
+        "price": "131.23",
+        "total_price": "131.23",
+        "unit_price": "0.13123",
+        "turnaround": 6
+      },
+      "error": null
+    },
+    "up_extra_sizes": {
+      "up-2x3-1000": {
+        "status": "live",
+        "sizeClicked": "2\" x 3\"",
+        "qtyClicked": "1,000",
+        "qty": 1000,
+        "total": 95.87,
+        "unit": 0.09587
+      },
+      "up-2x3-5000": {
+        "status": "live",
+        "sizeClicked": "2\" x 3\"",
+        "qtyClicked": "5,000",
+        "qty": 5000,
+        "total": 204.27,
+        "unit": 0.04085
+      },
+      "up-2x4-1000": {
+        "status": "live",
+        "sizeClicked": "2\" x 4\"",
+        "qtyClicked": "1,000",
+        "qty": 1000,
+        "total": 95.87,
+        "unit": 0.09587
+      },
+      "up-2x4-5000": {
+        "status": "live",
+        "sizeClicked": "2\" x 4\"",
+        "qtyClicked": "5,000",
+        "qty": 5000,
+        "total": 204.27,
+        "unit": 0.04085
+      },
+      "up-4x4-1000": {
+        "status": "live",
+        "sizeClicked": "4\" x 4\"",
+        "qtyClicked": "1,000",
+        "qty": 1000,
+        "total": 268.21,
+        "unit": 0.26821
+      },
+      "up-4x4-5000": {
+        "status": "live",
+        "sizeClicked": "4\" x 4\"",
+        "qtyClicked": "5,000",
+        "qty": 5000,
+        "total": 789.05,
+        "unit": 0.15781
+      }
+    },
+    "vp_boxes": {
+      "status": "failed",
+      "urls_tried": [
+        "https://www.vistaprint.com/custom-boxes/product-boxes",
+        "https://www.vistaprint.com/custom-boxes",
+        "https://www.vistaprint.com/packaging/product-boxes",
+        "https://www.vistaprint.com/marketing-materials/packaging/product-boxes",
+        "https://www.vistaprint.com/retail-packaging/product-boxes"
+      ],
+      "prices": {},
+      "cimpressCallCount": 0,
+      "error": null,
+      "cimpressSample": []
+    },
+    "vp_pouches": {
+      "status": "failed",
+      "urls_tried": [
+        "https://www.vistaprint.com/custom-pouches",
+        "https://www.vistaprint.com/custom-bags/stand-up-pouches",
+        "https://www.vistaprint.com/custom-packaging/stand-up-pouches",
+        "https://www.vistaprint.com/packaging/pouches"
+      ],
+      "prices": {},
+      "error": null
+    },
+    "gp_labels": {
+      "status": "no_price",
+      "shapeSet": false,
+      "sizeSet": false,
+      "paperSet": false,
+      "finishSet": false,
+      "qtySet": false,
+      "price": null,
+      "domPrices": [],
+      "networkCalls": [],
+      "error": null
+    },
+    "sm_labels": {
+      "status": "failed",
+      "apiCalls": [],
+      "dom_prices": [],
+      "error": null
+    }
+  }
+}
