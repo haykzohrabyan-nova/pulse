@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
-  <script src="auth.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v16"></script>
+  <script src="auth.js?v=20260417-v16"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -483,22 +483,15 @@
 <!-- ═══ QUEUE PANE (right side, narrow) ══════════════════════ -->
 <div id="queuePane">
   <div class="qp-header">
-    <div style="font-size:12px;font-weight:700;color:#1e293b;">📋 Placed Orders</div>
+    <div style="font-size:12px;font-weight:700;color:#1e293b;">📋 Placed Orders <span id="qpOrderCount" style="font-weight:400;color:#6b7280;"></span></div>
     <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:14px;color:#6b7280;padding:2px 4px;" title="Collapse">▶</button>
   </div>
   <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
     <input id="queueSearch" type="text" placeholder="🔍 Order # or customer..." oninput="renderQueuePane()" style="width:100%;padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;box-sizing:border-box;">
   </div>
-  <div style="padding:5px 8px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:5px;">
-    <select id="queueDateFilter" onchange="onQueueDateFilterChange()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
-      <option value="all">📅 All Dates</option>
-      <option value="today">Today</option>
-      <option value="yesterday">Yesterday</option>
-      <option value="last-week">Last Week</option>
-      <option value="last-month">Last Month</option>
-      <option value="custom">Custom…</option>
-    </select>
-    <select id="queueStatusFilter" onchange="renderQueuePane()" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+  <div style="padding:5px 8px;border-bottom:1px solid #e2e8f0;background:#fff;display:grid;gap:4px;">
+    <select id="queueStatusFilter" onchange="renderQueuePane()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="all">📋 All Orders</option>
       <option value="active">🟢 Active</option>
       <option value="prepress">📝 Prepress, Not Started</option>
       <option value="prepress-active">▶ Prepress, Started</option>
@@ -507,6 +500,14 @@
       <option value="overdue">🔴 Past Due</option>
       <option value="on-hold">⏸️ On Hold</option>
       <option value="closed">✓ Closed</option>
+    </select>
+    <select id="queueDateFilter" onchange="onQueueDateFilterChange()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">
+      <option value="all">📅 All Dates</option>
+      <option value="today">Today</option>
+      <option value="yesterday">Yesterday</option>
+      <option value="last-week">Last Week</option>
+      <option value="last-month">Last Month</option>
+      <option value="custom">Custom…</option>
     </select>
   </div>
   <div id="queueRepFilterRow" style="display:none;padding:5px 8px;border-bottom:1px solid #e2e8f0;background:#fff;">
@@ -527,6 +528,25 @@
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Artwork Preview">
   <button type="button" class="lightbox-close" onclick="closeLightbox()">✕</button>
+</div>
+
+<!-- Admin Code Modal (for editing locked job tickets) -->
+<div id="adminCodeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px;">🔒 Admin Approval Required</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">This job ticket is in a stage that requires admin approval to edit. Enter your admin code to unlock editing.</div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Admin Code</label>
+      <input type="password" id="adminCodeInput" placeholder="Enter admin code" autocomplete="off"
+        style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')verifyAdminCode()">
+    </div>
+    <div id="adminCodeResult" style="font-size:12px;margin-bottom:14px;min-height:18px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" onclick="closeAdminCodeModal()" style="flex:1;padding:10px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button type="button" onclick="verifyAdminCode()" style="flex:1;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Unlock Editing</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -771,6 +791,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Show order navigator (for parent OR sub-ticket)
       const navParentId = order.parentOrderId || orderId;
       await renderOrderNavigator(navParentId, orderId);
+      // Apply edit restriction: lock form unless status allows direct editing
+      const editableStatuses = ['prepress', 'on-hold', 'new'];
+      if (!editableStatuses.includes(order.status)) {
+        applyEditLock(order);
+      }
     }
   }
 });
@@ -1396,6 +1421,58 @@ function verifyRushCode() {
   } else {
     result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
     rushApproved = false;
+  }
+}
+
+// ─── Admin Code / Edit Lock ─────────────────────────────────────────
+function applyEditLock(order) {
+  // Disable all form inputs
+  const form = document.getElementById('ticketForm');
+  if (!form) return;
+  form.querySelectorAll('input,select,textarea,button').forEach(el => {
+    if (el.id !== 'saveBtn') el.disabled = true;
+  });
+  document.getElementById('saveBtn').disabled = true;
+
+  // Show a lock banner with an "Request Edit (Admin Code)" button
+  const banner = document.createElement('div');
+  banner.id = 'editLockBanner';
+  banner.style.cssText = 'background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  banner.innerHTML = `
+    <div>
+      <div style="font-size:13px;font-weight:800;color:#9a3412;text-transform:uppercase;">🔒 Editing Locked</div>
+      <div style="font-size:12px;color:#c2410c;margin-top:4px;">Job is in <strong>${order.status}</strong> stage. Only Prepress Not Started and On Hold tickets can be edited directly.</div>
+    </div>
+    <button type="button" onclick="openAdminCodeModal()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔑 Admin Edit</button>
+  `;
+  const container = document.querySelector('.jt-container');
+  const header = document.querySelector('.jt-header');
+  if (container && header) container.insertBefore(banner, header.nextSibling);
+}
+
+function openAdminCodeModal() {
+  const modal = document.getElementById('adminCodeModal');
+  if (modal) { modal.style.display = 'flex'; document.getElementById('adminCodeInput').value = ''; document.getElementById('adminCodeResult').textContent = ''; document.getElementById('adminCodeInput').focus(); }
+}
+
+function closeAdminCodeModal() {
+  const modal = document.getElementById('adminCodeModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function verifyAdminCode() {
+  const code = document.getElementById('adminCodeInput').value.trim();
+  const result = document.getElementById('adminCodeResult');
+  if (code.length >= 4) {
+    // Unlock form
+    const form = document.getElementById('ticketForm');
+    if (form) form.querySelectorAll('input,select,textarea,button').forEach(el => { el.disabled = false; });
+    document.getElementById('saveBtn').disabled = false;
+    const banner = document.getElementById('editLockBanner');
+    if (banner) { banner.style.background = '#d4edda'; banner.style.borderColor = 'var(--green)'; banner.innerHTML = '<div style="font-size:13px;font-weight:700;color:#166534;">✅ Admin edit unlocked.</div>'; }
+    closeAdminCodeModal();
+  } else {
+    result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
   }
 }
 
@@ -2634,7 +2711,9 @@ async function renderQueuePane() {
 
   // Status filter first
   let orders;
-  if (statusFilter === 'closed') {
+  if (statusFilter === 'all') {
+    orders = [...allOrders];
+  } else if (statusFilter === 'closed') {
     orders = allOrders.filter(o => doneStatuses.includes(o.status));
   } else if (statusFilter === 'on-hold') {
     orders = allOrders.filter(o => o.status === 'on-hold');
@@ -2676,6 +2755,9 @@ async function renderQueuePane() {
     if (!bHasDue) return 1;
     return new Date(a.dueDate) - new Date(b.dueDate);
   });
+
+  const countEl = document.getElementById('qpOrderCount');
+  if (countEl) countEl.textContent = `(${orders.length})`;
 
   if (orders.length === 0) {
     list.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:16px;text-align:center;">No tickets match.</div>';

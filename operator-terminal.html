@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v16"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -503,6 +503,14 @@
     }
     .short-warning.visible { display: block; }
     .short-warning strong { font-weight: 800; }
+    .pause-reason-btn {
+      width: 100%; padding: 12px 16px; font-size: 14px; font-weight: 600;
+      background: #fff; border: 1.5px solid #d1d5db; border-radius: 10px;
+      cursor: pointer; text-align: left; transition: all 0.15s;
+    }
+    .pause-reason-btn:hover, .pause-reason-btn.selected {
+      background: #eff6ff; border-color: #2563eb; color: #1d4ed8;
+    }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 900px) {
@@ -545,6 +553,14 @@
       <select id="operator-select" style="font-size:16px;padding:10px 12px;" onchange="onOperatorSelect(this.value)">
         <option value="">— Choose Operator —</option>
       </select>
+    </div>
+
+    <div class="login-form-row" id="user-id-row" style="display:none;">
+      <label for="user-id-input" style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">User Registration ID</label>
+      <input type="text" id="user-id-input" placeholder="Enter your User ID"
+        style="width:100%;font-size:16px;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;box-sizing:border-box;letter-spacing:0.1em;"
+        oninput="onUserIdInput()" autocomplete="off">
+      <div id="user-id-result" style="font-size:12px;margin-top:5px;min-height:16px;"></div>
     </div>
 
     <div class="op-preview" id="op-preview" style="display:none;">
@@ -607,6 +623,16 @@
             onkeydown="if(event.key==='Enter') doQRScan()" />
           <button class="btn-scan" onclick="doQRScan()">Go</button>
         </div>
+      </div>
+      <div style="padding:5px 8px 4px;border-bottom:1px solid #eef0f3;background:#f8f9fb;">
+        <select id="queue-sort" onchange="refreshQueue()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;background:#fff;">
+          <option value="rush-due">🚨 Rush → Due Date</option>
+          <option value="due-asc">⏰ Time A→Z (Earliest)</option>
+          <option value="due-desc">⏰ Time Z→A (Latest)</option>
+          <option value="units-asc">📦 Units A→Z (Fewest)</option>
+          <option value="units-desc">📦 Units Z→A (Most)</option>
+          <option value="multiple">🔀 Multiple Machines</option>
+        </select>
       </div>
       <div class="queue-scroll" id="queue-scroll">
         <div class="queue-empty">
@@ -697,6 +723,12 @@
         </div>
       </div>
 
+      <!-- Done Today -->
+      <div class="controls-section">
+        <div class="ctrl-section-title">✅ Done Today</div>
+        <div id="done-today-list" style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0;">—</div>
+      </div>
+
     </div><!-- end col-controls -->
   </div><!-- end main-area -->
 
@@ -750,13 +782,22 @@
   <div class="modal-box">
     <h2>⏸ Pause — Add a Note</h2>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
-      What caused this pause? (Required for pauses over 10 min)
+      Select the reason for this pause
     </p>
     <div class="modal-field">
       <label>Pause Reason</label>
-      <textarea id="pause-note-input" rows="3"
-        placeholder="e.g. Waiting for material, machine jam, die not found…"
-        style="font-size:15px;padding:10px 12px;"></textarea>
+      <div id="pause-reason-buttons" style="display:grid;gap:8px;margin-bottom:10px;">
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Working Day End')">🌅 Working Day End</button>
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Problem with Equipment')">🔧 Problem with Equipment</button>
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Fixing')">🛠 Fixing</button>
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Break')">☕ Break</button>
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Other')">📝 Other</button>
+        <button type="button" class="pause-reason-btn" onclick="selectPauseReason('Add Marker')">📌 Add Marker</button>
+      </div>
+      <textarea id="pause-note-input" rows="2"
+        placeholder="Additional notes (optional)…"
+        style="font-size:14px;padding:8px 10px;width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:8px;display:none;"></textarea>
+      <div id="pause-selected-reason" style="display:none;padding:8px 10px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;font-size:13px;font-weight:600;color:#1d4ed8;margin-top:6px;"></div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="cancelPause()">Cancel — Resume</button>
@@ -901,7 +942,15 @@ async function populateOperatorList() {
 function onOperatorSelect(name) {
   const preview = document.getElementById('op-preview');
   const btn = document.getElementById('btn-clock-in');
-  if (!name) { preview.style.display = 'none'; btn.disabled = true; return; }
+  const userIdRow = document.getElementById('user-id-row');
+  const userIdInput = document.getElementById('user-id-input');
+  const userIdResult = document.getElementById('user-id-result');
+  if (!name) {
+    preview.style.display = 'none';
+    btn.disabled = true;
+    if (userIdRow) userIdRow.style.display = 'none';
+    return;
+  }
   const profile = OPERATOR_PROFILES[name];
   if (profile) {
     document.getElementById('prev-name').textContent = name;
@@ -915,8 +964,40 @@ function onOperatorSelect(name) {
       ? profile.machines.map(m => `<span class="machine-chip">${m}</span>`).join('')
       : '<span style="font-size:12px;color:var(--text-muted);font-style:italic;">No machines assigned</span>';
     preview.style.display = 'block';
+    // Show User ID field if operator has a userId assigned
+    if (profile.userId) {
+      if (userIdRow) userIdRow.style.display = '';
+      if (userIdInput) { userIdInput.value = ''; }
+      if (userIdResult) userIdResult.textContent = '';
+      btn.disabled = true; // require ID confirmation
+    } else {
+      if (userIdRow) userIdRow.style.display = 'none';
+      btn.disabled = false;
+    }
+  } else {
+    preview.style.display = 'none';
+    if (userIdRow) userIdRow.style.display = 'none';
+    btn.disabled = false;
   }
-  btn.disabled = false;
+}
+
+function onUserIdInput() {
+  const name = document.getElementById('operator-select').value;
+  const profile = OPERATOR_PROFILES[name] || {};
+  const entered = (document.getElementById('user-id-input')?.value || '').trim();
+  const btn = document.getElementById('btn-clock-in');
+  const result = document.getElementById('user-id-result');
+  if (!profile.userId) { btn.disabled = false; return; }
+  if (entered === String(profile.userId)) {
+    result.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ ID verified</span>';
+    btn.disabled = false;
+  } else if (entered.length > 0) {
+    result.innerHTML = '<span style="color:#dc2626;">Incorrect User ID</span>';
+    btn.disabled = true;
+  } else {
+    result.textContent = '';
+    btn.disabled = true;
+  }
 }
 
 // ── CLOCK IN ──────────────────────────────────────────────────────────
@@ -974,6 +1055,7 @@ async function enterMainScreen() {
   // Load data
   await refreshCoins();
   await refreshQueue();
+  await refreshDoneToday();
 
   // Size the main area
   sizeMainArea();
@@ -984,7 +1066,7 @@ async function enterMainScreen() {
 
   // Subscribe to live updates
   onDBUpdate(async (data) => {
-    if (data.store === 'orders') await refreshQueue();
+    if (data.store === 'orders') { await refreshQueue(); await refreshDoneToday(); }
     if (data.store === 'operator_points') await refreshCoins();
     if (data.store === 'operator_sessions') {
       currentSession = await _get('operator_sessions', currentSession.id);
@@ -1054,6 +1136,39 @@ function fmtElapsed(ms) {
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return [String(h).padStart(2,'0'), String(m).padStart(2,'0'), String(sec).padStart(2,'0')].join(':');
+}
+
+// ── DONE TODAY ────────────────────────────────────────────────────────
+async function refreshDoneToday() {
+  const el = document.getElementById('done-today-list');
+  if (!el || !currentOperator) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const allOrders = await getAllOrders();
+    const profile = OPERATOR_PROFILES[currentOperator] || {};
+    const myMachines = profile.machines || [];
+    const done = allOrders.filter(order => {
+      if (!order.workflowSteps) return false;
+      return order.workflowSteps.some(s =>
+        s.status === 'completed' &&
+        s.completedAt &&
+        s.completedAt.startsWith(today) &&
+        (s.completedBy === currentOperator || matchMachine(s.machine, myMachines))
+      );
+    });
+    if (!done.length) {
+      el.innerHTML = '<span style="color:var(--text-muted);">No completed jobs yet today.</span>';
+      return;
+    }
+    el.innerHTML = done.map(o => `
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:7px 9px;margin-bottom:5px;text-align:left;">
+        <div style="font-weight:700;color:#166534;font-size:12px;">#${o.orderId} — ${escHtml(o.customerName || o.customer || '—')}</div>
+        <div style="font-size:11px;color:#4d7c5f;margin-top:1px;">${escHtml(o.productType || '—')} · ${(o.quantity||0).toLocaleString()} units</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--text-muted);">—</span>';
+  }
 }
 
 // ── BREAK PILL ────────────────────────────────────────────────────────
@@ -1147,7 +1262,32 @@ async function refreshQueue() {
     }
   });
 
-  myJobs.sort((a, b) => compareOrdersByRushDue(a.order, b.order));
+  const sortMode = document.getElementById('queue-sort')?.value || 'rush-due';
+  const sortFn = (a, b) => {
+    const ao = a.order, bo = b.order;
+    if (sortMode === 'due-asc') {
+      if (!ao.dueDate && !bo.dueDate) return 0;
+      if (!ao.dueDate) return 1; if (!bo.dueDate) return -1;
+      return new Date(ao.dueDate) - new Date(bo.dueDate);
+    } else if (sortMode === 'due-desc') {
+      if (!ao.dueDate && !bo.dueDate) return 0;
+      if (!ao.dueDate) return 1; if (!bo.dueDate) return -1;
+      return new Date(bo.dueDate) - new Date(ao.dueDate);
+    } else if (sortMode === 'units-asc') {
+      return (ao.quantity || 0) - (bo.quantity || 0);
+    } else if (sortMode === 'units-desc') {
+      return (bo.quantity || 0) - (ao.quantity || 0);
+    } else if (sortMode === 'multiple') {
+      // Multiple-machine orders (>1 step) first
+      const aSteps = (ao.workflowSteps || []).length;
+      const bSteps = (bo.workflowSteps || []).length;
+      if (bSteps !== aSteps) return bSteps - aSteps;
+      return compareOrdersByRushDue(ao, bo);
+    } else {
+      return compareOrdersByRushDue(ao, bo);
+    }
+  };
+  myJobs.sort(sortFn);
   comingJobs.sort((a, b) => compareOrdersByRushDue(a.order, b.order));
 
   document.getElementById('queue-count').textContent = myJobs.length;
@@ -1237,9 +1377,10 @@ async function selectJob(orderId) {
   try { order = await _get('orders', orderId); } catch (e) { return; }
   if (!order) return;
 
-  // Auto-pause the current job if running
+  // Block switching to another job while current job is running
   if (currentJob && currentJob.id !== orderId && stepState === 'running') {
-    await autoPauseCurrentJob(order.orderId);
+    showToast('⛔ Pause or complete the current job before switching.', 'error');
+    return;
   }
 
   currentJob = order;
@@ -1550,8 +1691,13 @@ async function stepAction(action) {
     setActionButtonUI();
 
   } else if (action === 'pause') {
-    // Always show pause modal for note
-    document.getElementById('pause-note-input').value = '';
+    // Reset pause modal state and show
+    _selectedPauseReason = '';
+    document.querySelectorAll('.pause-reason-btn').forEach(b => b.classList.remove('selected'));
+    const selDisplay = document.getElementById('pause-selected-reason');
+    if (selDisplay) { selDisplay.textContent = ''; selDisplay.style.display = 'none'; }
+    const noteArea = document.getElementById('pause-note-input');
+    if (noteArea) { noteArea.value = ''; noteArea.style.display = 'none'; }
     document.getElementById('pause-modal').classList.add('open');
 
   } else if (action === 'resume') {
@@ -1591,14 +1737,35 @@ async function stepAction(action) {
 }
 
 // ── PAUSE MODAL ───────────────────────────────────────────────────────
+let _selectedPauseReason = '';
+
+function selectPauseReason(reason) {
+  _selectedPauseReason = reason;
+  document.querySelectorAll('.pause-reason-btn').forEach(b => b.classList.remove('selected'));
+  event.target.closest('.pause-reason-btn').classList.add('selected');
+  const display = document.getElementById('pause-selected-reason');
+  if (display) { display.textContent = '✓ ' + reason; display.style.display = ''; }
+  const noteArea = document.getElementById('pause-note-input');
+  if (noteArea) noteArea.style.display = reason === 'Other' ? '' : 'none';
+}
+
 function cancelPause() {
   document.getElementById('pause-modal').classList.remove('open');
   // Don't pause — keep running
 }
 
 async function confirmPause() {
-  const note = document.getElementById('pause-note-input').value.trim();
+  const selectedReason = _selectedPauseReason;
+  const extraNote = document.getElementById('pause-note-input').value.trim();
+  const note = selectedReason ? (selectedReason + (extraNote ? ': ' + extraNote : '')) : extraNote;
   document.getElementById('pause-modal').classList.remove('open');
+  // reset
+  _selectedPauseReason = '';
+  document.querySelectorAll('.pause-reason-btn').forEach(b => b.classList.remove('selected'));
+  const display = document.getElementById('pause-selected-reason');
+  if (display) { display.textContent = ''; display.style.display = 'none'; }
+  const noteArea = document.getElementById('pause-note-input');
+  if (noteArea) { noteArea.value = ''; noteArea.style.display = 'none'; }
 
   stepPausedAt = Date.now();
   stepState    = 'paused';

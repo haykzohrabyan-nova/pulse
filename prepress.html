@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
-  <script src="auth.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v16"></script>
+  <script src="auth.js?v=20260417-v16"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -21,12 +21,22 @@
     <div class="queue-filters">
       <input id="queueSearch" type="text" placeholder="Search order or customer..." oninput="renderQueue()">
       <select id="queueStatusFilter" onchange="renderQueue()">
-        <option value="all">All prepress work</option>
-        <option value="prepress">Prepress, Not Started</option>
-        <option value="prepress-active">Prepress, Started</option>
-        <option value="prepress-paused">Prepress, Paused</option>
-        <option value="pending-account-manager">Sent Back to Account Manager</option>
+        <option value="all">All</option>
+        <option value="prepress">Not Started</option>
+        <option value="prepress-active">Started</option>
+        <option value="prepress-paused">Paused</option>
+        <option value="pending-review">Approved</option>
+        <option value="pending-account-manager">Send Back</option>
       </select>
+      <select id="queueDateFilter" onchange="renderQueue()">
+        <option value="all">📅 All Dates</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="last-week">Last Week</option>
+        <option value="last-month">Last Month</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="date" id="queueCustomDate" onchange="renderQueue()" style="display:none;">
     </div>
     <div id="queueList" class="queue-list"></div>
   </aside>
@@ -54,7 +64,6 @@
       <section class="detail-card" style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
           <h3 style="margin:0;">Workflow Steps</h3>
-          <a id="detailEditLink" class="btn btn-sm" href="#">Open Job Ticket</a>
         </div>
         <div id="detailSteps" class="steps-list" style="margin-top:12px;"></div>
       </section>
@@ -65,19 +74,20 @@
     <div class="detail-card sticky-card">
       <h3>Prepress Review</h3>
       <div class="checklist">
-        <label><input type="checkbox" id="checkDetails"><span>Ticket details verified</span></label>
-        <label><input type="checkbox" id="checkArtwork"><span>Artwork/files checked</span></label>
-        <label><input type="checkbox" id="checkSizing"><span>Size / quantity / imposition checked</span></label>
-        <label><input type="checkbox" id="checkCutting"><span>Die / cut method checked</span></label>
+        <label><input type="checkbox" id="checkDetails" onchange="updateApproveButtonVisibility()"><span>Ticket details verified</span></label>
+        <label><input type="checkbox" id="checkArtwork" onchange="updateApproveButtonVisibility()"><span>Artwork/files checked</span></label>
+        <label><input type="checkbox" id="checkSizing" onchange="updateApproveButtonVisibility()"><span>Size / quantity / imposition checked</span></label>
+        <label><input type="checkbox" id="checkCutting" onchange="updateApproveButtonVisibility()"><span>Die / cut method checked</span></label>
       </div>
       <div class="field">
         <label>Issue Category</label>
-        <select id="issueCategory">
+        <select id="issueCategory" onchange="updateApproveButtonVisibility()">
           <option value="">No issue</option>
           <option value="artwork">Artwork issue</option>
           <option value="copy">Ticket/detail mismatch</option>
           <option value="sizing">Size / quantity / fit issue</option>
           <option value="finishing">Finishing / die / cut issue</option>
+          <option value="manager-request">Manager Request</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -87,11 +97,10 @@
       </div>
       <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
       <div class="action-stack">
-        <button class="btn btn-primary" onclick="saveReview()">💾 Save Review</button>
         <button class="btn btn-primary" style="background:#2563eb;" onclick="startReview()">▶ Start Review</button>
         <button class="btn btn-warning" onclick="pauseReview()">⏸ Pause</button>
         <button class="btn btn-danger" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
-        <button class="btn btn-success" onclick="approveToProduction()">✅ Approve to Production</button>
+        <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
       </div>
     </div>
   </aside>
@@ -160,7 +169,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOrders() {
   const orders = await getAllOrders();
-  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
+  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(o.status))
     .sort(compareOrdersByRushDue);
   if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
   renderQueue();
@@ -170,7 +179,30 @@ async function loadOrders() {
 function renderQueue() {
   const q = (document.getElementById('queueSearch').value || '').toLowerCase().trim();
   const status = document.getElementById('queueStatusFilter').value;
+  const dateFilter = document.getElementById('queueDateFilter').value;
+  const customDate = document.getElementById('queueCustomDate').value;
+  document.getElementById('queueCustomDate').style.display = dateFilter === 'custom' ? '' : 'none';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
+
   let orders = allOrders.filter(o => status === 'all' ? true : o.status === status);
+
+  if (dateFilter === 'today') {
+    orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d < new Date(today.getTime()+86400000); });
+  } else if (dateFilter === 'yesterday') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= yesterday && d < today; });
+  } else if (dateFilter === 'last-week') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') >= weekStart; });
+  } else if (dateFilter === 'last-month') {
+    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') >= monthStart; });
+  } else if (dateFilter === 'custom' && customDate) {
+    const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
+    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= cStart && d <= cEnd; });
+  }
+
   if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
   document.getElementById('queueCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
   const list = document.getElementById('queueList');
@@ -228,7 +260,7 @@ function renderDetail() {
   document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
   document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
   document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
-  document.getElementById('detailEditLink').href = `job-ticket.html?order=${order.orderId}`;
+  // (Open Job Ticket link removed per David's request)
 
   document.getElementById('detailInfo').innerHTML = [
     detailLine('Quantity', `${(order.quantity || 0).toLocaleString()} pcs`),
@@ -267,6 +299,7 @@ function renderDetail() {
   document.getElementById('checkCutting').checked = !!order.prepressChecklist?.cutting;
   document.getElementById('issueCategory').value = order.prepressIssueCategory || '';
   document.getElementById('prepressComment').value = order.prepressIssueComment || order.prepressComment || '';
+  updateApproveButtonVisibility();
 
   const issueBox = document.getElementById('lastIssueBox');
   if (order.prepressIssueComment) {
@@ -280,6 +313,13 @@ function renderDetail() {
 
 function getSelectedOrder() {
   return allOrders.find(o => o.id === selectedOrderId);
+}
+
+function updateApproveButtonVisibility() {
+  const allChecked = ['checkDetails','checkArtwork','checkSizing','checkCutting'].every(id => document.getElementById(id)?.checked);
+  const hasIssue = (document.getElementById('issueCategory')?.value || '') !== '';
+  const btn = document.getElementById('btnApprove');
+  if (btn) btn.style.display = (allChecked && !hasIssue) ? '' : 'none';
 }
 
 function collectReviewPatch(order) {

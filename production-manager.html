@@ -4,41 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
-  <script src="auth.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v16"></script>
+  <script src="auth.js?v=20260417-v16"></script>
   <style id="page-styles"></style>
 </head>
 <body>
 <div id="nav"></div>
 
 <div class="pm-layout">
-  <!-- Sidebar: Filters + Stats -->
+  <!-- Sidebar: Filters + Stats (PrePress-style) -->
   <div class="pm-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-label">Filter by Status</div>
-      <button class="filter-btn active" data-status="all" onclick="setStatusFilter('all')">All Orders</button>
-      <button class="filter-btn" data-status="new" onclick="setStatusFilter('new')">New</button>
-      <button class="filter-btn" data-status="prepress" onclick="setStatusFilter('prepress')">Prepress, Not Started</button>
-      <button class="filter-btn" data-status="prepress-active" onclick="setStatusFilter('prepress-active')">Prepress, Started</button>
-      <button class="filter-btn" data-status="prepress-paused" onclick="setStatusFilter('prepress-paused')">Prepress, Paused</button>
-      <button class="filter-btn" data-status="pending-account-manager" onclick="setStatusFilter('pending-account-manager')">Needs Account Manager Fix</button>
-      <button class="filter-btn" data-status="pending-review" onclick="setStatusFilter('pending-review')">Pending Review</button>
-      <button class="filter-btn" data-status="in-production" onclick="setStatusFilter('in-production')">In Production</button>
-      <button class="filter-btn" data-status="on-hold" onclick="setStatusFilter('on-hold')">On Hold</button>
-      <button class="filter-btn" data-status="qc-checkout" onclick="setStatusFilter('qc-checkout')">QC Checkout</button>
-      <button class="filter-btn" data-status="qc-failed" onclick="setStatusFilter('qc-failed')">QC Failed</button>
-      <button class="filter-btn" data-status="reprint" onclick="setStatusFilter('reprint')">🔄 Reprint</button>
-      <button class="filter-btn" data-status="ready-to-ship" onclick="setStatusFilter('ready-to-ship')">Ready to Ship</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Filter by Facility</div>
-      <button class="filter-btn active" data-facility="all" onclick="setFacilityFilter('all')">All Facilities</button>
-      <button class="filter-btn" data-facility="16th-street" onclick="setFacilityFilter('16th-street')">16th Street</button>
-      <button class="filter-btn" data-facility="boyd-street" onclick="setFacilityFilter('boyd-street')">Boyd Street</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Search</div>
-      <input type="text" id="searchInput" placeholder="Order ID, customer..." oninput="renderList()">
+      <input type="text" id="searchInput" placeholder="🔍 Order # or customer..." oninput="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+      <select id="pmStatusFilter" onchange="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+        <option value="all">All Orders</option>
+        <option value="new">New</option>
+        <option value="pending-review">Pending Review</option>
+        <option value="in-production">In Production</option>
+        <option value="on-hold">On Hold</option>
+        <option value="qc-checkout">QC Checkout</option>
+        <option value="qc-failed">QC Failed</option>
+        <option value="reprint">🔄 Reprint</option>
+        <option value="ready-to-ship">Ready to Ship</option>
+        <option value="overdue">🔴 Overdue</option>
+      </select>
+      <select id="pmDateFilter" onchange="onPmDateFilterChange()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:4px;">
+        <option value="all">📅 All Dates</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="last-week">Last Week</option>
+        <option value="last-month">Last Month</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="date" id="pmCustomDate" onchange="renderList()" style="display:none;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:4px;">
+      <select id="pmFacilityFilter" onchange="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+        <option value="all">All Facilities</option>
+        <option value="16th-street">16th Street</option>
+        <option value="boyd-street">Boyd Street</option>
+      </select>
     </div>
     <div class="sidebar-section">
       <a href="job-ticket.html" class="btn btn-primary" style="width:100%;text-align:center;justify-content:center;">+ New Job</a>
@@ -467,23 +470,58 @@ function renderSidebarStats() {
   `;
 }
 
+function onPmDateFilterChange() {
+  const v = document.getElementById('pmDateFilter').value;
+  document.getElementById('pmCustomDate').style.display = v === 'custom' ? '' : 'none';
+  renderList();
+}
+
 function renderList() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const statusFilter = document.getElementById('pmStatusFilter')?.value || 'all';
+  const facilityFilter = document.getElementById('pmFacilityFilter')?.value || 'all';
+  const dateFilter = document.getElementById('pmDateFilter')?.value || 'all';
+  const customDate = document.getElementById('pmCustomDate')?.value || '';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
+  const doneStatuses = ['completed','shipped','received','waiting-pickup'];
+
   let filtered = allOrders.filter(o => {
-    if (currentStatusFilter === 'reprint') {
+    if (statusFilter === 'reprint') {
       if (!o.isReprint) return false;
-    } else if (currentStatusFilter !== 'all' && o.status !== currentStatusFilter) {
+    } else if (statusFilter === 'overdue') {
+      if (doneStatuses.includes(o.status) || !o.dueDate || new Date(o.dueDate+'T12:00:00') >= today) return false;
+    } else if (statusFilter !== 'all' && o.status !== statusFilter) {
       return false;
     }
-    if (currentFacilityFilter !== 'all' && o.facility !== currentFacilityFilter) return false;
+    if (facilityFilter !== 'all' && o.facility !== facilityFilter) return false;
     if (search) {
       const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription, o.reprintOfOrderId, o.reprintReason].join(' ').toLowerCase();
       if (!haystack.includes(search)) return false;
     }
+    // Date filter
+    if (dateFilter === 'today') {
+      if (!o.dueDate) return true;
+      const d = new Date(o.dueDate+'T12:00:00'); if (!(d >= today && d < new Date(today.getTime()+86400000))) return false;
+    } else if (dateFilter === 'yesterday') {
+      if (!o.dueDate) return false;
+      const d = new Date(o.dueDate+'T12:00:00'); if (!(d >= yesterday && d < today)) return false;
+    } else if (dateFilter === 'last-week') {
+      if (!o.dueDate || new Date(o.dueDate+'T12:00:00') < weekStart) return false;
+    } else if (dateFilter === 'last-month') {
+      if (!o.dueDate || new Date(o.dueDate+'T12:00:00') < monthStart) return false;
+    } else if (dateFilter === 'custom' && customDate) {
+      if (!o.dueDate) return false;
+      const d = new Date(o.dueDate+'T12:00:00');
+      if (!(d >= new Date(customDate+'T00:00:00') && d <= new Date(customDate+'T23:59:59'))) return false;
+    }
     return true;
   });
 
-  document.getElementById('listTitle').textContent = currentStatusFilter === 'all' ? 'All Orders' : (currentStatusFilter === 'reprint' ? 'Reprints / Shortages' : (STATUS_LABELS[currentStatusFilter] || currentStatusFilter));
+  document.getElementById('listTitle').textContent = statusFilter === 'all' ? 'All Orders' : (statusFilter === 'reprint' ? 'Reprints / Shortages' : (STATUS_LABELS[statusFilter] || statusFilter));
   document.getElementById('orderCount').textContent = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
 
   const container = document.getElementById('orderList');
@@ -603,19 +641,7 @@ function getActionButtons(order) {
   const btns = [];
   btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
 
-  if (order.status === 'prepress') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress-active')">▶ Start Prepress</button>`);
-  }
-  if (order.status === 'prepress-active') {
-    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'prepress-paused')">⏸ Pause Prepress</button>`);
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'pending-review')">✅ Complete Prepress</button>`);
-    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
-  }
-  if (order.status === 'prepress-paused') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress-active')">▶ Resume Prepress</button>`);
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'pending-review')">✅ Complete Prepress</button>`);
-    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
-  }
+  // Prepress operations are handled in the Prepress module — not shown here
   if (order.status === 'new' || order.status === 'pending-review') {
     btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">▶ Start Production</button>`);
   }
