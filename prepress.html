@@ -28,11 +28,11 @@
         <option value="pending-account-manager">Send Back</option>
       </select>
       <select id="queueDateFilter" onchange="renderQueue()">
-        <option value="all">📅 All Dates</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="last-week">Last Week</option>
-        <option value="last-month">Last Month</option>
+        <option value="all">📅 All (Created)</option>
+        <option value="today">Created Today</option>
+        <option value="yesterday">Created Yesterday</option>
+        <option value="last-week">Created Last Week</option>
+        <option value="last-month">Created Last Month</option>
         <option value="custom">Custom…</option>
       </select>
       <input type="date" id="queueCustomDate" onchange="renderQueue()" style="display:none;">
@@ -96,12 +96,32 @@
       </div>
       <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
       <div class="action-stack">
-        <button class="btn btn-primary" style="background:#2563eb;" onclick="startReview()">▶ Start Review</button>
-        <button class="btn btn-warning" onclick="pauseReview()">⏸ Pause</button>
+        <button class="btn btn-primary" id="btnStartPause" style="background:#2563eb;" onclick="toggleStartPause()">▶ Start Review</button>
         <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
         <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
       </div>
       <div id="prepressActionHint" style="font-size:12px;color:#92400e;margin-top:8px;">Start Review before using Send Back to Account Manager.</div>
+    </div>
+
+    <!-- Prepress History Log -->
+    <div class="detail-card" style="margin-top:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;">📋 Prepress History</h3>
+        <button class="btn btn-sm" onclick="toggleHistoryPanel()" id="btnToggleHistory" style="font-size:11px;">▼ Show</button>
+      </div>
+      <div id="historyPanelBody" style="display:none;">
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <select id="historyDateFilter" onchange="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:120px;">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last-week">Last Week</option>
+            <option value="last-month">Last Month</option>
+          </select>
+          <input type="text" id="historySearch" placeholder="Search…" oninput="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:80px;">
+        </div>
+        <div id="historyList" style="max-height:340px;overflow-y:auto;display:grid;gap:8px;font-size:12px;"></div>
+      </div>
     </div>
   </aside>
 </div>
@@ -191,16 +211,16 @@ function renderQueue() {
   let orders = allOrders.filter(o => status === 'all' ? true : o.status === status);
 
   if (dateFilter === 'today') {
-    orders = orders.filter(o => { if (!o.dueDate) return true; const d = new Date(o.dueDate+'T12:00:00'); return d >= today && d < new Date(today.getTime()+86400000); });
+    orders = orders.filter(o => { const d = new Date(o.createdAt || o.dueDate || 0); return d >= today && d < new Date(today.getTime()+86400000); });
   } else if (dateFilter === 'yesterday') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= yesterday && d < today; });
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= yesterday && d < today; });
   } else if (dateFilter === 'last-week') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') >= weekStart; });
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= weekStart; });
   } else if (dateFilter === 'last-month') {
-    orders = orders.filter(o => { if (!o.dueDate) return false; return new Date(o.dueDate+'T12:00:00') >= monthStart; });
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= monthStart; });
   } else if (dateFilter === 'custom' && customDate) {
     const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
-    orders = orders.filter(o => { if (!o.dueDate) return false; const d = new Date(o.dueDate+'T12:00:00'); return d >= cStart && d <= cEnd; });
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= cStart && d <= cEnd; });
   }
 
   if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
@@ -324,12 +344,37 @@ function updateApproveButtonVisibility() {
   const hasIssue = (document.getElementById('issueCategory')?.value || '') !== '';
   const order = getSelectedOrder();
   const reviewStarted = ['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order?.status);
+  const isPaused = order?.status === 'prepress-paused';
+  const isActive = order?.status === 'prepress-active';
   const btn = document.getElementById('btnApprove');
   const sendBackBtn = document.getElementById('btnSendBack');
+  const startPauseBtn = document.getElementById('btnStartPause');
   const hint = document.getElementById('prepressActionHint');
-  if (btn) btn.style.display = (allChecked && !hasIssue) ? '' : 'none';
+  if (btn) btn.style.display = (allChecked && !hasIssue && reviewStarted) ? '' : 'none';
   if (sendBackBtn) sendBackBtn.disabled = !reviewStarted;
   if (hint) hint.style.display = reviewStarted ? 'none' : '';
+  if (startPauseBtn) {
+    if (isActive) {
+      startPauseBtn.textContent = '⏸ Pause Review';
+      startPauseBtn.style.background = '#d97706';
+    } else if (isPaused) {
+      startPauseBtn.textContent = '▶ Resume Review';
+      startPauseBtn.style.background = '#2563eb';
+    } else {
+      startPauseBtn.textContent = '▶ Start Review';
+      startPauseBtn.style.background = '#2563eb';
+    }
+  }
+}
+
+async function toggleStartPause() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  if (order.status === 'prepress-active') {
+    await pauseReview();
+  } else {
+    await startReview();
+  }
 }
 
 function collectReviewPatch(order) {
@@ -436,6 +481,100 @@ function openArtworkLightbox(dataUrl) {
   const w = window.open('', '_blank');
   if (!w) return;
   w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;display:block;margin:auto;">`);
+}
+
+// ── Prepress History Log ────────────────────────────────────
+let _historyOpen = false;
+
+function toggleHistoryPanel() {
+  _historyOpen = !_historyOpen;
+  const body = document.getElementById('historyPanelBody');
+  const btn = document.getElementById('btnToggleHistory');
+  if (body) body.style.display = _historyOpen ? '' : 'none';
+  if (btn) btn.textContent = _historyOpen ? '▲ Hide' : '▼ Show';
+  if (_historyOpen) renderHistory();
+}
+
+async function renderHistory() {
+  const listEl = document.getElementById('historyList');
+  if (!listEl) return;
+  const dateFilter = document.getElementById('historyDateFilter')?.value || 'all';
+  const search = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
+
+  // Load all activity and all orders once
+  let activity = [];
+  let ordersMap = {};
+  try { activity = await getAllActivity(); } catch (e) {}
+  try {
+    const allOrds = await getAllOrders();
+    allOrds.forEach(o => { ordersMap[o.orderId] = o; });
+  } catch (e) {}
+
+  // Filter to prepress-approved events
+  let events = activity.filter(a => a.type === 'prepress-approved');
+
+  // Date filter on event timestamp
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
+  const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate()-7);
+  const monthStart = new Date(todayStart); monthStart.setDate(monthStart.getDate()-30);
+
+  if (dateFilter === 'today') {
+    events = events.filter(a => new Date(a.timestamp) >= todayStart);
+  } else if (dateFilter === 'yesterday') {
+    events = events.filter(a => { const d = new Date(a.timestamp); return d >= yesterdayStart && d < todayStart; });
+  } else if (dateFilter === 'last-week') {
+    events = events.filter(a => new Date(a.timestamp) >= weekStart);
+  } else if (dateFilter === 'last-month') {
+    events = events.filter(a => new Date(a.timestamp) >= monthStart);
+  }
+
+  // Search filter
+  if (search) {
+    events = events.filter(a => {
+      const o = ordersMap[a.orderId] || {};
+      return [a.orderId, o.customerName || o.customer, o.productType, a.by, a.message].join(' ').toLowerCase().includes(search);
+    });
+  }
+
+  // Sort newest first
+  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  if (!events.length) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">No approved tickets found.</div>';
+    return;
+  }
+
+  listEl.innerHTML = events.map(a => {
+    const o = ordersMap[a.orderId] || {};
+    // Gather the ping-pong audit: find all prepress-related activities for this order
+    const pingPong = activity
+      .filter(x => x.orderId === a.orderId && ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'].includes(x.type))
+      .sort((x, y) => new Date(x.timestamp) - new Date(y.timestamp));
+
+    const pingPongHtml = pingPong.length > 1 ? `
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9;">
+        ${pingPong.map(p => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px;">
+          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatDateTime(p.timestamp)}</span>
+          <span style="font-size:11px;color:${p.type==='prepress-returned'?'#b91c1c':p.type==='prepress-approved'?'#16a34a':'#64748b'};">${
+            p.type==='prepress-started'?'▶ Started':p.type==='prepress-paused'?'⏸ Paused':p.type==='prepress-returned'?'↩ Sent back':p.type==='prepress-resubmitted'?'↪ Resubmitted':'✅ Approved'
+          }</span>
+          ${p.by ? `<span style="font-size:10px;color:var(--text-muted);">by ${p.by}</span>` : ''}
+        </div>`).join('')}
+      </div>` : '';
+
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#f8fafc;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <span style="font-weight:700;color:#1d4ed8;">#${a.orderId}</span>
+        <span style="color:#16a34a;font-weight:600;font-size:11px;">✅ Approved ${formatDateTime(a.timestamp)}</span>
+      </div>
+      <div style="color:#374151;margin-top:3px;">${o.customerName || o.customer || '—'}</div>
+      <div style="color:var(--text-muted);font-size:11px;">${o.productType || '—'} · ${(o.quantity||0).toLocaleString()} pcs · Rep: ${o.accountManager||'—'}</div>
+      ${a.by ? `<div style="font-size:11px;color:var(--text-muted);">Approved by: ${a.by}</div>` : ''}
+      ${pingPongHtml}
+    </div>`;
+  }).join('');
 }
 </script>
 </body>

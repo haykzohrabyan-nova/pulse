@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Dashboard — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
-  <script src="auth.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -529,6 +529,11 @@
             if (!stageBuckets[stage]) stageBuckets[stage] = [];
             stageBuckets[stage].push(order);
           }
+        } else if (order.status === 'pending-review') {
+          // Approved by prepress but no workflow steps yet — place in first production stage
+          const firstProdStage = lineConfig.stages.find(s => s !== 'Prepress') || lineConfig.stages[0];
+          stageBuckets[firstProdStage] = stageBuckets[firstProdStage] || [];
+          stageBuckets[firstProdStage].push(order);
         } else {
           // No current step — put in Prepress
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
