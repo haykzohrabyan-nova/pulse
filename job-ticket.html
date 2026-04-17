@@ -19,6 +19,9 @@
     <div>
       <h2 id="pageTitle">New Job Ticket</h2>
       <p id="orderIdDisplay" style="color:var(--text-muted);font-size:13px;"></p>
+      <div id="etaHeaderDisplay" style="display:none;margin-top:4px;font-size:13px;font-weight:600;color:#2563eb;">
+        &#x23F1; <span id="etaHeaderText"></span>
+      </div>
     </div>
     <div style="display:flex;gap:8px;">
       <a id="addSubTicketBtn" href="#" class="btn" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;">➕ Add Sub-Ticket</a>
@@ -1253,6 +1256,108 @@ function calcFrames() {
 
   if (document.getElementById('labelSizeSection').style.display !== 'none') calcLabelFit();
   autoDetectWorkflow();
+  updateETAHeader();
+}
+
+// ─────────────────────────────────────────────────────────────
+// ETA Header — shows total production time in header
+// ─────────────────────────────────────────────────────────────
+function updateETAHeader() {
+  const etaEl = document.getElementById('etaHeaderDisplay');
+  const etaTxt = document.getElementById('etaHeaderText');
+  if (!etaEl || !etaTxt) return;
+
+  const workflowKey = document.getElementById('workflowTemplate')?.value;
+  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  if (!tpl || !tpl.steps || !tpl.steps.length) { etaEl.style.display = 'none'; return; }
+
+  const quantity = parseInt(document.getElementById('quantity')?.value) || 0;
+  const sheetCount = parseInt(document.getElementById('sheetCount')?.value) ||
+    Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet')?.value) || 1));
+  if (!quantity) { etaEl.style.display = 'none'; return; }
+
+  const fakeOrder = {
+    quantity,
+    sheetCount,
+    piecesPerSheet: parseInt(document.getElementById('piecesPerSheet')?.value) || 1,
+    hasWhiteLayer: document.getElementById('colorMode')?.value === 'CMYK+White',
+    hasUV: document.getElementById('hasUV')?.checked || false,
+    foilType: document.getElementById('hasFoil')?.checked ? (document.getElementById('foilType')?.value || 'Gold') : 'None',
+  };
+
+  let totalMinutes = 0;
+  tpl.steps.forEach(machine => {
+    const mt = calculateMachineTime(machine, fakeOrder);
+    if (mt) totalMinutes += mt.totalMinutes;
+    else totalMinutes += 60;
+  });
+
+  if (totalMinutes <= 0) { etaEl.style.display = 'none'; return; }
+
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  const shortFmt = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+
+  const finishDate = new Date(Date.now() + totalMinutes * 60 * 1000);
+  const finishFmt = finishDate.toLocaleString('en-US', {
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  });
+
+  etaTxt.textContent = `${shortFmt} \u00B7 ${finishFmt}`;
+  etaEl.style.display = 'block';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Revised ETA status row — shown when operator has submitted a midpoint check
+// ─────────────────────────────────────────────────────────────
+function renderRevisedETAStatus(order) {
+  const existing = document.getElementById('revisedEtaRow');
+  if (existing) existing.remove();
+
+  if (!order || !order.workflowSteps) return;
+  const steps = order.workflowSteps;
+  let revisedStep = null;
+  for (const s of steps) {
+    if (s.revisedRemainingMinutes != null) revisedStep = s;
+  }
+  if (!revisedStep) return;
+
+  const mt = calculateMachineTime(revisedStep.machine, order);
+  const originalMinutes = mt ? mt.totalMinutes : 0;
+  const originalH = Math.floor(originalMinutes / 60);
+  const originalM = Math.round(originalMinutes % 60);
+  const originalFmt = originalH > 0 ? (originalM > 0 ? `${originalH}h ${originalM}m` : `${originalH}h`) : `${originalM}m`;
+
+  let elapsedMs = revisedStep.elapsedMs || 0;
+  if (revisedStep.startedAt && revisedStep.status === 'active') {
+    elapsedMs = Date.now() - new Date(revisedStep.startedAt).getTime();
+  }
+  const elapsedMin = Math.round(elapsedMs / 60000);
+  const elapsedH = Math.floor(elapsedMin / 60);
+  const elapsedMm = elapsedMin % 60;
+  const elapsedFmt = elapsedH > 0 ? (elapsedMm > 0 ? `${elapsedH}h ${elapsedMm}m` : `${elapsedH}h`) : `${elapsedMm}m`;
+
+  const revMin = revisedStep.revisedRemainingMinutes;
+  const revH = Math.floor(revMin / 60);
+  const revMm = revMin % 60;
+  const revFmt = revH > 0 ? (revMm > 0 ? `${revH}h ${revMm}m` : `${revH}h`) : `${revMm}m`;
+
+  const expectedRemainingMin = Math.max(0, originalMinutes - elapsedMin);
+  const isDelayed = revMin > expectedRemainingMin + 10;
+  const statusIcon = isDelayed ? '&#x1F7E1; Delayed' : '&#x1F7E2; On Track';
+
+  const row = document.createElement('div');
+  row.id = 'revisedEtaRow';
+  row.style.cssText = 'background:#fef3cd;border:1px solid #f59e0b;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:12px;';
+  row.innerHTML = `<strong>&#x1F4CA; ${revisedStep.machine || 'Step'} Midpoint Check:</strong> &nbsp;
+    Original: <strong>${originalFmt}</strong> &nbsp;|&nbsp;
+    Worked: <strong>${elapsedFmt}</strong> &nbsp;|&nbsp;
+    Revised remaining: <strong>${revFmt}</strong> &nbsp;|&nbsp;
+    ${statusIcon}`;
+
+  const form = document.getElementById('ticketForm');
+  if (form) form.parentNode.insertBefore(row, form);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1385,8 +1490,8 @@ async function updateFinishEta() {
     quantity,
     piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
     sheetCount: parseInt(document.getElementById('sheetCount').value) || Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet').value) || 1)),
-    colors: document.getElementById('colors')?.value || '',
-    hasWhiteLayer: document.getElementById('colors')?.value === 'CMYK + White',
+    colors: document.getElementById('colorMode')?.value || '',
+    hasWhiteLayer: document.getElementById('colorMode')?.value === 'CMYK+White',
     hasUV: !!document.getElementById('hasUV')?.checked,
     foilType: document.getElementById('hasFoil')?.checked ? (document.getElementById('foilType')?.value || 'Standard') : 'None',
   };
@@ -2438,6 +2543,7 @@ async function loadOrderIntoForm(order) {
   calcOrderTotal();
 
   calcFrames();
+  renderRevisedETAStatus(order);
 }
 
 function renderAccountManagerIssueBanner(order) {
@@ -2609,13 +2715,6 @@ function onQueueDateFilterChange() {
   renderQueuePane();
 }
 
-function setQFilter(f) {
-  _qFilter = f;
-  const sel = document.getElementById('queueDateFilter');
-  if (sel) sel.value = f;
-  renderQueuePane();
-}
-
 function toggleQueuePane() {
   _queuePaneVisible = !_queuePaneVisible;
   document.getElementById('queuePane').classList.toggle('collapsed', !_queuePaneVisible);
@@ -2627,6 +2726,8 @@ function toggleQueuePane() {
 
 function setQFilter(f) {
   _qFilter = f;
+  const sel = document.getElementById('queueDateFilter');
+  if (sel) sel.value = f;
   document.querySelectorAll('.qp-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.qfilter === f));
   renderQueuePane();
 }

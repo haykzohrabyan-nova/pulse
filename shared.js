@@ -1456,7 +1456,7 @@ async function buildHoldPatch(order) {
   return {
     status: 'on-hold',
     holdReason: reason.trim(),
-    holdPreviousStatus: order.status || 'pending-review',
+    holdPreviousStatus: order.status || 'in-production',
     holdRequestedBy: initiator,
     holdRequestedAt: new Date().toISOString(),
     holdApprovals: approvals,

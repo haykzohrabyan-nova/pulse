@@ -237,14 +237,30 @@
     return (order?.workflowSteps || []).reduce((sum, step) => sum + getTrackedStepMs(step), 0);
   }
 
+  function fmtHours(totalHours) {
+    if (!totalHours || totalHours <= 0) return '';
+    const h = Math.floor(totalHours);
+    const m = Math.round((totalHours - h) * 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
   function renderJobCard(order, line, subProgress) {
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
-    // Production estimate
-    const estDays = estimateTotalProductionDays(order);
-    const estLabel = estDays > 0 ? `~${estDays}d remaining` : '';
+    // Production estimate — hours format
+    const steps = order.workflowSteps || [];
+    const currentIdx = order.currentStep || 0;
+    let totalRemainingHours = 0;
+    for (let i = currentIdx; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.status === 'completed') continue;
+      const mt = calculateMachineTime(s.machine, order);
+      totalRemainingHours += mt ? mt.totalHours : 1;
+    }
+    const estLabel = totalRemainingHours > 0 ? `~${fmtHours(totalRemainingHours)} remaining` : '';
     // Die info for cutting jobs
     let dieHTML = '';
-    const steps = order.workflowSteps || [];
     const hasDieCut = steps.some(s => s.machine && (s.machine.includes('Moll') && s.operation?.includes('Cut') || s.machine.includes('GM Die')));
     if (hasDieCut) {
       if (order.dieStatus === 'existing' && order.dieName) {
@@ -1011,8 +1027,12 @@
         ${o.status === 'prepress' ? `<button class="btn btn-primary btn-sm" onclick="startPrepressOrder(${o.id},'${o.orderId}')">▶️ Start Prepress</button>` : ''}
         ${o.status === 'prepress-active' ? `<button class="btn btn-warning btn-sm" onclick="pausePrepressOrder(${o.id},'${o.orderId}')">⏸️ Pause Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
         ${o.status === 'prepress-paused' ? `<button class="btn btn-primary btn-sm" onclick="resumePrepressOrder(${o.id},'${o.orderId}')">▶️ Resume Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'pending-confirmation' ? `<button class="btn btn-success btn-sm" onclick="approveConfirmationDetail(${o.id})">✅ Approve OT / Confirm</button><button class="btn btn-danger btn-sm" onclick="rejectConfirmationDetail(${o.id})">❌ Reject — Hold</button>` : ''}
+        ${o.status === 'pending-account-manager' ? `<button class="btn btn-primary btn-sm" onclick="returnToPrepressDetail(${o.id})">↩ Issue Resolved — Return to Prepress</button>` : ''}
         ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
         ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'shipped' || o.status === 'waiting-pickup' ? `<button class="btn btn-success btn-sm" onclick="markReceivedDetail(${o.id})">📬 Mark Received</button>` : ''}
+        ${o.status === 'received' ? `<button class="btn btn-success btn-sm" onclick="markCompletedDetail(${o.id})">✅ Mark Completed</button>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
         <div><strong>Product:</strong> ${o.productType || '—'}</div>
@@ -1051,8 +1071,49 @@
   async function resumeOrder(id) {
     const order = await getOrder(id);
     if (!order) return;
-    const resumeStatus = order.holdPreviousStatus || 'pending-review';
+    const resumeStatus = order.holdPreviousStatus || 'in-production';
     await updateOrder(id, { status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor' });
+    closeDetail(); refresh();
+  }
+  async function approveConfirmationDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'prepress', needsConfirmation: false, confirmationApprovedBy: by, confirmationApprovedAt: new Date().toISOString() });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override approved — order moved to Prepress`, by });
+    closeDetail(); refresh();
+  }
+  async function rejectConfirmationDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    const reason = prompt('Reason for rejecting overtime/capacity override:') || 'OT approval rejected';
+    await updateOrder(id, { status: 'on-hold', holdReason: reason, holdPreviousStatus: 'pending-confirmation', holdRequestedBy: by, holdRequestedAt: new Date().toISOString(), needsConfirmation: false });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override rejected — ${reason}`, by });
+    closeDetail(); refresh();
+  }
+  async function returnToPrepressDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'prepress', prepressIssueComment: '', accountManagerResolvedAt: new Date().toISOString(), accountManagerResolvedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Account manager issue resolved — returned to Prepress`, by });
+    closeDetail(); refresh();
+  }
+  async function markReceivedDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'received', receivedAt: new Date().toISOString(), receivedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Order marked as received`, by });
+    closeDetail(); refresh();
+  }
+  async function markCompletedDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'completed', completedAt: new Date().toISOString(), completedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Order marked as completed`, by });
     closeDetail(); refresh();
   }
   async function holdOrder(id) {

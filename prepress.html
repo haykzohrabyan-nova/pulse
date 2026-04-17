@@ -25,7 +25,6 @@
         <option value="prepress">Not Started</option>
         <option value="prepress-active">Started</option>
         <option value="prepress-paused">Paused</option>
-        <option value="pending-review">Approved</option>
         <option value="pending-account-manager">Send Back</option>
       </select>
       <select id="queueDateFilter" onchange="renderQueue()">
@@ -169,7 +168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOrders() {
   const orders = await getAllOrders();
-  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(o.status))
+  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
     .sort(compareOrdersByRushDue);
   if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
   renderQueue();

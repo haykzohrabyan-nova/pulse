@@ -645,6 +645,13 @@ function getActionButtons(order) {
   if (order.status === 'new' || order.status === 'pending-review') {
     btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">▶ Start Production</button>`);
   }
+  if (order.status === 'pending-confirmation') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="approveConfirmation(${order.id})">✅ Approve OT / Confirm</button>`);
+    btns.push(`<button class="btn btn-sm btn-danger" onclick="rejectConfirmation(${order.id})">❌ Reject — Put On Hold</button>`);
+  }
+  if (order.status === 'pending-account-manager') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress')">↩ Issue Resolved — Return to Prepress</button>`);
+  }
   if (order.status === 'in-production') {
     btns.push(`<button class="btn btn-sm btn-primary" onclick="advanceStep(${order.id})">⏭ Next Step</button>`);
     btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
@@ -657,12 +664,18 @@ function getActionButtons(order) {
     btns.push(`<a href="qc-checkout.html?order=${order.orderId}" class="btn btn-sm btn-primary">🔍 Go to QC</a>`);
   }
   if (order.status === 'qc-failed') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">↩ Return to Production</button>`);
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="returnToProductionFromQCFail(${order.id})">↩ Return to Production</button>`);
   }
   if (order.status === 'ready-to-ship') {
     btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
     btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'shipped')">📦 Mark Shipped</button>`);
     btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'waiting-pickup')">🏪 Waiting Pickup</button>`);
+  }
+  if (order.status === 'shipped' || order.status === 'waiting-pickup') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'received')">📬 Mark Received</button>`);
+  }
+  if (order.status === 'received') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'completed')">✅ Mark Completed</button>`);
   }
   if (['shipped', 'waiting-pickup', 'received', 'completed'].includes(order.status)) {
     btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
@@ -711,7 +724,7 @@ async function changeStatus(dbId, newStatus) {
   }
 
   if (newStatus === 'resume') {
-    const resumeStatus = order.holdPreviousStatus || 'pending-review';
+    const resumeStatus = order.holdPreviousStatus || 'in-production';
     await updateOrder(dbId, { ...order, status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager' });
     await addActivity({ orderId: order.orderId, type: 'resume', message: `Order resumed to ${STATUS_LABELS[resumeStatus] || resumeStatus}`, by: (typeof getCurrentName === 'function' ? getCurrentName() : 'Manager') });
     await loadOrders();
@@ -752,6 +765,43 @@ async function advanceStep(dbId) {
     status: newStatus
   });
   await addActivity({ orderId: order.orderId, type: 'step-advance', message: `Advanced to step ${nextStep + 1}: ${steps[nextStep]?.machine || 'QC'}`, by: 'Manager' });
+  await loadOrders();
+  if (newStatus === 'qc-checkout') {
+    alert(`✅ All production steps complete for Order #${order.orderId}.\n\nOrder has been sent to QC Checkout. Please notify QC to begin inspection.`);
+  }
+}
+
+// ── Confirmation / OT Approval ────────────────────────────
+async function approveConfirmation(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  await updateOrder(dbId, { ...order, status: 'prepress', needsConfirmation: false, confirmationApprovedBy: by, confirmationApprovedAt: new Date().toISOString() });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override approved — order moved to Prepress`, by });
+  await loadOrders();
+}
+
+async function rejectConfirmation(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  const reason = prompt('Reason for rejecting overtime/capacity override:') || 'OT approval rejected';
+  await updateOrder(dbId, { ...order, status: 'on-hold', holdReason: reason, holdPreviousStatus: 'pending-confirmation', holdRequestedBy: by, holdRequestedAt: new Date().toISOString(), needsConfirmation: false });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override rejected — ${reason}`, by });
+  await loadOrders();
+}
+
+// ── QC Failed → Return to Production ──────────────────────
+async function returnToProductionFromQCFail(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps || [];
+  // Reset to last production step so it can be reworked
+  const lastStepIdx = Math.max(0, steps.length - 1);
+  const resetSteps = steps.map((s, i) => i === lastStepIdx ? { ...s, status: 'pending', completedAt: null } : s);
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  await updateOrder(dbId, { ...order, status: 'in-production', workflowSteps: resetSteps, currentStep: lastStepIdx });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Returned to production from QC fail — step ${lastStepIdx + 1} reset`, by });
   await loadOrders();
 }
 
