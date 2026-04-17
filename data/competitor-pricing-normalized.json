@@ -3,7 +3,7 @@
   "product_scope": "multi-product",
   "description": "Normalized competitor comparison data keyed by query spec. Covers roll labels, folding cartons, and stand-up pouches. Each query maps to a set of competitor results. Internal label prices are calculated from LABEL_SALES_TIERS. Internal box/pouch prices are pending model documentation.",
   "last_updated": "2026-04-17",
-  "last_capture_pass": "2026-04-17-axiom-gp-breakthrough",
+  "last_capture_pass": "2026-04-17-gp-matte-confirmed-unavailable",
   "products_covered": [
     "roll_labels",
     "folding_cartons",
@@ -211,7 +211,7 @@
             "total_price": 356.8,
             "unit_price": 0.07136,
             "quantity": 5000,
-            "spec_delta": "finish=Clear Gloss (not Matte) \u2014 Matte option exists (finish=3) but requires separate pass",
+            "spec_delta": "finish=Clear Gloss (only finish available for this shape+size+paper combination)",
             "confidence": "high",
             "raw_capture_id": "gp-3x3-5000-gloss",
             "api_endpoint": "/service/rest/v1/products/300158845/prices",
@@ -228,7 +228,7 @@
             }
           },
           "confidence": "high",
-          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection."
+          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection. NOTE: Matte finish is NOT available for this spec \u2014 only Clear Gloss Laminate (Indoor) offered for Square-Rounded 3\u00d73 White BOPP."
         },
         {
           "competitor": "stickermule",
@@ -371,7 +371,7 @@
             "total_price": 148.91,
             "unit_price": 0.14891,
             "quantity": 1000,
-            "spec_delta": "finish=Clear Gloss (not Matte) \u2014 Matte option exists (finish=3) but requires separate pass",
+            "spec_delta": "finish=Clear Gloss (only finish available for this shape+size+paper combination)",
             "confidence": "high",
             "raw_capture_id": "gp-3x3-5000-gloss",
             "api_endpoint": "/service/rest/v1/products/300158845/prices",
@@ -388,7 +388,7 @@
             }
           },
           "confidence": "high",
-          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection."
+          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection. NOTE: Matte finish is NOT available for this spec \u2014 only Clear Gloss Laminate (Indoor) offered for Square-Rounded 3\u00d73 White BOPP."
         }
       ],
       "comparison_notes": "Our price $236.11 vs UPrinting $222.26 \u2014 only 6% difference at 1k/3\u00d73. We are relatively competitive at lower quantities."
@@ -2477,6 +2477,10 @@
       {
         "competitor": "axiomprint",
         "gap": "PARTIAL \u2014 no 3\u00d73 in standard configurator. Captured: 2\u00d73 (250/500/1k/2.5k) and 3\u00d74 (250/500/1k/2.5k) via Antd dropdown. Max std qty=2500. 5k+ requires custom quote."
+      },
+      {
+        "competitor": "quadlabels",
+        "gap": "Target competitor confirmed by Hayk and upstream Print Group context, but no live capture is present in the Pulse dataset yet. Likely requires authenticated retail access before pricing capture can proceed."
       }
     ],
     "folding_cartons": [
@@ -2520,6 +2524,8 @@
     "gotprint_roll_labels": "GotPrint roll labels are no longer fully blocked. A live pricing capture now exists for 3x3 Square-Rounded, White BOPP, Clear Gloss via /service/rest/v1/products/300158845/prices after the correct configurator sequence. Remaining gap: capture the exact Matte finish for the same spec and document the precise session/configuration steps that unlock that request.",
     "stickermule_roll_labels": "Upload-first confirmed. $47 starting price from JSON-LD. 5k pricing requires manual quote with artwork upload.",
     "packola_boxes": "Packola STE boxes: exact 4\"\u00d72\"\u00d75\" spec captured at 250/500/1000/2000/2500 qty. Dimensions confirmed via L/W/D input fields. Price via DOM extraction from product page calculator.",
-    "packola_pouches": "Packola stand-up pouches: Medium (~4\"\u00d76\") is closest to our 4.375\"\u00d76\"\u00d72\" spec. Captured at 250/500/1000/2500/5000 qty. Directional \u2014 exact Packola dimensions not configurable (predefined size tiers)."
+    "packola_pouches": "Packola stand-up pouches: Medium (~4\"\u00d76\") is closest to our 4.375\"\u00d76\"\u00d72\" spec. Captured at 250/500/1000/2500/5000 qty. Directional \u2014 exact Packola dimensions not configurable (predefined size tiers).",
+    "quadlabels_roll_labels": "Quadlabels is part of the confirmed target competitor set for the PRI-7 pricing-intelligence pipeline, but no live capture is in the Pulse dataset yet. This vendor likely needs authenticated retail access, and the access/request path should be handled via Delta Nexus email before capture can continue.",
+    "pricing_pipeline_context": "This Pulse dataset is the continuation of the original Print Group competitor-pricing pipeline: PRI-7 umbrella, PRI-8 live capture, PRI-9 workaround execution moved into Pulse as PUL-30, PRI-10 normalization, PRI-11 Pulse display. Keep new captures and notes compatible with that downstream normalization/display chain."
   }
 }
