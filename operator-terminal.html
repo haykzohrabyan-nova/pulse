@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v16"></script>
+  <script src="shared.js?v=20260417-v17"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -512,6 +512,20 @@
       background: #eff6ff; border-color: #2563eb; color: #1d4ed8;
     }
 
+    /* ── REQUIRED ACTIONS BANNER ── */
+    .req-actions-notice {
+      background: #fde8e8; border: 1.5px solid #dc2626; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .req-actions-notice .ran-title {
+      font-size: 12px; font-weight: 800; color: #7f1d1d;
+      text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .req-actions-notice ul {
+      margin: 0; padding-left: 16px; font-size: 12px; color: #7f1d1d; line-height: 1.6;
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 900px) {
       body { overflow: auto; }
@@ -672,6 +686,7 @@
           Select a job to begin
         </div>
         <div id="action-buttons" style="display:none;">
+          <div id="required-actions-display"></div>
           <button class="action-btn btn-start" id="btn-start" onclick="stepAction('start')">▶ Start</button>
           <button class="action-btn btn-pause hidden" id="btn-pause" onclick="stepAction('pause')">⏸ Pause</button>
           <button class="action-btn btn-resume hidden" id="btn-resume" onclick="stepAction('resume')">▶ Resume</button>
@@ -1495,6 +1510,7 @@ async function renderJobDetail(order) {
   if (order.cutMethod) details.push({ label: 'Cut Method', value: order.cutMethod });
   if (order.dieStatus) details.push({ label: 'Die Status', value: order.dieStatus });
   if (order.dieNumber) details.push({ label: 'Die #', value: order.dieNumber });
+  if (order.hasPerforation) details.push({ label: 'Perforation', value: '⚠️ YES', warn: true });
 
   html += `<div class="job-details-grid">`;
   details.forEach(d => {
@@ -1510,6 +1526,14 @@ async function renderJobDetail(order) {
     html += `<div class="special-notes-card">
       <div class="note-label">📝 Special Notes</div>
       <div class="note-text">${escHtml(order.notes)}</div>
+    </div>`;
+  }
+
+  // ── PERFORATION WARNING ──
+  if (order.hasPerforation) {
+    html += `<div class="special-notes-card" style="background:#fde8e8;border-color:#dc2626;">
+      <div class="note-label" style="color:#7f1d1d;">⚠️ Perforation Required</div>
+      <div class="note-text" style="color:#7f1d1d;">${order.perforationNotes ? escHtml(order.perforationNotes) : 'This job requires perforation. Check setup instructions before starting.'}</div>
     </div>`;
   }
 
@@ -1576,7 +1600,7 @@ async function renderJobDetail(order) {
 
   // ── KNOWLEDGE BASE ALERTS ──
   let alerts = [];
-  try { alerts = await getAlertsForStep(machine, order.material || '', step?.operation || '', currentOperator); } catch (e) {}
+  try { alerts = await getAlertsForStep(machine, order.material || '', step?.operation || '', currentOperator, order); } catch (e) {}
   if (alerts.length) {
     alerts.forEach(a => {
       const cls = a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info';
@@ -1645,10 +1669,40 @@ function setActionButtonUI() {
   bResume.classList.toggle('hidden',  stepState !== 'paused');
   bComplete.classList.toggle('hidden', stepState !== 'running' && stepState !== 'paused');
 
+  // Required actions check — block Complete if pending
+  const reqStep = currentJob?.workflowSteps?.[currentStepIdx];
+  const reqMachine = reqStep?.machine || '';
+  const pendingRequired = getPendingRequiredActions(reqMachine);
+  const reqDisplay = document.getElementById('required-actions-display');
+  if (reqDisplay) {
+    if (pendingRequired.length > 0 && (stepState === 'running' || stepState === 'paused')) {
+      reqDisplay.innerHTML = `<div class="req-actions-notice">
+        <div class="ran-title">🚫 Required Before Completing</div>
+        <ul>${pendingRequired.map(a => `<li>${escHtml(a)}</li>`).join('')}</ul>
+      </div>`;
+      bComplete.disabled = true;
+      bComplete.title = 'Complete required actions first';
+    } else {
+      reqDisplay.innerHTML = '';
+      bComplete.disabled = false;
+      bComplete.title = '';
+    }
+  }
+
   // Pause overdue warning visibility
   if (stepState !== 'paused') {
     document.getElementById('pause-overdue-warn').classList.remove('visible');
   }
+}
+
+// ── REQUIRED ACTIONS HELPER ───────────────────────────────────────────
+function getPendingRequiredActions(machine) {
+  const pending = [];
+  const needsDie = machine.includes('Moll Brothers Cutter') || machine.includes('GM Die Cutter');
+  if (needsDie && !dieVerified) {
+    pending.push('Scan and verify die barcode before completing this step');
+  }
+  return pending;
 }
 
 // ── STEP ACTIONS ──────────────────────────────────────────────────────
@@ -1725,6 +1779,13 @@ async function stepAction(action) {
     document.getElementById('pause-overdue-warn').classList.remove('visible');
 
   } else if (action === 'complete') {
+    // Guard: check required actions
+    const pendingReq = getPendingRequiredActions(machine);
+    if (pendingReq.length > 0) {
+      showToast('red', '🚫 Required Action Pending', pendingReq[0]);
+      return;
+    }
+
     // Pre-fill complete modal
     const isPrint = machine.includes('HP Indigo') || machine.includes('Canon') || machine.includes('Roland');
     document.getElementById('cmp-overs-row').style.display = isPrint ? 'block' : 'none';
@@ -1823,6 +1884,7 @@ async function scanDie() {
   resultEl.textContent = `✅ Die #${die.dieNumber} verified — ${die.customer || '—'} | ${die.description || '—'} | Uses: ${(die.usageCount || 0) + 1}`;
   const card = document.getElementById('die-scan-card');
   if (card) card.classList.add('verified');
+  setActionButtonUI(); // clear required-actions banner and re-enable Complete
   await recordDieUsage(die.id).catch(() => {});
   await addActivity({
     type: 'die-scanned', orderId: currentJob?.orderId,

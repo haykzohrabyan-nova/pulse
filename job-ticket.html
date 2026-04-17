@@ -260,6 +260,16 @@
             <input type="text" id="foilNotes" placeholder="Foil notes / custom color">
           </div>
         </div>
+        <!-- Perforation toggle -->
+        <div class="field">
+          <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
+            <input type="checkbox" id="hasPerforation" onchange="onPerforationChange()">
+            <span>Perforation</span>
+          </label>
+          <div id="perforationSection" style="display:none;">
+            <input type="text" id="perforationNotes" placeholder="Perforation notes (location, type, pattern…)">
+          </div>
+        </div>
       </div>
       <div class="form-row" id="finishingNotesRow" style="margin-top:8px;display:none;">
         <div class="field">
@@ -1417,6 +1427,12 @@ function onFinishingChange() {
   if (skuList.length > 0) renderSKUs();
 }
 
+function onPerforationChange() {
+  const hasPerforation = document.getElementById('hasPerforation')?.checked;
+  const perforationSection = document.getElementById('perforationSection');
+  if (perforationSection) perforationSection.style.display = hasPerforation ? 'block' : 'none';
+}
+
 // ─────────────────────────────────────────────────────────────
 // Due Date & Rush
 // ─────────────────────────────────────────────────────────────
@@ -2262,6 +2278,8 @@ async function saveTicket(suppressRedirect = false) {
       hasFoil,
       foilType: hasFoil ? document.getElementById('foilType').value : 'None',
       foilNotes: hasFoil ? document.getElementById('foilNotes').value.trim() : '',
+      hasPerforation: document.getElementById('hasPerforation')?.checked || false,
+      perforationNotes: document.getElementById('hasPerforation')?.checked ? (document.getElementById('perforationNotes')?.value.trim() || '') : '',
       finishingNotes: document.getElementById('finishingNotes').value.trim(),
       cutMethod: document.getElementById('cutMethod').value,
       dieStatus: document.getElementById('dieStatus').value,
@@ -2480,6 +2498,16 @@ async function loadOrderIntoForm(order) {
   if (order.hasFoil) {
     document.getElementById('foilType').value = order.foilType || 'Gold';
     document.getElementById('foilNotes').value = order.foilNotes || '';
+  }
+  // Perforation
+  const perfCheck = document.getElementById('hasPerforation');
+  if (perfCheck) {
+    perfCheck.checked = order.hasPerforation || false;
+    if (order.hasPerforation) {
+      const perfNotes = document.getElementById('perforationNotes');
+      if (perfNotes) perfNotes.value = order.perforationNotes || '';
+    }
+    onPerforationChange();
   }
   onFinishingChange();
 

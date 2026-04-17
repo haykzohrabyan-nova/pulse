@@ -1883,8 +1883,8 @@ function getAllKnowledge() { return _getAll('knowledge_base'); }
 
 function updateKnowledge(id, changes) { return _update('knowledge_base', id, changes); }
 
-// Match knowledge base entries to a specific step (machine + material + operation)
-async function getAlertsForStep(machine, material, operation, operatorName = '') {
+// Match knowledge base entries to a specific step (machine + material + operation + order)
+async function getAlertsForStep(machine, material, operation, operatorName = '', order = {}) {
   const all = await getAllKnowledge();
   return all.filter(entry => {
     if (!entry.active) return false;
@@ -1897,7 +1897,26 @@ async function getAlertsForStep(machine, material, operation, operatorName = '')
     ).map(x => x.toLowerCase());
     const matchMachine = !entry.machine || entry.machine === machine || (Array.isArray(entry.machines) && entry.machines.includes(machine));
     const matchMaterial = !entry.material || String(material || '').toLowerCase().includes(String(entry.material).toLowerCase());
-    const matchOperation = !entry.operation || entry.operation === operation;
+
+    // Improved operation matching: exact match OR keyword found in machine's operation list
+    // OR alert is relevant based on order-level finish attributes (foil, UV)
+    const machineOpsLower = (MACHINES[machine]?.operations || []).map(o => o.toLowerCase());
+    const entryOpLower = (entry.operation || '').toLowerCase();
+    const entryOpKeyword = entryOpLower.split(' ')[0]; // first word for keyword matching
+    const orderHasFoil = !!(order.hasFoil || (order.foilType && order.foilType !== 'None'));
+    const orderHasUV = !!order.hasUV;
+    const alertMentionsFoil = entryOpLower.includes('foil') ||
+      (entry.title || '').toLowerCase().includes('foil') ||
+      (entry.description || '').toLowerCase().includes('foil');
+    const alertMentionsUV = entryOpLower.includes('uv') ||
+      (entry.title || '').toLowerCase().includes('uv') ||
+      (entry.description || '').toLowerCase().includes('uv');
+    const matchOperation = !entry.operation ||
+      entry.operation === operation ||
+      (entryOpKeyword && machineOpsLower.some(mo => mo.includes(entryOpKeyword))) ||
+      (alertMentionsFoil && orderHasFoil) ||
+      (alertMentionsUV && orderHasUV);
+
     const matchOperator = operatorList.length === 0 || operatorList.includes(String(operatorName || '').trim().toLowerCase());
     return matchMachine && matchMaterial && matchOperation && matchOperator;
   });

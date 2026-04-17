@@ -731,6 +731,19 @@ async function changeStatus(dbId, newStatus) {
     return;
   }
 
+  // Guard: cannot manually set ready-to-ship without a QC pass record
+  if (newStatus === 'ready-to-ship') {
+    const hasQcPass = order.qcRecord?.verdict === 'pass' || !!order.qcPassedAt;
+    if (!hasQcPass) {
+      alert('❌ Cannot mark Ready to Ship — this order has not passed QC.\n\nUse the QC Checkout page to complete the QC inspection first.');
+      return;
+    }
+    if (order.status === 'qc-failed') {
+      alert('❌ Cannot mark Ready to Ship — this order has a QC fail on record.\n\nReturn it to production, fix the defects, then re-run QC.');
+      return;
+    }
+  }
+
   const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
   const patch = { ...order, status: newStatus };
   if (newStatus === 'prepress-active' && order.status === 'prepress') patch.prepressStartedAt = new Date().toISOString(), patch.prepressStartedBy = by;
