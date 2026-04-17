@@ -210,6 +210,33 @@
     return days + 'd';
   }
 
+  function getTrackedStepMs(step) {
+    if (!step) return 0;
+    if (typeof step.elapsedMs === 'number' && step.elapsedMs > 0) return step.elapsedMs;
+    const startedAt = step.startedAt || step.startTime;
+    if (!startedAt) return 0;
+    const pausedMs = step.totalPausedMs || step.pausedDuration || 0;
+    const endAt = step.endTime || step.completedAt || ((step.status === 'paused' && step.pausedAt) ? step.pausedAt : null);
+    const endMs = endAt ? new Date(endAt).getTime() : Date.now();
+    return Math.max(0, endMs - new Date(startedAt).getTime() - pausedMs);
+  }
+
+  function getOrderCurrentTimer(order) {
+    if (!order) return null;
+    if (order.status === 'prepress-active' && order.prepressStartedAt) {
+      return { machine: 'Prepress', ms: Math.max(0, Date.now() - new Date(order.prepressStartedAt).getTime()) };
+    }
+    const step = order.workflowSteps?.[order.currentStep || 0];
+    if (step && step.startedAt && ['in-production','qc-checkout','ready-to-ship'].includes(order.status)) {
+      return { machine: step.machine || 'Current Step', ms: getTrackedStepMs(step) };
+    }
+    return null;
+  }
+
+  function getOrderTotalTrackedMs(order) {
+    return (order?.workflowSteps || []).reduce((sum, step) => sum + getTrackedStepMs(step), 0);
+  }
+
   function renderJobCard(order, line, subProgress) {
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
     // Production estimate
@@ -233,6 +260,9 @@
     const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
     const reprintHTML = order.isReprint ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🔁 Recreated from #${order.reprintOfOrderId || '—'}${order.reprintReason ? ` • ${order.reprintReason}` : ''}</div>` : '';
     const accountManagerIssueHTML = order.status === 'pending-account-manager' ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">⚠ Waiting on ${order.accountManager || 'account manager'}${order.prepressIssueComment ? ` • ${order.prepressIssueComment}` : ''}</div>` : '';
+    const overtimeHTML = order.needsConfirmation || order.status === 'pending-confirmation'
+      ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🕒 ${order.confirmationReason || 'Pending overtime approval'}</div>`
+      : '';
     const prepressHTML = order.status === 'prepress-active'
       ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
       : order.status === 'prepress-paused'
@@ -269,6 +299,15 @@
     } else if (order.status === 'ready-to-ship') {
       statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
     }
+
+    const currentTimer = getOrderCurrentTimer(order);
+    const totalTrackedMs = getOrderTotalTrackedMs(order);
+    const timingHTML = (currentTimer || totalTrackedMs > 0)
+      ? `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:${currentTimer ? '#eff6ff' : '#f8fafc'};border:1px solid ${currentTimer ? '#bfdbfe' : '#e2e8f0'};">
+          ${currentTimer ? `<div style="font-size:10px;font-weight:700;color:#1d4ed8;">🟢 On ${currentTimer.machine}: ${formatDuration(currentTimer.ms)}</div>` : ''}
+          <div style="font-size:10px;color:#475569;${currentTimer ? 'margin-top:2px;' : ''}">⏱ Total worked: ${formatDuration(totalTrackedMs || 0)}</div>
+        </div>`
+      : '';
 
     // Sub-ticket progress bar (for parent orders)
     let subProgressHTML = '';
@@ -307,7 +346,9 @@
       ${shortageHTML}
       ${reprintHTML}
       ${accountManagerIssueHTML}
+      ${overtimeHTML}
       ${prepressHTML}
+      ${timingHTML}
       <div class="card-meta">
         <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
         <span class="card-due ${dueClass(order.dueDate)}">${dueLabel(order.dueDate)}</span>
@@ -834,13 +875,7 @@
       const cs = steps[o.currentStep || 0];
       const stageName = cs ? getStageForStep(cs, line) : '—';
       const overdue = isOverdue(o.dueDate) && !['completed','ready-to-ship'].includes(o.status);
-      const prodStart = steps.find(s => s.startTime)?.startTime;
-      let inProdTime = 0;
-      if (prodStart) {
-        const activeStep = steps.find(s => s.status === 'active');
-        const endPoint = activeStep ? Date.now() : (steps.filter(s => s.endTime).map(s => new Date(s.endTime).getTime()).sort((a,b)=>b-a)[0] || Date.now());
-        inProdTime = endPoint - new Date(prodStart).getTime();
-      }
+      const inProdTime = getOrderTotalTrackedMs(o);
       const indent = isSubRow ? 'padding-left:28px;' : '';
       const subTag = isSubRow ? `<span style="font-size:10px;color:#6b7280;margin-left:4px;">└ sub</span>` : '';
       const reprintTag = o.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
@@ -998,9 +1033,7 @@
           <thead><tr><th>#</th><th>Machine</th><th>Operation</th><th>Status</th><th>Time</th><th>Loss</th></tr></thead>
           <tbody>
             ${steps.map((s, i) => {
-              let dur = 0;
-              if (s.startTime && s.endTime) dur = new Date(s.endTime).getTime() - new Date(s.startTime).getTime() - (s.pausedDuration||0);
-              else if (s.startTime && s.status === 'active') dur = Date.now() - new Date(s.startTime).getTime() - (s.pausedDuration||0);
+              const dur = getTrackedStepMs(s);
               const isCurrent = i === (o.currentStep || 0) && o.status === 'in-production';
               return `<tr style="${isCurrent ? 'background:rgba(210,153,34,0.1);font-weight:600;' : ''}">
                 <td>${i+1}</td><td>${s.machine}</td><td>${s.operation}</td>

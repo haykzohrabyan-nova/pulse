@@ -198,14 +198,30 @@
     return days + 'd';
   }
 
+  function fmtHours(totalHours) {
+    if (!totalHours || totalHours <= 0) return '';
+    const h = Math.floor(totalHours);
+    const m = Math.round((totalHours - h) * 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
   function renderJobCard(order, line) {
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
-    // Production estimate
-    const estDays = estimateTotalProductionDays(order);
-    const estLabel = estDays > 0 ? `~${estDays}d remaining` : '';
+    // Production estimate — hours format
+    const steps = order.workflowSteps || [];
+    const currentIdx = order.currentStep || 0;
+    let totalRemainingHours = 0;
+    for (let i = currentIdx; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.status === 'completed') continue;
+      const mt = calculateMachineTime(s.machine, order);
+      totalRemainingHours += mt ? mt.totalHours : 1;
+    }
+    const estLabel = totalRemainingHours > 0 ? `~${fmtHours(totalRemainingHours)} remaining` : '';
     // Die info for cutting jobs
     let dieHTML = '';
-    const steps = order.workflowSteps || [];
     const hasDieCut = steps.some(s => s.machine && (s.machine.includes('Moll') && s.operation?.includes('Cut') || s.machine.includes('GM Die')));
     if (hasDieCut) {
       if (order.dieStatus === 'existing' && order.dieName) {
@@ -218,6 +234,10 @@
     }
     // On hold indicator
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
+    // Overtime badge
+    const otHTML = (order.capacityOverride || ['pending-confirmation','pending-overtime-approval'].includes(order.status))
+      ? `<span style="background:#ea580c;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;">OT</span>`
+      : '';
 
     // Queue visualization classes
     let queueClass = '';
@@ -239,7 +259,7 @@
 
     return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="card-order">${statusDot}#${order.orderId}</span>
+        <span class="card-order">${statusDot}#${order.orderId}${otHTML}</span>
         <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
       </div>
       <div class="card-customer">${order.customer || '—'}</div>

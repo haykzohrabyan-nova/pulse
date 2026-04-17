@@ -828,6 +828,21 @@
   </div>
 </div>
 
+<!-- ── MIDPOINT CHECK MODAL ── -->
+<div class="modal-overlay" id="midpoint-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:800;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 24px;width:360px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px;">&#x26A0;&#xFE0F; Midpoint Check</div>
+    <div id="midpoint-desc" style="font-size:13px;color:#6b7280;margin-bottom:16px;"></div>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">How much time do you have left? (minutes)</label>
+    <input type="number" id="midpoint-input" min="0" placeholder="e.g. 45"
+      style="width:100%;font-size:18px;padding:10px 12px;border:2px solid #d1d5db;border-radius:6px;margin-bottom:16px;">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitMidpointCheck()">Submit</button>
+      <button class="btn" onclick="dismissMidpointCheck()">Skip</button>
+    </div>
+  </div>
+</div>
+
 <!-- ╔══════════════════════════════════════════════════════════╗
      ║                    JAVASCRIPT                           ║
      ╚══════════════════════════════════════════════════════════╝ -->
@@ -848,6 +863,7 @@ let unitsDoneToday    = 0;
 let tickInterval      = null;
 let breakBarOpen      = false;
 let lastBreakPopupKey = null;   // prevents repeat popups
+let midpointCheckFired = false; // tracks if midpoint check was already shown for current step
 
 // ── INIT ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1030,6 +1046,19 @@ function startTicker() {
     if (stepState === 'running' && stepStartedAt != null) {
       const elapsed = Date.now() - stepStartedAt;
       document.getElementById('timer-display').textContent = fmtElapsed(elapsed);
+
+      // Midpoint check: fire once when elapsed >= 50% of estimated time
+      if (!midpointCheckFired && currentJob) {
+        const step = currentJob.workflowSteps?.[currentStepIdx];
+        if (step && step.status !== 'completed') {
+          const mt = calculateMachineTime(step.machine, currentJob);
+          const estimatedMs = mt ? mt.totalMinutes * 60 * 1000 : 0;
+          if (estimatedMs > 0 && elapsed >= estimatedMs * 0.5) {
+            midpointCheckFired = true;
+            showMidpointCheck(step, estimatedMs);
+          }
+        }
+      }
     }
 
     // Pause overdue warning
@@ -1054,6 +1083,48 @@ function fmtElapsed(ms) {
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return [String(h).padStart(2,'0'), String(m).padStart(2,'0'), String(sec).padStart(2,'0')].join(':');
+}
+
+// ── MIDPOINT CHECK ────────────────────────────────────────────────────
+function showMidpointCheck(step, estimatedMs) {
+  const modal = document.getElementById('midpoint-modal');
+  const desc  = document.getElementById('midpoint-desc');
+  const input = document.getElementById('midpoint-input');
+  const estMin = Math.round(estimatedMs / 60000);
+  const elapsedMin = Math.round((Date.now() - stepStartedAt) / 60000);
+  desc.textContent = `You are halfway through ${step.machine || 'this step'} (est. ${estMin}m total, ${elapsedMin}m elapsed). Are you on track?`;
+  input.value = '';
+  modal.style.display = 'flex';
+  setTimeout(() => input.focus(), 100);
+}
+
+async function submitMidpointCheck() {
+  const modal = document.getElementById('midpoint-modal');
+  const input = document.getElementById('midpoint-input');
+  const remaining = parseInt(input.value);
+  if (isNaN(remaining) || remaining < 0) {
+    input.style.border = '2px solid red';
+    setTimeout(() => { input.style.border = '2px solid #d1d5db'; }, 1500);
+    return;
+  }
+  modal.style.display = 'none';
+
+  if (!currentJob) return;
+  const steps = [...(currentJob.workflowSteps || [])];
+  steps[currentStepIdx] = {
+    ...steps[currentStepIdx],
+    revisedRemainingMinutes: remaining,
+    midpointCheckedAt: new Date().toISOString(),
+    midpointCheckedBy: currentOperator,
+  };
+  await updateOrder(currentJob.id, { workflowSteps: steps });
+  currentJob = await _get('orders', currentJob.id);
+
+  showToast('yellow', '&#x23F1; Midpoint Logged', `Revised remaining: ${remaining}m. Rep-facing ticket updated.`);
+}
+
+function dismissMidpointCheck() {
+  document.getElementById('midpoint-modal').style.display = 'none';
 }
 
 // ── BREAK PILL ────────────────────────────────────────────────────────
@@ -1526,6 +1597,7 @@ async function stepAction(action) {
     stepState    = 'running';
     stepStartedAt = Date.now();
     stepPausedAt  = null;
+    midpointCheckFired = false; // reset for new step
 
     // Persist to DB
     const steps = [...(currentJob.workflowSteps || [])];

@@ -75,6 +75,10 @@ const WORKFLOW_TEMPLATES = {
   // 16th Street — HP Indigo 6K Line
   '6k-labels-die': { name: 'Labels w/ Die (6K)', steps: ['HP Indigo 6K', 'GM Die Cutter w/ JetFX'] },
   '6k-labels-laser': { name: 'Labels - Laser Cut (6K)', steps: ['HP Indigo 6K', 'GM Laser Cutter w/ JetFX'] },
+  '6k-sheet-die': { name: 'Label Sheets - Die Cut (6K)', steps: ['HP Indigo 6K', 'Moll Brothers Cutter'] },
+  '6k-sheet-guillotine': { name: 'Label Sheets - Guillotine (6K)', steps: ['HP Indigo 6K', 'Guillotine Cutter'] },
+  '6k-sheet-duplo': { name: 'Label Sheets - Duplo (6K)', steps: ['HP Indigo 6K', 'Duplo'] },
+  '6k-sheet-boyd': { name: 'Label Sheets - Boyd Flatbed (6K)', steps: ['HP Indigo 6K', 'Graphtec Flatbed (Large) x2'] },
   '6k-pouches-die': { name: 'Pouches w/ Die (6K)', steps: ['HP Indigo 6K', 'GM Die Cutter w/ JetFX', 'Karlville Poucher'] },
   '6k-pouches-laser': { name: 'Pouches - Laser (6K)', steps: ['HP Indigo 6K', 'GM Laser Cutter w/ JetFX', 'Karlville Poucher'] },
   // 16th Street — No print (plain cut)
@@ -635,8 +639,8 @@ function calculateMachineTime(machineName, order) {
   else if (machineName === 'Karlville Poucher') {
     const perShift = hasUV ? 16500 : 22500;
     const shifts = Math.ceil((order.quantity || 0) / perShift);
-    result.passes.push({ operation: 'Pouching', minutes: shifts * 480, speed: `~${perShift.toLocaleString()}/shift` });
-    result.totalMinutes = shifts * 480;
+    result.passes.push({ operation: 'Pouching', minutes: shifts * DEFAULT_PRODUCTIVE_HOURS_PER_DAY * 60, speed: `~${perShift.toLocaleString()}/shift` });
+    result.totalMinutes = shifts * DEFAULT_PRODUCTIVE_HOURS_PER_DAY * 60;
   }
   else if (machineName === 'Roland Printers') {
     const minPerSheet = 12;
@@ -664,7 +668,7 @@ function calculateMachineTime(machineName, order) {
   }
 
   // Convert to work hours/days
-  const workHoursPerDay = 7; // 8hr shift minus breaks/setup
+  const workHoursPerDay = getMachineDailyWorkHours(machineName) || DEFAULT_PRODUCTIVE_HOURS_PER_DAY;
   result.totalHours = +(result.totalMinutes / 60).toFixed(1);
   result.totalDays = +(result.totalMinutes / 60 / workHoursPerDay).toFixed(1);
   result.shiftsNeeded = Math.ceil(result.totalMinutes / 60 / workHoursPerDay);
@@ -693,7 +697,7 @@ function calculateFullProductionTime(order) {
     }
   }
 
-  const workHoursPerDay = 7;
+  const workHoursPerDay = DEFAULT_PRODUCTIVE_HOURS_PER_DAY;
   return {
     totalMinutes,
     totalHours: +(totalMinutes / 60).toFixed(1),
@@ -715,7 +719,6 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
 
   // Count available business days until due date
   const availableWorkDays = countBusinessDays(today, dueDate);
-  const workHoursPerDay = 7; // 8hr shift minus breaks/setup
 
   const machineDetails = [];
   let totalProductionMinutes = 0;
@@ -749,11 +752,12 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
     const totalMinutesOnMachine = queueMinutes + orderMinutes;
     const totalHoursOnMachine = totalMinutesOnMachine / 60;
     const queueHours = queueMinutes / 60;
-    const queueDays = +(queueHours / workHoursPerDay).toFixed(1);
-    const totalDaysExact = +(totalHoursOnMachine / workHoursPerDay).toFixed(1);
-    const daysNeeded = Math.ceil(totalHoursOnMachine / workHoursPerDay);
-    const daysForJustThisOrder = Math.ceil(orderMinutes / 60 / workHoursPerDay);
-    const overtimeHoursNeededRaw = Math.max(0, totalHoursOnMachine - (availableWorkDays * workHoursPerDay));
+    const machineHoursPerDay = getMachineDailyWorkHours(machine);
+    const queueDays = +(queueHours / machineHoursPerDay).toFixed(1);
+    const totalDaysExact = +(totalHoursOnMachine / machineHoursPerDay).toFixed(1);
+    const daysNeeded = Math.ceil(totalHoursOnMachine / machineHoursPerDay);
+    const daysForJustThisOrder = Math.ceil(orderMinutes / 60 / machineHoursPerDay);
+    const overtimeHoursNeededRaw = Math.max(0, totalHoursOnMachine - (availableWorkDays * machineHoursPerDay));
     const overtimePerDayNeeded = !availableWorkDays || overtimeHoursNeededRaw <= 0
       ? 0
       : +(overtimeHoursNeededRaw / availableWorkDays).toFixed(1);
@@ -775,6 +779,7 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
       queueDays,
       orderMinutes: Math.round(orderMinutes),
       orderHours: +(orderMinutes / 60).toFixed(1),
+      machineHoursPerDay,
       totalMinutes: Math.round(totalMinutesOnMachine),
       totalHours: +(totalHoursOnMachine).toFixed(1),
       totalDaysExact,
@@ -796,7 +801,7 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
     const overloaded = machineDetails.filter(m => !m.fits);
     const primaryOverload = [...overloaded].sort((a, b) => b.overtimeHoursNeededExact - a.overtimeHoursNeededExact)[0];
     const maxOvertime = Math.max(...overloaded.map(m => m.overtimeHoursNeededExact));
-    const extraShiftsNeeded = Math.ceil(maxOvertime / workHoursPerDay);
+    const extraShiftsNeeded = Math.ceil(maxOvertime / DEFAULT_PRODUCTIVE_HOURS_PER_DAY);
     const extensionDays = Math.max(1, bottleneckDays - availableWorkDays);
     const overtimePerDay = primaryOverload?.overtimePerDayNeeded
       ? ` (~${primaryOverload.overtimePerDayNeeded} overtime hrs/day over the next ${availableWorkDays} work day${availableWorkDays === 1 ? '' : 's'})`
@@ -809,7 +814,7 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
     availableWorkDays,
     totalProductionMinutes: Math.round(totalProductionMinutes),
     totalProductionHours: +(totalProductionMinutes / 60).toFixed(1),
-    totalProductionDays: Math.ceil(totalProductionMinutes / 60 / workHoursPerDay),
+    totalProductionDays: Math.ceil(totalProductionMinutes / 60 / DEFAULT_PRODUCTIVE_HOURS_PER_DAY),
     bottleneckMachine,
     bottleneckDays,
     machineDetails,
@@ -819,6 +824,10 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
 
 // Calculate estimated days for a machine to process an order
 function estimateMachineDays(machineName, order) {
+  const machineTime = calculateMachineTime(machineName, order);
+  if (machineTime?.totalHours) {
+    return Math.ceil(machineTime.totalHours / (getMachineDailyWorkHours(machineName) || DEFAULT_PRODUCTIVE_HOURS_PER_DAY));
+  }
   const cap = MACHINE_CAPACITY[machineName];
   if (!cap) return null;
   if (cap.dailySheets) {
@@ -878,6 +887,148 @@ const OPERATOR_PROFILES = {
   'Tiko':             { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
   'Tigran Zohrabyan': { facility: 'all', machines: [], role: 'supervisor', shift: '—', notes: 'Supervisor / Sales Manager' },
 };
+
+const DEFAULT_PRODUCTIVE_HOURS_PER_DAY = 7;
+const OPERATOR_DAILY_HOURS_OVERRIDES = {
+  'Tuoyo': 5,
+};
+
+function parseShiftStart(shift) {
+  if (!shift || shift === '—') return { hour: 6, minute: 0 };
+  const match = String(shift).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return { hour: 6, minute: 0 };
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const meridiem = match[3].toUpperCase();
+  if (meridiem === 'PM' && hour !== 12) hour += 12;
+  if (meridiem === 'AM' && hour === 12) hour = 0;
+  return { hour, minute };
+}
+
+function getMachineAssignedOperators(machineName) {
+  return Object.entries(OPERATOR_PROFILES)
+    .filter(([, profile]) => profile.role === 'operator' && Array.isArray(profile.machines) && profile.machines.includes(machineName))
+    .map(([name, profile]) => ({
+      name,
+      hoursPerDay: OPERATOR_DAILY_HOURS_OVERRIDES[name] || DEFAULT_PRODUCTIVE_HOURS_PER_DAY,
+      shift: profile.shift,
+      profile,
+    }));
+}
+
+function getMachineDailyWorkHours(machineName) {
+  if (machineName === 'Prepress') return DEFAULT_PRODUCTIVE_HOURS_PER_DAY;
+  const operators = getMachineAssignedOperators(machineName);
+  if (!operators.length) return DEFAULT_PRODUCTIVE_HOURS_PER_DAY;
+  return operators.reduce((sum, op) => sum + op.hoursPerDay, 0);
+}
+
+function getMachineShiftStart(machineName) {
+  const operators = getMachineAssignedOperators(machineName);
+  if (!operators.length) return { hour: 6, minute: 0 };
+  return operators
+    .map(op => parseShiftStart(op.shift))
+    .sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute))[0];
+}
+
+function moveToNextBusinessShift(date, machineName) {
+  const next = new Date(date);
+  const { hour, minute } = getMachineShiftStart(machineName);
+  next.setSeconds(0, 0);
+  while (next.getDay() === 0 || next.getDay() === 6) {
+    next.setDate(next.getDate() + 1);
+  }
+  next.setHours(hour, minute, 0, 0);
+  return next;
+}
+
+function addWorkingHours(machineName, hoursToAdd, fromDate = new Date()) {
+  const dailyHours = Math.max(0.5, getMachineDailyWorkHours(machineName));
+  const { hour, minute } = getMachineShiftStart(machineName);
+  let cursor = new Date(fromDate);
+  let remaining = Math.max(0, hoursToAdd);
+
+  while (cursor.getDay() === 0 || cursor.getDay() === 6) {
+    cursor = moveToNextBusinessShift(cursor, machineName);
+  }
+
+  while (remaining > 0) {
+    const dayStart = new Date(cursor);
+    dayStart.setHours(hour, minute, 0, 0);
+    const dayEnd = new Date(dayStart.getTime() + dailyHours * 60 * 60 * 1000);
+
+    if (cursor < dayStart) cursor = new Date(dayStart);
+    if (cursor >= dayEnd) {
+      cursor = moveToNextBusinessShift(new Date(dayStart.getTime() + 24 * 60 * 60 * 1000), machineName);
+      continue;
+    }
+
+    const availableToday = (dayEnd.getTime() - cursor.getTime()) / (60 * 60 * 1000);
+    const consume = Math.min(remaining, availableToday);
+    cursor = new Date(cursor.getTime() + consume * 60 * 60 * 1000);
+    remaining -= consume;
+
+    if (remaining > 0) {
+      cursor = moveToNextBusinessShift(new Date(dayStart.getTime() + 24 * 60 * 60 * 1000), machineName);
+    }
+  }
+
+  return cursor;
+}
+
+async function estimateOrderSchedule(order, workflowSteps) {
+  const allOrders = await getAllOrders();
+  const activeStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'pending-confirmation'];
+  const now = new Date();
+  let cursor = new Date(now);
+  const machinePlans = [];
+
+  for (const step of workflowSteps || []) {
+    const machine = step.machine || step;
+    const orderTime = calculateMachineTime(machine, order);
+    const orderHours = orderTime?.totalHours || ((orderTime?.totalMinutes || 120) / 60);
+
+    const queuedOrders = allOrders.filter(o => {
+      if (order?.id && o.id === order.id) return false;
+      if (!activeStatuses.includes(o.status)) return false;
+      const steps = o.workflowSteps || [];
+      const currentIdx = o.currentStep || 0;
+      for (let i = currentIdx; i < steps.length; i++) {
+        if (steps[i].machine === machine && steps[i].status !== 'completed') return true;
+      }
+      return false;
+    });
+
+    let queueHours = 0;
+    for (const queued of queuedOrders) {
+      const queuedTime = calculateMachineTime(machine, queued);
+      queueHours += queuedTime?.totalHours || ((queuedTime?.totalMinutes || 60) / 60);
+    }
+
+    const availableAt = addWorkingHours(machine, queueHours, now);
+    const startAt = new Date(Math.max(cursor.getTime(), availableAt.getTime()));
+    const finishAt = addWorkingHours(machine, orderHours, startAt);
+
+    machinePlans.push({
+      machine,
+      orderHours: +orderHours.toFixed(1),
+      queueHours: +queueHours.toFixed(1),
+      availableAt: availableAt.toISOString(),
+      startAt: startAt.toISOString(),
+      finishAt: finishAt.toISOString(),
+      dailyHours: getMachineDailyWorkHours(machine),
+    });
+
+    cursor = finishAt;
+  }
+
+  return {
+    generatedAt: now.toISOString(),
+    totalOrderHours: +machinePlans.reduce((sum, plan) => sum + plan.orderHours, 0).toFixed(1),
+    finalFinishAt: machinePlans.length ? machinePlans[machinePlans.length - 1].finishAt : now.toISOString(),
+    machinePlans,
+  };
+}
 
 // ── Break & Meal Rules (California Labor Law) ──────────────
 // Rest Break 1: ~2-3 hrs after clock-in (10 min paid)
@@ -1051,9 +1202,13 @@ const MATERIALS = [
     '18pt C1S', '18pt C2S', '18pt Silver',
     '24pt C1S', '24pt C2S'
   ]},
+  { category: 'Cardstock (Boyd)', items: ['16pt', '18pt', '20pt', '24pt'] },
   { category: 'Cover/Text Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover', '80lb Text', '100lb Text'] },
   { category: 'Cover Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover'] },
-  { category: 'Vinyl (Boyd)', items: ['Vinyl Matte', 'Vinyl Gloss', 'Holographic Vinyl'] },
+  { category: 'Vinyl (Boyd)', items: ['White Vinyl', 'White Vinyl - Aggressive Glue', 'Holographic Vinyl'] },
+  { category: 'Banner Material (Boyd)', items: ['Banner Material'] },
+  { category: 'Window Decal Material (Boyd)', items: ['Window Decal'] },
+  { category: 'Wallpaper Material (Boyd)', items: ['Self-Adhesive (Peel-and-Stick)', 'Traditional / Unpasted'] },
   { category: 'Specialty (Boyd)', items: ['Window Decal', 'Wallpaper Material', 'Banner Material'] },
   { category: 'Sheet (Boyd)', items: ['18pt (Boyd)', '20pt (Boyd)', '24pt (Boyd)'] },
   { category: 'Other', items: ['Vinyl'] }
@@ -1073,14 +1228,20 @@ const PRODUCT_TYPES = {
   'Labels (Roll)': {
     materials: ['BOPP', 'Label Sheets'],
     defaultPrintType: 'Roll',
-    facilities: ['16th-street', 'boyd-street'],
-    notes: 'Roll labels printed on 6K (16th St) or Roland/Canon (Boyd). NOT Cosmetic Web.'
+    facilities: ['16th-street'],
+    notes: 'Roll labels printed on 6K at 16th Street. NOT Cosmetic Web.'
   },
   'Labels (Sheet)': {
     materials: ['Label Sheets'],
     defaultPrintType: 'Sheet',
-    facilities: ['16th-street', 'boyd-street'],
+    facilities: ['16th-street'],
     notes: 'Sheet labels — Label Sheets only'
+  },
+  'Vinyl Labels / 54\'\' Rolls': {
+    materials: ['Vinyl (Boyd)'],
+    defaultPrintType: 'Roll',
+    facilities: ['boyd-street'],
+    notes: 'Boyd vinyl label roll workflow'
   },
   'Pouches': {
     materials: ['Cosmetic Web'],
@@ -1157,16 +1318,27 @@ const PRODUCT_TYPES = {
 };
 
 // Get filtered materials for a product type
-function getMaterialsForProduct(productType) {
+function getMaterialsForProduct(productType, facility = '') {
   const pt = PRODUCT_TYPES[productType];
   if (!pt) return MATERIALS; // show all if unknown
-  const allowedCategories = pt.materials;
+  let allowedCategories = pt.materials;
+  if (facility === 'boyd-street' && productType === 'Folding Cartons / Boxes') {
+    allowedCategories = ['Cardstock (Boyd)'];
+  } else if (facility === 'boyd-street' && productType === 'Diecut Stickers') {
+    allowedCategories = ['Vinyl (Boyd)'];
+  } else if (facility === 'boyd-street' && productType === 'Banners / Large Format') {
+    allowedCategories = ['Banner Material (Boyd)'];
+  } else if (facility === 'boyd-street' && productType === 'Window Decals') {
+    allowedCategories = ['Window Decal Material (Boyd)'];
+  } else if (facility === 'boyd-street' && productType === 'Wallpaper') {
+    allowedCategories = ['Wallpaper Material (Boyd)'];
+  }
   return MATERIALS.filter(g => allowedCategories.includes(g.category));
 }
 
 // Render material options filtered by product type
-function renderFilteredMaterialOptions(productType) {
-  const filtered = getMaterialsForProduct(productType);
+function renderFilteredMaterialOptions(productType, facility = '') {
+  const filtered = getMaterialsForProduct(productType, facility);
   return filtered.map(g => `<optgroup label="${g.category}">${g.items.map(i => `<option value="${i}">${i}</option>`).join('')}</optgroup>`).join('');
 }
 

@@ -1007,7 +1007,7 @@ const POINTS_RULES = {
 };
 
 const ORDER_STATUSES = [
-  'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'on-hold',
+  'waiting-approval', 'new', 'pending-confirmation', 'pending-overtime-approval', 'pending-review', 'on-hold',
   'in-production', 'reprint', 'qc-checkout', 'qc-failed', 'ready-to-ship',
   'shipped', 'waiting-pickup', 'received', 'completed'
 ];
@@ -1145,7 +1145,8 @@ const FINISHING_OPTIONS = ['None', 'Spot UV', 'Foil', 'Spot UV + Foil', 'Scodix 
 const STATUS_LABELS = {
   'waiting-approval': 'Waiting Approval',
   'new': 'New',
-  'pending-confirmation': 'Pending Confirmation',
+  'pending-confirmation': 'Pending Overtime Approval',
+  'pending-overtime-approval': 'Pending Overtime Approval',
   'pending-review': 'Pending Review',
   'in-production': 'In Production',
   'on-hold': 'On Hold',
@@ -1163,6 +1164,7 @@ const STATUS_COLORS = {
   'waiting-approval': '#8b949e',
   'new': '#58a6ff',
   'pending-confirmation': '#ea580c',
+  'pending-overtime-approval': '#ea580c',
   'pending-review': '#d29922',
   'in-production': '#3fb950',
   'on-hold': '#f85149',
@@ -1907,6 +1909,7 @@ const THEME_CSS = `
   .badge-waiting-approval { background: #f1f3f5; color: #5f6b7a; }
   .badge-new { background: #e0edff; color: #1d4ed8; }
   .badge-pending-confirmation { background: #fff1e6; color: #c2410c; }
+  .badge-pending-overtime-approval { background: #fff1e6; color: #c2410c; }
   .badge-pending-review { background: #fef3cd; color: #92600a; }
   .badge-in-production { background: #d4edda; color: #0f6b2d; }
   .badge-on-hold { background: #fde8e8; color: #b91c1c; }

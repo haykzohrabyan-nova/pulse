@@ -15,10 +15,13 @@
     <div>
       <h2 id="pageTitle">New Job Ticket</h2>
       <p id="orderIdDisplay" style="color:var(--text-muted);font-size:13px;"></p>
+      <div id="etaHeaderDisplay" style="display:none;margin-top:4px;font-size:13px;font-weight:600;color:#2563eb;">
+        &#x23F1; <span id="etaHeaderText"></span>
+      </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button type="button" class="btn" onclick="window.location='production-manager.html'">← Back to Production</button>
-      <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
+      <button type="button" class="btn" onclick="window.location='production-manager.html'">&#x2190; Back to Production</button>
+      <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">&#x1F4BE; Save Job Ticket</button>
     </div>
   </div>
 
@@ -771,6 +774,7 @@ function calcFrames() {
 
   if (document.getElementById('labelSizeSection').style.display !== 'none') calcLabelFit();
   autoDetectWorkflow();
+  updateETAHeader();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -924,6 +928,57 @@ async function updateCapacityHint() {
   else { color = 'var(--red)'; icon = '🔴'; label = `${primaryMachine}: ~${pct}% loaded — OVERBOOKED. Rush approval or push date.`; }
 
   hintEl.innerHTML = `<span style="color:${color};font-weight:600;">${icon} ${label}</span>`;
+  updateETAHeader();
+}
+
+// ─────────────────────────────────────────────────────────────
+// ETA Header — shows total production time in header
+// ─────────────────────────────────────────────────────────────
+function updateETAHeader() {
+  const etaEl = document.getElementById('etaHeaderDisplay');
+  const etaTxt = document.getElementById('etaHeaderText');
+  if (!etaEl || !etaTxt) return;
+
+  const workflowKey = document.getElementById('workflowTemplate')?.value;
+  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  if (!tpl || !tpl.steps || !tpl.steps.length) { etaEl.style.display = 'none'; return; }
+
+  const quantity = parseInt(document.getElementById('quantity')?.value) || 0;
+  const sheetCount = parseInt(document.getElementById('sheetCount')?.value) ||
+    Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet')?.value) || 1));
+  if (!quantity) { etaEl.style.display = 'none'; return; }
+
+  const fakeOrder = {
+    quantity,
+    sheetCount,
+    piecesPerSheet: parseInt(document.getElementById('piecesPerSheet')?.value) || 1,
+    hasWhiteLayer: document.getElementById('colorMode')?.value === 'CMYK+White',
+    hasUV: document.getElementById('hasUV')?.checked || false,
+    foilType: document.getElementById('hasFoil')?.checked ? (document.getElementById('foilType')?.value || 'Gold') : 'None',
+  };
+
+  let totalMinutes = 0;
+  tpl.steps.forEach(machine => {
+    const mt = calculateMachineTime(machine, fakeOrder);
+    if (mt) totalMinutes += mt.totalMinutes;
+    else totalMinutes += 60; // default 1hr for unknown machines
+  });
+
+  if (totalMinutes <= 0) { etaEl.style.display = 'none'; return; }
+
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  const shortFmt = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+
+  // Calculate projected finish time from now
+  const finishDate = new Date(Date.now() + totalMinutes * 60 * 1000);
+  const finishFmt = finishDate.toLocaleString('en-US', {
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  });
+
+  etaTxt.textContent = `${shortFmt} \u00B7 ${finishFmt}`;
+  etaEl.style.display = 'block';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1404,25 +1459,23 @@ async function saveTicket() {
       const capacity = await checkProductionCapacity(capOrder, workflowSteps);
 
       if (!capacity.fits) {
-        btn.disabled = false;
-        btn.textContent = '💾 Save Job Ticket';
+        // Calculate overtime hours needed for bottleneck
+        const overloaded = capacity.machineDetails.filter(m => !m.fits);
+        const maxOT = overloaded.length > 0 ? Math.max(...overloaded.map(m => m.overtimeHoursNeeded)) : 0;
 
-        const detailLines = capacity.machineDetails.map(m => {
-          const icon = m.fits ? '✅' : '🔴';
-          return `${icon} ${m.machine}: ${m.queuedJobs} jobs queued (${m.queueHours}hr) + this order (${m.orderHours}hr) = ${m.daysNeeded} days needed`;
-        }).join('\n');
-
-        const msg = `⚠️ PRODUCTION CAPACITY WARNING\n\n` +
-          `This order cannot be completed by the due date with the current workload.\n\n` +
-          `Available work days: ${capacity.availableWorkDays}\n` +
-          `Bottleneck: ${capacity.bottleneckMachine} — needs ${capacity.bottleneckDays} days\n\n` +
-          `Machine breakdown:\n${detailLines}\n\n` +
-          `${capacity.suggestedAction}\n\n` +
-          `Job ticket will be saved with status "Pending Confirmation" — needs supervisor approval.`;
+        const msg = `⏰ OVERTIME APPROVAL REQUIRED\n\n` +
+          `This job requires overtime to meet the due date.\n\n` +
+          `Bottleneck: ${capacity.bottleneckMachine}\n` +
+          `Extra hours needed: ${maxOT}h\n` +
+          `Available work days: ${capacity.availableWorkDays} — needs ${capacity.bottleneckDays} days\n\n` +
+          `Sending for Mauricio / Tigran approval.\n` +
+          `Job will be saved with status "Pending Overtime Approval".`;
 
         alert(msg);
         capOrder._capacityOverride = true;
         capOrder._capacityDetails = capacity;
+        capOrder._overtimeHoursNeeded = maxOT;
+        capOrder._overtimeBottleneck = capacity.bottleneckMachine;
       }
     }
 
@@ -1507,16 +1560,20 @@ async function saveTicket() {
       workflowTemplate: workflowKey,
       workflowSteps,
       currentStep: 0,
-      status: (capOrder?._materialShortage || capOrder?._capacityOverride) ? 'pending-confirmation'
+      status: capOrder?._capacityOverride ? 'pending-overtime-approval'
+        : capOrder?._materialShortage ? 'pending-confirmation'
         : dueDateCheck.isRush ? 'on-hold'
         : 'new',
       isRush: dueDateCheck.isRush || false,
       rushApprovedBy: rushApproved ? 'Supervisor' : null,
       capacityOverride: capOrder?._capacityOverride || false,
+      overtimeHoursNeeded: capOrder?._overtimeHoursNeeded || 0,
+      overtimeBottleneck: capOrder?._overtimeBottleneck || '',
       materialShortage: capOrder?._materialShortage || false,
       needsConfirmation: !!(capOrder?._materialShortage || capOrder?._capacityOverride),
-      confirmationReason: capOrder?._materialShortage ? 'Material shortage — needs supervisor confirmation'
-        : capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
+      confirmationReason: capOrder?._capacityOverride
+        ? `Overtime required — bottleneck: ${capOrder?._overtimeBottleneck || 'unknown'}, extra ${capOrder?._overtimeHoursNeeded || 0}h needed`
+        : capOrder?._materialShortage ? 'Material shortage — needs supervisor confirmation'
         : '',
       holdReason: dueDateCheck.isRush ? 'Rush order — approved by supervisor' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
@@ -1670,6 +1727,69 @@ async function loadOrderIntoForm(order) {
   }
 
   calcFrames();
+  renderRevisedETAStatus(order);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Revised ETA status row (Feature 5 — rep-facing view)
+// Shown when operator has submitted a midpoint check response
+// ─────────────────────────────────────────────────────────────
+function renderRevisedETAStatus(order) {
+  // Remove any existing status row
+  const existing = document.getElementById('revisedEtaRow');
+  if (existing) existing.remove();
+
+  if (!order || !order.workflowSteps) return;
+  const steps = order.workflowSteps;
+  // Find any active or most-recently-updated step with revisedRemainingMinutes
+  let revisedStep = null;
+  for (const s of steps) {
+    if (s.revisedRemainingMinutes != null) {
+      revisedStep = s;
+    }
+  }
+  if (!revisedStep) return;
+
+  // Calculate original estimate for that step
+  const mt = calculateMachineTime(revisedStep.machine, order);
+  const originalMinutes = mt ? mt.totalMinutes : 0;
+  const originalH = Math.floor(originalMinutes / 60);
+  const originalM = Math.round(originalMinutes % 60);
+  const originalFmt = originalH > 0 ? (originalM > 0 ? `${originalH}h ${originalM}m` : `${originalH}h`) : `${originalM}m`;
+
+  // Elapsed since step started
+  let elapsedMs = revisedStep.elapsedMs || 0;
+  if (revisedStep.startedAt && revisedStep.status === 'active') {
+    elapsedMs = Date.now() - new Date(revisedStep.startedAt).getTime();
+  }
+  const elapsedMin = Math.round(elapsedMs / 60000);
+  const elapsedH = Math.floor(elapsedMin / 60);
+  const elapsedMm = elapsedMin % 60;
+  const elapsedFmt = elapsedH > 0 ? (elapsedMm > 0 ? `${elapsedH}h ${elapsedMm}m` : `${elapsedH}h`) : `${elapsedMm}m`;
+
+  // Revised remaining
+  const revMin = revisedStep.revisedRemainingMinutes;
+  const revH = Math.floor(revMin / 60);
+  const revMm = revMin % 60;
+  const revFmt = revH > 0 ? (revMm > 0 ? `${revH}h ${revMm}m` : `${revH}h`) : `${revMm}m`;
+
+  // Status: is revised remaining > original remaining?
+  const expectedRemainingMin = Math.max(0, originalMinutes - elapsedMin);
+  const isDelayed = revMin > expectedRemainingMin + 10; // 10 min buffer
+  const statusIcon = isDelayed ? '&#x1F7E1; Delayed' : '&#x1F7E2; On Track';
+
+  const row = document.createElement('div');
+  row.id = 'revisedEtaRow';
+  row.style.cssText = 'background:#fef3cd;border:1px solid #f59e0b;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:12px;';
+  row.innerHTML = `<strong>&#x1F4CA; ${revisedStep.machine || 'Step'} Midpoint Check:</strong> &nbsp;
+    Original: <strong>${originalFmt}</strong> &nbsp;|&nbsp;
+    Worked: <strong>${elapsedFmt}</strong> &nbsp;|&nbsp;
+    Revised remaining: <strong>${revFmt}</strong> &nbsp;|&nbsp;
+    ${statusIcon}`;
+
+  // Insert before the form
+  const form = document.getElementById('ticketForm');
+  if (form) form.parentNode.insertBefore(row, form);
 }
 </script>
 </body>

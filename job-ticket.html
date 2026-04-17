@@ -21,7 +21,6 @@
       <p id="orderIdDisplay" style="color:var(--text-muted);font-size:13px;"></p>
     </div>
     <div style="display:flex;gap:8px;">
-      <button type="button" class="btn" onclick="window.location='production-manager.html'">← Back to Production</button>
       <a id="addSubTicketBtn" href="#" class="btn" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;">➕ Add Sub-Ticket</a>
       <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
     </div>
@@ -39,28 +38,38 @@
     <div id="currentStepTimerMeta" style="margin-top:6px;font-size:12px;color:#2563eb;"></div>
   </div>
 
+  <div id="overtimeApprovalBanner" style="display:none;margin-bottom:14px;padding:14px 16px;border-radius:14px;border:1px solid #fdba74;background:#fff7ed;">
+    <div style="font-size:12px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#c2410c;">Pending Overtime Approval</div>
+    <div id="overtimeApprovalText" style="margin-top:6px;font-size:15px;font-weight:700;color:#9a3412;"></div>
+    <div id="overtimeApprovalMeta" style="margin-top:6px;font-size:12px;color:#c2410c;"></div>
+  </div>
+
   <form id="ticketForm" onsubmit="return false;">
 
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- JOB TICKET NUMBER (top of form)                        -->
     <!-- ═══════════════════════════════════════════════════════ -->
-    <div class="form-section" style="padding:14px 20px;">
+    <div class="form-section" style="padding:12px 20px;">
       <div class="form-row" style="margin-bottom:0;">
-        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
-          <div class="field" style="max-width:300px;">
-            <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
-            <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;" oninput="clearOrderIdError()">
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:grid;grid-template-columns:minmax(250px,320px) minmax(240px,1fr);gap:16px;align-items:end;">
+            <div class="field" style="margin-bottom:0;">
+              <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
+              <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;" oninput="clearOrderIdError()">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+              <div style="font-size:10px;color:var(--text-muted);max-width:340px;line-height:1.35;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+              <div style="display:flex;gap:18px;align-items:center;font-size:12px;flex-wrap:wrap;justify-content:flex-end;">
+                <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
+                <div id="dueDateCountdown" style="font-weight:700;"></div>
+              </div>
+            </div>
           </div>
-          <div id="parentOrderSection" class="field" style="max-width:260px;display:none;">
+          <div id="parentOrderSection" class="field" style="max-width:320px;display:none;">
             <label style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;">📎 Part of existing order? <span style="font-weight:400;font-size:11px;">(optional)</span></label>
             <input type="text" id="parentOrderInput" placeholder="Type parent # e.g. 18000, then press Tab" style="font-size:14px;" onblur="linkParentOrder()" onkeydown="if(event.key==='Enter'){event.preventDefault();linkParentOrder();}">
             <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Leave blank if this is the first ticket for this order</div>
             <div id="parentOrderStatus" style="font-size:11px;margin-top:3px;"></div>
-          </div>
-          <div style="display:flex;gap:20px;align-items:center;margin-top:18px;font-size:12px;">
-            <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
-            <div id="dueDateCountdown" style="font-weight:700;"></div>
           </div>
         </div>
       </div>
@@ -210,19 +219,23 @@
       <div class="form-grid form-grid-3" style="grid-template-columns: 1fr 1fr 1fr;">
         <!-- Lamination -->
         <div class="field" id="laminationField">
-          <label>Lamination</label>
-          <select id="lamination" onchange="onFinishingChange()">
-            <option value="None">None</option>
-            <option value="Gloss">Gloss</option>
-            <option value="Matte">Matte</option>
-            <option value="Soft Touch">Soft Touch</option>
-            <option value="Holo">Holo</option>
-            <option value="Coating">Coating</option>
-          </select>
+          <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
+            <input type="checkbox" id="hasLamination" onchange="onFinishingChange()">
+            <span>Lamination</span>
+          </label>
+          <div id="laminationSection" style="display:none;">
+            <select id="lamination" onchange="onFinishingChange()">
+              <option value="Gloss">Gloss</option>
+              <option value="Matte">Matte</option>
+              <option value="Soft Touch">Soft Touch</option>
+              <option value="Holo">Holo</option>
+              <option value="Coating">Coating</option>
+            </select>
+          </div>
         </div>
         <!-- UV toggle only (no file) -->
         <div class="field">
-          <label class="checkbox-label finishing-check">
+          <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
             <input type="checkbox" id="hasUV" onchange="onFinishingChange()">
             <span>UV Coating</span>
           </label>
@@ -398,6 +411,7 @@
           <label>Due Date *</label>
           <input type="date" id="dueDate" onchange="checkDueDate()" required>
           <div id="leadTimeHint" style="font-size:11px;color:var(--text-muted);margin-top:3px;"></div>
+          <div id="finishEtaHint" style="font-size:11px;margin-top:4px;"></div>
           <div id="capacityCalHint" style="font-size:11px;margin-top:4px;"></div>
           <div id="rushWarning" style="display:none;margin-top:6px;padding:8px 12px;background:#fef3cd;border:1px solid #f59e0b;border-radius:var(--radius);font-size:12px;color:#92600a;"></div>
           <div id="rushApprovalSection" style="display:none;margin-top:8px;">
@@ -428,64 +442,29 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- SECTION: Sales & Billing                               -->
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <div class="form-section">
-      <h3 class="section-title">💰 Sales &amp; Billing</h3>
-      <div class="form-grid form-grid-2">
-        <div class="field">
-          <label>Customer PO #</label>
-          <input type="text" id="customerPO" placeholder="e.g. PO-20045, 2024-CUST-881">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Customer's purchase order number, if provided</div>
-        </div>
-        <div class="field">
-          <label>Quote Ref #</label>
-          <input type="text" id="quoteRef" placeholder="e.g. Q-2024-0042">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Internal or external quote reference</div>
-        </div>
-      </div>
-      <div class="form-grid form-grid-3" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px;">
-        <div class="field">
-          <label>Price per Unit ($)</label>
-          <input type="number" id="pricePerUnit" min="0" step="0.0001" placeholder="e.g. 0.35" oninput="calcOrderTotal()">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Per label / per box / per unit</div>
-        </div>
-        <div class="field">
-          <label>Order Total ($)</label>
-          <input type="text" id="orderTotalDisplay" placeholder="Auto-calculated" readonly style="background:var(--bg);font-weight:600;color:var(--accent);">
-          <input type="hidden" id="orderTotal">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Qty × Unit price (editable if needed)</div>
-        </div>
-        <div class="field">
-          <label>Payment Terms</label>
-          <select id="paymentTerms">
-            <option value="">— Not set —</option>
-            <option value="net-30">Net 30</option>
-            <option value="net-60">Net 60</option>
-            <option value="net-90">Net 90</option>
-            <option value="due-on-receipt">Due on Receipt</option>
-            <option value="prepaid">Prepaid</option>
-            <option value="cod">COD</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-grid form-grid-2" style="margin-top:8px;">
-        <div class="field">
-          <label>Invoice # <span style="font-weight:400;font-size:11px;color:var(--text-muted);">(fill when invoiced)</span></label>
-          <input type="text" id="invoiceNumber" placeholder="e.g. INV-2024-00391">
-        </div>
-        <div class="field">
-          <label>Invoice Status</label>
-          <select id="invoiceStatus">
-            <option value="not-invoiced">Not Invoiced</option>
-            <option value="invoiced">Invoiced</option>
-            <option value="partially-paid">Partially Paid</option>
-            <option value="paid">Paid</option>
-            <option value="voided">Voided</option>
-          </select>
-        </div>
-      </div>
+    <div style="display:none;">
+      <input type="text" id="customerPO" value="">
+      <input type="text" id="quoteRef" value="">
+      <input type="number" id="pricePerUnit" value="" oninput="calcOrderTotal()">
+      <input type="text" id="orderTotalDisplay" value="">
+      <input type="hidden" id="orderTotal" value="">
+      <select id="paymentTerms">
+        <option value=""></option>
+        <option value="net-30">Net 30</option>
+        <option value="net-60">Net 60</option>
+        <option value="net-90">Net 90</option>
+        <option value="due-on-receipt">Due on Receipt</option>
+        <option value="prepaid">Prepaid</option>
+        <option value="cod">COD</option>
+      </select>
+      <input type="text" id="invoiceNumber" value="">
+      <select id="invoiceStatus">
+        <option value="not-invoiced">Not Invoiced</option>
+        <option value="invoiced">Invoiced</option>
+        <option value="partially-paid">Partially Paid</option>
+        <option value="paid">Paid</option>
+        <option value="voided">Voided</option>
+      </select>
     </div>
 
     <!-- Save Bar -->
@@ -557,7 +536,7 @@ initAuth('job-ticket');
 
 document.getElementById('page-styles').textContent = `
   .jt-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
-  #queuePane { width: 260px; min-width: 240px; background: #f8fafc; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
+  #queuePane { width: 340px; min-width: 320px; background: #f8fafc; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; transition: width 0.2s; flex-shrink:0; }
   #queuePane.collapsed { width: 0; min-width: 0; border: none; overflow: hidden; }
   .qp-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .qp-filters { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
@@ -580,7 +559,7 @@ document.getElementById('page-styles').textContent = `
   }
   .section-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .form-grid { display: grid; gap: 16px; margin-bottom: 16px; }
-  .form-grid-2 { grid-template-columns: 1fr 1fr; }
+  .form-grid-2 { grid-template-columns: 1.06fr 0.94fr; gap: 12px; }
   .form-grid-3 { }
   .form-row { margin-bottom: 12px; }
   .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -787,8 +766,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       const subBtn = document.getElementById('addSubTicketBtn');
       subBtn.href = `job-ticket.html?parent=${orderId}`;
       subBtn.style.display = '';
-      // Show sub-ticket section (for parent orders)
-      await renderSubTicketSection(orderId);
+      // Show production progress section
+      renderProductionProgressSection(order);
       // Show order navigator (for parent OR sub-ticket)
       const navParentId = order.parentOrderId || orderId;
       await renderOrderNavigator(navParentId, orderId);
@@ -860,31 +839,88 @@ function toggleOrderNav() {
   arrow.innerHTML     = isHidden ? '&#9660;' : '&#9650;';
 }
 
-async function renderSubTicketSection(orderId) {
-  const subs = await getSubTickets(orderId);
+function getTrackedStepMs(step) {
+  if (!step) return 0;
+  if (typeof step.elapsedMs === 'number' && step.elapsedMs > 0) return step.elapsedMs;
+  const startedAt = step.startedAt || step.startTime;
+  if (!startedAt) return 0;
+  const pausedMs = step.totalPausedMs || step.pausedDuration || 0;
+  const endAt = step.endTime || step.completedAt || ((step.status === 'paused' && step.pausedAt) ? step.pausedAt : null);
+  const endMs = endAt ? new Date(endAt).getTime() : Date.now();
+  return Math.max(0, endMs - new Date(startedAt).getTime() - pausedMs);
+}
+
+function getTotalTrackedProductionMs(order) {
+  return (order?.workflowSteps || []).reduce((sum, step) => sum + getTrackedStepMs(step), 0);
+}
+
+function renderProductionProgressSection(order) {
+  const existing = document.getElementById('subTicketSection');
+  if (existing) existing.remove();
+
   const container = document.createElement('div');
   container.id = 'subTicketSection';
-  container.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:16px;';
-  const done = subs.filter(s => ['completed','shipped','received','ready-to-ship'].includes(s.status)).length;
-  let subsHTML = subs.length === 0 ? '<div style="color:#6b7280;font-size:12px;">No sub-tickets yet.</div>' :
-    subs.map(s => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;">
-      <a href="job-ticket.html?order=${s.orderId}" style="color:#2563eb;font-weight:600;">#${s.orderId}</a>
-      <span>${s.productType || '—'}</span>
-      <span>${(s.quantity||0).toLocaleString()} pcs</span>
-      <span style="padding:2px 8px;border-radius:12px;font-size:11px;background:${
-        ['completed','shipped','received','ready-to-ship'].includes(s.status)?'#dcfce7':'#fef3cd'
-      };color:${
-        ['completed','shipped','received','ready-to-ship'].includes(s.status)?'#15803d':'#92600a'
-      };">${s.status}</span>
-    </div>`).join('');
+  container.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;margin-bottom:16px;';
+
+  const steps = order?.workflowSteps || [];
+  const currentIdx = order?.currentStep || 0;
+  const currentTimer = getCurrentTimerInfo(order);
+  const totalTrackedMs = getTotalTrackedProductionMs(order);
+  const currentStep = steps[currentIdx] || null;
+  const nextStep = steps[currentIdx + 1] || null;
+
+  const statusTone = currentTimer
+    ? 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;'
+    : 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;';
+  const statusText = currentTimer
+    ? `${currentTimer.machine} • ${formatElapsedShort(Date.now() - new Date(currentTimer.startedAt).getTime())}`
+    : currentStep
+    ? `${currentStep.machine || 'Next machine'} • not started yet`
+    : 'Workflow not assigned yet';
+
+  const stepsHtml = steps.length
+    ? steps.map((step, idx) => {
+        const isCompleted = step.status === 'completed' || idx < currentIdx;
+        const isCurrent = idx === currentIdx && ['prepress-active','in-production','qc-checkout','ready-to-ship'].includes(order.status);
+        const bg = isCompleted ? '#16a34a' : isCurrent ? '#2563eb' : '#e5e7eb';
+        const color = isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280';
+        const labelBg = isCompleted ? '#dcfce7' : isCurrent ? '#dbeafe' : '#f3f4f6';
+        const tracked = getTrackedStepMs(step);
+        return `<div style="display:flex;align-items:flex-start;gap:10px;min-width:170px;flex:1;">
+          <div style="display:flex;flex-direction:column;align-items:center;min-width:18px;">
+            <div style="width:14px;height:14px;border-radius:999px;background:${bg};margin-top:4px;"></div>
+            ${idx < steps.length - 1 ? '<div style="width:2px;flex:1;min-height:26px;background:#d1d5db;margin-top:6px;"></div>' : ''}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:700;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${step.machine || `Step ${idx + 1}`}</div>
+            <div style="margin-top:3px;font-size:11px;color:#6b7280;">${step.operation || 'Production step'}</div>
+            <div style="margin-top:5px;display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:${labelBg};font-size:11px;color:${color};font-weight:600;">${isCompleted ? 'Done' : isCurrent ? 'Current machine' : 'Upcoming'}</div>
+            ${tracked > 0 ? `<div style="margin-top:5px;font-size:11px;color:#475569;">Worked: ${formatElapsedShort(tracked)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="font-size:12px;color:#6b7280;">No machine workflow is assigned to this job yet.</div>';
+
   container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div style="font-weight:700;font-size:14px;">🗂 Sub-Tickets &nbsp;<span style="font-weight:400;font-size:12px;color:#6b7280;">${done}/${subs.length} complete</span></div>
-      <a href="job-ticket.html?parent=${orderId}" class="btn btn-primary" style="font-size:12px;padding:5px 12px;">➕ Add Sub-Ticket</a>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
+      <div>
+        <div style="font-weight:800;font-size:14px;color:#0f172a;">Production Progress</div>
+        <div style="margin-top:6px;display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;${statusTone}">${statusText}</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Total worked</div>
+          <div style="margin-top:4px;font-size:16px;font-weight:800;color:#0f172a;">${totalTrackedMs > 0 ? formatElapsedShort(totalTrackedMs) : '0m'}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;min-width:180px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Up next</div>
+          <div style="margin-top:4px;font-size:13px;font-weight:700;color:#0f172a;">${nextStep?.machine || currentStep?.machine || 'Waiting to be assigned'}</div>
+        </div>
+      </div>
     </div>
-    ${subs.length > 0 ? `<div style="background:#e0f2fe;height:6px;border-radius:4px;margin-bottom:10px;"><div style="background:#2563eb;height:6px;border-radius:4px;width:${subs.length?Math.round(done/subs.length*100):0}%;"></div></div>` : ''}
-    ${subsHTML}
+    <div style="display:flex;gap:12px;overflow-x:auto;padding-top:4px;">${stepsHtml}</div>
   `;
+
   document.querySelector('.jt-container').insertBefore(container, document.querySelector('.jt-header').nextSibling);
 }
 
@@ -1003,6 +1039,7 @@ function updateFrameSheetLabels() {
 // ─────────────────────────────────────────────────────────────
 function onProductTypeChange() {
   const productType = document.getElementById('productType').value;
+  const facility = document.getElementById('facility').value;
   document.getElementById('otherProductRow').style.display = productType === 'Other' ? 'block' : 'none';
 
   // Show/hide pouch gusset field
@@ -1012,8 +1049,10 @@ function onProductTypeChange() {
   document.getElementById('gussetField').style.display = isPouch ? '' : 'none';
   const laminationField = document.getElementById('laminationField');
   const laminationSelect = document.getElementById('lamination');
+  const laminationToggle = document.getElementById('hasLamination');
   if (laminationField) laminationField.style.display = isLabelSheet ? 'none' : '';
-  if (isLabelSheet && laminationSelect) laminationSelect.value = 'None';
+  if (isLabelSheet && laminationSelect) laminationSelect.value = 'Gloss';
+  if (isLabelSheet && laminationToggle) laminationToggle.checked = false;
   document.getElementById('boxDepthField').style.display = isBox ? '' : 'none';
   document.getElementById('pouchCalcBox').style.display = isPouch ? '' : 'none';
   const wLabel = document.getElementById('widthLabel');
@@ -1026,7 +1065,7 @@ function onProductTypeChange() {
   if (!info) return;
 
   const matSel = document.getElementById('material');
-  matSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType);
+  matSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType, facility);
 
   document.getElementById('printType').value = info.defaultPrintType || 'Sheet';
   onPrintTypeChange();
@@ -1223,9 +1262,13 @@ function onColorModeChange() {
 // Finishing toggles — show/hide file slots & foil options
 // ─────────────────────────────────────────────────────────────
 function onFinishingChange() {
+  const hasLamination = document.getElementById('hasLamination')?.checked;
   const hasUV = document.getElementById('hasUV').checked;
   const hasFoil = document.getElementById('hasFoil').checked;
   const lamination = document.getElementById('lamination').value;
+  const laminationSection = document.getElementById('laminationSection');
+
+  if (laminationSection) laminationSection.style.display = hasLamination ? 'block' : 'none';
 
   // UV file slot
   document.getElementById('uvFileSlot').style.display = hasUV ? 'block' : 'none';
@@ -1235,7 +1278,7 @@ function onFinishingChange() {
   document.getElementById('foilFileSlot').style.display = hasFoil ? 'block' : 'none';
 
   // Finishing Notes — only show when at least one finishing option is selected
-  const hasAnyFinishing = hasUV || hasFoil || (lamination && lamination !== 'None');
+  const hasAnyFinishing = hasUV || hasFoil || hasLamination;
   const notesRow = document.getElementById('finishingNotesRow');
   if (notesRow) notesRow.style.display = hasAnyFinishing ? '' : 'none';
 
@@ -1258,10 +1301,9 @@ function checkDueDate() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('dueDate').min = today;
   updateCapacityHint();
+  updateFinishEta();
   updateDueDateCountdown();
-
-  const lt = LEAD_TIMES[productType];
-  hint.textContent = lt ? `Standard: ${lt.label}` : 'Standard: 3–5 business days';
+  hint.textContent = '';
 
   if (!dueDate) { warning.style.display = 'none'; approvalSection.style.display = 'none'; return; }
 
@@ -1292,6 +1334,55 @@ function checkDueDate() {
   warning.style.display = 'none';
   approvalSection.style.display = 'none';
   rushApproved = false;
+}
+
+async function updateFinishEta() {
+  const hintEl = document.getElementById('finishEtaHint');
+  const leadTimeEl = document.getElementById('leadTimeHint');
+  if (!hintEl) return;
+
+  const facility = document.getElementById('facility').value;
+  const productType = document.getElementById('productType').value;
+  const quantity = parseInt(document.getElementById('quantity').value) || 0;
+  const workflowKey = document.getElementById('workflowTemplate').value;
+  const workflowTpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+
+  if (!facility || !productType || !quantity || !workflowTpl?.steps?.length) {
+    hintEl.innerHTML = '';
+    if (leadTimeEl) leadTimeEl.textContent = '';
+    return;
+  }
+
+  const orderShape = {
+    id: editingDbId || null,
+    facility,
+    productType,
+    quantity,
+    piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
+    sheetCount: parseInt(document.getElementById('sheetCount').value) || Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet').value) || 1)),
+    colors: document.getElementById('colors')?.value || '',
+    hasWhiteLayer: document.getElementById('colors')?.value === 'CMYK + White',
+    hasUV: !!document.getElementById('hasUV')?.checked,
+    foilType: document.getElementById('hasFoil')?.checked ? (document.getElementById('foilType')?.value || 'Standard') : 'None',
+  };
+
+  try {
+    const finishSummary = await getFinishSummary(orderShape, workflowTpl.steps.map(machine => ({ machine })));
+    if (!finishSummary) {
+      hintEl.innerHTML = '';
+      if (leadTimeEl) leadTimeEl.textContent = '';
+      return;
+    }
+    const finishAt = finishSummary.finishAt;
+    const schedule = await estimateOrderSchedule(orderShape, workflowTpl.steps.map(machine => ({ machine })));
+    const dueDate = document.getElementById('dueDate').value ? new Date(document.getElementById('dueDate').value + 'T23:59:59') : null;
+    const meetsDueDate = !dueDate || finishAt.getTime() <= dueDate.getTime();
+    if (leadTimeEl) leadTimeEl.textContent = `Estimated workload: ${schedule.totalOrderHours.toFixed(1)} hrs`;
+    hintEl.innerHTML = `<span style="color:${meetsDueDate ? '#0f172a' : '#b91c1c'};font-weight:700;">${finishSummary.label}</span>`;
+  } catch (err) {
+    hintEl.innerHTML = '';
+    if (leadTimeEl) leadTimeEl.textContent = '';
+  }
 }
 
 function verifyRushCode() {
@@ -1378,15 +1469,19 @@ function updateCutMethodOptions() {
   const sel = document.getElementById('cutMethod');
   const currentVal = sel.value;
 
-  const is6KProduct = ['Labels (Roll)', 'Labels (Sheet)', 'Pouches', 'Stickers'].includes(productType);
+  const is6KProduct = ['Labels (Roll)', 'Pouches', 'Stickers'].includes(productType);
+  const isLabelSheet = productType === 'Labels (Sheet)';
   const is15KProduct = ['Folding Cartons / Boxes', 'Business Cards', 'Flyers / Postcards', 'Booklets'].includes(productType);
   const isBoyd = facility === 'boyd-street';
   const isOther = productType === 'Other';
 
   let options = [
     { value: 'none', label: 'No Cut Required' },
-    { value: 'na-roll', label: 'N/A — Printed Roll (no cutting)' },
   ];
+
+  if (document.getElementById('printType').value === 'Roll') {
+    options.push({ value: 'na-roll', label: 'N/A — Printed Roll (no cutting)' });
+  }
 
   // Pouches go straight to Karlville — no cut method needed
   if (productType === 'Pouches') {
@@ -1407,9 +1502,30 @@ function updateCutMethodOptions() {
       { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
     ]);
   } else if (isBoyd) {
+    if (['Vinyl Labels / 54\'\' Rolls', 'Diecut Stickers', 'Vinyl Signage', 'Window Decals', 'Wallpaper'].includes(productType)) {
+      options = [
+        { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
+      ];
+    } else if (productType === 'Folding Cartons / Boxes' || productType === 'Sheet Products (Boyd)') {
+      options = [
+        { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+      ];
+    } else if (productType === 'Banners / Large Format') {
+      options = [
+        { value: 'hand-cut', label: 'Hand Cutting' },
+      ];
+    } else {
+      options = options.concat([
+        { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
+        { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
+      ]);
+    }
+  } else if (isLabelSheet) {
     options = options.concat([
+      { value: 'die-cut', label: 'Die Cut (Moll Brothers)' },
+      { value: 'guillotine', label: 'Guillotine' },
+      { value: 'duplo', label: 'Duplo Flatbed' },
       { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
-      { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
     ]);
   } else if (is6KProduct) {
     options = options.concat([
@@ -1501,7 +1617,12 @@ function autoDetectWorkflow() {
     }
   } else if (productType === 'Pouches') {
     detectedKey = cutMethod === 'gm-die' ? '6k-pouches-die' : '6k-pouches-laser';
-  } else if (['Labels (Roll)', 'Labels (Sheet)', 'Stickers'].includes(productType)) {
+  } else if (productType === 'Labels (Sheet)') {
+    if (cutMethod === 'die-cut') detectedKey = '6k-sheet-die';
+    else if (cutMethod === 'duplo') detectedKey = '6k-sheet-duplo';
+    else if (cutMethod === 'graphtec-large') detectedKey = '6k-sheet-boyd';
+    else detectedKey = '6k-sheet-guillotine';
+  } else if (['Labels (Roll)', 'Stickers'].includes(productType)) {
     detectedKey = cutMethod === 'gm-die' ? '6k-labels-die' : '6k-labels-laser';
   } else if (productType === 'Folding Cartons / Boxes') {
     if (cutMethod === 'die-cut') detectedKey = '15k-box-die';
@@ -1517,6 +1638,7 @@ function autoDetectWorkflow() {
   document.getElementById('workflowTemplate').value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
   // update capacity hint now that workflow is known
   updateCapacityHint();
+  updateFinishEta();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1870,6 +1992,10 @@ async function saveTicket(suppressRedirect = false) {
             : `, needs ~${m.overtimeHoursNeededExact} overtime hrs total${m.overtimePerDayNeeded ? ` (~${m.overtimePerDayNeeded}/day)` : ''}`;
           return `${icon} ${m.machine}: queue clears in ~${m.backlogClearDays} days (${m.queueHours}hr), this order adds ${m.orderHours}hr, total ${m.totalHours}hr = ${m.totalDaysExact} days${overtimeLine}`;
         }).join('\n');
+        const primaryOverload = [...capacity.machineDetails].filter(m => !m.fits).sort((a, b) => b.overtimeHoursNeededExact - a.overtimeHoursNeededExact)[0];
+        const overtimeReason = primaryOverload
+          ? `Needs overtime approval: +${primaryOverload.overtimeHoursNeededExact} hrs on ${primaryOverload.machine}`
+          : 'Needs overtime approval';
 
         const msg = `⚠️ PRODUCTION CAPACITY WARNING\n\n` +
           `This order cannot be completed by the due date with the current workload.\n\n` +
@@ -1877,11 +2003,12 @@ async function saveTicket(suppressRedirect = false) {
           `Bottleneck: ${capacity.bottleneckMachine} — needs ${capacity.bottleneckDays} days\n\n` +
           `Machine breakdown:\n${detailLines}\n\n` +
           `${capacity.suggestedAction}\n\n` +
-          `Job ticket will be saved with status "Pending Confirmation" — needs supervisor approval.`;
+          `Job ticket will be saved with status "Pending Confirmation" and visible overtime flagging.`;
 
         alert(msg);
         capOrder._capacityOverride = true;
         capOrder._capacityDetails = capacity;
+        capOrder._confirmationReason = overtimeReason;
       }
     }
 
@@ -1948,7 +2075,7 @@ async function saveTicket(suppressRedirect = false) {
       hasWhiteLayer: colorMode === 'CMYK+White',
       hasSpecialColor: document.getElementById('hasSpecialColor').checked,
       specialColorDetails: document.getElementById('hasSpecialColor').checked ? document.getElementById('specialColorDetails').value.trim() : '',
-      lamination: document.getElementById('lamination').value,
+      lamination: document.getElementById('hasLamination')?.checked ? document.getElementById('lamination').value : 'None',
       hasUV: document.getElementById('hasUV').checked,
       hasFoil,
       foilType: hasFoil ? document.getElementById('foilType').value : 'None',
@@ -1982,7 +2109,7 @@ async function saveTicket(suppressRedirect = false) {
       materialShortage: capOrder?._materialShortage || false,
       materialShortageDetails: capOrder?._materialShortageDetails || null,
       needsConfirmation: !!capOrder?._capacityOverride,
-      confirmationReason: capOrder?._capacityOverride ? 'Capacity overload — needs supervisor confirmation'
+      confirmationReason: capOrder?._capacityOverride ? (capOrder._confirmationReason || 'Needs overtime approval')
         : '',
       holdReason: (dueDateCheck.isRush && !rushApproved) ? 'Rush order waiting for supervisor approval' : '',
       artworkFiles: allArtwork.filter(a => a.role === 'main'),
@@ -2100,6 +2227,7 @@ async function saveTicket(suppressRedirect = false) {
 async function loadOrderIntoForm(order) {
   renderAccountManagerIssueBanner(order);
   renderCurrentStepTimerBanner(order);
+  renderOvertimeApprovalBanner(order);
   document.getElementById('facility').value = order.facility || '';
   await new Promise(r => setTimeout(r, 10));
   populateProductTypes();
@@ -2126,7 +2254,7 @@ async function loadOrderIntoForm(order) {
 
   // Material
   if (order.productType) {
-    document.getElementById('material').innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(order.productType);
+    document.getElementById('material').innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(order.productType, order.facility || '');
   }
   document.getElementById('material').value = order.material || '';
 
@@ -2161,7 +2289,8 @@ async function loadOrderIntoForm(order) {
   }
 
   // Lamination
-  document.getElementById('lamination').value = order.lamination || 'None';
+  document.getElementById('hasLamination').checked = !!(order.lamination && order.lamination !== 'None');
+  document.getElementById('lamination').value = (order.lamination && order.lamination !== 'None') ? order.lamination : 'Gloss';
 
   // UV & Foil
   document.getElementById('hasUV').checked = order.hasUV || false;
@@ -2251,6 +2380,23 @@ function renderAccountManagerIssueBanner(order) {
   }
 }
 
+function renderOvertimeApprovalBanner(order) {
+  const banner = document.getElementById('overtimeApprovalBanner');
+  const textEl = document.getElementById('overtimeApprovalText');
+  const metaEl = document.getElementById('overtimeApprovalMeta');
+  if (!banner || !textEl || !metaEl) return;
+
+  if (order?.needsConfirmation && order?.confirmationReason) {
+    banner.style.display = 'block';
+    textEl.textContent = order.confirmationReason;
+    metaEl.textContent = 'Visible to account managers, production, and supervisors until Mauricio / supervisor confirms overtime.';
+  } else {
+    banner.style.display = 'none';
+    textEl.textContent = '';
+    metaEl.textContent = '';
+  }
+}
+
 function getCurrentTimerInfo(order) {
   if (!order) return null;
   if (order.status === 'prepress-active' && order.prepressStartedAt) {
@@ -2270,6 +2416,36 @@ function formatElapsedShort(ms) {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
+function formatElapsedWords(ms) {
+  const totalMinutes = Math.max(0, Math.round(ms / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0 && minutes > 0) return `${hours} hours ${minutes} min`;
+  if (hours > 0) return `${hours} hours`;
+  return `${minutes} min`;
+}
+
+function formatFinishStamp(dateLike) {
+  return new Date(dateLike).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+  });
+}
+
+async function getFinishSummary(orderLike, workflowSteps) {
+  if (!workflowSteps?.length) return null;
+  try {
+    const schedule = await estimateOrderSchedule(orderLike, workflowSteps);
+    const finishAt = new Date(schedule.finalFinishAt);
+    const remainingMs = Math.max(0, finishAt.getTime() - Date.now());
+    return {
+      finishAt,
+      label: `⏱ Expected finish: ${formatElapsedWords(remainingMs)} ${formatFinishStamp(finishAt)}`,
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 function renderCurrentStepTimerBanner(order) {
   const banner = document.getElementById('currentStepTimerBanner');
   const textEl = document.getElementById('currentStepTimerText');
@@ -2283,7 +2459,7 @@ function renderCurrentStepTimerBanner(order) {
 
   _currentStepTimerOrder = order || null;
 
-  const updateBanner = () => {
+  const updateBanner = async () => {
     const timerInfo = getCurrentTimerInfo(_currentStepTimerOrder);
     if (!timerInfo) {
       banner.style.display = 'none';
@@ -2294,7 +2470,8 @@ function renderCurrentStepTimerBanner(order) {
     banner.style.display = 'block';
     const elapsed = formatElapsedShort(Date.now() - new Date(timerInfo.startedAt).getTime());
     textEl.textContent = `${timerInfo.machine} • ${elapsed}`;
-    metaEl.textContent = `${timerInfo.note}${timerInfo.startedAt ? ` • started ${formatDateTime(timerInfo.startedAt)}` : ''}`;
+    const finishSummary = await getFinishSummary(_currentStepTimerOrder, (_currentStepTimerOrder?.workflowSteps || []).slice(_currentStepTimerOrder?.currentStep || 0));
+    metaEl.textContent = `${timerInfo.note}${timerInfo.startedAt ? ` • started ${formatDateTime(timerInfo.startedAt)}` : ''}${finishSummary ? ` • ${finishSummary.label.replace('⏱ ', '')}` : ''}`;
   };
 
   updateBanner();
