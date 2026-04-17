@@ -155,6 +155,7 @@
         </div>
 
         <div id="summaryWarnings" class="callout callout-amber" style="display:none;"></div>
+        <div id="benchmarkPanel" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1273,6 +1274,15 @@ function renderSummary({ mode, profile, material, footprint, fitsPerUnit, needed
   if (estimatorNotes) allWarnings.push(`Estimator notes: ${estimatorNotes}`);
   summaryWarnings.style.display = allWarnings.length ? '' : 'none';
   summaryWarnings.innerHTML = allWarnings.map(item => `• ${item}`).join('<br>');
+
+  // Market benchmark panel
+  if (typeof updateBenchmarkPanel === 'function') {
+    const bWidth  = parseFloat(document.getElementById('itemWidth')?.value)  || null;
+    const bHeight = parseFloat(document.getElementById('itemHeight')?.value) || null;
+    const bQty    = toNumber('quantity') || null;
+    const bTotal  = pricing.awaitingPricingTable ? null : (pricing.total || null);
+    updateBenchmarkPanel('benchmarkPanel', $('productType')?.value, bWidth, bHeight, bQty, bTotal);
+  }
 }
 
 function persistRatesAndRecalc() {
@@ -1307,5 +1317,6 @@ function resetRateInputs() {
   calculateEstimate();
 }
 </script>
+<script src="pulse-benchmark.js"></script>
 </body>
 </html>
