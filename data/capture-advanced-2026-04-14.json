@@ -1,0 +1,138 @@
+{
+  "vistaprint": {
+    "defaultPrices": {
+      "50": {
+        "total": 35.99,
+        "unit": 0.72
+      }
+    },
+    "sizePrices": {},
+    "price5000": null,
+    "unit5000": null,
+    "sizeInteracted": true,
+    "sizeMethod": "select_3x3_option",
+    "selectionsUsed": {
+      "selections[Roll Finishing Type]": "Slit Roll"
+    },
+    "pricingContext": "eyJ2ZXJzaW9uIjowLCJtZXJjaGFudElkIjoiVklTVEFQUklOVCIsIm1hcmtldCI6IlVTIiwiY3VzdG9tZXJHcm91cHMiOlsiYW5vbnltb3VzX3VzZXJzIiwibG9naW5fcHJvbXB0X25vdF9sb2dnZWRfaW5fY3VzdG9tZXJzIiwibm9fYWNjb3VudCIsIm5vdF9wcm9hZHZhbnRhZ2UiLCIyMDI1X2RlX3VucmVjb2duaXplZCIsImV4Y2x1ZGVzX3JuYl90ZXN0X2NhX3VrIiwiZXZlcnlvbmUiLCIyMDI1X0ZSX1VucmVjb2duaXplZCIsInNpdGVfdGFnZ2luZ19uZXdfY3VzdG9tZXIiLCJuZXdfdXNlcl9yZWdpc3RlcmVkX25vbnJlZ2lzdGVyZWQiLCJuZXdfY3VzdG9tZXJfbG9nZ2VkaW5fbG9nZ2Vkb3V0IiwicGRwX2Rlc2t0b3BfdXNlcnMiLCJkZXNpZ25fc2VydmljZXNfaHViX2luc3BpcmF0aW9uIiwiZXNfcGF5bWVudF9iZWZvcmVfYnJpZWZfdGVzdCIsIndpeF9kaXNjb3VudF9hbm9ueW1vdXMiLCJ3aXhfZGlzY291bnQiXX0",
+    "error": null
+  },
+  "axiom": {
+    "price": 112.68,
+    "shape": null,
+    "width": null,
+    "height": null,
+    "material": "40# Paper Liner",
+    "qty": null,
+    "allPrices": [
+      112.68,
+      147.62,
+      221.15
+    ],
+    "error": null
+  },
+  "stickermule": {
+    "price": null,
+    "pricingTable": null,
+    "configInteracted": false,
+    "networkPrices": [],
+    "error": null,
+    "allPrices": []
+  },
+  "gotprint": {
+    "price": null,
+    "priceSpec": null,
+    "networkApiCalls": [
+      {
+        "url": "https://static.gotprint.com/tl/css/cart/cart.css?v=0109_20260219_032136-100",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/assets/dyn/js/pb-price-table-3fd35328bfc4ce0ff92eb4e08f1a4f7c.js?vsn=d",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/assets/dyn/js/page-builder-341a9ccdeb857ac7fb549b2256a3329b.js?vsn=d",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/service/rest/v1/promobar/content?platform=1&type=1",
+        "status": 200
+      },
+      {
+        "url": "https://static.gotprint.com/tl/cli-app/dist/production/css/shoppingCart.css?v=0109_20260219_032136-100",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/assets/dyn/css/access_token.txt",
+        "status": 200
+      },
+      {
+        "url": "https://cdn.acsbapp.com/config/gotprint.com/config.json",
+        "status": 200
+      },
+      {
+        "url": "https://dx.mountain.com/spx?dxver=4.0.0&shaid=38876&tdr=&plh=https%3A%2F%2Fwww.gotprint.com%2Fhome.html&cb=16926659444736",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/service/rest/v1/i18n/lookup/resources",
+        "status": 200
+      },
+      {
+        "url": "https://www.gotprint.com/service/rest/v1/settings",
+        "status": 200
+      }
+    ],
+    "domPrices": [
+      10.96,
+      11.55,
+      11.66,
+      11.84,
+      12.33,
+      13.65,
+      14.59,
+      14.93,
+      15.71,
+      16.75,
+      17.5,
+      18.78,
+      19.2,
+      19.44,
+      19.8,
+      20.63,
+      22.28,
+      22.94,
+      23.14,
+      23.37,
+      25.38,
+      25.58,
+      26.03,
+      26.37,
+      27.05,
+      28.04,
+      35.2,
+      35.71,
+      35.8,
+      36.15,
+      37.4,
+      37.88,
+      40.42,
+      47.74,
+      48.62,
+      54.99,
+      55.32,
+      58.5,
+      69.93,
+      70.72,
+      72.94,
+      74.3,
+      75.2,
+      76.28,
+      107.8,
+      114.4,
+      213.9
+    ],
+    "error": null
+  }
+}

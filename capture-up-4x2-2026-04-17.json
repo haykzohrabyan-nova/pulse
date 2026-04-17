@@ -1,0 +1,62 @@
+{
+  "run_date": "2026-04-17T22:45:22.362Z",
+  "results": [
+    {
+      "id": "up-label-4x2-1000-pri8-v2",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 1000,
+      "total_price": 131.23,
+      "unit_price": 0.13123,
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "size_label": "2\" x 2\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "angular_scope_dom",
+      "notes": "Size confirmed: 2\" x 2\". W=2, H=2. Gloss Indoor"
+    },
+    {
+      "id": "up-label-4x2-5000-pri8-v2",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 5000,
+      "total_price": 309.16,
+      "unit_price": 0.06183,
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "size_label": "2\" x 2\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "angular_scope_dom",
+      "notes": "Size confirmed: 2\" x 2\". W=2, H=2. Gloss Indoor"
+    },
+    {
+      "id": "up-label-4x2-10000-pri8-v2",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 10000,
+      "total_price": 400,
+      "unit_price": 0.04,
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "size_label": "2\" x 2\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "angular_scope_dom",
+      "notes": "Size confirmed: 2\" x 2\". W=2, H=2. Gloss Indoor"
+    }
+  ]
+}

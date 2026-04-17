@@ -1,0 +1,437 @@
+{
+  "vistaprint": {},
+  "axiom": {
+    "prices": [
+      112.68,
+      147.62,
+      221.15
+    ],
+    "interactions": [],
+    "finalSpec": {
+      "material": "Banners & Signs",
+      "totalPrice": "112.68",
+      "unitPrice": "0.45"
+    }
+  },
+  "uprinting": {
+    "prices": [
+      131.23
+    ],
+    "priceTable": {
+      "totalPrice": "Quantity :      1,000               100            250            500            1,000            2,000            2,500            3,000            4,000            5,000            6,000            7,000            8,000            9,000            10,000            15,000            20,000            25,000            30,000            35,000            40,000            45,000            50,000            55,000            60,000            65,000            70,000            75,000            80,000            85,000            90,000            95,000            100,000                     Printing Time:       6 Business Days               6 Business Days            4 Business Days            2 Business Days            1 Business Day                   Printing Cost:   $131.23   ( $0.13 for each)      Printing Cost: $131.23   ( $0.13 for each)",
+      "allPrices": [
+        131.23
+      ]
+    },
+    "configState": {
+      "allPriceEls": [
+        {
+          "id": "",
+          "class": "price-wrap calc-group",
+          "text": "Quantity :\n1,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $131.23\n( $0.13 for each)"
+        },
+        {
+          "id": "price",
+          "class": "price-section ",
+          "text": "Quantity :\n1,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $131.23\n( $0.13 for each)"
+        },
+        {
+          "id": "",
+          "class": "comp-product-calculator-price-container",
+          "text": "Printing Cost: $131.23\n( $0.13 for each)"
+        },
+        {
+          "id": "price",
+          "class": "calc-price subtotal-price",
+          "text": "$131.23"
+        },
+        {
+          "id": "",
+          "class": "calc-price-per-piece ",
+          "text": "( $0.13 for each)"
+        },
+        {
+          "id": "",
+          "class": "accessibility-price hidden",
+          "text": "Printing Cost: $131.23   ( $0.13 for each)"
+        },
+        {
+          "id": "",
+          "class": "calc-price subtotal-price",
+          "text": "$131.23"
+        },
+        {
+          "id": "",
+          "class": "calc-price-per-piece ",
+          "text": "( $0.13 for each)"
+        },
+        {
+          "id": "",
+          "class": "comp-sticky-calc-price-container ng-scope",
+          "text": "Send This to My Email\nBy submitting, you agree to receiving marketing emails from UPrinting. See our Terms & Conditions and Privacy Policy. You can update your email preferences or unsubscribe anytime"
+        },
+        {
+          "id": "",
+          "class": "sticky-calc-price-container loaded",
+          "text": "Printing Cost:\n                \n                    \n                        \n                        \n                            $131.23\n                        \n                    \n               "
+        },
+        {
+          "id": "",
+          "class": "price-container ng-scope",
+          "text": "Printing Cost:\n                \n                    \n                        \n                        \n                            $131.23"
+        },
+        {
+          "id": "",
+          "class": "sticky-price",
+          "text": "$131.23"
+        },
+        {
+          "id": "",
+          "class": "original-price ng-binding ng-scope",
+          "text": "$131.23"
+        }
+      ],
+      "formData": {
+        "selects": [],
+        "inputs": [
+          {
+            "name": "",
+            "id": "desktop_search",
+            "type": "text",
+            "value": "",
+            "placeholder": "Search (e.g. labels, boxes, etc)",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "product_id",
+            "id": "",
+            "type": "hidden",
+            "value": "33",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "product_type",
+            "id": "",
+            "type": "hidden",
+            "value": "offset",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "calc_form_flag",
+            "id": "",
+            "type": "hidden",
+            "value": "n",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "coupon_code",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "tier_id",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr10",
+            "id": "attr10",
+            "type": "hidden",
+            "value": "1381",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr3",
+            "id": "attr3",
+            "type": "hidden",
+            "value": "1405",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "width",
+            "id": "width",
+            "type": "hidden",
+            "value": "0.5",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "height",
+            "id": "height",
+            "type": "hidden",
+            "value": "0.5",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr25",
+            "id": "attr25",
+            "type": "hidden",
+            "value": "1413",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr17",
+            "id": "attr17",
+            "type": "hidden",
+            "value": "1418",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr948",
+            "id": "attr948",
+            "type": "hidden",
+            "value": "99589",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr27",
+            "id": "attr27",
+            "type": "hidden",
+            "value": "1420",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr5",
+            "id": "attr5",
+            "type": "hidden",
+            "value": "1428",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr6",
+            "id": "attr6",
+            "type": "hidden",
+            "value": "1440",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr315",
+            "id": "attr315",
+            "type": "hidden",
+            "value": "18971",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "attr4",
+            "id": "attr4",
+            "type": "hidden",
+            "value": "1425",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "csrf",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "zip_code",
+            "id": "zip_code",
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter Zip",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "csrf",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "email",
+            "id": "",
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter your email",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "email",
+            "id": "",
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter your email",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "proofing_options",
+            "id": "",
+            "type": "checkbox",
+            "value": "pdf",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "newsletter_email",
+            "id": "",
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter your email",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "event_source_code",
+            "id": "event_source_code",
+            "type": "hidden",
+            "value": "FS",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "csrf",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "newsletter_email",
+            "id": "",
+            "type": "text",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "csrf",
+            "id": "",
+            "type": "hidden",
+            "value": "",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          },
+          {
+            "name": "",
+            "id": "share_calc_config_input",
+            "type": "text",
+            "value": "https://www.uprinting.com/roll-labels.html?attr3=1405&attr4=1425&attr5=1428&attr6=1440&attr10=1381&attr17=1418&attr25=1413&attr27=1420&attr315=18971&product_id=33&calc_variant=GRID",
+            "placeholder": "",
+            "min": "",
+            "max": ""
+          }
+        ]
+      },
+      "priceDataScript": " var calcId = \"#calc_33_grid\"; var ProductCalculator = document.querySelector(calcId); var initialEcommerceVariant = '|Size:2\" x 2\"|Die-Cutting:Square (Rounded Corners)|Shape:Rounded Corners|Substrate:White BOPP Label - Roll|'; var initialProductName = 'Roll Labels'; var initialUnitPrice = '0.13123'; var initialQty = '1000'; var CalcPricingData = {\"request\":{\"product_id\":\"33\",\"initial_price_data\":{\"attr3\":\"1405\",\"attr4\":\"1425\",\"attr5\":\"1428\",\"attr6\":\"1440\",\"attr10\":\"1381\",\"attr17\":\"1418\",\"attr25\":\"1413\",\"attr27\":\"1420\",\"attr315\":\"18971\",\"attr948\":\"99589\"}},\"response\":{\"price\":{\"price_source\":\"GRID_STACK\",\"orig_price\":131.23,\"total_price\":\"131.23\",\"price\":\"131.23\",\"product_markup\":0,\"product_markdown\":0,\"min_markup\":0,\"has_markdown\":0,\"exceeded_pricing_threshold\":\"n\",\"unit_price\":\"0.13123\",\"in_stock_flag\":\"y\",\"shipping_computation_type_id\":\"1\",\"shipping_grid_stack_id\":null,\"product_id\":\"33\",\"item_name\":\"Roll Labels\",\"pricing_system\":\"OFF\",\"account_type_code\":\"DIGI\",\"turnaround\":6,\"max_turnaround\":6,\"qty\":1000,\"sheet_qty\":1,\"page_qty\":1,\"maximum_order_quantity\":0,\"width\":\"2\",\"height\":\"2\",\"spine_width\":0,\"stock_attr_val_id\":\"295\",\"stake\":0,\"sku\":null,\"is_digital\":4,\"is_lfp\":0,\"has_mailing\":0,\"order_specs\":[{\"attr_val_order_spec_id\":\"21\",\"attr_val_id\":\"21\",\"attribute_id\":\"3\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"SZ\",\"order_spec_value\":\"2\\\" x 2\\\"\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Size\",\"sort\":\"2\",\"attribute_name\":\"Size\"},{\"attr_val_order_spec_id\":\"125\",\"attr_val_id\":\"87\",\"attribute_id\":\"4\",\"order_spec_option_id\":\"13\",\"order_spec_code\":\"SIDE\",\"order_spec_value\":\"Front Only\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Printed Side\",\"sort\":\"5\",\"attribute_name\":\"Printed Side\"},{\"attr_val_order_spec_id\":\"93\",\"attr_val_id\":\"95\",\"attribute_id\":\"5\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"QTY\",\"order_spec_value\":\"1,000\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Quantity\",\"sort\":\"7\",\"attribute_name\":\"Quantity\"},{\"attr_val_order_spec_id\":\"22677\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"5460\",\"order_spec_code\":\"DIECUT\",\"order_spec_value\":\"Square (Rounded Corners)\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Die-Cutting\",\"sort\":\"17\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"283\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"7512\",\"order_spec_code\":\"SHAPE\",\"order_spec_value\":\"Rounded Corners\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Shape\",\"sort\":\"33\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"126\",\"attr_val_id\":\"129\",\"attribute_id\":\"6\",\"order_spec_option_id\":\"32\",\"order_spec_code\":\"TA\",\"order_spec_value\":\"6 Business Days\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Turnaround\",\"sort\":\"41\",\"attribute_name\":\"Turnaround\"},{\"attr_val_order_spec_id\":\"26576\",\"attr_val_id\":\"302\",\"attribute_id\":\"27\",\"order_spec_option_id\":\"129\",\"order_spec_code\":\"WIND\",\"order_spec_value\":\"Not Important\",\"custom_flag\":\"n",
+      "pageGlobals": [
+        "website_config",
+        "page_product_id",
+        "ddConfig",
+        "ProductCalculator",
+        "initialProductName",
+        "initialUnitPrice",
+        "enabled_share_config",
+        "page_product_ids",
+        "isShareConfig",
+        "activeProductId"
+      ]
+    },
+    "apiCalls": [
+      {
+        "url": "https://staticecp.uprinting.com/11783/510x510/Label-Roll.jpg",
+        "status": 200,
+        "body": "����\u0000\u0010JFIF\u0000\u0001\u0001\u0000\u0000\u0001\u0000\u0001\u0000\u0000��\u0000\u0011Ducky\u0000\u0001\u0000\u0004\u0000\u0000\u0000d\u0000\u0000��\u0000\u0018Exif\u0000\u0000II*\u0000\b\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000��\u00030http://ns.adobe.com/xap/1.0/\u0000<?xpacket begin=\"﻿\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?> <x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"Adobe XMP Core 9.1-c001 79.1462899777, 2023/06/25-23:57:14        \"> <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"> <rdf:Description rdf:about=\"\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" xmlns:xmpMM=\"http://ns.adobe.com/xap/1.0/mm/\" xmlns:stRef=\"http://ns.adobe.com/xap/1.0/sType/Resour"
+      },
+      {
+        "url": "https://staticecp.uprinting.com/11783/530x530/Label-Roll.webp",
+        "status": 200,
+        "body": "RIFF�>\u0000\u0000WEBPVP8X\n\u0000\u0000\u0000 \u0000\u0000\u0000\u0011\u0002\u0000\u0011\u0002\u0000ICCP�\u0001\u0000\u0000\u0000\u0000\u0001�\u0000\u0000\u0000\u0000\u00040\u0000\u0000mntrRGB XYZ \u0007�\u0000\u0001\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000acsp\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000��\u0000\u0001\u0000\u0000\u0000\u0000�-\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\tdesc\u0000\u0000\u0000�\u0000\u0000\u0000$rXYZ\u0000\u0000\u0001\u0014\u0000\u0000\u0000\u0014gXYZ\u0000\u0000\u0001(\u0000\u0000\u0000\u0014bXYZ\u0000\u0000\u0001<\u0000\u0000\u0000\u0014wtpt\u0000\u0000\u0001P\u0000\u0000\u0000\u0014rTRC\u0000\u0000\u0001d\u0000\u0000\u0000(gTRC\u0000\u0000\u0001d\u0000\u0000\u0000(bTRC\u0000\u0000\u0001d\u0000\u0000\u0000(cprt\u0000\u0000\u0001�\u0000\u0000\u0000<mluc\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\fenUS\u0000\u0000\u0000\b\u0000\u0000\u0000\u001c\u0000s\u0000R\u0000G\u0000BXYZ \u0000\u0000\u0000\u0000\u0000\u0000o�\u0000\u00008�\u0000\u0000\u0003�XYZ \u0000\u0000\u0000\u0000\u0000\u0000b�\u0000\u0000��\u0000\u0000\u0018�XYZ \u0000\u0000\u0000\u0000\u0000\u0000$�\u0000\u0000\u000f�\u0000\u0000��XYZ \u0000\u0000\u0000\u0000\u0000\u0000��\u0000\u0001\u0000\u0000\u0000\u0000�-para\u0000\u0000\u0000\u0000\u0000\u0004\u0000\u0000\u0000\u0002ff\u0000\u0000�\u0000\u0000\rY\u0000\u0000\u0013�\u0000\u0000\n[\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000mluc\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\fenUS\u0000\u0000\u0000 \u0000\u0000\u0000\u001c\u0000G\u0000o\u0000o\u0000g\u0000l\u0000e\u0000 \u0000I\u0000n\u0000c\u0000.\u0000 \u00002\u00000\u00001\u00006VP8 �<\u0000"
+      },
+      {
+        "url": "https://staticecp.uprinting.com/15131/530x530/BOPP-Material_Video_Thumbnail-1.jpeg",
+        "status": 200,
+        "body": "����\u0000\u0010JFIF\u0000\u0001\u0001\u0000\u0000\u0001\u0000\u0001\u0000\u0000��\u0002DICC_PROFILE\u0000\u0001\u0001\u0000\u0000\u00024\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000mntrRGB XYZ \u0007�\u0000\u0006\u0000\u0004\u0000\u0011\u0000+\u00008acsp\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000��\u0000\u0001\u0000\u0000\u0000\u0000�-\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\ndesc\u0000\u0000\u0000�\u0000\u0000\u0000ybkpt\u0000\u0000\u0001x\u0000\u0000\u0000\u0014wtpt\u0000\u0000\u0001�\u0000\u0000\u0000\u0014cprt\u0000\u0000\u0001�\u0000\u0000\u0000\u0015rXYZ\u0000\u0000\u0001�\u0000\u0000\u0000\u0014gXYZ\u0000\u0000\u0001�\u0000\u0000\u0000\u0014bXYZ\u0000\u0000\u0001�\u0000\u0000\u0000\u0014rTRC\u0000\u0000\u0001�\u0000\u0000\u0000@gTRC\u0000\u0000\u0001�\u0000\u0000\u0000@bTRC\u0000\u0000\u0001�\u0000\u0000\u0000@desc\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u001fsRGB IEC61966-2-1 black scaled\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000XYZ \u0000\u0000\u0000\u0000\u0000\u0000\u0003\u0016\u0000\u0000\u00033\u0000\u0000\u0002�XYZ \u0000\u0000\u0000\u0000\u0000\u0000��\u0000\u0001\u0000\u0000\u0000\u0000�-text\u0000\u0000\u0000\u0000Dropbox, Inc.\u0000\u0000\u0000XYZ \u0000\u0000\u0000\u0000\u0000\u0000o�\u0000\u00008�\u0000\u0000\u0003�XY"
+      },
+      {
+        "url": "https://staticecp.uprinting.com/6763/Square-Rounded.svg",
+        "status": 200,
+        "body": "<svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path opacity=\"0.7\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3 7.44C3 4.98786 4.98786 3 7.44 3H24.56C27.0121 3 29 4.98786 29 7.44V24.56C29 27.0121 27.0121 29 24.56 29H7.44C4.98786 29 3 27.0121 3 24.56V7.44ZM7.44 4.2C5.6506 4.2 4.2 5.6506 4.2 7.44V24.56C4.2 26.3494 5.6506 27.8 7.44 27.8H24.56C26.3494 27.8 27.8 26.3494 27.8 24.56V7.44C27.8 5.6506 26.3494 4.2 24.56 4.2H7.44Z\" fill=\"#333333\"/>\n</svg>\n"
+      },
+      {
+        "url": "https://staticecp.uprinting.com/6759/Rectangle-Rounded.svg",
+        "status": 200,
+        "body": "<svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path opacity=\"0.7\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M1 11.5616C1 9.04232 2.98786 7 5.44 7H26.56C29.0121 7 31 9.04232 31 11.5616V20.4384C31 22.9577 29.0121 25 26.56 25H5.44C2.98786 25 1 22.9577 1 20.4384V11.5616ZM5.44 8.23288C3.6506 8.23288 2.2 9.72322 2.2 11.5616V20.4384C2.2 22.2768 3.6506 23.7671 5.44 23.7671H26.56C28.3494 23.7671 29.8 22.2768 29.8 20.4384V11.5616C29.8 9.72322 28.3494 8.23"
+      },
+      {
+        "url": "https://module-api.uprinting.com/js/ab-test-library/dri/optimizely-lib/dist/optimizely-lib.js",
+        "status": 200,
+        "body": "!function(e){var t={};function n(o){if(t[o])return t[o].exports;var r=t[o]={i:o,l:!1,exports:{}};return e[o].call(r.exports,r,r.exports,n),r.l=!0,r.exports}n.m=e,n.c=t,n.d=function(e,t,o){n.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:o})},n.r=function(e){\"undefined\"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:\"Module\"}),Object.defineProperty(e,\"__esModule\",{value:!0})},n.t=function(e,t){if(1&t&&(e=n(e)),8&t)return e;if(4&t&&\"object\"==typeof e&&e"
+      },
+      {
+        "url": "https://s1.uprinting.com/assets/img/uprinting-logo-new.svg",
+        "status": 200,
+        "body": "<svg width=\"638\" height=\"143\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g clip-path=\"url(#a)\"><path d=\"M87.56 3.86c-7.87 0-11.97 2.94-11.97 2.94v.03h-.01v114.29s-7.59 6.95-23.5 6.95c-17.84 0-27.55-10.99-27.55-18.63V6.81s-4.17-2.95-12.25-2.95S0 6.8 0 6.8v102.43c0 16.28 22.82 27.28 29.87 30.19 8.19 3.35 25.82 3.01 34.81 2.16 16.15-1.48 34.84-11 34.84-11V6.8s-4.1-2.94-11.97-2.94\" fill=\"#126CB5\"/><path d=\"m261.09 22.92-5.32 14.85c-1.45-1.14-4.19-2.02-5.64-2.02-5.47 0-10.38 4.19-10.38 10.53v46."
+      },
+      {
+        "url": "https://s1.uprinting.com/assets/libraries/headjs/1.0.3/head.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+        "status": 200,
+        "body": "/*! up-static 2026-03-28 */\n!function(a,b){\"use strict\";function c(a){y[y.length]=a}function d(a){var b=new RegExp(\" ?\\\\b\"+a+\"\\\\b\");x.className=x.className.replace(b,\"\")}function e(a,b){for(var c=0,d=a.length;c<d;c++)b.call(a,a[c],c)}function f(){var b,d,f,g;x.className=x.className.replace(/ (w-|eq-|gt-|gte-|lt-|lte-|portrait|no-portrait|landscape|no-landscape)\\d+/g,\"\"),b=a.innerWidth||x.clientWidth,d=a.outerWidth||a.screen.width,i.screen.innerWidth=b,i.screen.outerWidth=d,c(\"w-\"+b),e(z.screens,"
+      },
+      {
+        "url": "https://s1.uprinting.com/assets/css_min/page-product/page-product-btf.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+        "status": 200,
+        "body": ".comp-faq-container .faq-item .faq-answer img,.comp-faq-container.accordion .panel .faq-answer img{max-width:100%;height:auto}.comp-templates-nav-tabs-container .templates-nav-tabs .list-link:hover,.comp-templates-nav-tabs-container .templates-nav-tabs li.active .list-link{background:0 0;border:none}.comp-share-calc-config-modal .modal-header:focus,.comp-share-calc-config-modal .share-config-details:focus,.comp-share-calc-config-modal .share-config-modal-title:focus{outline:0}.comp-qna-form-cont"
+      },
+      {
+        "url": "https://s1.uprinting.com/assets/scripts_min/headjs_loaders/info-scripts.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+        "status": 200,
+        "body": "/*! up-static 2026-03-28 */\ntracker_enabled&&(head.load({tracker:tracker_domain+\"/info-1.0.3-min.js\"}),head.ready([\"tracker\"],function(){head.load({upTrackerScript:website_config.static_url+\"/assets/scripts_min/vanilla_js/info.min.js\"+website_config.static_version})}));"
+      }
+    ],
+    "error": null
+  }
+}

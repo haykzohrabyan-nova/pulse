@@ -1,0 +1,947 @@
+{
+  "schema_version": "1.0",
+  "product_scope": "labels",
+  "description": "Raw competitor label pricing captures. Each entry is a single data point from a competitor site. Do not normalize or infer specs not explicitly stated. Confidence field: high=confirmed quote, medium=page-displayed price, low=promo/example snippet.",
+  "last_updated": "2026-04-14",
+  "capture_tool_version": "2.0",
+  "captures": [
+    {
+      "id": "vistaprint-roll-labels-50qty-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_cimpress_api_intercept",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels 1\"×1\" White Paper Matte Slit Roll, 50 qty",
+      "specs": {
+        "width_in": 1,
+        "height_in": 1,
+        "shape": "square",
+        "format": "slit_roll",
+        "quantity": 50,
+        "material": "White Paper",
+        "finish": "Matte"
+      },
+      "pricing": {
+        "total_price": 35.99,
+        "unit_price": 0.72,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "pricing_service_api"
+      },
+      "raw_snippet": "website-pricing-service-cdn.prices.cimpress.io/v4/prices: qty=50 totalListPrice.untaxed=$35.99, unitListPrice.untaxed=$0.72",
+      "notes": "Intercepted Cimpress pricing service API response during page load. Product key PRD-DF5PWTHC v75. Smallest available size (1\"x1\") and smallest qty shown. Script: capture-vp-pricing-service.js",
+      "blocker": null,
+      "next_step": "Get price for 3\"x3\" size and 5000 qty — need pricingContext token and correct size selections"
+    },
+    {
+      "id": "vistaprint-roll-labels-1000qty-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_cimpress_api_intercept",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels 1\"×1\" White Paper Matte Slit Roll, 1,000 qty",
+      "specs": {
+        "width_in": 1,
+        "height_in": 1,
+        "shape": "square",
+        "format": "slit_roll",
+        "quantity": 1000,
+        "material": "White Paper",
+        "finish": "Matte"
+      },
+      "pricing": {
+        "total_price": 110.24,
+        "unit_price": 0.12,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "pricing_service_api"
+      },
+      "raw_snippet": "website-pricing-service-cdn.prices.cimpress.io/v4/prices: qty=1000 totalListPrice.untaxed=$110.24, unitListPrice.untaxed=$0.12",
+      "notes": "Intercepted same Cimpress pricing service API call — estimatedPrices includes multiple qty tiers. Same spec as 50-qty entry. Script: capture-vp-pricing-service.js",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "axiomprint-roll-labels-250qty-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/product/roll-labels-335",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_headless_dom_extraction",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels 2\"×3\" (default configurator state), 250 qty",
+      "specs": {
+        "width_in": 2,
+        "height_in": 3,
+        "shape": "rectangle",
+        "format": "roll",
+        "quantity": 250,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 112.68,
+        "unit_price": 0.451,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "configurator_live"
+      },
+      "raw_snippet": "DOM price on axiomprint.com/product/roll-labels-335: $112.68 for 250 qty (default state)",
+      "notes": "Found correct product URL by following nav: axiomprint.com → catalog/labels-stickers → roll-labels-335. __NEXT_DATA__ confirms product: 'Roll Labels' at /product/roll-labels-335. Ant Design (antd) configurator. Default qty=250. Script: capture-api-direct.js",
+      "blocker": null,
+      "next_step": "5000 qty not available in standard configurator (max=2500). Need custom quote for 5000+."
+    },
+    {
+      "id": "axiomprint-roll-labels-2500qty-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/product/roll-labels-335",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_antd_dropdown_interaction",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels 2\"×3\" (default size), 2,500 qty (max standard configurator qty)",
+      "specs": {
+        "width_in": 2,
+        "height_in": 3,
+        "shape": "rectangle",
+        "format": "roll",
+        "quantity": 2500,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 213.27,
+        "unit_price": 0.0853,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "configurator_live"
+      },
+      "raw_snippet": "After clicking Ant Design qty dropdown → '2,500' option: DOM price updated to $213.27",
+      "notes": "Playwright clicked .ant-select qty dropdown, found options [250, 500, 1000, 1500, 2000, 2500] — max qty is 2500. Clicked 2500, price updated to $213.27. 5000 qty NOT available — requires custom quote (contact axiomprint.com). Script: capture-vistaprint-api.js",
+      "blocker": null,
+      "next_step": "5000 qty: custom quote required from axiomprint.com"
+    },
+    {
+      "id": "stickermule-custom-labels-—-any--2026-04-14",
+      "competitor": "stickermule",
+      "competitor_display": "Sticker Mule",
+      "source_url": "https://www.stickermule.com/custom-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "json_ld_schema",
+      "confidence": "medium",
+      "product_type": "labels",
+      "raw_spec_description": "Custom labels — any shape or size (starting price)",
+      "specs": {},
+      "pricing": {
+        "total_price": 47,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": 4,
+        "shipping_included": true,
+        "price_type": "starting_from"
+      },
+      "raw_snippet": "{\"@type\":\"AggregateOffer\",\"@id\":\"/custom-labels#offers\",\"priceCurrency\":\"USD\",\"lowPrice\":\"47\"}",
+      "notes": "Starting price from JSON-LD AggregateOffer. Shipping: free. 4-day turnaround: true. Full per-size pricing requires headless browser.",
+      "blocker": null,
+      "next_step": "Use Playwright to interact with size configurator for 3x3, 5000 pcs quote"
+    },
+    {
+      "id": "gotprint-roll-labels-72-manual-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/g/stickers-and-labels.html",
+      "captured_at": "2026-04-14",
+      "capture_method": "html_scrape_nav_markup",
+      "capture_source": "manual",
+      "confidence": "low",
+      "product_type": "labels",
+      "raw_spec_description": "Roll Labels 2\" circle — promo/example price from nav markup (quantity unspecified)",
+      "specs": {
+        "width_in": 2,
+        "height_in": 2,
+        "shape": "circle",
+        "format": "roll",
+        "quantity": null,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 72.92,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "example_promo"
+      },
+      "raw_snippet": "Roll Labels $72.92",
+      "notes": "Manually captured from navigation cross-sell markup. Quantity not stated — treat as promo example anchor only. GotPrint URL now returns 404 on automated fetch; manual browser access may still show this page. Vue.js configurator required for spec-accurate pricing.",
+      "blocker": "vue_js_configurator",
+      "next_step": "Intercept XHR/fetch in browser devtools on gotprint.com roll-labels page to find Vue.js pricing API"
+    },
+    {
+      "id": "gotprint-auto-capture-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/g/stickers-and-labels.html",
+      "captured_at": "2026-04-14",
+      "capture_method": "fetch_failed",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "Fetch failed: HTTP 404",
+      "blocker": "HTTP 404",
+      "next_step": null
+    },
+    {
+      "id": "vistaprint-capture-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers",
+      "captured_at": "2026-04-14",
+      "capture_method": "html_fetch_attempt",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "Static HTML returned (1272401 bytes) but contains no pricing data. All product/price content requires JS execution.",
+      "blocker": "full_js_ssr_required",
+      "next_step": "Use Playwright to navigate to vistaprint.com/custom-labels and configure 3x3 label"
+    },
+    {
+      "id": "axiomprint-capture-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/labels/",
+      "captured_at": "2026-04-14",
+      "capture_method": "html_fetch_attempt",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "All 5 URL variants returned 404 or isFallback:true. Last HTTP status: 404. Site uses Next.js dynamic routing — product URLs may follow a different pattern.",
+      "blocker": "nextjs_dynamic_routing_404",
+      "next_step": "Open axiomprint.com in browser and inspect the URL for label products. Or call 747-888-7777 / email order@axiomprint.com for manual quote."
+    },
+    {
+      "id": "gotprint-headless-dom-price-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/store/stickers-and-labels/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_dom_text_extraction",
+      "capture_source": "automated_headless",
+      "confidence": "low",
+      "product_type": "labels",
+      "raw_spec_description": "Price extracted from GotPrint page text (spec unknown)",
+      "specs": {},
+      "pricing": {
+        "total_price": 69.93,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "page_displayed"
+      },
+      "raw_snippet": null,
+      "notes": "Price found in page text: $69.93. Spec not confirmed. All prices on page: [16.75, 11.84, 14.93, 26.03, 11.55, 19.44, 48.62, 69.93].",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "vistaprint-headless-failed-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_headless_attempt",
+      "capture_source": "automated_headless",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "Playwright navigated to VP. API calls: 2. No price extracted. Titles visited: \"Custom Labels & Stickers: Print Online | VistaPrint\". Config found: false.",
+      "blocker": "no_price_in_dom_or_xhr",
+      "next_step": "Try direct configurator URL with pre-configured params in query string"
+    },
+    {
+      "id": "axiomprint-headless-failed-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_headless_attempt",
+      "capture_source": "automated_headless",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "Homepage loaded. Label product link: https://axiomprint.com/catalog/labels-stickers. API calls: 20. No price extracted.",
+      "blocker": "no_price_on_config_page",
+      "next_step": "Manual: visit axiomprint.com and navigate to label printing, then record URL and price"
+    },
+    {
+      "id": "stickermule-breakthrough-failed-2026-04-14",
+      "competitor": "stickermule",
+      "competitor_display": "Sticker Mule",
+      "source_url": "https://www.stickermule.com/custom-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_headless_breakthrough",
+      "capture_source": "automated_headless",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": null,
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": null
+      },
+      "raw_snippet": null,
+      "notes": "Breakthrough attempt failed. Form elements found: 0. API URLs probed: 11. Error: none — pricing not exposed by any API or DOM path tried. API probe found no 2xx pricing endpoints. JS chunks inspected for pricing table.",
+      "blocker": "configurator_price_not_accessible",
+      "next_step": "Consider manual browser session: open custom-labels page, configure 3x3/5000/matte, copy price and paste into raw data manually"
+    },
+    {
+      "id": "uprinting-3x3-5000-final-2026-04-14",
+      "competitor": "uprinting",
+      "competitor_display": "UPrinting",
+      "source_url": "https://www.uprinting.com/roll-labels.html",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_verified_dropdown",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "labels",
+      "raw_spec_description": "Roll Labels, 3\"x3\", qty=5000, White BOPP",
+      "specs": {
+        "width_in": 3,
+        "height_in": 3,
+        "quantity": 5000,
+        "material": "White BOPP",
+        "format": "roll"
+      },
+      "pricing": {
+        "total_price": 505.85,
+        "unit_price": 0.1012,
+        "currency": "USD",
+        "turnaround_days": 6,
+        "shipping_included": false,
+        "price_type": "configured_quote"
+      },
+      "raw_snippet": "Quantity :\n5,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $505.85\n( $0.10 for each)",
+      "notes": "Final verified capture. size=\"3\"x3\"\", qty=5000. PriceWrap: Quantity :\n5,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $505.85\n( $0.10 for each)",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "axiomprint-3x3-bopp-2500-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/product/roll-labels-335",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_antd_dropdown_interaction",
+      "capture_source": "automated_headless",
+      "confidence": "low",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels shape? 3\"×3\" (dims set), material?, qty? (configurator max)",
+      "specs": {
+        "width_in": 3,
+        "height_in": 3,
+        "shape": null,
+        "format": "roll",
+        "quantity": 2500,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 112.68,
+        "unit_price": 0.0451,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "configurator_live"
+      },
+      "raw_snippet": "Ant Design configurator: shape=null, material=40# Paper Liner, qty=null, allPrices=[112.68,147.62,221.15]",
+      "notes": "Advanced pass. Shape selection: not confirmed. Material: 40# Paper Liner. Max configurator qty = 2500 (5000+ needs custom quote). All prices on page: [112.68,147.62,221.15].",
+      "blocker": null,
+      "next_step": "5000 qty: custom quote required from axiomprint.com"
+    },
+    {
+      "id": "axiomprint-targeted-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/product/roll-labels-335",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_antd_dropdown_waitForSelector",
+      "capture_source": "automated_headless",
+      "confidence": "low",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels ?, material?, qty?",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "shape": null,
+        "format": "roll",
+        "quantity": null,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 112.68,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "configurator_live"
+      },
+      "raw_snippet": "sizeSelected=\"null\", matSelected=\"null\", qtySelected=\"null\". Options found: {\"0\":[\"2\\\" x 3\\\"\",\"2\\\" x 3.5\\\"\",\"2\\\" x 4\\\"\",\"2\\\" x 4.5\\\"\",\"3\\\" x 4\\\"\",\"3\\\" x 5\\\"\"]}",
+      "notes": "Targeted Ant Design interaction with waitForSelector. Size: \"null\". Material: \"null\". Qty: \"null\". Configurator max = 2500.",
+      "blocker": null,
+      "next_step": "5000 qty requires custom quote from axiomprint.com"
+    },
+    {
+      "id": "vistaprint-5000qty-final-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_cimpress_api_nodejs",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels Slit Roll — default size (shape/size not confirmed), 5,000 qty",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "shape": null,
+        "format": "slit_roll",
+        "quantity": 5000,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 219.19,
+        "unit_price": 0.05,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "cimpress_api_nodejs_request"
+      },
+      "raw_snippet": "Playwright context.request.get() bypassed CORS. shapeClicked=\"Rounded Square\", sizeFilledIn=false, capturedAfterShape=true. Selections used: {\"selections[Roll Finishing Type]\":\"Slit Roll\",\"selections[Shape]\":\"Rounded Square\"}",
+      "notes": "Cimpress pricing service via Node.js-side request (not browser fetch — no CORS issue). Shape: \"Rounded Square\". Size 3×3 filled: false. New API call after shape: true. Material type: VP likely uses White Paper (not BOPP) for roll labels — spec delta to note.",
+      "blocker": null,
+      "next_step": "Confirm 3\"×3\" size is reflected in pricingContext by watching selections[] after shape+size interaction"
+    },
+    {
+      "id": "axiomprint-best-available-2026-04-14",
+      "competitor": "axiomprint",
+      "competitor_display": "Axiom Print",
+      "source_url": "https://axiomprint.com/product/roll-labels-335",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_antd_dropdown_waitForSelector",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels 3\" x 4\", qty? (best available to 3\"×3\" — no 3×3 in configurator)",
+      "specs": {
+        "width_in": 3,
+        "height_in": 4,
+        "shape": "rectangle",
+        "format": "roll",
+        "quantity": null,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 112.68,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "configurator_live"
+      },
+      "raw_snippet": "Size dropdown options: [112.68,147.62,221.15]. NO 3\"×3\" option available in standard configurator. Best available: 3\" x 4\".",
+      "notes": "IMPORTANT: Axiom roll labels configurator (/product/roll-labels-335) does NOT offer 3\"×3\" size. Available sizes: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. Best available for comparison: 3\" x 4\". No material dropdown visible — material not configurable from size dropdown. 5000+ qty requires custom quote.",
+      "blocker": null,
+      "next_step": "For exact 3×3 quote from Axiom: call 747-888-7777 or visit axiomprint.com for custom quote"
+    },
+    {
+      "id": "vistaprint-browser-click-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_browser_click_through",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels default size, 5,000 qty",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "shape": "Rounded Square",
+        "format": "slit_roll",
+        "quantity": 5000,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 544.86,
+        "unit_price": 0.11,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "cimpress_api_nodejs_with_3x3_selections"
+      },
+      "raw_snippet": "$49.99 | $0.12 | $9.99 | $0.21 each / 48 units | $35.20",
+      "notes": "Browser click-through pass. Shape clicked: Rounded Square. Size inputs filled: false. Method: cimpress_api_nodejs_with_3x3_selections. Selections: {\"selections[Roll Finishing Type]\":\"Slit Roll\",\"selections[Shape]\":\"Rounded Square\",\"selections[Width]\":\"3\",\"selections[Height]\":\"3\",\"selections[Custom Width]\":\"3\",\"selections[Custom Height]\":\"3\"}",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "gotprint-browser-click-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/store/stickers-and-labels/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_browser_click_through",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels, size=?, qty=?, material=?",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "shape": "Square",
+        "format": "roll",
+        "quantity": null,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 72.92,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "dom_text_extraction"
+      },
+      "raw_snippet": null,
+      "notes": "Browser click-through. Configurator found: false. Options found: {}. Method: dom_text_extraction",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "stickermule-browser-click-2026-04-14",
+      "competitor": "stickermule",
+      "competitor_display": "Sticker Mule",
+      "source_url": "https://www.stickermule.com/custom-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_browser_click_through",
+      "capture_source": "automated_headless",
+      "confidence": "none",
+      "product_type": "labels",
+      "raw_spec_description": "Custom Labels, size=?, qty=?",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "format": "sheet_or_roll",
+        "quantity": null,
+        "material": null
+      },
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": 4,
+        "shipping_included": true,
+        "price_type": "not_captured"
+      },
+      "raw_snippet": "Skip to main content\n\nSticker Mule and our third-party partners use cookies and other tools to collect information you provide as well as your interaction with our websites for performance improvement",
+      "notes": "Browser click-through. Configurator found: true. URLs tried: https://www.stickermule.com/custom-labels, https://www.stickermule.com/products/custom-labels, https://www.stickermule.com/labels. Method: null",
+      "blocker": "No price captured. State: {\"sizeSelected\":null,\"qtySelected\":null,\"visibleInputs\":3,\"apiCalls\":27}",
+      "next_step": "Upload-first flow confirmed. Manual: upload placeholder file on stickermule.com/custom-labels, set 3×3, 5000 qty, read price"
+    },
+    {
+      "id": "gotprint-configurator-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_vue_dropdown_click",
+      "capture_source": "automated_headless",
+      "confidence": "none",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels shape=null size=null paper=null finish=null qty=null",
+      "specs": {
+        "shape": null,
+        "size": null,
+        "material": null,
+        "finish": null,
+        "quantity": null
+      },
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": false,
+        "price_type": "not_captured"
+      },
+      "raw_snippet": "subtotal=null shapeOpts=[] sizeOpts=[] paperOpts=[]",
+      "notes": "GP configurator found at /products/roll-labels/order. Shapes: . Sizes: . Paper: . Finish: . Exception: elementHandle.click: Timeout 30000ms exceeded.\nCall log:\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not enabled\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is not enabled\n    - retrying click action\n      - waiting 100ms\n    57 × waiting for element to be visible, enabled and stable\n       - element is not enabled\n     - retrying click action\n       - waiting 500ms\n",
+      "blocker": "Price not in DOM after configuration. Shape=null Size=null Paper=null Finish=null Qty=null",
+      "next_step": "GP configurator requires specific Vue.js interaction not captured by headless. Try a real browser session on /products/roll-labels/order with DevTools open."
+    },
+    {
+      "id": "vistaprint-custom-diecut-2026-04-14",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_custom_diecut_scroll_cimpress",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels Custom Die-Cut size unconfirmed, qty=5000",
+      "specs": {
+        "width_in": null,
+        "height_in": null,
+        "shape": "Custom (Die-Cut)",
+        "format": "slit_roll",
+        "quantity": 5000,
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 219.19,
+        "unit_price": 0.05,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": null,
+        "price_type": "cimpress_direct_no_size"
+      },
+      "raw_snippet": "allPrices={\"50\":35.99,\"1000\":110.24} method=cimpress_direct_no_size",
+      "notes": "Custom Die-Cut shape clicked. Size inputs found: NO — still below fold or not rendering in headless. Method: cimpress_direct_no_size. Notes: Rounded Square + Width=3 Height=3: $219.19",
+      "blocker": "Size 3×3 not confirmed — pricingContext may not encode custom dimensions without actual input interaction",
+      "next_step": "VP Custom Die-Cut size inputs require actual browser scroll + fill. Try opening VP in real Chrome, clicking Custom Die-Cut, scrolling to Size section, filling 3×3."
+    },
+    {
+      "id": "gotprint-native-select-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_native_select_direct",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Roll Labels shape=\"null\" size=\"Square\" paper=\"null\" finish=\"null\" qty=\"null\"",
+      "specs": {
+        "shape": null,
+        "size": "Square",
+        "material": null,
+        "finish": null,
+        "quantity": null
+      },
+      "pricing": {
+        "total_price": 72.92,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": false,
+        "price_type": "configurator_dom_subtotal"
+      },
+      "raw_snippet": "allPriceTexts=[\"$24.85\",\"$13.65\",\"$29.75\",\"$72.92\",\"$6.99\"]",
+      "notes": "GP /products/roll-labels/order — native <select> confirmed. Shapes: Select Option. Sizes: Rectangle - Rounded, Square - Rounded, Arched, Circle, Heart, Starburst, Oval, Rectangle. Paper: 4\" x 4\", 5\" x 5\". Finish: Clear BOPP Label, White BOPP Label, White Vinyl Label, White Removable Label, Clear Removable Label, Silver Foil BOPP Label, White Textured Label - Estate #8, Cream Laid Textured Label, White Laid Textured Label. Square shape option not found",
+      "blocker": null,
+      "next_step": null
+    },
+    {
+      "id": "gotprint-configurator-final-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_native_select_by_name",
+      "capture_source": "automated_headless",
+      "confidence": "low",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Configurator explored, price not captured",
+      "specs": {},
+      "pricing": {
+        "total_price": null,
+        "unit_price": null,
+        "currency": "USD",
+        "turnaround_days": null,
+        "shipping_included": false,
+        "price_type": "not_captured"
+      },
+      "raw_snippet": "Shapes/sizes explored: {\"Square - Rounded\":[],\"Rectangle\":[],\"Square\":[]}. Paper options: . Finish options: .",
+      "notes": "GP configurator at /products/roll-labels/order confirmed. Native <select> elements by name attribute. Shape options: Rectangle - Rounded, Square - Rounded, Arched, Circle, Heart, Starburst, Oval, Rectangle, Square. Square shape sizes: ?. Square-Rounded shape sizes: ?. Rectangle shape sizes: ?. Paper options: Clear BOPP Label, White BOPP Label, White Vinyl Label, White Removable Label, Clear Removable Label, Silver Foil BOPP Label, White Textured, Cream Laid Textured, White Laid Textured. Finish options: Clear Gloss Laminate (Indoor), Clear Gloss Laminate (Outdoor), Matte Finish (Indoor). NOTE: No qty selector on configurator page — qty is entered after clicking \"Upload Front\" or \"Design Online\". Shipping rules from product details: 0.5\" x 0.5\" - 3\" x 3\" = up to 1000 qty/roll. 3\" x 3\" IS a supported size. To get exact price: complete full flow on /products/roll-labels/order → Upload → enter qty 5000.",
+      "blocker": "Qty selector only appears in upload/design flow — subtotal shows $0.00 until artwork uploaded. Manual flow required for price with qty.",
+      "next_step": "Manual browser: go to gotprint.com/products/roll-labels/order, select Square (or Square-Rounded) + size closest to 3×3 + White BOPP + Matte, click Upload Front (use any placeholder image), enter qty 5000, capture price."
+    },
+    {
+      "id": "gotprint-shape-size-map-2026-04-14",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-14",
+      "capture_method": "playwright_native_select_js_dispatch",
+      "capture_source": "automated_headless",
+      "confidence": "medium",
+      "product_type": "roll_labels",
+      "raw_spec_description": "shape=\"Square - Rounded\" size=\"3\" x 3\"\" paper=\"null\" finish=\"null\"",
+      "specs": {
+        "shape": "Square - Rounded",
+        "size": "3\" x 3\"",
+        "material": null,
+        "finish": null
+      },
+      "pricing": {
+        "total_price": 24.85,
+        "unit_price": null,
+        "currency": "USD",
+        "price_type": "configurator_subtotal"
+      },
+      "raw_snippet": "shape_size_map={\"Rectangle - Rounded\":[\"0.5\\\" x 1\\\"\",\"0.5\\\" x 2\\\"\",\"0.75\\\" x 1.5\\\"\",\"1\\\" x 2\\\"\",\"1.5\\\" x 2.5\\\"\",\"1.5\\\" x 3\\\"\",\"1.5\\\" x 3.5\\\"\",\"2\\\" x 3\\\"\",\"2.5\\\" x 3\\\"\",\"2.5\\\" x 3.5\\\"\",\"2.5\\\" x 4\\\"\",\"2.5\\\" x 5\\\"\",\"2.5\\\" x 7\\\"\",\"3\\\" x 4\\\"\",\"3\\\" x 5\\\"\",\"3\\\" x 5.5\\\"\",\"3.5\\\" x 4\\\"\",\"3.5\\\" x 5\\\"\",\"4\\\" x 5\\\"\",\"5\\\" x 7\\\"\",\"6\\\" x 6.5\\\"\"],\"Square - Rounded\":[\"1\\\" x 1\\\"\",\"1.5\\\" x 1.5\\\"\",\"2\\\" x 2\\\"\",\"2.5\\\" x 2.5\\\"\",\"3\\\" x 3\\\"\",\"4\\\" x 4\\\"\",\"5\\\" x 5\\\"\"],\"Arched\":[\"3\\\" x 4\\\" Arched\"],\"Circle\":[\"0.75\\\" Diameter\",\"1\\\" Diameter",
+      "notes": "Configurator: /products/roll-labels/order — native selects by name=shape/size/paper/finish/color. All shape → size options: {\"Rectangle - Rounded\":[\"0.5\\\" x 1\\\"\",\"0.5\\\" x 2\\\"\",\"0.75\\\" x 1.5\\\"\",\"1\\\" x 2\\\"\",\"1.5\\\" x 2.5\\\"\",\"1.5\\\" x 3\\\"\",\"1.5\\\" x 3.5\\\"\",\"2\\\" x 3\\\"\",\"2.5\\\" x 3\\\"\",\"2.5\\\" x 3.5\\\"\",\"2.5\\\" x 4\\\"\",\"2.5\\\" x 5\\\"\",\"2.5\\\" x 7\\\"\",\"3\\\" x 4\\\"\",\"3\\\" x 5\\\"\",\"3\\\" x 5.5\\\"\",\"3.5\\\" x 4\\\"\",\"3.5\\\" x 5\\\"\",\"4\\\" x 5\\\"\",\"5\\\" x 7\\\"\",\"6\\\" x 6.5\\\"\"],\"Square - Rounded\":[\"1\\\" x 1\\\"\",\"1.5\\\" x 1.5\\\"\",\"2\\\" x 2\\\"\",\"2.5\\\" x 2.5\\\"\",\"3\\\" x 3\\\"\",\"4\\\" x 4\\\"\",\"5\\\" x 5\\\"\"],\"Arched\":[\"3\\\" x 4\\\" Arched\"],\"Circle\":[\"0.75\\\" Diameter\",\"1\\\" Diameter\",\"1.25\\\" Diameter\",\"1.5\\\" Diameter\",\"2\\\" Diameter\",\"2.5\\\" Diameter\",\"3\\\" Diameter\",\"3.5\\\" Diameter\",\"4\\\" Diameter\",\"5\\\" Diameter\"],\"Heart\":[\"1.5\\\" x 1.5\\\" Heart\"],\"Starburst\":[\"1.625\\\" x 1.625\\\"\"],\"Oval\":[\"0.75\\\" x 1.5\\\"\",\"1.5\\\" x 2.5\\\"\",\"2\\\" x 3\\\"\",\"3\\\" x 4\\\"\"],\"Rectangle\":[\"2.5\\\" x 3.5\\\"\",\"3.5\\\" x 4\\\"\",\"3.5\\\" x 5\\\"\",\"4\\\" x 6\\\" (Standard)\"],\"Square\":[\"4\\\" x 4\\\"\",\"5\\\" x 5\\\"\"]}. Shapes with 3×3: Square - Rounded. Best available for 3×3 target: shape=\"Square - Rounded\" size=\"3\" x 3\"\". NOTE: Qty selector NOT on configurator page — must upload artwork to proceed to qty+price. Materials confirmed: Clear BOPP, White BOPP, White Vinyl, White Removable, Clear Removable, Silver Foil BOPP. Finishes: Clear Gloss (Indoor), Clear Gloss (Outdoor), Matte Finish (Indoor).",
+      "blocker": null,
+      "next_step": "Manual: gotprint.com/products/roll-labels/order → shape=\"Square - Rounded\" → size=\"3\" x 3\"\" → White BOPP → Matte → Upload any image → enter qty 5000 → read subtotal."
+    }
+  ],
+  "capture_coverage_summary": {
+    "vistaprint": {
+      "status": "partial",
+      "confidence": "medium",
+      "last_method": "playwright_browser_click_through",
+      "verified_prices": [
+        {
+          "qty": 50,
+          "total": 35.99,
+          "unit": 0.72,
+          "spec": "1×1 White Paper Matte (old)"
+        },
+        {
+          "qty": 1000,
+          "total": 110.24,
+          "unit": 0.12,
+          "spec": "1×1 White Paper Matte (old)"
+        },
+        {
+          "qty": 5000,
+          "total": 219.19,
+          "unit": 0.05,
+          "spec": "default size (shape/size not confirmed)"
+        },
+        {
+          "qty": 5000,
+          "total": 544.86,
+          "unit": 0.11,
+          "spec": "default size (size unconfirmed)"
+        }
+      ]
+    },
+    "axiomprint": {
+      "status": "partial",
+      "confidence": "low",
+      "last_method": "playwright_antd_dropdown_waitForSelector",
+      "verified_prices": [
+        {
+          "qty": 250,
+          "total": 112.68,
+          "unit": 0.451,
+          "spec": "2×3 default (old capture)"
+        },
+        {
+          "qty": 2500,
+          "total": 213.27,
+          "unit": 0.0853,
+          "spec": "2×3 default (old capture)"
+        },
+        {
+          "qty": 2500,
+          "total": 112.68,
+          "unit": 0.0451,
+          "spec": "Square 3×3 White Matte BOPP (conf=low)"
+        }
+      ],
+      "notes": "CONFIRMED: no 3\"×3\" option in standard configurator. Sizes: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. Best available: 3\" x 4\". Max qty = 2500. 5000+ needs custom quote."
+    },
+    "gotprint": {
+      "status": "partial",
+      "confidence": "medium",
+      "last_method": "playwright_native_select_js_dispatch",
+      "configurator_url": "https://www.gotprint.com/products/roll-labels/order",
+      "shape_size_map": {
+        "Rectangle - Rounded": [
+          "0.5\" x 1\"",
+          "0.5\" x 2\"",
+          "0.75\" x 1.5\"",
+          "1\" x 2\"",
+          "1.5\" x 2.5\"",
+          "1.5\" x 3\"",
+          "1.5\" x 3.5\"",
+          "2\" x 3\"",
+          "2.5\" x 3\"",
+          "2.5\" x 3.5\"",
+          "2.5\" x 4\"",
+          "2.5\" x 5\"",
+          "2.5\" x 7\"",
+          "3\" x 4\"",
+          "3\" x 5\"",
+          "3\" x 5.5\"",
+          "3.5\" x 4\"",
+          "3.5\" x 5\"",
+          "4\" x 5\"",
+          "5\" x 7\"",
+          "6\" x 6.5\""
+        ],
+        "Square - Rounded": [
+          "1\" x 1\"",
+          "1.5\" x 1.5\"",
+          "2\" x 2\"",
+          "2.5\" x 2.5\"",
+          "3\" x 3\"",
+          "4\" x 4\"",
+          "5\" x 5\""
+        ],
+        "Arched": [
+          "3\" x 4\" Arched"
+        ],
+        "Circle": [
+          "0.75\" Diameter",
+          "1\" Diameter",
+          "1.25\" Diameter",
+          "1.5\" Diameter",
+          "2\" Diameter",
+          "2.5\" Diameter",
+          "3\" Diameter",
+          "3.5\" Diameter",
+          "4\" Diameter",
+          "5\" Diameter"
+        ],
+        "Heart": [
+          "1.5\" x 1.5\" Heart"
+        ],
+        "Starburst": [
+          "1.625\" x 1.625\""
+        ],
+        "Oval": [
+          "0.75\" x 1.5\"",
+          "1.5\" x 2.5\"",
+          "2\" x 3\"",
+          "3\" x 4\""
+        ],
+        "Rectangle": [
+          "2.5\" x 3.5\"",
+          "3.5\" x 4\"",
+          "3.5\" x 5\"",
+          "4\" x 6\" (Standard)"
+        ],
+        "Square": [
+          "4\" x 4\"",
+          "5\" x 5\""
+        ]
+      },
+      "shapes_with_3x3": [
+        "Square - Rounded"
+      ],
+      "paper_options": [
+        "Clear BOPP Label",
+        "White BOPP Label",
+        "White Vinyl Label",
+        "White Removable Label",
+        "Clear Removable Label",
+        "Silver Foil BOPP Label"
+      ],
+      "finish_options": [
+        "Clear Gloss Laminate (Indoor)",
+        "Clear Gloss Laminate (Outdoor)",
+        "Matte Finish (Indoor)"
+      ],
+      "best_available_for_3x3": {
+        "shape": "Square - Rounded",
+        "size": "3\" x 3\""
+      },
+      "notes": "Configurator found and fully explored. Native selects. No qty selector on config page — qty comes after upload. Subtotal = $0 without upload. Price capture requires manual flow: select options → upload → qty → checkout."
+    },
+    "uprinting": {
+      "status": "live",
+      "confidence": "high",
+      "last_method": "playwright_verified_dropdown",
+      "reason": "Roll Labels 3\"x3\", qty=5000: $505.85."
+    },
+    "stickermule": {
+      "status": "blocked",
+      "confidence": "none",
+      "last_method": "playwright_headless_breakthrough",
+      "reason": "Breakthrough attempt failed. Form elements found: 0. API URLs probed: 11. Error: none — pricing not exposed by any API o"
+    }
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "initialPriceData": {
+    "fullPriceData": "{\"price_source\":\"GRID_STACK\",\"orig_price\":131.23,\"total_price\":\"131.23\",\"price\":\"131.23\",\"product_markup\":0,\"product_markdown\":0,\"min_markup\":0,\"has_markdown\":0,\"exceeded_pricing_threshold\":\"n\",\"unit_price\":\"0.13123\",\"in_stock_flag\":\"y\",\"shipping_computation_type_id\":\"1\",\"shipping_grid_stack_id\":null,\"product_id\":\"33\",\"item_name\":\"Roll Labels\",\"pricing_system\":\"OFF\",\"account_type_code\":\"DIGI\",\"turnaround\":6,\"max_turnaround\":6,\"qty\":1000,\"sheet_qty\":1,\"page_qty\":1,\"maximum_order_quantity\":0,\"width\":\"2\",\"height\":\"2\",\"spine_width\":0,\"stock_attr_val_id\":\"295\",\"stake\":0,\"sku\":null,\"is_digital\":4,\"is_lfp\":0,\"has_mailing\":0,\"order_specs\":[{\"attr_val_order_spec_id\":\"21\",\"attr_val_id\":\"21\",\"attribute_id\":\"3\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"SZ\",\"order_spec_value\":\"2\\\" x 2\\\"\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Size\",\"sort\":\"2\",\"attribute_name\":\"Size\"},{\"attr_val_order_spec_id\":\"125\",\"attr_val_id\":\"87\",\"attribute_id\":\"4\",\"order_spec_option_id\":\"13\",\"order_spec_code\":\"SIDE\",\"order_spec_value\":\"Front Only\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Printed Side\",\"sort\":\"5\",\"attribute_name\":\"Printed Side\"},{\"attr_val_order_spec_id\":\"93\",\"attr_val_id\":\"95\",\"attribute_id\":\"5\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"QTY\",\"order_spec_value\":\"1,000\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Quantity\",\"sort\":\"7\",\"attribute_name\":\"Quantity\"},{\"attr_val_order_spec_id\":\"22677\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"5460\",\"order_spec_code\":\"DIECUT\",\"order_spec_value\":\"Square (Rounded Corners)\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Die-Cutting\",\"sort\":\"17\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"283\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"7512\",\"order_spec_code\":\"SHAPE\",\"order_spec_value\":\"Rounded Corners\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Shape\",\"sort\":\"33\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"126\",\"attr_val_id\":\"129\",\"attribute_id\":\"6\",\"order_spec_option_id\":\"32\",\"order_spec_code\":\"TA\",\"order_spec_value\":\"6 Business Days\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Turnaround\",\"sort\":\"41\",\"attribute_name\":\"Turnaround\"},{\"attr_val_order_spec_id\":\"26576\",\"attr_val_id\":\"302\",\"attribute_id\":\"27\",\"order_spec_option_id\":\"129\",\"order_spec_code\":\"WIND\",\"order_spec_value\":\"Not Important\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Unwind Direction\",\"sort\":\"42\",\"attribute_name\":\"Unwind Direction\"},{\"attr_val_order_spec_id\":\"35274\",\"attr_val_id\":\"300\",\"attribute_id\":\"17\",\"order_spec_option_id\":\"8464\",\"order_spec_code\":\"FLAM\",\"order_spec_value\":\"Gloss Indoor\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Front Lamination\",\"sort\":\"1405\",\"attribute_name\":\"Lamination\"},{\"attr_val_order_spec_id\":\"35275\",\"attr_val_id\":\"300\",\"attribute_id\":\"17\",\"order_spec_option_id\":\"8398\",\"order_spec_code\":\"BLAM\",\"order_spec_value\":\"None\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Back Lamination\",\"sort\":\"1406\",\"attribute_name\":\"Lamination\"},{\"attr_val_order_spec_id\":\"34990\",\"attr_val_id\":\"295\",\"attribute_id\":\"25\",\"order_spec_option_id\":\"8182\",\"order_spec_code\":\"SUBST\",\"order_spec_value\":\"White BOPP Label - Roll\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Substrate\",\"sort\":\"1431\",\"attribute_name\":\"Material\"}],\"display_specs\":[{\"attribute_id\":\"10\",\"attribute_name\":\"Shape\",\"attr_value\":\"Square (Rounded Corners)\",\"sort\":\"2\",\"prod_attr_val_id\":\"1381\",\"order_spec_codes\":[\"SHAPE\",\"DIECUT\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"3\",\"attribute_name\":\"Size\",\"attr_value\":\"2\\\" x 2\\\"\",\"sort\":\"3\",\"prod_attr_val_id\":\"1405\",\"order_spec_codes\":[\"SZ\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"25\",\"attribute_name\":\"Material\",\"attr_value\":\"White BOPP\",\"sort\":\"4\",\"prod_attr_val_id\":\"1413\",\"order_spec_codes\":[\"SUBST\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"17\",\"attribute_name\":\"Lamination\",\"attr_value\":\"Gloss Laminate\",\"sort\":\"5\",\"prod_attr_val_id\":\"1418\",\"order_spec_codes\":[\"FLAM\",\"BLAM\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"315\",\"attribute_name\":\"Color\",\"attr_value\":\"Full Color\",\"sort\":\"6\",\"prod_attr_val_id\":\"18971\",\"order_spec_codes\":[],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"27\",\"attribute_name\":\"Unwind Direction\",\"attr_value\":\"Not Important\",\"sort\":\"8\",\"prod_attr_val_id\":\"1420\",\"order_spec_codes\":[\"WIND\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"4\",\"attribute_name\":\"Printed Side\",\"attr_value\":\"Front Only\",\"sort\":\"9\",\"prod_attr_val_id\":\"1425\",\"order_spec_codes\":[\"SIDE\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"5\",\"attribute_name\":\"Quantity\",\"attr_value\":\"1,000\",\"sort\":\"10\",\"prod_attr_val_id\":\"1428\",\"order_spec_codes\":[\"QTY\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"6\",\"attribute_name\":\"Printing Time\",\"attr_value\":\"6 Business Days\",\"sort\":\"11\",\"prod_attr_val_id\":\"1440\",\"order_spec_codes\":[\"TA\"],\"hide_to_customer_flag\":\"n\"}],\"allow_reorder_flag\":\"y\",\"qpi\":135,\"wtpi\":0.00067,\"cpp_d\":0.683,\"sht_height_d\":38.58,\"sht_width_d\":12.48,\"markup_amt_digital\":180,\"no_sd\":1,\"max_to\":6,\"min_to\":6,\"lead_time\":6,\"flat_area\":\"4.0000000000000000\",\"flat_area_sq_ft\":\"0.0277777777777777\",\"finished_width\":\"2\",\"finished_height\":\"2\",\"finished_area\":\"4.0000000000000000\",\"finished_area_sq_ft\":\"0.0277777777777777\",\"cpp\":0.683,\"sht_height\":38.58,\"sht_width\":12.48,\"no_sht\":1,\"qty_per_group\":1,\"no_groups\":1000,\"sets_per_pad\":1,\"weight_factors\":[],\"material_factors\":[],\"factors\":{\"width\":\"2\",\"height\":\"2\",\"is_digital\":4,\"qpi\":135,\"wtpi\":0.00067,\"cpp_d\":0.683,\"sht_height_d\":38.58,\"sht_width_d\":12.48,\"markup_amt_digital\":180,\"no_sd\":1,\"qty\":1000,\"max_to\":6,\"min_to\":6,\"lead_time\":6,\"flat_area\":\"4.0000000000000000\",\"flat_area_sq_ft\":\"0.0277777777777777\",\"finished_width\":\"2\",\"finished_height\":\"2\",\"finished_area\":\"4.0000000000000000\",\"finished_area_sq_ft\":\"0.0277777777777777\",\"cpp\":0.683,\"sht_height\":38.58,\"sht_width\":12.48,\"no_sht\":1,\"qty_per_group\":1,\"no_groups\":1000,\"sets_per_pad\":1,\"weight_factors\":[],\"material_factors\":[]},\"weight\":2.68,\"bln_custom_size\":false,\"bln_custom_qty\":false,\"calc_version\":2,\"price_data\":{\"attr3\":\"1405\",\"attr4\":\"1425\",\"attr5\":\"1428\",\"attr6\":\"1440\",\"attr10\":\"1381\",\"attr17\":\"1418\",\"attr25\":\"1413\",\"attr27\":\"1420\",\"attr315\":\"18971\",\"product_id\":\"33\",\"addon_attributes_limit\":[],\"get_shipping_base_price\":true},\"shipping_base_price\":\"131.23\",\"addon_attrs\":[],\"available_turnaround_options\":[],\"cached_data\":false,\"cached_price\":false,\"cached\":false,\"use_local_memcache\":true,\"response_milliseconds\":\"215\",\"discounted_price\":null}",
+    "qty": 1000,
+    "totalPrice": "131.23",
+    "price": "131.23",
+    "unitPrice": "0.13123",
+    "width": "2",
+    "height": "2",
+    "turnaround": 6,
+    "priceDataField": "{\"attr3\":\"1405\",\"attr4\":\"1425\",\"attr5\":\"1428\",\"attr6\":\"1440\",\"attr10\":\"1381\",\"attr17\":\"1418\",\"attr25\":\"1413\",\"attr27\":\"1420\",\"attr315\":\"18971\",\"product_id\":\"33\",\"addon_attributes_limit\":[],\"get_shipping_base_price\":true}"
+  },
+  "clickResult": {
+    "clicked": true,
+    "tag": "SPAN",
+    "class": "",
+    "id": ""
+  },
+  "postClickPrice": {
+    "qty": 5000,
+    "price": "309.16",
+    "unitPrice": "0.06183",
+    "totalPrice": "309.16",
+    "turnaround": 6
+  },
+  "qtyPriceTable": [
+    {
+      "tag": "A",
+      "text": "100",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "250",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "500",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "1,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "2,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "2,500",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "3,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "4,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "5,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "6,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "7,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "8,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "9,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "10,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "15,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "20,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "25,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "30,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "35,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "40,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "45,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "50,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "55,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "60,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "65,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "70,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "75,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "80,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "85,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "90,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "95,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "100,000",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "6 Business Days",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "4 Business Days",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "2 Business Days",
+      "href": "",
+      "dataQty": null
+    },
+    {
+      "tag": "A",
+      "text": "1 Business Day",
+      "href": "",
+      "dataQty": null
+    }
+  ],
+  "angularScope": {
+    "functions": [],
+    "selectedSpecs": "{\"3\":\"1405\",\"4\":\"1425\",\"5\":1430,\"6\":\"1440\",\"10\":\"1381\",\"17\":\"1418\",\"25\":\"1413\",\"27\":\"1420\",\"315\":\"18971\"}",
+    "currentConfig": "{\"mobileMenuMaxHeight\":0,\"isStickyHeaderNavOpen\":false,\"currentSizeIdValue\":0,\"previousSizeIdValue\":0,\"tabTop\":1259.34375,\"templateLoaded\":true,\"paperSpecSelected\":false,\"not_sticky_header\":true}"
+  },
+  "pricingAPICalls": [
+    {
+      "url": "https://s1.uprinting.com/assets/css_min/components/calculators/calculator-variants/gridlist-calc.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "status": 200,
+      "body": "@media (min-width:992px) and (max-width:1140px){.grid-gridlist .calculator-shipping-container{padding-left:25px;padding-right:25px}}.grid-gridlist .custom-size-tooltip{float:none;margin:0;position:relative}.grid-gridlist .custom-size-tooltip .tooltip-label{top:3px;position:relative;margin-right:4.5px}.grid-gridlist .calc-attr{grid-template-columns:1fr 2fr}.grid-gridlist .box-calc-attr{align-items:flex-start}.grid-gridlist .box-calc-attr .calculator-label{flex-direction:column;align-items:flex-start}.grid-gridlist .filter-attrs-container{grid-column:2}.grid-gridlist .filter-attrs-container .box-calc-attr{display:block}.grid-gridlist .price-section .quantity-group .site-dropdown:not(.with-addon-price){width:55%}"
+    },
+    {
+      "url": "https://www.uprinting.com/muffins/info-1.0.3-min.js",
+      "status": 200,
+      "body": "function Tracker_Main(page_id,website_code,dev_mode){var _this=this;_this.page_id=page_id;_this.website_code=website_code;_this.logQueue=new Array();_this.pixel_url=tracker_domain+'/_log.php';_this.dev_mode=(dev_mode!='undefined')?dev_mode:0;_this.flushInterval=2000;_this.log_px=new Image();_this.flushLastCall=0;this.log=function(name,value,target,callback){var value=(value==null)?'0':value;var target=(target==null)?'0':target;var callback=(callback==null)?'':callback;if(_this.isUnique(name,value,target)==true){_this.logQueue.push({\"name\":name,\"value\":value,\"target\":target});if(_this.dev_mode==1&&typeof console=='object')\r\nTracker_SafeLog('Tracked event '+name+' with value '+value+' and target '+target);if(callback!='')\r\n_this.webkitCleanup(callback);}\r\nwindow.setTimeout(_this.flush,_this.flushInterval);return _this;}\r\nthis.flush=function(group_parent){var group_parent=(typeof group_parent=='string')?group_parent:0;var flushTime=Math.floor(new Date().getTime()/1000);if(_this.logQueue.length==0)\r\nreturn false;if(flushTime==_this.lastFlushCall)\r\nreturn false;var url_str=\"?page_id=\"+_this.page_id+\"&itapi_sid=\"+Tracker_GetCookie('__session_id')+\"&visitor_id=\"+Tracker_GetCookie('__uptracker')+\"&page_url=\"+encodeURIComponent(document.location.href)+\"&website_code=\"+website_code;for(i=0;i<_this.logQueue.length;i++){url_str+='&n[]='+_this.logQueue[i].name+'&v[]='+_this.logQueue[i].value+'&t[]='+_this.logQueue[i].target;}\r\nurl_str+='&r='+Math.floor(Math.random()*100000);if(isNaN(group_parent)==true){url_str+='&group_parent='+group_parent;}\r\nelse\r\nurl_str+='&group_parent=0';_this.log_px.src=_this.pixel_url+url_str;_this.lastFlushCall=Math.floor(new Date().getTime()/1000);_this.logQueue=new Array();return _this;}\r\nthis.isUnique=function(name,value,target){if(_this.logQueue.length==0){return true;}\r\nelse{for(i=0;i<_this.logQueue.length;i++){if((_this.logQueue[i]['name']==name)&&(_this.logQueue[i]['value']==value)&&(_this.logQueue[i]['target']==target)){return false;}}\r\nreturn true;}}\r\nthis.webkitCleanup=function(callback){var group_parent=(typeof group_parent=='string')?group_parent:0;var supportsCORS=(typeof XMLHttpRequest!=\"undefined\"&&\"withCredentials\"in new XMLHttpRequest());if(_this.logQueue.length==0)\r\nreturn false;var url_str=\"?page_id=\"+_this.page_id+\"&itapi_sid=\"+Tracker_GetCookie('__session_id')+\"&page_url=\"+document.location.href+\"&website_code=\"+website_code;for(i=0;i<_this.logQueue.length;i++){url_str+='&n[]='+_this.logQueue[i].name+'&v[]='+_this.logQueue[i].value+'&t[]='+_this.logQueue[i].target;}\r\nurl_str+='&r='+Math.floor(Math.random()*100000);if(isNaN(group_parent)==true){url_str+='&group_parent='+group_parent;}\r\nelse\r\nurl_str+='&group_parent=0';if(supportsCORS){var xhr=new XMLHttpRequest();xhr.open('GET',_this.pixel_url+url_str,false);xhr.onreadystatechange=function(){if(xhr.readyState>=this.opened)\r\nxhr.abort();}\r\ntry{xhr.send();}\r\ncatch(e){}}\r\nelse{var img=new Image();img.src=_this.pixel_url+url_str;}\r\n_this.logQueue=new Array();(callback"
+    },
+    {
+      "url": "https://www.uprinting.com/muffins/issue.php?requestTokenOnly=1&r=1776157383",
+      "status": 200,
+      "body": "Tracker_VisitorToken_Request( {\"message\":\"Token issued\",\"visitor_token\":\"8f239113ddb6dfd563b996411a102389\"})"
+    },
+    {
+      "url": "https://www.uprinting.com/html/angular-app/modules/sms-product/directives/calculator/calc-variant-switcher.directive.html?v=0f928622f54b131bb63afa5aa5708071a3b976e2",
+      "status": 200,
+      "body": "<div class=\"comp-calc-variant-switcher\"\n    ng-show=\"show_calc_variant_switcher\"\n    ng-if=\"!mobileView\">\n    <div class=\"site-toggle-switch\"\n        ng-class=\"{'toggled': isChecked}\">\n        <span class=\"default-option-label\">Grid</span>\n        <label class=\"switch\">\n            <input type=\"checkbox\"\n                   aria-label=\"calculator switch view\"\n                   ng-model=\"isChecked\" \n                   ng-change=\"toggleCalcVariant(isChecked)\">\n            <span class=\"slider round\"></span>\n        </label>\n        <span class=\"toggled-option-label\">List</span>\n    </div>\n</div>\n"
+    },
+    {
+      "url": "https://www.uprinting.com/html/angular-app/modules/sms-product/directives/share-calc-config/share-calc-config.directive.html?v=0f928622f54b131bb63afa5aa5708071a3b976e2",
+      "status": 200,
+      "body": "<div class=\"comp-share-calc-config-container\">\n    <div id=\"share_calc_btn\">\n        <a href class=\"share-config-link\" ng-click=\"actions.showModal()\" tabindex=\"0\" aria-label=\"Share Product Modal\">\n            <span class=\"share-icon dri-share-link\"></span>\n            <span class=\"share-text site-secondary-link-italic\">Share Product</span>\n        </a>\n    </div>\n    <focus-trap first-trap=\".modal-close-btn.close\" \n    last-trap-alt=\".site-alert-success.share-config-copy-message\"\n    last-trap=\".site-btn-link-display.cancel-btn\">\n        <div id=\"share_calc_config_modal\" tabindex=\"-1\" class=\"comp-share-calc-config-modal site-modal modal fade\" role=\"dialog\">\n            <div class=\"modal-dialog js-share-product-modal\">\n                <!-- Modal content-->\n                <div tabindex=\"-1\" class=\"modal-content\">\n                    <div class=\"modal-header\">\n                        <button type=\"button\" class=\"modal-close-btn close\" data-dismiss=\"modal\"\n                                aria-label=\"close button. Press escape key to close the modal\">&times;</button>\n                        <div class=\"share-config-modal-title modal-title\" tabindex=\"0\" role=\"heading\" aria-level=\"2\">\n                            Share Product Configuration\n                        </div>\n                    </div>\n                    <div class=\"modal-body\">\n                        <div id=\"product-config\">\n                            <div class=\"share-config-details\" tabindex=\"0\">\n                                Sharing below link with a person will let them view the same configuration you have on the screen.\n                                However, they will not be able to access your shopping cart or account information.\n                            </div>\n                            <div class=\"share-config-form-group site-form-group form-group\">\n                                <div class=\"site-input-group\">\n                                    <input ng-model=\"shareCalcConfigLink\"\n                                        ng-click=\"actions.autoSelectInput()\"\n                                        type=\"text\"\n                                        class=\"site-form-input share-config-form-input form-control\"\n                                        id=\"share_calc_config_input\"\n                                        readonly=\"readonly\"\n                                        value=\"\">\n                                </div>\n                            </div>\n                        </div>\n                        <button ng-click=\"actions.copyShareCalcConfigLink()\" class=\"copy-link-btn site-btn-primary btn btn-primary\" type=\"button\">Copy Link</button>\n                        <div ng-if=\"copyMessage\" class=\"site-alert-success share-config-copy-message\" tabindex=\"0\" aria-live=\"polite\">\n                            <span class=\"alert-message\">\n                            {{copyMessage}}\n                            </span>\n                        </div>\n                       "
+    },
+    {
+      "url": "https://www.uprinting.com/calc-sw.js?jsUrl=https://calc-js.uprinting.com/app-min.js&cacheKey=calc-sw-cache",
+      "status": 200,
+      "body": "const swParams = new URL(self.location.href);\nconst sharedCalcUrl = swParams.searchParams.get('jsUrl');\nconst sharedCalcCacheKey = swParams.searchParams.get('cacheKey');\nconst ETagCacheKey = '/calc-etag';\n\nself.addEventListener('fetch', (event) => {\n    if (event.request.url.includes(sharedCalcUrl)) {\n        event.respondWith(handleCalcRequest());\n    }\n});\n\nasync function handleCalcRequest() {\n    const cache = await caches.open(sharedCalcCacheKey);\n    const storedEtag = await retrieveEtagFromCache(cache);\n\n    const headers = {\n        'Content-Type': 'application/javascript',\n    };\n    if (storedEtag) {\n        headers['If-None-Match'] = storedEtag;\n    }\n\n    try {\n        const response = await fetch(sharedCalcUrl, { headers });\n\n        if (response.status == 200) {\n            const newEtag = response.headers.get('ETag');\n            if (newEtag) {\n                await cache.put(ETagCacheKey, new Response(newEtag));\n            }\n            await cache.put(sharedCalcUrl, response.clone());\n            return response;\n        }\n\n        if (response.status == 304) {\n            const cachedResponse = await cache.match(sharedCalcUrl);\n            if (cachedResponse) {\n                return cachedResponse;\n            }\n        }\n\n    } catch (error) {\n        // Offline fallback\n        const cachedResponse = await cache.match(sharedCalcUrl);\n        if (cachedResponse) {\n            return cachedResponse;\n        }\n\n    }\n}\n\nasync function retrieveEtagFromCache(cache) {\n    const response = await cache.match(ETagCacheKey);\n    return response ? await response.text() : null;\n}\n"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/app-min.js",
+      "status": 200,
+      "body": "/*! For license information please see app-min.js.LICENSE.txt */\n!function(){var e,t,r,i,a={4744:function(e){\"use strict\";var t=function(e){return function(e){return!!e&&\"object\"==typeof e}(e)&&!function(e){var t=Object.prototype.toString.call(e);return\"[object RegExp]\"===t||\"[object Date]\"===t||function(e){return e.$$typeof===r}(e)}(e)},r=\"function\"==typeof Symbol&&Symbol.for?Symbol.for(\"react.element\"):60103;function i(e,t){return!1!==t.clone&&t.isMergeableObject(e)?s((r=e,Array.isArray(r)?[]:{}),e,t):e;var r}function a(e,t,r){return e.concat(t).map(function(e){return i(e,r)})}function n(e){return Object.keys(e).concat(function(e){return Object.getOwnPropertySymbols?Object.getOwnPropertySymbols(e).filter(function(t){return e.propertyIsEnumerable(t)}):[]}(e))}function o(e,t){try{return t in e}catch(e){return!1}}function s(e,r,l){(l=l||{}).arrayMerge=l.arrayMerge||a,l.isMergeableObject=l.isMergeableObject||t,l.cloneUnlessOtherwiseSpecified=i;var _=Array.isArray(r);return _===Array.isArray(e)?_?l.arrayMerge(e,r,l):function(e,t,r){var a={};return r.isMergeableObject(e)&&n(e).forEach(function(t){a[t]=i(e[t],r)}),n(t).forEach(function(n){(function(e,t){return o(e,t)&&!(Object.hasOwnProperty.call(e,t)&&Object.propertyIsEnumerable.call(e,t))})(e,n)||(o(e,n)&&r.isMergeableObject(t[n])?a[n]=function(e,t){if(!t.customMerge)return s;var r=t.customMerge(e);return\"function\"==typeof r?r:s}(n,r)(e[n],t[n],r):a[n]=i(t[n],r))}),a}(e,r,l):i(r,l)}s.all=function(e,t){if(!Array.isArray(e))throw new Error(\"first argument should be an array\");return e.reduce(function(e,r){return s(e,r,t)},{})};var l=s;e.exports=l},4741:function(e,t,r){var i;!function(e){!function(){var t=\"object\"==typeof r.g?r.g:\"object\"==typeof self?self:\"object\"==typeof this?this:Function(\"return this;\")(),i=a(e);function a(e,t){return function(r,i){\"function\"!=typeof e[r]&&Object.defineProperty(e,r,{configurable:!0,writable:!0,value:i}),t&&t(r,i)}}void 0===t.Reflect?t.Reflect=e:i=a(t.Reflect,i),function(e){var t=Object.prototype.hasOwnProperty,r=\"function\"==typeof Symbol,i=r&&void 0!==Symbol.toPrimitive?Symbol.toPrimitive:\"@@toPrimitive\",a=r&&void 0!==Symbol.iterator?Symbol.iterator:\"@@iterator\",n=\"function\"==typeof Object.create,o={__proto__:[]}instanceof Array,s=!n&&!o,l={create:n?function(){return I(Object.create(null))}:o?function(){return I({__proto__:null})}:function(){return I({})},has:s?function(e,r){return t.call(e,r)}:function(e,t){return t in e},get:s?function(e,r){return t.call(e,r)?e[r]:void 0}:function(e,t){return e[t]}},_=Object.getPrototypeOf(Function),c=\"object\"==typeof process&&process.env&&\"true\"===process.env.REFLECT_METADATA_USE_MAP_POLYFILL,d=c||\"function\"!=typeof Map||\"function\"!=typeof Map.prototype.entries?function(){var e={},t=[],r=function(){function e(e,t,r){this._index=0,this._keys=e,this._values=t,this._selector=r}return e.prototype[\"@@iterator\"]=function(){return this},e.prototype[a]=function(){return this},e.prototype.next=function(){var e=this._index;if(e>=0&&e<this"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/grid-template-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[794],{1033:function(t,e,n){n.r(e),n.d(e,{Main:function(){return I}});var r,o=n(3911),i=n(7538),a=n(3),c=n(5859),s=n(9317),l=n(3760),u=n(4525),p=n(8617),f=n(9949),d=n(5337),h=n(659),_=n(5896),b=n(9552),m=n(7843),y=n(2293),v=n(1205),g=n(2224),S=n(9690),w=(r=function(t,e){return r=Object.setPrototypeOf||{__proto__:[]}instanceof Array&&function(t,e){t.__proto__=e}||function(t,e){for(var n in e)Object.prototype.hasOwnProperty.call(e,n)&&(t[n]=e[n])},r(t,e)},function(t,e){if(\"function\"!=typeof e&&null!==e)throw new TypeError(\"Class extends value \"+String(e)+\" is not a constructor or null\");function n(){this.constructor=t}r(t,e),t.prototype=null===e?Object.create(e):(n.prototype=e.prototype,new n)}),C=function(t,e){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(t,e)},z=function(t,e,n,r){return new(n||(n=Promise))(function(o,i){function a(t){try{s(r.next(t))}catch(t){i(t)}}function c(t){try{s(r.throw(t))}catch(t){i(t)}}function s(t){var e;t.done?o(t.value):(e=t.value,e instanceof n?e:new n(function(t){t(e)})).then(a,c)}s((r=r.apply(t,e||[])).next())})},R=function(t,e){var n,r,o,i,a={label:0,sent:function(){if(1&o[0])throw o[1];return o[1]},trys:[],ops:[]};return i={next:c(0),throw:c(1),return:c(2)},\"function\"==typeof Symbol&&(i[Symbol.iterator]=function(){return this}),i;function c(c){return function(s){return function(c){if(n)throw new TypeError(\"Generator is already executing.\");for(;i&&(i=0,c[0]&&(a=0)),a;)try{if(n=1,r&&(o=2&c[0]?r.return:c[0]?r.throw||((o=r.return)&&o.call(r),0):r.next)&&!(o=o.call(r,c[1])).done)return o;switch(r=0,o&&(c=[2&c[0],o.value]),c[0]){case 0:case 1:o=c;break;case 4:return a.label++,{value:c[1],done:!1};case 5:a.label++,r=c[1],c=[0];continue;case 7:c=a.ops.pop(),a.trys.pop();continue;default:if(!((o=(o=a.trys).length>0&&o[o.length-1])||6!==c[0]&&2!==c[0])){a=0;continue}if(3===c[0]&&(!o||c[1]>o[0]&&c[1]<o[3])){a.label=c[1];break}if(6===c[0]&&a.label<o[1]){a.label=o[1],o=c;break}if(o&&a.label<o[2]){a.label=o[2],a.ops.push(c);break}o[2]&&a.ops.pop(),a.trys.pop();continue}c=e.call(t,a)}catch(t){c=[6,t],r=0}finally{n=o=0}if(5&c[0])throw c[1];return{value:c[0]?c[1]:void 0,done:!0}}([c,s])}}},I=function(t){function e(e,n,r,o,i,a,c,s,l,u,p,f,d,h){var _=t.call(this,e,n,r,o,i,a,c,s,l,u,p,f,h)||this;return _.configManagerService=e,_.templateConfigHelper=n,_.templateViewHelper=r,_.calcDataHelper=o,_.calculator=i,_.componentFactory=a,_.calcDOMHelper=c,_.componentHelper=s,_.calcInfoService=l,_.priceRequestHelper=u,_.priceDataService=p,_.attributeService=f,_.sizeService=d,_.mailingValidatorService=h,_.TEMPLATE=\"grid-template\",_.load=function(){return z(_,void 0,void 0,function(){return R(this,function(t){switch(t.label){case 0:return this.init(),this.loadTemplate(),[4,this.loadComponents()];case 1:return t.sent(),this.addCustomEvents(),[2]}})})},_.loadComponents=function(){return z(_,void 0,void 0,function(){var t,e,n"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/45-min.js?v=1773890072292",
+      "status": 200,
+      "body": "(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[45],{9949:function(t,e,r){\"use strict\";r.d(e,{t:function(){return v}});var i=r(5859),a=r(3760),n=r(2224),s=r(9478),c=r(478),o=r(659),l=r(6934),u=r(8564),d=r(8617),p=function(t,e){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(t,e)},_=function(t){var e=\"function\"==typeof Symbol&&Symbol.iterator,r=e&&t[e],i=0;if(r)return r.call(t);if(t&&\"number\"==typeof t.length)return{next:function(){return t&&i>=t.length&&(t=void 0),{value:t&&t[i++],done:!t}}};throw new TypeError(e?\"Object is not iterable.\":\"Symbol.iterator is not defined.\")},h=function(t,e){var r=\"function\"==typeof Symbol&&t[Symbol.iterator];if(!r)return t;var i,a,n=r.call(t),s=[];try{for(;(void 0===e||e-- >0)&&!(i=n.next()).done;)s.push(i.value)}catch(t){a={error:t}}finally{try{i&&!i.done&&(r=n.return)&&r.call(n)}finally{if(a)throw a.error}}return s},f=function(t,e,r){if(r||2===arguments.length)for(var i,a=0,n=e.length;a<n;a++)!i&&a in e||(i||(i=Array.prototype.slice.call(e,0,a)),i[a]=e[a]);return t.concat(i||Array.prototype.slice.call(e))},v=function(){function t(t,e,r,i,a,n,s){var o=this;this.templateConfigHelper=t,this.attributeService=e,this.sizeService=r,this.fieldTypeService=i,this.exceptionService=a,this.quantityService=n,this.calcDataHelper=s,this.selectedSpecs={},this.previousSpecs=null,this.invalidSpecs={},this.excludeAttrs=[],this.isFirstLoad=!0,this.customSize=0,this.customTrim=!1,this.sizeUnit=\"in\",this.attributes=null,this.exceptions=null,this.factors=null,this.attributeAddOn=null,this.hideExceptionsFlag=\"y\",this.hideSizeExceptionsFlag=\"n\",this.threeDimensionalFlag=\"n\",this.incompatibleSizeSpecs=[],this.flatSizeInvalidSpecs={},this.flatSizeExceptions={},this.sizeData={},this.inRangeSizeExProdValIds={},this.sizePresetValue=null,this.qtyValueDisplay=null,this.sizeAttributeId=null,this.sizeAttribute=null,this.hasError=!1,this.validationErrors={},this.fixedAttributes={},this.fixedAttributeException={},this.initialize=function(t,e){var r;o.calculatorData=t,o.attributes=t.prod_attrs,o.setExceptionFlags(),o.setCalculatorExceptions(),o.setCalculatorFactors(),o.sizeAttribute=o.sizeService.getSizeAttribute(o.calculatorData.prod_attrs),o.sizeAttributeId=(null===(r=o.sizeAttribute)||void 0===r?void 0:r.attribute_id)?o.sizeAttribute.attribute_id:null,e&&Object.keys(e).length?(o.selectedSpecs=e,o.selectedSpecs.size_unit&&o.sizeService.isFtSizeUnit(o.selectedSpecs.size_unit)&&o.selectedSpecs.width&&o.selectedSpecs.height&&(o.selectedSpecs.width_ft=o.selectedSpecs.width,o.selectedSpecs.height_ft=o.selectedSpecs.height)):o.setCalculatorDefaultSpecs(),o.fixedAttributes=o.attributeService.getFixedAttributes(o.calculatorData,o.selectedSpecs),o.setCalculatorData()},this.setExceptionFlags=function(){o.calculatorData.hide_exceptions_flag&&(o.hideExceptionsFlag=o.calculatorData.hide_exceptions_flag),o.calculatorData.hide_size_exceptions_flag&&(o.hideSizeExceptionsFlag=o.calculatorData.hide_size_"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/3336-min.js?v=1773890072292",
+      "status": 200,
+      "body": "/*! For license information please see 3336-min.js.LICENSE.txt */\n(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[3336],{9690:function(e,t,r){\"use strict\";t.N=void 0;const n=r(3676);Object.defineProperty(t,\"N\",{enumerable:!0,get:function(){return n.MailingValidatorService}})},3676:function(e,t,r){\"use strict\";var n=this&&this.__decorate||function(e,t,r,n){var i,o=arguments.length,s=o<3?t:null===n?n=Object.getOwnPropertyDescriptor(t,r):n;if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.decorate)s=Reflect.decorate(e,t,r,n);else for(var a=e.length-1;a>=0;a--)(i=e[a])&&(s=(o<3?i(s):o>3?i(t,r,s):i(t,r))||s);return o>3&&s&&Object.defineProperty(t,r,s),s};Object.defineProperty(t,\"__esModule\",{value:!0}),t.MailingValidatorService=void 0;const i=r(659);let o=class{validateSpecsForMailing=(e,t)=>{const r=e.selectedSpecs,n=t.mailingConfigRange,i=t.productMailingExceptions;return!!this.withinMailingPostageRange(e,n)&&this.validateExceptions(i,r)};withinMailingPostageRange=(e,t)=>{const r=e.selectedQuantity,n=e.selectedDimensions.width,i=e.selectedDimensions.height,o=n>=i?n/i:i/n,s=e.weight/r*16;for(const e of t){const{min_quantity:t,max_quantity:a,min_width:c,max_width:p,min_height:l,max_height:u,min_aspect_ratio:h,max_aspect_ratio:f,min_weight:y,max_weight:d}=e;if(!this.isWithinRange(r,t,a))continue;const g=this.isWithinRange(n,c,p)&&this.isWithinRange(i,l,u),m=this.isWithinRange(i,c,p)&&this.isWithinRange(n,l,u);if((g||m)&&this.isWithinRange(o,h,f)&&this.isWithinRange(s,y,d))return!0}return!1};validateExceptions=(e,t)=>{const r=Object.values(t).map(Number);for(const t of e){const e=JSON.parse(t),n=Object.values(e).map(Number),i=this.arrayIntersect(r,n).length;if(i>0&&i===n.length)return!1}return!0};isWithinRange=(e,t,r)=>null==t&&null==r||null!=t&&null==r&&e>=t||null!=r&&null==t&&e<=r||null!=t&&null!=r&&e>=t&&e<=r;arrayIntersect=(e,t)=>[...new Set(e.filter(e=>t.includes(e)))]};t.MailingValidatorService=o,t.MailingValidatorService=o=n([(0,i.singleton)()],o)},7975:function(e){\"use strict\";function t(e){if(\"string\"!=typeof e)throw new TypeError(\"Path must be a string. Received \"+JSON.stringify(e))}function r(e,t){for(var r,n=\"\",i=0,o=-1,s=0,a=0;a<=e.length;++a){if(a<e.length)r=e.charCodeAt(a);else{if(47===r)break;r=47}if(47===r){if(o===a-1||1===s);else if(o!==a-1&&2===s){if(n.length<2||2!==i||46!==n.charCodeAt(n.length-1)||46!==n.charCodeAt(n.length-2))if(n.length>2){var c=n.lastIndexOf(\"/\");if(c!==n.length-1){-1===c?(n=\"\",i=0):i=(n=n.slice(0,c)).length-1-n.lastIndexOf(\"/\"),o=a,s=0;continue}}else if(2===n.length||1===n.length){n=\"\",i=0,o=a,s=0;continue}t&&(n.length>0?n+=\"/..\":n=\"..\",i=2)}else n.length>0?n+=\"/\"+e.slice(o+1,a):n=e.slice(o+1,a),i=a-o-1;o=a,s=0}else 46===r&&-1!==s?++s:s=-1}return n}var n={resolve:function(){for(var e,n=\"\",i=!1,o=arguments.length-1;o>=-1&&!i;o--){var s;o>=0?s=arguments[o]:(void 0===e&&(e=process.cwd()),s=e),t(s),0!==s.length&&(n=s+\"/\"+n,i=47===s.charCodeAt(0))}return n=r(n,!i),i?n.length>0?\"/\"+n:\"/\":n.l"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/price-calc-factory-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[5381],{4954:function(e,t,n){n.r(t),n.d(t,{PriceCalcFactory:function(){return i}});var r=n(5896),o=n(3760),c=n(659),a=function(e,t){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(e,t)},i=function(){function e(e,t){var r=this;this.componentHelper=e,this.templateConfigHelper=t,this.getComponent=function(e){return t=r,o=void 0,a=function(){var t;return function(e,t){var n,r,o,c,a={label:0,sent:function(){if(1&o[0])throw o[1];return o[1]},trys:[],ops:[]};return c={next:i(0),throw:i(1),return:i(2)},\"function\"==typeof Symbol&&(c[Symbol.iterator]=function(){return this}),c;function i(i){return function(l){return function(i){if(n)throw new TypeError(\"Generator is already executing.\");for(;c&&(c=0,i[0]&&(a=0)),a;)try{if(n=1,r&&(o=2&i[0]?r.return:i[0]?r.throw||((o=r.return)&&o.call(r),0):r.next)&&!(o=o.call(r,i[1])).done)return o;switch(r=0,o&&(i=[2&i[0],o.value]),i[0]){case 0:case 1:o=i;break;case 4:return a.label++,{value:i[1],done:!1};case 5:a.label++,r=i[1],i=[0];continue;case 7:i=a.ops.pop(),a.trys.pop();continue;default:if(!((o=(o=a.trys).length>0&&o[o.length-1])||6!==i[0]&&2!==i[0])){a=0;continue}if(3===i[0]&&(!o||i[1]>o[0]&&i[1]<o[3])){a.label=i[1];break}if(6===i[0]&&a.label<o[1]){a.label=o[1],o=i;break}if(o&&a.label<o[2]){a.label=o[2],a.ops.push(i);break}o[2]&&a.ops.pop(),a.trys.pop();continue}i=t.call(e,a)}catch(e){i=[6,e],r=0}finally{n=o=0}if(5&i[0])throw i[1];return{value:i[0]?i[1]:void 0,done:!0}}([i,l])}}}(this,function(r){switch(r.label){case 0:return[4,n.e(5028).then(n.bind(n,5137))];case 1:return t=r.sent(),this.componentHelper.resolveComponent(t,e),[2]}})},new((c=void 0)||(c=Promise))(function(e,n){function r(e){try{l(a.next(e))}catch(e){n(e)}}function i(e){try{l(a.throw(e))}catch(e){n(e)}}function l(t){var n;t.done?e(t.value):(n=t.value,n instanceof c?n:new c(function(e){e(n)})).then(r,i)}l((a=a.apply(t,o||[])).next())});var t,o,c,a}}return function(e,t,n,r){var o,c=arguments.length,a=c<3?t:null===r?r=Object.getOwnPropertyDescriptor(t,n):r;if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.decorate)a=Reflect.decorate(e,t,n,r);else for(var i=e.length-1;i>=0;i--)(o=e[i])&&(a=(c<3?o(a):c>3?o(t,n,a):o(t,n))||a);return c>3&&a&&Object.defineProperty(t,n,a),a}([(0,c.injectable)(),a(\"design:paramtypes\",[r.w,o.j])],e)}()}}]);"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/dropdown-factory-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[4641],{9130:function(e,t,n){n.r(t),n.d(t,{DropdownFactory:function(){return u}});var r,c=n(5896),o=n(3760),a=n(659),i=function(e,t){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(e,t)};!function(e){e.SIMPLE=\"simple\",e.SELECT=\"select\",e.ACCORDION=\"accordion\",e.SELECT_DESIGN=\"select_design\",e.TAB=\"tab\",e.ROLLER=\"roller\",e.GRID_HORIZONTAL=\"grid_horizontal\"}(r||(r={}));var u=function(){function e(e,t){var c=this;this.componentHelper=e,this.templateConfigHelper=t,this.getComponent=function(e){return t=c,o=void 0,i=function(){var t,c;return function(e,t){var n,r,c,o,a={label:0,sent:function(){if(1&c[0])throw c[1];return c[1]},trys:[],ops:[]};return o={next:i(0),throw:i(1),return:i(2)},\"function\"==typeof Symbol&&(o[Symbol.iterator]=function(){return this}),o;function i(i){return function(u){return function(i){if(n)throw new TypeError(\"Generator is already executing.\");for(;o&&(o=0,i[0]&&(a=0)),a;)try{if(n=1,r&&(c=2&i[0]?r.return:i[0]?r.throw||((c=r.return)&&c.call(r),0):r.next)&&!(c=c.call(r,i[1])).done)return c;switch(r=0,c&&(i=[2&i[0],c.value]),i[0]){case 0:case 1:c=i;break;case 4:return a.label++,{value:i[1],done:!1};case 5:a.label++,r=i[1],i=[0];continue;case 7:i=a.ops.pop(),a.trys.pop();continue;default:if(!((c=(c=a.trys).length>0&&c[c.length-1])||6!==i[0]&&2!==i[0])){a=0;continue}if(3===i[0]&&(!c||i[1]>c[0]&&i[1]<c[3])){a.label=i[1];break}if(6===i[0]&&a.label<c[1]){a.label=c[1],c=i;break}if(c&&a.label<c[2]){a.label=c[2],a.ops.push(i);break}c[2]&&a.ops.pop(),a.trys.pop();continue}i=t.call(e,a)}catch(e){i=[6,e],r=0}finally{n=c=0}if(5&i[0])throw i[1];return{value:i[0]?i[1]:void 0,done:!0}}([i,u])}}}(this,function(o){switch(o.label){case 0:switch(t={},c=this.templateConfigHelper.getConfig(\"attr_dropdown_display\"),e.sub_type&&(c=e.sub_type),c){case r.SELECT:return[3,1];case r.SELECT_DESIGN:return[3,3];case r.SIMPLE:return[3,5];case r.ACCORDION:return[3,7];case r.GRID_HORIZONTAL:return[3,9];case r.TAB:return[3,11];case r.ROLLER:return[3,13]}return[3,15];case 1:return[4,n.e(2167).then(n.bind(n,1253))];case 2:case 4:case 6:case 8:case 10:case 12:case 14:return t=o.sent(),[3,16];case 3:return[4,n.e(5698).then(n.bind(n,2269))];case 5:return[4,n.e(8269).then(n.bind(n,993))];case 7:return[4,n.e(3131).then(n.bind(n,6647))];case 9:return[4,n.e(5668).then(n.bind(n,3873))];case 11:return[4,n.e(4420).then(n.bind(n,1031))];case 13:return[4,n.e(8523).then(n.bind(n,5973))];case 15:throw new Error(\"Invalid Dropdown Type: \".concat(c));case 16:return this.componentHelper.resolveComponent(t,e),[2]}})},new((a=void 0)||(a=Promise))(function(e,n){function r(e){try{u(i.next(e))}catch(e){n(e)}}function c(e){try{u(i.throw(e))}catch(e){n(e)}}function u(t){var n;t.done?e(t.value):(n=t.value,n instanceof a?n:new a(function(e){e(n)})).then(r,c)}u((i=i.apply(t,o||[])).next())});var t,o,a,i}}return function(e,t,n,r){var c,o=arguments.length,a=o<3?t:null===r?r=O"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/price-calc-default-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[5028],{5137:function(e,i,t){t.r(i),t.d(i,{PriceCalc:function(){return l}});var n=t(659),r=t(3760),a=t(5337),c=function(e,i){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(e,i)},o=function(e){var i=\"function\"==typeof Symbol&&Symbol.iterator,t=i&&e[i],n=0;if(t)return t.call(e);if(e&&\"number\"==typeof e.length)return{next:function(){return e&&n>=e.length&&(e=void 0),{value:e&&e[n++],done:!e}}};throw new TypeError(i?\"Object is not iterable.\":\"Symbol.iterator is not defined.\")},l=function(){function e(e,i){var t=this;this.templateConfigHelper=e,this.calcDOMHelper=i,this.qty=0,this.setData=function(e,i){t.attributeId=e,t.data=i},this.init=function(){t.mainElementRef.addEventListener(\"calc.priceChange\",function(e){var i,n,r,a,c,l=e.detail,s=t.mainElementRef.querySelectorAll(\".calc-price\"),d=t.mainElementRef.querySelectorAll(\".calc-price-per-piece\"),u=t.mainElementRef.querySelector(\".per-piece-label\"),p=l.price;if(t.priceDisplayConfig.account_type_code_checking&&\"LFP\"==l.account_type_code&&(p=l.unit_price,t.priceDisplayConfig.show_unit_price=!1),!t.priceDisplayConfig.hide_subtotal_price&&s.length){var f=Number(1*p).toFixed(2).toLocaleString();(null===(c=t.priceDisplayConfig)||void 0===c?void 0:c.show_price_with_commas)&&(f=(1*p).toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2}));try{for(var m=o(s),y=m.next();!y.done;y=m.next()){var h=y.value;h.innerHTML=\"$\"+f,h.classList.add(\"subtotal-price\"),h.setAttribute(\"aria-label\",\"$\"+f+\".\")}}catch(e){i={error:e}}finally{try{y&&!y.done&&(n=m.return)&&n.call(m)}finally{if(i)throw i.error}}}var v=l.order_specs.find(function(e){return\"NOOFROLL\"===e.order_spec_code||\"ROWS_IMPO\"===e.order_spec_code}),_=l.qty;if(l.no_groups?_=l.no_groups:l.no_pads&&(_=l.no_pads),t.priceDisplayConfig.show_unit_price&&d.length){var g=1*l.price/_;try{for(var L=o(d),b=L.next();!b.done;b=L.next()){var q=b.value;switch(t.priceDisplayConfig.type){case\"default\":q.innerHTML='( <span data-qaid=\"originalUnitPrice\">$'+(1*l.unit_price).toFixed(2)+\"</span> for each)\";break;case\"v2\":q.innerHTML='<span data-qaid=\"originalUnitPrice\">$'+(1*l.unit_price).toFixed(2)+\"</span> each\";break;case\"v3\":q.innerHTML=\"$\"+g.toFixed(2),v&&u&&(u.innerText=\"roll\");break;case\"v4\":t.priceDisplayConfig.show_unit_price_multiple_qty?(t.qty=l.qty,q.innerHTML=t.getPricePerPieceContent(l)):q.innerHTML='Only <span class=\"span-inline\" data-qaid=\"originalUnitPrice\">$'+(1*l.unit_price).toFixed(2)+\"</span> each\"}}}catch(e){r={error:e}}finally{try{b&&!b.done&&(a=L.return)&&a.call(L)}finally{if(r)throw r.error}}}var S=t.mainElementRef.querySelector(\".calc-quantity\");S&&(S.innerHTML=Number(_).toLocaleString())}),t.mainElementRef.addEventListener(\"calc.validationPassed\",function(e){var i,n,r,a,c,l;if(\"v2\"==t.priceDisplayConfig.type){var s=t.mainElementRef.querySelectorAll(\".calc-price-per-piece\"),d=t.mainElementRef.querySelectorAll(\".calc-price"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/simple-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[8269],{1297:function(e,t,r){r.d(t,{u:function(){return i}});var i=function(){function e(){this.dropdowns=[],this.counter=0,this.openDropdownImmediately=!1}return e.prototype.setOpenDropdownImmediately=function(e){this.openDropdownImmediately=e},e.prototype.createDropdown=function(e,t){var r=this;if(!e.dropdownConfigured)return e.parentNode.addEventListener(\"click\",function(i){var n=e.parentNode.querySelector(\".dropdown-toggle\");if(i.preventDefault(),i.target.classList.contains(\"prevent-dropdown-collapse\")||i.target.offsetParent&&i.target.offsetParent.disabled||i.target.parentElement.classList.contains(\"prevent-dropdown-collapse\"))i.preventDefault();else{var o=!1,a=r.dropdowns.find(function(t){return t.parentNode.classList.contains(\"expanded\")&&t.parentNode!==e.parentNode});if(a){var l=a.parentNode.querySelector(\".dropdown-toggle\");a.parentNode.classList.remove(\"expanded\"),l.setAttribute(\"aria-expanded\",\"false\"),r.hideDropdownEventHandler(a.parentNode),o=!0}e.parentNode.classList.contains(\"expanded\")?(n.focus(),e.parentNode.classList.remove(\"expanded\"),n.setAttribute(\"aria-expanded\",\"false\"),r.hideDropdownEventHandler(e.parentNode)):e.parentNode.classList.contains(\"disabled\")||o&&!r.openDropdownImmediately||(e.parentNode.classList.add(\"expanded\"),n.setAttribute(\"aria-expanded\",\"true\"),r.showDropdownEventHandler(e.parentNode,t))}},!1),e.parentNode.addEventListener(\"keydown\",function(t){var i=e.parentNode.querySelector(\".dropdown-toggle\"),n=e.parentNode.querySelector(\".dropdown-menu-item:last-of-type\");(!t.shiftKey&&9===t.keyCode&&(document.activeElement===n||document.activeElement.parentNode===n)||t.shiftKey&&9===t.keyCode&&document.activeElement===i||27===t.keyCode)&&(i.setAttribute(\"aria-expanded\",\"false\"),e.parentNode.classList.remove(\"expanded\"),r.hideDropdownEventHandler(e.parentNode)),13==t.keyCode&&e.parentNode.classList.contains(\"expanded\")&&(i.setAttribute(\"aria-expanded\",\"false\"),e.parentNode.classList.remove(\"expanded\"),r.hideDropdownEventHandler(e.parentNode),i.focus(),e.parentNode.classList.remove(\"expanded\"),r.hideDropdownEventHandler(e.parentNode))}),t&&!t.reposition||(e.scrollEvent=this.setScrollHandler(e.parentNode)),e.clickEvent=this.closeDropdownsOnClickOutside(e.parentNode),e.dropdownConfigured=!0,e.dropdownIndex=this.counter,this.counter++,this.dropdowns.push(e),e.dropdownIndex},e.prototype.destroyElement=function(e){for(var t=0;t<this.dropdowns.length;t++)if(this.dropdowns[t].dropdownIndex===e){var r=this.dropdowns[t];window.removeEventListener(\"scroll\",r.scrollEvent),document.removeEventListener(\"click\",r.clickEvent),this.dropdowns.splice(t,1);break}},e.prototype.prepareFormDropdowns=function(e,t){void 0===t&&(t=null);for(var r=[],i=e.querySelectorAll(\".dropdown-toggle\"),n=0;n<i.length;n++){var o=this.createDropdown(i[n],t);r.push(o)}return r},e.prototype.closeDropdownsOnClickOutside=function(e){var t=this,r=function(r){if(!e.contains(r.target))"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/sms-tooltip-content-factory-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[617],{2938:function(t,e,o){o.r(e),o.d(e,{SmsTooltipContentFactory:function(){return h}});var n,r=o(5896),i=o(3760),l=o(8084),c=o(5337),a=o(4213),p=o(9247),s=o(659),u=function(){return u=Object.assign||function(t){for(var e,o=1,n=arguments.length;o<n;o++)for(var r in e=arguments[o])Object.prototype.hasOwnProperty.call(e,r)&&(t[r]=e[r]);return t},u.apply(this,arguments)},f=function(t,e){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(t,e)},d=function(t,e,o,n){return new(o||(o=Promise))(function(r,i){function l(t){try{a(n.next(t))}catch(t){i(t)}}function c(t){try{a(n.throw(t))}catch(t){i(t)}}function a(t){var e;t.done?r(t.value):(e=t.value,e instanceof o?e:new o(function(t){t(e)})).then(l,c)}a((n=n.apply(t,e||[])).next())})},v=function(t,e){var o,n,r,i,l={label:0,sent:function(){if(1&r[0])throw r[1];return r[1]},trys:[],ops:[]};return i={next:c(0),throw:c(1),return:c(2)},\"function\"==typeof Symbol&&(i[Symbol.iterator]=function(){return this}),i;function c(c){return function(a){return function(c){if(o)throw new TypeError(\"Generator is already executing.\");for(;i&&(i=0,c[0]&&(l=0)),l;)try{if(o=1,n&&(r=2&c[0]?n.return:c[0]?n.throw||((r=n.return)&&r.call(n),0):n.next)&&!(r=r.call(n,c[1])).done)return r;switch(n=0,r&&(c=[2&c[0],r.value]),c[0]){case 0:case 1:r=c;break;case 4:return l.label++,{value:c[1],done:!1};case 5:l.label++,n=c[1],c=[0];continue;case 7:c=l.ops.pop(),l.trys.pop();continue;default:if(!((r=(r=l.trys).length>0&&r[r.length-1])||6!==c[0]&&2!==c[0])){l=0;continue}if(3===c[0]&&(!r||c[1]>r[0]&&c[1]<r[3])){l.label=c[1];break}if(6===c[0]&&l.label<r[1]){l.label=r[1],r=c;break}if(r&&l.label<r[2]){l.label=r[2],l.ops.push(c);break}r[2]&&l.ops.pop(),l.trys.pop();continue}c=e.call(t,l)}catch(t){c=[6,t],n=0}finally{o=r=0}if(5&c[0])throw c[1];return{value:c[0]?c[1]:void 0,done:!0}}([c,a])}}};!function(t){t.MODAL=\"modal\",t.POPOVER=\"popover\"}(n||(n={}));var h=function(){function t(t,e,r,i,l){var c=this;this.componentHelper=t,this.templateConfigHelper=e,this.tooltipContentService=r,this.httpService=i,this.calcDOMHelper=l,this.previewHashUrl=\"\",this.getComponent=function(t){return d(c,void 0,void 0,function(){var e,o,n,r,i,l,c;return v(this,function(a){for(e=this.templateConfigHelper.getMergedConfig(),o=this.calcDOMHelper.getCalcDOM(),n=o.querySelectorAll(\".calc-tooltip\"),(r=document.querySelector(\".hash-span\"))&&(i=r.getAttribute(\"data-hash\"))&&e.enable_sms_tooltip&&(this.previewHashUrl=\"?tooltip_preview=\".concat(i)),l=0;l<n.length;l++)(c=n[l]).classList.contains(\"mailing-tooltip\")||this.setTooltipListener(c,t,e);return[2]})})},this.getTooltipContent=function(t,e,o){var n,r,i,l,a=t.getAttribute(\"data-trigger-method\");if(!(null!==a&&\"click\"==a&&0==o||\"hover\"==a&&1==o)){var p=c.tooltipContentService.getTooltipContent(null===(n=null==e?void 0:e.tooltip_content)||void 0===n?void 0:n.tooltip_id);if(p)return c.loadTooltipContent(e,p);if((nul"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/custom-size-attribute-factory-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[1394],{8862:function(e,t,n){n.r(t),n.d(t,{CustomSizeAttributeFactory:function(){return s}});var r=n(5896),o=n(3760),a=n(2224),c=n(9949),i=n(659),u=function(e,t){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(e,t)},s=function(){function e(e,t,r,o){var a=this;this.calculator=e,this.componentHelper=t,this.templateConfigHelper=r,this.sizeService=o,this.getComponent=function(e){return t=a,r=void 0,c=function(){var t,r,o;return function(e,t){var n,r,o,a,c={label:0,sent:function(){if(1&o[0])throw o[1];return o[1]},trys:[],ops:[]};return a={next:i(0),throw:i(1),return:i(2)},\"function\"==typeof Symbol&&(a[Symbol.iterator]=function(){return this}),a;function i(i){return function(u){return function(i){if(n)throw new TypeError(\"Generator is already executing.\");for(;a&&(a=0,i[0]&&(c=0)),c;)try{if(n=1,r&&(o=2&i[0]?r.return:i[0]?r.throw||((o=r.return)&&o.call(r),0):r.next)&&!(o=o.call(r,i[1])).done)return o;switch(r=0,o&&(i=[2&i[0],o.value]),i[0]){case 0:case 1:o=i;break;case 4:return c.label++,{value:i[1],done:!1};case 5:c.label++,r=i[1],i=[0];continue;case 7:i=c.ops.pop(),c.trys.pop();continue;default:if(!((o=(o=c.trys).length>0&&o[o.length-1])||6!==i[0]&&2!==i[0])){c=0;continue}if(3===i[0]&&(!o||i[1]>o[0]&&i[1]<o[3])){c.label=i[1];break}if(6===i[0]&&c.label<o[1]){c.label=o[1],o=i;break}if(o&&c.label<o[2]){c.label=o[2],c.ops.push(i);break}o[2]&&c.ops.pop(),c.trys.pop();continue}i=t.call(e,c)}catch(e){i=[6,e],r=0}finally{n=o=0}if(5&i[0])throw i[1];return{value:i[0]?i[1]:void 0,done:!0}}([i,u])}}}(this,function(a){switch(a.label){case 0:if(t=this.calculator.getData(),!(r=this.sizeService.getSizeAttribute(t.prod_attrs)))return[3,7];switch(o={},e.sub_type){case\"custom-size-attribute\":return[3,1];case\"custom-size-handler\":return[3,3]}return[3,5];case 1:return[4,n.e(9887).then(n.bind(n,517))];case 2:return o=a.sent(),[3,6];case 3:return[4,n.e(8731).then(n.bind(n,233))];case 4:return o=a.sent(),[3,6];case 5:throw new Error(\"Invalid Custom Size Component \".concat(e.sub_type));case 6:e.data.attribute_id=r.attribute_id,this.componentHelper.resolveComponent(o,e),a.label=7;case 7:return[2]}})},new((o=void 0)||(o=Promise))(function(e,n){function a(e){try{u(c.next(e))}catch(e){n(e)}}function i(e){try{u(c.throw(e))}catch(e){n(e)}}function u(t){var n;t.done?e(t.value):(n=t.value,n instanceof o?n:new o(function(e){e(n)})).then(a,i)}u((c=c.apply(t,r||[])).next())});var t,r,o,c}}return function(e,t,n,r){var o,a=arguments.length,c=a<3?t:null===r?r=Object.getOwnPropertyDescriptor(t,n):r;if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.decorate)c=Reflect.decorate(e,t,n,r);else for(var i=e.length-1;i>=0;i--)(o=e[i])&&(c=(a<3?o(c):a>3?o(t,n,c):o(t,n))||c);return a>3&&c&&Object.defineProperty(t,n,c),c}([(0,i.injectable)(),u(\"design:paramtypes\",[c.t,r.w,o.j,a.t])],e)}()}}]);"
+    },
+    {
+      "url": "https://calc-js.uprinting.com/custom-size-handler-min.js?v=1773890072292",
+      "status": 200,
+      "body": "\"use strict\";(this.webpackJsonpSharedCalc=this.webpackJsonpSharedCalc||[]).push([[8731],{233:function(t,e,a){a.r(e),a.d(e,{CustomSizeHandler:function(){return m}});var i=a(659),r=a(3),o=a(5896),n=a(9552),c=a(7843),l=a(9949),s=a(3760),u=a(5337),d=a(7538),p=a(2224),f=a(5859),h=function(t,e){if(\"object\"==typeof Reflect&&\"function\"==typeof Reflect.metadata)return Reflect.metadata(t,e)},m=function(){function t(t,e,a,i,o,c,l,s){var u=this;this.componentHelper=t,this.templateConfigHelper=e,this.calculator=a,this.calcDOMHelper=i,this.componentFactory=o,this.calcInfoService=c,this.sizeService=l,this.attributeService=s,this.dynamicSize=!1,this.setData=function(t,e){u.id=t,u.attributeId=e.attribute_id},this.init=function(){u.calculatorData=u.calculator.getData(),u.config=u.templateConfigHelper.getMergedConfig(),u.setCustomSizeTooltipEvent(),u.showCustomSizeModal=u.showCustomSizeModal.bind(u),u.mainElementRef.addEventListener(\"calc.customSizeModal\",u.showCustomSizeModal)},this.showCustomSizeModal=function(t){return e=u,a=void 0,r=function(){var e;return function(t,e){var a,i,r,o,n={label:0,sent:function(){if(1&r[0])throw r[1];return r[1]},trys:[],ops:[]};return o={next:c(0),throw:c(1),return:c(2)},\"function\"==typeof Symbol&&(o[Symbol.iterator]=function(){return this}),o;function c(c){return function(l){return function(c){if(a)throw new TypeError(\"Generator is already executing.\");for(;o&&(o=0,c[0]&&(n=0)),n;)try{if(a=1,i&&(r=2&c[0]?i.return:c[0]?i.throw||((r=i.return)&&r.call(i),0):i.next)&&!(r=r.call(i,c[1])).done)return r;switch(i=0,r&&(c=[2&c[0],r.value]),c[0]){case 0:case 1:r=c;break;case 4:return n.label++,{value:c[1],done:!1};case 5:n.label++,i=c[1],c=[0];continue;case 7:c=n.ops.pop(),n.trys.pop();continue;default:if(!((r=(r=n.trys).length>0&&r[r.length-1])||6!==c[0]&&2!==c[0])){n=0;continue}if(3===c[0]&&(!r||c[1]>r[0]&&c[1]<r[3])){n.label=c[1];break}if(6===c[0]&&n.label<r[1]){n.label=r[1],r=c;break}if(r&&n.label<r[2]){n.label=r[2],n.ops.push(c);break}r[2]&&n.ops.pop(),n.trys.pop();continue}c=e.call(t,n)}catch(t){c=[6,t],i=0}finally{a=r=0}if(5&c[0])throw c[1];return{value:c[0]?c[1]:void 0,done:!0}}([c,l])}}}(this,function(a){switch(a.label){case 0:return this.calcInfoService.isCustomModalOpen?[2,!1]:(this.calcInfoService.setCustomSizeModalStatus(!0),e=\"dropdown\",this.componentHelper.getComponentInstance(\"box_\".concat(t.detail.attribute_id))&&(e=\"box\"),[4,this.componentFactory.getComponent({id:\"custom_size\",type:n.I.CUSTOM_SIZE,sub_type:\"custom-size-attribute\",data:{display_type:e,attribute_data:t.detail}})]);case 1:return a.sent(),[2]}})},new((i=void 0)||(i=Promise))(function(t,o){function n(t){try{l(r.next(t))}catch(t){o(t)}}function c(t){try{l(r.throw(t))}catch(t){o(t)}}function l(e){var a;e.done?t(e.value):(a=e.value,a instanceof i?a:new i(function(t){t(a)})).then(n,c)}l((r=r.apply(e,a||[])).next())});var e,a,i,r},this.setCustomSizeTooltipEvent=function(){var t=u.mainElementRef.querySelector(\".custom-size-tooltip\");t&&t.addEventListener(\"click\",func"
+    },
+    {
+      "url": "https://www.uprinting.com/muffins/_log.php?page_id=130033&itapi_sid=580592994&visitor_id=532462330&page_url=https%3A%2F%2Fwww.uprinting.com%2Froll-labels.html&website_code=UP&n[]=PAGE_LOADED&v[]=1&t[]=0&r=28588&group_parent=0",
+      "status": 200,
+      "body": "����\u0000\u0010JFIF\u0000\u0001\u0001\u0001\u0000`\u0000`\u0000\u0000��\u0000C\u0000\u0002\u0001\u0001\u0002\u0001\u0001\u0002\u0002\u0002\u0002\u0002\u0002\u0002\u0002\u0003\u0005\u0003\u0003\u0003\u0003\u0003\u0006\u0004\u0004\u0003\u0005\u0007\u0006\u0007\u0007\u0007\u0006\u0007\u0007\b\t\u000b\t\b\b\n\b\u0007\u0007\n\r\n\n\u000b\f\f\f\f\u0007\t\u000e\u000f\r\f\u000e\u000b\f\f\f��\u0000C\u0001\u0002\u0002\u0002\u0003\u0003\u0003\u0006\u0003\u0003\u0006\f\b\u0007\b\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f\f��\u0000\u0011\b\u0000\u0001\u0000\u0001\u0003\u0001\"\u0000\u0002\u0011\u0001\u0003\u0011\u0001��\u0000\u001f\u0000\u0000\u0001\u0005\u0001\u0001\u0001\u0001\u0001\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b��\u0000�\u0010\u0000\u0002\u0001\u0003\u0003\u0002\u0004\u0003\u0005\u0005\u0004\u0004\u0000\u0000\u0001}\u0001\u0002\u0003\u0000\u0004\u0011\u0005\u0012!1A\u0006\u0013Qa\u0007\"q\u00142���\b#B��\u0015R��$3br�\t\n\u0016\u0017\u0018\u0019\u001a%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz���������������������������������������������������������������������������\u0000\u001f\u0001\u0000\u0003\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b��\u0000�\u0011\u0000\u0002\u0001\u0002\u0004\u0004\u0003\u0004\u0007\u0005\u0004\u0004\u0000\u0001\u0002w\u0000\u0001\u0002\u0003\u0011\u0004\u0005!1\u0006\u0012AQ\u0007aq\u0013\"2�\b\u0014B����\t#3R�\u0015br�\n\u0016$4�%�\u0017\u0018\u0019\u001a&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz��������������������������������������������������������������������������\u0000\f\u0003\u0001\u0000\u0002\u0011\u0003\u0011\u0000?\u0000����(\u0003��"
+    }
+  ]
+}

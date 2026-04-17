@@ -1,0 +1,41 @@
+{
+  "uprinting": {
+    "prices": {
+      "1000_qty_2x2_bopp": {
+        "price": 131.23,
+        "unitPrice": 0.13,
+        "turnaround": "6 Business Days",
+        "spec": "2\"x2\" White BOPP Roll, Rounded Corners, 1,000 qty"
+      }
+    },
+    "calPricingData": null,
+    "error": null
+  },
+  "axiom": {
+    "prices": [
+      {
+        "qty": 250,
+        "size": "2\"x3\"",
+        "price": 112.68,
+        "unitPrice": 0.45,
+        "turnaround": "5 business days"
+      },
+      {
+        "qty": "2,500",
+        "price": 0.09,
+        "spec": "Axiom Roll Labels qty=2,500"
+      }
+    ],
+    "specs": {
+      "totalPrice": "213.27",
+      "unitPrice": "0.09",
+      "qty": "2,500"
+    },
+    "error": null
+  },
+  "vistaprint": {
+    "quantityPrices": [],
+    "rawApiResponse": null,
+    "error": null
+  }
+}

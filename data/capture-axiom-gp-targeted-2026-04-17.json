@@ -1,0 +1,529 @@
+{
+  "run_date": "2026-04-17T22:53:46.391Z",
+  "results": {
+    "axiom": {
+      "prices": [],
+      "structure": {
+        "domInfo": {
+          "priceEls": [
+            {
+              "tag": "P",
+              "cls": "typography_lato_16__BlEhb ",
+              "id": "",
+              "text": "$112.68"
+            },
+            {
+              "tag": "P",
+              "cls": "typography_lato_16__BlEhb ",
+              "id": "",
+              "text": "$147.62"
+            },
+            {
+              "tag": "P",
+              "cls": "typography_lato_16__BlEhb ",
+              "id": "",
+              "text": "$221.15"
+            },
+            {
+              "tag": "P",
+              "cls": "ProductInfo_finalPrice__lqRBP",
+              "id": "",
+              "text": "$112.68"
+            },
+            {
+              "tag": "P",
+              "cls": "ProductInfo_subHeadingText__K5Sa9",
+              "id": "",
+              "text": "$0.45 each"
+            }
+          ],
+          "dropdownCandidates": [
+            {
+              "tag": "DIV",
+              "cls": "header_moreOptions__CWSzG",
+              "id": "",
+              "text": "Business CardsMarketing MaterialBanners & SignsStands & Disp",
+              "children": 2
+            },
+            {
+              "tag": "DIV",
+              "cls": "ThumbSlider_thumbSlide__Ck5zN ThumbSlider_isSelected__jvMin",
+              "id": "",
+              "text": "",
+              "children": 1
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_container__IpBUk",
+              "id": "",
+              "text": "RectangleSquareCircleOvalCustom Cut",
+              "children": 1
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_gridBox__v4ACH",
+              "id": "",
+              "text": "RectangleSquareCircleOvalCustom Cut",
+              "children": 5
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_itemBox__UNfZi CustomHorizontalSelect_activeBorder__qchTg",
+              "id": "",
+              "text": "Rectangle",
+              "children": 3
+            },
+            {
+              "tag": "IMG",
+              "cls": "CustomHorizontalSelect_image__jOOHH",
+              "id": "",
+              "text": "",
+              "children": 0
+            },
+            {
+              "tag": "P",
+              "cls": "CustomHorizontalSelect_title__IsYmb",
+              "id": "",
+              "text": "Rectangle",
+              "children": 0
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_activeIconBox__46VFC CustomHorizontalSelect_activeIcon__w",
+              "id": "",
+              "text": "",
+              "children": 1
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_itemBox__UNfZi",
+              "id": "",
+              "text": "Square",
+              "children": 3
+            },
+            {
+              "tag": "IMG",
+              "cls": "CustomHorizontalSelect_image__jOOHH",
+              "id": "",
+              "text": "",
+              "children": 0
+            },
+            {
+              "tag": "P",
+              "cls": "CustomHorizontalSelect_title__IsYmb",
+              "id": "",
+              "text": "Square",
+              "children": 0
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_itemBox__UNfZi",
+              "id": "",
+              "text": "Circle",
+              "children": 3
+            },
+            {
+              "tag": "IMG",
+              "cls": "CustomHorizontalSelect_image__jOOHH",
+              "id": "",
+              "text": "",
+              "children": 0
+            },
+            {
+              "tag": "P",
+              "cls": "CustomHorizontalSelect_title__IsYmb",
+              "id": "",
+              "text": "Circle",
+              "children": 0
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_itemBox__UNfZi",
+              "id": "",
+              "text": "Oval",
+              "children": 3
+            },
+            {
+              "tag": "IMG",
+              "cls": "CustomHorizontalSelect_image__jOOHH",
+              "id": "",
+              "text": "",
+              "children": 0
+            },
+            {
+              "tag": "P",
+              "cls": "CustomHorizontalSelect_title__IsYmb",
+              "id": "",
+              "text": "Oval",
+              "children": 0
+            },
+            {
+              "tag": "DIV",
+              "cls": "CustomHorizontalSelect_itemBox__UNfZi",
+              "id": "",
+              "text": "Custom Cut",
+              "children": 3
+            },
+            {
+              "tag": "IMG",
+              "cls": "CustomHorizontalSelect_image__jOOHH",
+              "id": "",
+              "text": "",
+              "children": 0
+            },
+            {
+              "tag": "P",
+              "cls": "CustomHorizontalSelect_title__IsYmb",
+              "id": "",
+              "text": "Custom Cut",
+              "children": 0
+            }
+          ],
+          "clickables": [],
+          "hasReact": false
+        },
+        "configuratorInfo": {
+          "type": "custom",
+          "tableInfo": [
+            {
+              "rows": 3,
+              "html": "\n    <tbody><tr>\n    <td class=\"footer-text\" style=\"width: 80px !important;\">Mon - Fri</td>\n    <td class=\"footer-text\">9AM - 6PM</td>\n    </tr>\n    <tr style=\"background: transparent;\">\n    <td class=\"footer-text\" style=\"width: 80px !important;\">Sat</td>\n    <td class=\"footer-text\">10AM - 2PM</td>\n"
+            }
+          ],
+          "configDivs": [],
+          "scripts": []
+        }
+      },
+      "error": null,
+      "apiCalls": [
+        {
+          "url": "https://axiomprint.com/_next/data/RlPVA5h4EgkBXC5cx-8np/index.json",
+          "bodyPreview": "{\"pageProps\":{\"metaData\":{\"title\":\"Online Printing in Los Angeles, Same Day Rush Printing in LA | AxiomPrint.com\",\"description\":\"We specialize in custom printing services in Los Angeles. Same day printing orders are Welcome! Digital, Large format, Offset Printing & Mailing Services. High Quality and"
+        },
+        {
+          "url": "https://website.workroomapp.com/api/v1/org/axiom-print",
+          "bodyPreview": "{\"id\":\"6698ee2589edbd001c909ce6\",\"name\":\"Axiom Print\",\"legalName\":\"Axiom Print\",\"domain\":\"axiomprint.com\",\"logo\":\"organisation/2024-12-27t09-21-25-499z-axiomprintlogo.svg\",\"config\":{\"title\":\"Online Printing Services, Print Management, Custom Print Solutions by AxiomPrint\",\"metaTitle\":\"Online Printin"
+        },
+        {
+          "url": "https://website.workroomapp.com/api/v1/products/search-products?organisationName=axiom-print",
+          "bodyPreview": "{\"products\":[{\"product_id\":154,\"name\":\"Smooth Banner\",\"image\":\"https://axiomprint.s3.us-west-1.amazonaws.com/ProductImages/154/originals/2026-03-25T09-47-14-510Z-smooth-banner.png\",\"url\":\"smooth-banner-154\",\"meta_keywords\":\"smooth,banner,vinyl,indoor\",\"isSearch\":true,\"isMenu\":true},{\"product_id\":155"
+        },
+        {
+          "url": "https://website.workroomapp.com/api/v1/org/axiom-print/menu-items",
+          "bodyPreview": "{\"organisation\":{\"id\":\"6698ee2589edbd001c909ce6\",\"name\":\"Axiom Print\",\"slug\":\"axiom-print\",\"domain\":\"axiomprint.com\",\"logo\":\"organisation/2024-12-27t09-21-25-499z-axiomprintlogo.svg\",\"favicon\":\"organisation/2025-06-02t08-00-28-342z-favicon.ico\"},\"menuItems\":[{\"category\":{\"allowSubcategories\":true,\"l"
+        },
+        {
+          "url": "https://px.ads.linkedin.com/attribution_trigger?pid=3030114&time=1776466427987&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Froll-labels-335",
+          "bodyPreview": "{}"
+        }
+      ],
+      "wooApi": {
+        "url": "https://www.axiomprint.com/?wc-ajax=get_variation",
+        "status": 200,
+        "preview": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width\"/><script id=\"config\" type=\"application/ld+json\">{\"@context\":\"https://schema.org/\",\"@type\":\"LocalBusiness\",\"@id\":\"https://www.axiomprint.com\",\"name\":\"Axiom Print\",\"logo\":\"https://www.axiomprint.com/assets/icons/AxiomPrintLogo.svg\",\"telephone\":\"747-888-7777\",\"email\":\"order@axiomprint.com\",\"url\":\"https://www.axiomprint.com\",\"sameAs\":[\"https://www.facebook.com/axiomprint\",\"https://www.insta"
+      }
+    },
+    "gotprint": {
+      "token": null,
+      "prices": null,
+      "error": "page.select is not a function",
+      "apiCalls": [
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/promobar/content?platform=1&type=1",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "x-requested-with": "XMLHttpRequest",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/promobar/content?platform=1&type=1",
+          "status": 200,
+          "body": "{\"items\":[{\"id\":294,\"content\":\"<span><span><span><svg xmlns=\\\"http://www.w3.org/2000/svg\\\" height=\\\"1.5em\\\" \\\"margin-right:\\\"10px;=\\\"\\\" width:20px;\\\"\\\"=\\\"\\\" viewBox=\\\"0 0 640 512\\\"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><style>svg{fill:#ffffff}</style><path d=\\\"M128 0C110.3 0 96 14.3 96 32V224h96V192c0-35.3 28.7-64 64-64H480V32c0-17.7-14.3-32-32-32H128zM256 160c-17.7 "
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/json",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "{\"nonEnums\":\"gp.json.warning.*\"}"
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/json",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "{\"nonEnums\":\"gp.json.order-form.v1.*\"}"
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/json",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "{\"taxExemptType\":\"ALL\",\"taxExemptStatus\":\"ALL\",\"taxExemptCountries\":\"ALL\",\"taxExemptStates\":\"ALL\",\"taxCertificateExpirationReason\":\"1,2\",\"directMarketingProposalStatus\":\"all\",\"directMarketingProposalDesignType\":\"0,1,2,3\",\"mailingType\":\"ALL\",\"directMarketingProposalMailingListType\":\"1,2,3,4,5\",\"direc"
+        },
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/settings",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/logger",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0",
+            "x-requested-with": "XMLHttpRequest",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "content-type": "application/json"
+          },
+          "postData": "\"Browser Report :: { Browser Name: Chrome, Browser Version : 124.0.0.0, OS Name : macOS, OS Version : 10.15.7, Device Type : desktop }\""
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "status": 200,
+          "body": "{\"gp.json.warning.*\":{\"label\":{\"gp.json.warning.size\":\"<div style=\\\"max-width: 350px;\\\">Any banner that measures over 3 ft (36 inches) on the shortest side will be folded and shipped inside a box.</div>\",\"gp.json.warning.nextDayRush\":\"<div style=\\\"max-width: 350px;\\\">Rush refers to production only. Your order will be produced and ready to ship out on the following business day based on the following criteria: To meet the cut off time, orders and payments must be approved and successfully charged"
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/json",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "{\"nonEnums\":\"PrintProductSpecifications.shape,PrintProductSpecifications.size,label.material,PrintProductSpecifications.page,PrintProductSpecifications.pocket,label.paper,PrintProductSpecifications.finish,PrintProductSpecifications.finish,PrintProductSpecifications.folding,PrintProductSpecifications"
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "status": 200,
+          "body": "{\"gp.json.order-form.v1.*\":{\"label\":{\"gp.json.order-form.v1.bleedMessage\":\"<b>Bleed Line:</b> Make sure your background and any elements meant to go to the edge extend all the way to the bleed line.\",\"gp.json.order-form.v1.myFiles\":\"My Files\",\"gp.json.order-form.v1.silverPackage\":\"Silver Package\",\"gp.json.order-form.v1.ok\":\"Ok\",\"gp.json.order-form.v1.imageInUse\":\"Image is currently in use and cannot be deleted.\",\"gp.json.order-form.v1.right\":\"Right\",\"gp.json.order-form.v1.safetyMessage\":\"<b>Safe"
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/logger",
+          "status": 200,
+          "body": null
+        },
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/users/self/cart?includeTotal=true&requestValues=true&includeCount=false&type=1",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/settings",
+          "status": 200,
+          "body": "{\"id\":100,\"siteId\":100,\"enabled\":true,\"subDomain\":\"www\",\"lookAndFeelTemplateId\":1,\"orderPrefix\":\"GP\",\"country\":\"US\",\"exchangeRate\":1,\"phone\":\"877-922-7374\",\"mailingAddress\":\"GotPrint.com\\n\\n7651 N. San Fernando Rd.\\nBurbank, CA 91505\",\"defaultAddressType\":2,\"allowAddressTypeSelection\":true,\"orderingShippingPanelType\":1,\"zipCodeBasedShippingSupported\":true,\"couponDiscountServices\":{\"mailingAndInsertingCouponDiscountService\":false,\"directMarketingProposalCouponDiscountService\":false,\"insertingCoup"
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "status": 200,
+          "body": "{\"ProductOptionType.NUMBERING\":{\"label\":\"Numbering\"},\"Label.back\":{\"label\":\"Back\"},\"ProductOptionGroup.BOARDS_HOLE_DRILLING\":{\"label\":\"Hole Drilling\"},\"ProductOptionType.NUMBERING_POSITION_RIGHT_CENTER\":{\"label\":\"Numbering position Right Center\"},\"frontInstructions\":{\"label\":\"Text and Design Instructions for the Front (Outside)\"},\"Label.designedByBasicDesigner\":{\"label\":\"Designed by Basic Creator\"},\"DirectMarketingProposal.Specification.proofType\":{\"label\":\"Proof Type\"},\"Quote.Specification.mate"
+        },
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/store/countries",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/i18n/lookup/resources",
+          "status": 200,
+          "body": "{\"ShippingMethod.FREIGHT\":{\"label\":\"Freight\"},\"label.printedSide\":{\"label\":\"Printed Side\"},\"label.orientation\":{\"label\":\"Orientation\"},\"label.type\":{\"label\":\"Type\"},\"Label.limitedAccessLocations\":{\"label\":\"Limited Access Locations\"},\"label.sweatShirtPrintType\":{\"label\":\"Print Type\"},\"label.materialColor\":{\"label\":\"Material Color\"},\"label.signType\":{\"label\":\"Sign Type\"},\"ProductQuantity.quantity\":{\"label\":\"Quantity\"},\"label.package\":{\"label\":\"Package\"},\"state\":{\"label\":\"State\",\"keys\":[{\"id\":\"US.A"
+        },
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/settings/product/specifications?requestValues=true&productType=36",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/users/self/cart?includeTotal=true&requestValues=true&includeCount=false&type=1",
+          "status": 200,
+          "body": "{\"items\":[],\"count\":null,\"recentAddedCartIds\":null,\"totalPrice\":[{\"id\":\"subTotalExShipping\",\"label\":\"Subtotal (excludes shipping)\",\"price\":0}],\"saveForLateritems\":[],\"saveForLaterCount\":null,\"totalCount\":null}"
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/store/countries",
+          "status": 200,
+          "body": "{\"countries\":[{\"id\":268,\"country\":\"US\",\"countryId\":50,\"sampleRequestEnabled\":true,\"useAsBilling\":true,\"useAsShipping\":true,\"hasZipCode\":true,\"sortRank\":100},{\"id\":317,\"country\":\"AR\",\"countryId\":1,\"sampleRequestEnabled\":false,\"useAsBilling\":true,\"useAsShipping\":true,\"hasZipCode\":true,\"sortRank\":0},{\"id\":318,\"country\":\"AU\",\"countryId\":2,\"sampleRequestEnabled\":false,\"useAsBilling\":true,\"useAsShipping\":true,\"hasZipCode\":true,\"sortRank\":0},{\"id\":896,\"country\":\"AT\",\"countryId\":3,\"sampleRequestEnabled\""
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/settings/product/specifications?requestValues=true&productType=36",
+          "status": 200,
+          "body": "{\"panels\":[],\"trays\":[],\"papers\":[{\"id\":13,\"label\":\"Clear BOPP Label\"},{\"id\":12,\"label\":\"White BOPP Label\"},{\"id\":14,\"label\":\"White Vinyl Label (Glossy)\"},{\"id\":72,\"label\":\"White Removable Label\"},{\"id\":73,\"label\":\"Clear Removable Label\"},{\"id\":15,\"label\":\"White Textured Label - Estate #8\"},{\"id\":80,\"label\":\"Cream Laid Textured Label (Matte)\"},{\"id\":81,\"label\":\"Silver Foil BOPP Label\"},{\"id\":79,\"label\":\"White Laid Textured Label (Matte)\"}],\"turnarounds\":[{\"id\":1,\"label\":\"Regular\"}],\"colors\":[{\"i"
+        },
+        {
+          "type": "request",
+          "method": "GET",
+          "url": "/service/rest/v1/product/search?_=1776466433905",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0",
+            "x-requested-with": "XMLHttpRequest",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "content-type": "application/json"
+          }
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/product/search?_=1776466433905",
+          "status": 200,
+          "body": "{\"items\":[{\"products\":\"Acrylic Boards\",\"productList\":true,\"newBadge\":false,\"image\":\"/products/search-thumbnail/wedding_acrylic_boards.png\",\"description\":\"Signs & Banners > Rigid Signs\",\"url\":\"/products/acrylic-boards/order.html\",\"addInfo\":true,\"addInfoUrl\":\"/products/acrylic-boards/info.html\",\"keywords\":\"acrylic, rigid sign,rigid signs,wedding sign, clear sign, company sign, business sign, transparent sign, acrylic boards\",\"fileDescriptor\":null},{\"products\":\"Aluminum Boards\",\"productList\":true,\""
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/oauth/token",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/x-www-form-urlencoded",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "grant_type=client_credentials&client_id=guest&client_secret=guest"
+        },
+        {
+          "type": "response",
+          "url": "/service/rest/v1/oauth/token",
+          "status": 415,
+          "body": "{\"messageList\":[{\"resource\":\"gp-bdc-gpcom-app03:worker4::39\",\"severity\":\"ERROR\",\"code\":\"unsupported_media_type\",\"value\":\"Not supported error Occurred due to null \",\"id\":\"165\",\"compositeId\":\"122:415:3:165\"}]}"
+        },
+        {
+          "type": "request",
+          "method": "POST",
+          "url": "/service/rest/v1/oauth/token",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://www.gotprint.com/products/roll-labels/order",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "content-type": "application/x-www-form-urlencoded",
+            "sec-ch-ua-mobile": "?0"
+          },
+          "postData": "grant_type=password&username=anonymous&password=anonymous"
+        }
+      ],
+      "httpResults": {
+        "/service/rest/v1/products/roll-labels": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/products": {
+          "status": 200,
+          "preview": "{\"items\":[{\"id\":300137749},{\"id\":300137750},{\"id\":300137751},{\"id\":300137753},{\"id\":300137754},{\"id\":300137755},{\"id\":300137756},{\"id\":300137758},{\"id\":300137759},{\"id\":300137760},{\"id\":300137761},{\"i"
+        },
+        "/service/rest/v1/catalog/products/roll-labels": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/catalog/roll-labels/options": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/pricing/roll-labels": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/pricing?product=roll-labels&width=3&height=3&qty=5000": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/price?variantId=32&paperTypeId=12&qty=5000": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v1/cart": {
+          "status": 401,
+          "preview": ""
+        },
+        "/service/rest/v2/pricing": {
+          "status": 400,
+          "preview": ""
+        }
+      }
+    }
+  }
+}

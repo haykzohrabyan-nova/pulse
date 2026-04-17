@@ -1,0 +1,118 @@
+{
+  "vistaprintPrices": {
+    "1000": {
+      "totalListPrice": {
+        "taxed": 110.24,
+        "untaxed": 110.24
+      },
+      "totalDiscountedPrice": {
+        "taxed": 110.24,
+        "untaxed": 110.24
+      },
+      "unitListPrice": {
+        "taxed": 0.12,
+        "untaxed": 0.12
+      },
+      "unitDiscountedPrice": {
+        "taxed": 0.12,
+        "untaxed": 0.12
+      },
+      "baseListPrice": {
+        "taxed": 0,
+        "untaxed": 0
+      },
+      "baseDiscountPrice": {
+        "taxed": 0,
+        "untaxed": 0
+      },
+      "breakdown": [
+        {
+          "name": "Roll Finishing Type",
+          "value": "Slit Roll",
+          "listPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          },
+          "discountPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          }
+        },
+        {
+          "name": "Custom Width",
+          "value": "1",
+          "listPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          },
+          "discountPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          }
+        },
+        {
+          "name": "Custom Height",
+          "value": "1",
+          "listPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          },
+          "discountPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          }
+        },
+        {
+          "name": "Material",
+          "value": "White Paper",
+          "listPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          },
+          "discountPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          }
+        },
+        {
+          "name": "Finish",
+          "value": "Matte",
+          "listPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          },
+          "discountPrice": {
+            "taxed": 0,
+            "untaxed": 0
+          }
+        },
+        {
+          "name": "Size",
+          "value": "Custom",
+          "listPrice": {
+            "taxed": 110.24,
+            "untaxed": 110.24
+          },
+          "discountPrice": {
+            "taxed": 110.24,
+            "untaxed": 110.24
+          }
+        }
+      ],
+      "taxRate": 0,
+      "additionalCharges": [],
+      "shippingPriceStatus": "NotRequested",
+      "shippingListPrice": {
+        "taxed": 0,
+        "untaxed": 0
+      },
+      "shippingDiscountedPrice": {
+        "taxed": 0,
+        "untaxed": 0
+      }
+    }
+  },
+  "uprintingCurrentPrices": [
+    131.23
+  ]
+}

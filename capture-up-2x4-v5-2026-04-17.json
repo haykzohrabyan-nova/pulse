@@ -1,0 +1,14 @@
+{
+  "run_date": "2026-04-17T22:54:31.934Z",
+  "results": [],
+  "api_calls": [
+    {
+      "url": "https://www.uprinting.com/html/angular-app/modules/sms-product/directives/calculator/calc-variant-switcher.directive.html?v=35b5434fe11b2c4faa57f32501365d4daa8b62dc",
+      "body": "<div class=\"comp-calc-variant-switcher\"\n    ng-show=\"show_calc_variant_switcher\"\n    ng-if=\"!mobileView\">\n    <div class=\"site-toggle-switch\"\n        ng-class=\"{'toggled': isChecked}\">\n        <span class=\"default-option-label\">Grid</span>\n        <label class=\"switch\">\n            <input type=\"checkbox\"\n                   aria-label=\"calculator switch view\"\n                   ng-model=\"isChecked\" \n                   ng-change=\"toggleCalcVariant(isChecked)\">\n            <span class=\"slider round"
+    },
+    {
+      "url": "https://www.uprinting.com/html/angular-app/modules/sms-product/directives/share-calc-config/share-calc-config.directive.html?v=35b5434fe11b2c4faa57f32501365d4daa8b62dc",
+      "body": "<div class=\"comp-share-calc-config-container\">\n    <div id=\"share_calc_btn\">\n        <a href class=\"share-config-link\" ng-click=\"actions.showModal()\" tabindex=\"0\" aria-label=\"Share Product Modal\">\n            <span class=\"share-icon dri-share-link\"></span>\n            <span class=\"share-text site-secondary-link-italic\">Share Product</span>\n        </a>\n    </div>\n    <focus-trap first-trap=\".modal-close-btn.close\" \n    last-trap-alt=\".site-alert-success.share-config-copy-message\"\n    last-trap=\""
+    }
+  ]
+}

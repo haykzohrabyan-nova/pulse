@@ -3,7 +3,7 @@
   "product_scope": "multi-product",
   "description": "Normalized competitor comparison data keyed by query spec. Covers roll labels, folding cartons, and stand-up pouches. Each query maps to a set of competitor results. Internal label prices are calculated from LABEL_SALES_TIERS. Internal box/pouch prices are pending model documentation.",
   "last_updated": "2026-04-17",
-  "last_capture_pass": "2026-04-17-multiproduct-pass",
+  "last_capture_pass": "2026-04-17-axiom-gp-breakthrough",
   "products_covered": [
     "roll_labels",
     "folding_cartons",
@@ -28,8 +28,8 @@
         },
         {
           "min_frames": 120,
-          "standard_per_frame": 5.0,
-          "uv_per_frame": 6.0
+          "standard_per_frame": 5,
+          "uv_per_frame": 6
         },
         {
           "min_frames": 60,
@@ -48,8 +48,8 @@
         },
         {
           "min_frames": 6,
-          "standard_per_frame": 20.0,
-          "uv_per_frame": 40.0
+          "standard_per_frame": 20,
+          "uv_per_frame": 40
         }
       ],
       "lamination_adders": {
@@ -75,7 +75,7 @@
         },
         {
           "min_frames": 550,
-          "frame_price": 4.0
+          "frame_price": 4
         },
         {
           "min_frames": 275,
@@ -83,7 +83,7 @@
         },
         {
           "min_frames": 110,
-          "frame_price": 9.0
+          "frame_price": 9
         },
         {
           "min_frames": 55,
@@ -92,8 +92,8 @@
       ],
       "spec_example": {
         "pouch_width_in": 4.375,
-        "pouch_height_in": 6.0,
-        "gusset_in": 2.0,
+        "pouch_height_in": 6,
+        "gusset_in": 2,
         "flat_footprint_in": "10.99 x 6.24",
         "fits_per_frame": 6,
         "web_usable_width_in": 12.24,
@@ -199,21 +199,36 @@
         {
           "competitor": "gotprint",
           "competitor_display": "GotPrint",
-          "status": "partial",
-          "coverage": "configurator_explored_upload_required_for_price",
-          "total_price": null,
-          "unit_price": null,
+          "status": "live",
+          "coverage": "confirmed_size_gloss_finish",
+          "total_price": 356.8,
+          "unit_price": 0.07136,
           "currency": "USD",
           "turnaround_days": null,
           "shipping_included": false,
           "closest_data_point": {
-            "description": "Square-Rounded / 3\" x 3\" / White BOPP / Matte Finish \u2014 spec 100% confirmed, price blocked by upload wall",
-            "price": null,
-            "spec_delta": "size=3\" x 3\" (EXACT), material=White BOPP (EXACT), qty=5000 available",
-            "confidence": "high"
+            "description": "Roll Labels 3\"\u00d73\" Square-Rounded, White BOPP, Clear Gloss Laminate Indoor, 5,000 qty",
+            "total_price": 356.8,
+            "unit_price": 0.07136,
+            "quantity": 5000,
+            "spec_delta": "finish=Clear Gloss (not Matte) \u2014 Matte option exists (finish=3) but requires separate pass",
+            "confidence": "high",
+            "raw_capture_id": "gp-3x3-5000-gloss",
+            "api_endpoint": "/service/rest/v1/products/300158845/prices",
+            "product_id": 300158845,
+            "full_price_table": {
+              "100": 76.28,
+              "250": 86.16,
+              "500": 123,
+              "1000": 148.91,
+              "2500": 226.86,
+              "5000": 356.8,
+              "10000": 618.83,
+              "15000": 876.58
+            }
           },
-          "confidence": "medium",
-          "notes": "Configurator at /products/roll-labels/order: shape=Square-Rounded, size=3x3 (variantId=32), White BOPP (paper ID=12), Matte Finish, qty=5000 ALL confirmed. Price blocked: Vue.js cascade disables paper/finish selects until upload completes. REST API 401. Manual human click-through needed."
+          "confidence": "high",
+          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection."
         },
         {
           "competitor": "stickermule",
@@ -258,9 +273,9 @@
         "frames_needed": 59,
         "tier_min_frames": 25,
         "frame_price": 8.5,
-        "print_charge": 500.0,
+        "print_charge": 500,
         "lamination_charge": 0,
-        "total": 500.0,
+        "total": 500,
         "unit_price": 0.1,
         "currency": "USD",
         "note": "85 fits/frame = 5\u00d717. 5000/85 = 58.8 \u2192 59 frames. Tier: 25-frame min at $8.50/frame."
@@ -340,6 +355,40 @@
           },
           "confidence": "high",
           "notes": "Verified via Playwright Bootstrap dropdown + Angular scope read. Shipping not included."
+        },
+        {
+          "competitor": "gotprint",
+          "competitor_display": "GotPrint",
+          "status": "live",
+          "coverage": "confirmed_size_gloss_finish",
+          "total_price": 148.91,
+          "unit_price": 0.14891,
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 3\"\u00d73\" Square-Rounded, White BOPP, Clear Gloss Indoor, 1,000 qty",
+            "total_price": 148.91,
+            "unit_price": 0.14891,
+            "quantity": 1000,
+            "spec_delta": "finish=Clear Gloss (not Matte) \u2014 Matte option exists (finish=3) but requires separate pass",
+            "confidence": "high",
+            "raw_capture_id": "gp-3x3-5000-gloss",
+            "api_endpoint": "/service/rest/v1/products/300158845/prices",
+            "product_id": 300158845,
+            "full_price_table": {
+              "100": 76.28,
+              "250": 86.16,
+              "500": 123,
+              "1000": 148.91,
+              "2500": 226.86,
+              "5000": 356.8,
+              "10000": 618.83,
+              "15000": 876.58
+            }
+          },
+          "confidence": "high",
+          "notes": "Playwright session capture via /service/rest/v1/products/300158845/prices. Shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Full price table captured 100-15k qty. Shipping not included. Previous upload wall blocker is resolved \u2014 material and finish selects enabled after shape+size selection."
         }
       ],
       "comparison_notes": "Our price $236.11 vs UPrinting $222.26 \u2014 only 6% difference at 1k/3\u00d73. We are relatively competitive at lower quantities."
@@ -363,7 +412,7 @@
         "fits_per_frame": 85,
         "frames_needed": 12,
         "tier_min_frames": 6,
-        "frame_price": 20.0,
+        "frame_price": 20,
         "print_charge": 235.29,
         "lamination_charge": 0,
         "total": 235.29,
@@ -497,7 +546,7 @@
         "fits_per_frame": 279,
         "frames_needed": 4,
         "tier_min_frames": 6,
-        "frame_price": 20.0,
+        "frame_price": 20,
         "print_charge": 71.68,
         "lamination_charge": 0,
         "total": 71.68,
@@ -558,8 +607,31 @@
         "currency": "USD",
         "note": "45 fits/frame (height-on-web: floor(12/2.24)\u00d7floor(39/4.24)=5\u00d79). 10000/45=222.2\u2192223 frames. Tier: 120-frame min at $5/frame."
       },
-      "competitor_results": [],
-      "comparison_notes": "No competitor data captured yet. Placeholder for future capture run."
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 683.03,
+          "unit_price": 0.0683,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2\"\u00d74\" White BOPP, Gloss Indoor, 10,000 qty (2\"\u00d74\" = 4\"\u00d72\" rotated)",
+            "total_price": 683.03,
+            "unit_price": 0.0683,
+            "quantity": 10000,
+            "spec_delta": "size=2\"\u00d74\" (4\"\u00d72\" rotated \u2014 same label area, same price); lam=Gloss Indoor (identical price to Matte on UPrinting roll labels)",
+            "confidence": "high",
+            "raw_capture_id": "up-2x4-10000"
+          },
+          "confidence": "high",
+          "notes": "Captured via UPrinting pricing API (calculator.digitalroom.com/v1/computePrice). Size confirmed: 2\"\u00d74\" (w=2, h=4) \u2014 same as 4\"\u00d72\" rotated. Gloss Indoor lam pricing same as Matte for roll labels. 6-day turnaround. Shipping not included."
+        }
+      ],
+      "comparison_notes": "UPrinting live at $683.03/10k pcs ($0.068/unit). Also captured: 1k=$203.66, 5k=$463.40. Our price $1,111.11 \u2014 we are 63% more expensive at 10k/4\"\u00d72\"."
     },
     {
       "query_id": "box-ste-4x2x5-250-18pt-gloss",
@@ -606,9 +678,31 @@
           },
           "confidence": "high",
           "notes": "Angular scope read. Style=Straight Tuck End, L=4/W=2/D=5, 18pt SBS cardstock, Gloss front, 8-10 business day turnaround. Flat sheet: 12.75\"\u00d710.65\". Shipping not included."
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "exact_spec",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "high",
+          "total_price": 717.5,
+          "unit_price": 2.87,
+          "closest_data_point": {
+            "description": "Packola Straight Tuck End Box, 4\"L\u00d72\"W\u00d75\"D, 250 pcs",
+            "total_price": 717.5,
+            "unit_price": 2.87,
+            "quantity": 250,
+            "spec_delta": "exact match \u2014 all dimensions and qty confirmed; material is Packola standard cardstock (vs 18pt SBS)",
+            "confidence": "high",
+            "raw_capture_id": "packola-box-ste-4x2x5-250-pri8"
+          },
+          "notes": "Captured via Packola product page DOM (calc-price-per-piece + calc-price.subtotal-price). Dimensions confirmed via L/W/D input fill: 4\"\u00d72\"\u00d75\". Cardstock weight not explicitly confirmed (Packola does not display grams/pt)."
         }
       ],
-      "comparison_notes": "UPrinting live at $675/250 pcs ($2.70/unit). Our internal price TBD \u2014 needs HP 15K pricing model. Benchmark anchor set."
+      "comparison_notes": "UPrinting live at $675/250 pcs ($2.70/unit). Our internal price TBD \u2014 needs HP 15K pricing model. Benchmark anchor set. Packola: $717.50/250 ($2.87/unit)."
     },
     {
       "query_id": "box-ste-4x2x5-500-18pt-gloss",
@@ -655,9 +749,31 @@
           },
           "confidence": "high",
           "notes": "Angular scope read. Same spec as 250 pcs variant."
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "exact_spec",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "high",
+          "total_price": 1255,
+          "unit_price": 2.51,
+          "closest_data_point": {
+            "description": "Packola Straight Tuck End Box, 4\"L\u00d72\"W\u00d75\"D, 500 pcs",
+            "total_price": 1255,
+            "unit_price": 2.51,
+            "quantity": 500,
+            "spec_delta": "exact match \u2014 all dimensions and qty confirmed; material is Packola standard cardstock (vs 18pt SBS)",
+            "confidence": "high",
+            "raw_capture_id": "packola-box-ste-4x2x5-500-pri8"
+          },
+          "notes": "Captured via Packola product page DOM (calc-price-per-piece + calc-price.subtotal-price). Dimensions confirmed via L/W/D input fill: 4\"\u00d72\"\u00d75\". Cardstock weight not explicitly confirmed (Packola does not display grams/pt)."
         }
       ],
-      "comparison_notes": "UPrinting: $1,180/500 pcs ($2.36/unit). Scale from 250 to 500: 75% cost increase for 2\u00d7 qty."
+      "comparison_notes": "UPrinting: $1,180/500 pcs ($2.36/unit). Scale from 250 to 500: 75% cost increase for 2\u00d7 qty. Packola: $1255.00/500 ($2.51/unit)."
     },
     {
       "query_id": "box-ste-4x2x5-1000-18pt-gloss",
@@ -703,9 +819,31 @@
             "raw_capture_id": "up-box-ste-1000"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "exact_spec",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "high",
+          "total_price": 1800,
+          "unit_price": 1.8,
+          "closest_data_point": {
+            "description": "Packola Straight Tuck End Box, 4\"L\u00d72\"W\u00d75\"D, 1000 pcs",
+            "total_price": 1800,
+            "unit_price": 1.8,
+            "quantity": 1000,
+            "spec_delta": "exact match \u2014 all dimensions and qty confirmed; material is Packola standard cardstock (vs 18pt SBS)",
+            "confidence": "high",
+            "raw_capture_id": "packola-box-ste-4x2x5-1000-pri8"
+          },
+          "notes": "Captured via Packola product page DOM (calc-price-per-piece + calc-price.subtotal-price). Dimensions confirmed via L/W/D input fill: 4\"\u00d72\"\u00d75\". Cardstock weight not explicitly confirmed (Packola does not display grams/pt)."
         }
       ],
-      "comparison_notes": "UPrinting: $1,690/1k pcs ($1.69/unit). Qty scaling: 2\u00d7 qty from 500 \u2192 1000 = 43% cost increase."
+      "comparison_notes": "UPrinting: $1,690/1k pcs ($1.69/unit). Qty scaling: 2\u00d7 qty from 500 \u2192 1000 = 43% cost increase. Packola: $1800.00/1,000 ($1.80/unit)."
     },
     {
       "query_id": "box-ste-4x2x5-2000-18pt-gloss",
@@ -751,9 +889,31 @@
             "raw_capture_id": "up-box-ste-2000"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "exact_spec",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "high",
+          "total_price": 2160,
+          "unit_price": 1.08,
+          "closest_data_point": {
+            "description": "Packola Straight Tuck End Box, 4\"L\u00d72\"W\u00d75\"D, 2000 pcs",
+            "total_price": 2160,
+            "unit_price": 1.08,
+            "quantity": 2000,
+            "spec_delta": "exact match \u2014 all dimensions and qty confirmed; material is Packola standard cardstock (vs 18pt SBS)",
+            "confidence": "high",
+            "raw_capture_id": "packola-box-ste-4x2x5-2000-pri8"
+          },
+          "notes": "Captured via Packola product page DOM (calc-price-per-piece + calc-price.subtotal-price). Dimensions confirmed via L/W/D input fill: 4\"\u00d72\"\u00d75\". Cardstock weight not explicitly confirmed (Packola does not display grams/pt)."
         }
       ],
-      "comparison_notes": "UPrinting: $2,020/2k pcs ($1.01/unit). Volume discount curve flattening \u2014 2\u00d7 qty from 1000 costs only 20% more."
+      "comparison_notes": "UPrinting: $2,020/2k pcs ($1.01/unit). Volume discount curve flattening \u2014 2\u00d7 qty from 1000 costs only 20% more. Packola: $2160.00/2,000 ($1.08/unit)."
     },
     {
       "query_id": "box-ste-4x2x5-2500-18pt-gloss",
@@ -799,9 +959,31 @@
             "raw_capture_id": "up-box-ste-2500"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "exact_spec",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "high",
+          "total_price": 2400,
+          "unit_price": 0.96,
+          "closest_data_point": {
+            "description": "Packola Straight Tuck End Box, 4\"L\u00d72\"W\u00d75\"D, 2500 pcs",
+            "total_price": 2400,
+            "unit_price": 0.96,
+            "quantity": 2500,
+            "spec_delta": "exact match \u2014 all dimensions and qty confirmed; material is Packola standard cardstock (vs 18pt SBS)",
+            "confidence": "high",
+            "raw_capture_id": "packola-box-ste-4x2x5-2500-pri8"
+          },
+          "notes": "Captured via Packola product page DOM (calc-price-per-piece + calc-price.subtotal-price). Dimensions confirmed via L/W/D input fill: 4\"\u00d72\"\u00d75\". Cardstock weight not explicitly confirmed (Packola does not display grams/pt)."
         }
       ],
-      "comparison_notes": "UPrinting: $2,250/2.5k pcs ($0.90/unit). Smallest available qty on UPrinting is 50 pcs ($270, $5.40/unit)."
+      "comparison_notes": "UPrinting: $2,250/2.5k pcs ($0.90/unit). Smallest available qty on UPrinting is 50 pcs ($270, $5.40/unit). Packola: $2400.00/2,500 ($0.96/unit)."
     },
     {
       "query_id": "pouch-sup-4375x6-500-white",
@@ -809,8 +991,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 500 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 500,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -825,9 +1007,9 @@
         "fits_per_frame": 6,
         "frames_needed": 84,
         "frame_price": 13.5,
-        "print_charge": 1134.0,
+        "print_charge": 1134,
         "lamination_charge": 0,
-        "total": 1134.0,
+        "total": 1134,
         "unit_price": 2.268,
         "currency": "USD",
         "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 84 frames x $13.5/frame."
@@ -854,9 +1036,31 @@
           },
           "confidence": "high",
           "notes": "Angular scope read. 6-day turnaround. Perf=Yes, Window=No, Hang Hole=None. Shipping not included."
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "different_size_confirmed",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "medium",
+          "total_price": 462.76,
+          "unit_price": 0.93,
+          "closest_data_point": {
+            "description": "Packola Stand-Up Pouch Medium (~4\"\u00d76\"), 500 pcs",
+            "total_price": 462.76,
+            "unit_price": 0.93,
+            "quantity": 500,
+            "spec_delta": "qty exact; size=Packola \"Medium\" (~4\"\u00d76\") vs our spec 4.375\"\u00d76\"\u00d72\" \u2014 close but not exactly matched; material confirmed white",
+            "confidence": "medium",
+            "raw_capture_id": "packola-pouch-sup-500-pri8"
+          },
+          "notes": "Captured via Packola custom-pouches product page. Stand-Up type selected; Medium size (~4\"\u00d76\") chosen as closest to our 4.375\"\u00d76\"\u00d72\" gusset spec. Exact dimensions and gusset not adjustable in Packola configurator. DIRECTIONAL pricing \u2014 actual Packola quote for exact spec may vary."
         }
       ],
-      "comparison_notes": "PRIMARY POUCH BENCHMARK. UPrinting $630.22/500 pcs ($1.26/unit). Our price TBD. Full UPrinting pricing curve captured \u2014 see qty range queries below."
+      "comparison_notes": "PRIMARY POUCH BENCHMARK. UPrinting $630.22/500 pcs ($1.26/unit). Our price TBD. Full UPrinting pricing curve captured \u2014 see qty range queries below. Packola (directional, Medium ~4\"\u00d76\"): $462.76/500 ($0.93/unit)."
     },
     {
       "query_id": "pouch-sup-4375x6-100-white",
@@ -864,8 +1068,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 100 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 100,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -916,8 +1120,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 250 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 250,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -930,9 +1134,9 @@
         "fits_per_frame": 6,
         "frames_needed": 42,
         "frame_price": 13.5,
-        "print_charge": 567.0,
+        "print_charge": 567,
         "lamination_charge": 0,
-        "total": 567.0,
+        "total": 567,
         "unit_price": 2.268,
         "currency": "USD",
         "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 42 frames x $13.5/frame."
@@ -958,9 +1162,31 @@
             "raw_capture_id": "up-pouch-250"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "different_size_confirmed",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "medium",
+          "total_price": 421.51,
+          "unit_price": 1.69,
+          "closest_data_point": {
+            "description": "Packola Stand-Up Pouch Medium (~4\"\u00d76\"), 250 pcs",
+            "total_price": 421.51,
+            "unit_price": 1.69,
+            "quantity": 250,
+            "spec_delta": "qty exact; size=Packola \"Medium\" (~4\"\u00d76\") vs our spec 4.375\"\u00d76\"\u00d72\" \u2014 close but not exactly matched; material confirmed white",
+            "confidence": "medium",
+            "raw_capture_id": "packola-pouch-sup-250-pri8"
+          },
+          "notes": "Captured via Packola custom-pouches product page. Stand-Up type selected; Medium size (~4\"\u00d76\") chosen as closest to our 4.375\"\u00d76\"\u00d72\" gusset spec. Exact dimensions and gusset not adjustable in Packola configurator. DIRECTIONAL pricing \u2014 actual Packola quote for exact spec may vary."
         }
       ],
-      "comparison_notes": "UPrinting: $505.87/250 pcs ($2.02/unit)."
+      "comparison_notes": "UPrinting: $505.87/250 pcs ($2.02/unit). Packola (directional, Medium ~4\"\u00d76\"): $421.51/250 ($1.69/unit)."
     },
     {
       "query_id": "pouch-sup-4375x6-1000-white",
@@ -968,8 +1194,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 1000 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 1000,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -981,10 +1207,10 @@
         "calculated": true,
         "fits_per_frame": 6,
         "frames_needed": 167,
-        "frame_price": 9.0,
-        "print_charge": 1503.0,
+        "frame_price": 9,
+        "print_charge": 1503,
         "lamination_charge": 0,
-        "total": 1503.0,
+        "total": 1503,
         "unit_price": 1.503,
         "currency": "USD",
         "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 167 frames x $9.0/frame."
@@ -1010,9 +1236,31 @@
             "raw_capture_id": "up-pouch-1000"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "different_size_confirmed",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "medium",
+          "total_price": 545.29,
+          "unit_price": 0.55,
+          "closest_data_point": {
+            "description": "Packola Stand-Up Pouch Medium (~4\"\u00d76\"), 1000 pcs",
+            "total_price": 545.29,
+            "unit_price": 0.55,
+            "quantity": 1000,
+            "spec_delta": "qty exact; size=Packola \"Medium\" (~4\"\u00d76\") vs our spec 4.375\"\u00d76\"\u00d72\" \u2014 close but not exactly matched; material confirmed white",
+            "confidence": "medium",
+            "raw_capture_id": "packola-pouch-sup-1000-pri8"
+          },
+          "notes": "Captured via Packola custom-pouches product page. Stand-Up type selected; Medium size (~4\"\u00d76\") chosen as closest to our 4.375\"\u00d76\"\u00d72\" gusset spec. Exact dimensions and gusset not adjustable in Packola configurator. DIRECTIONAL pricing \u2014 actual Packola quote for exact spec may vary."
         }
       ],
-      "comparison_notes": "UPrinting: $897.26/1k pcs ($0.90/unit)."
+      "comparison_notes": "UPrinting: $897.26/1k pcs ($0.90/unit). Packola (directional, Medium ~4\"\u00d76\"): $545.29/1,000 ($0.55/unit)."
     },
     {
       "query_id": "pouch-sup-4375x6-2500-white",
@@ -1020,8 +1268,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 2500 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 2500,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -1062,9 +1310,31 @@
             "raw_capture_id": "up-pouch-2500"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "different_size_confirmed",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "medium",
+          "total_price": 792.83,
+          "unit_price": 0.32,
+          "closest_data_point": {
+            "description": "Packola Stand-Up Pouch Medium (~4\"\u00d76\"), 2500 pcs",
+            "total_price": 792.83,
+            "unit_price": 0.32,
+            "quantity": 2500,
+            "spec_delta": "qty exact; size=Packola \"Medium\" (~4\"\u00d76\") vs our spec 4.375\"\u00d76\"\u00d72\" \u2014 close but not exactly matched; material confirmed white",
+            "confidence": "medium",
+            "raw_capture_id": "packola-pouch-sup-2500-pri8"
+          },
+          "notes": "Captured via Packola custom-pouches product page. Stand-Up type selected; Medium size (~4\"\u00d76\") chosen as closest to our 4.375\"\u00d76\"\u00d72\" gusset spec. Exact dimensions and gusset not adjustable in Packola configurator. DIRECTIONAL pricing \u2014 actual Packola quote for exact spec may vary."
         }
       ],
-      "comparison_notes": "UPrinting: $1,664.25/2.5k pcs ($0.67/unit)."
+      "comparison_notes": "UPrinting: $1,664.25/2.5k pcs ($0.67/unit). Packola (directional, Medium ~4\"\u00d76\"): $792.83/2,500 ($0.32/unit)."
     },
     {
       "query_id": "pouch-sup-4375x6-5000-white",
@@ -1072,8 +1342,8 @@
       "query_label": "Stand-Up Pouch, 4.375\" W \u00d7 6\" H \u00d7 2\" Gusset, 5000 pcs, Thick Gauge White",
       "spec": {
         "width_in": 4.375,
-        "height_in": 6.0,
-        "gusset_in": 2.0,
+        "height_in": 6,
+        "gusset_in": 2,
         "quantity": 5000,
         "material": "Thick Gauge White",
         "printed_sides": "Front Only",
@@ -1085,10 +1355,10 @@
         "calculated": true,
         "fits_per_frame": 6,
         "frames_needed": 834,
-        "frame_price": 4.0,
-        "print_charge": 3336.0,
+        "frame_price": 4,
+        "print_charge": 3336,
         "lamination_charge": 0,
-        "total": 3336.0,
+        "total": 3336,
         "unit_price": 0.6672,
         "currency": "USD",
         "note": "6K+Karlville. 4.375x6 pouch, 2\" gusset. Flat footprint 10.99x6.24\". 6 fits/frame. 834 frames x $4.0/frame."
@@ -1114,9 +1384,31 @@
             "raw_capture_id": "up-pouch-5000"
           },
           "confidence": "high"
+        },
+        {
+          "competitor": "packola",
+          "competitor_display": "Packola",
+          "status": "live",
+          "coverage": "different_size_confirmed",
+          "currency": "USD",
+          "turnaround_days": null,
+          "shipping_included": null,
+          "confidence": "medium",
+          "total_price": 1205.42,
+          "unit_price": 0.24,
+          "closest_data_point": {
+            "description": "Packola Stand-Up Pouch Medium (~4\"\u00d76\"), 5000 pcs",
+            "total_price": 1205.42,
+            "unit_price": 0.24,
+            "quantity": 5000,
+            "spec_delta": "qty exact; size=Packola \"Medium\" (~4\"\u00d76\") vs our spec 4.375\"\u00d76\"\u00d72\" \u2014 close but not exactly matched; material confirmed white",
+            "confidence": "medium",
+            "raw_capture_id": "packola-pouch-sup-5000-pri8"
+          },
+          "notes": "Captured via Packola custom-pouches product page. Stand-Up type selected; Medium size (~4\"\u00d76\") chosen as closest to our 4.375\"\u00d76\"\u00d72\" gusset spec. Exact dimensions and gusset not adjustable in Packola configurator. DIRECTIONAL pricing \u2014 actual Packola quote for exact spec may vary."
         }
       ],
-      "comparison_notes": "UPrinting: $2,941/5k pcs ($0.59/unit). Full curve captured: 100\u2192250\u2192500\u21921000\u21922500\u21925000."
+      "comparison_notes": "UPrinting: $2,941/5k pcs ($0.59/unit). Full curve captured: 100\u2192250\u2192500\u21921000\u21922500\u21925000. Packola (directional, Medium ~4\"\u00d76\"): $1205.42/5,000 ($0.24/unit)."
     },
     {
       "query_id": "up-2x3-1000-matte-bopp",
@@ -1241,9 +1533,9 @@
         "fits_per_frame": 18,
         "frames_needed": 56,
         "frame_price": 8.5,
-        "print_charge": 476.0,
+        "print_charge": 476,
         "lamination_charge": 0,
-        "total": 476.0,
+        "total": 476,
         "unit_price": 0.476,
         "currency": "USD",
         "note": "18 fits/frame, 56 frames, $8.5/frame tier."
@@ -1325,10 +1617,312 @@
         }
       ],
       "comparison_notes": "Our price $1167.6 vs UPrinting $789.05."
+    },
+    {
+      "query_id": "2x2-10000-matte-bopp-cmyk",
+      "product_type": "roll_labels",
+      "query_label": "2\" \u00d7 2\" square label, 10000 pcs, White BOPP, Matte lamination, CMYK",
+      "spec": {
+        "width_in": 2,
+        "height_in": 2,
+        "quantity": 10000,
+        "material": "White BOPP",
+        "finish": "Matte",
+        "shape": "square",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "calculated": true,
+        "fits_per_frame": 85,
+        "frames_needed": 118,
+        "tier_min_frames": 120,
+        "frame_price": 5,
+        "print_charge": 588.24,
+        "lamination_charge": 0,
+        "total": 600,
+        "unit_price": 0.06,
+        "currency": "USD",
+        "note": "85 fits/frame = 5\u00d717. 10000/85 = 117.6 \u2192 118 frames. Tier: 120-frame min at $5.00/frame (rounded up to 120). Total = 120\u00d7$5 = $600.",
+        "frames_charged": 120
+      },
+      "competitor_results": [
+        {
+          "competitor": "uprinting",
+          "competitor_display": "UPrinting",
+          "status": "live",
+          "coverage": "exact_spec",
+          "total_price": 400,
+          "unit_price": 0.04,
+          "currency": "USD",
+          "turnaround_days": 6,
+          "shipping_included": false,
+          "closest_data_point": {
+            "description": "Roll Labels 2\"\u00d72\" White BOPP, 10,000 qty",
+            "total_price": 400,
+            "unit_price": 0.04,
+            "quantity": 10000,
+            "spec_delta": "exact match",
+            "confidence": "high",
+            "raw_capture_id": "up-2x2-10000"
+          },
+          "confidence": "high",
+          "notes": "Angular scope priceData capture. size=2x2 (stock selector), qty=10000. Shipping not included."
+        }
+      ],
+      "comparison_notes": "UPrinting $400.00 vs our $600.00 (at 120-frame min tier) \u2014 we are 50% more expensive at 10k/2x2."
+    },
+    {
+      "query_id": "axiom-2x3-250-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 2\"\u00d73\" Rectangle, 250 pcs (reference)",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 250,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Reference spec \u2014 not our target. For context only."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_different_size",
+          "total_price": 112.68,
+          "unit_price": 0.4507,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 2\"\u00d73\" Rectangle, White Matte BOPP. 250 qty = $112.68. Standard turnaround. No 3\u00d73 available."
+        }
+      ],
+      "comparison_notes": "Axiom 2\"\u00d73\"/250: $112.68. Reference only \u2014 Axiom has no 3\u00d73 option."
+    },
+    {
+      "query_id": "axiom-2x3-500-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 2\"\u00d73\" Rectangle, 500 pcs (reference)",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 500,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Reference spec \u2014 not our target. For context only."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_different_size",
+          "total_price": 124.76,
+          "unit_price": 0.2495,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 2\"\u00d73\" Rectangle, White Matte BOPP. 500 qty = $124.76. Standard turnaround. No 3\u00d73 available."
+        }
+      ],
+      "comparison_notes": "Axiom 2\"\u00d73\"/500: $124.76. Reference only \u2014 Axiom has no 3\u00d73 option."
+    },
+    {
+      "query_id": "axiom-2x3-1000-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 2\"\u00d73\" Rectangle, 1000 pcs (reference)",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 1000,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Reference spec \u2014 not our target. For context only."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_different_size",
+          "total_price": 148.32,
+          "unit_price": 0.1483,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 2\"\u00d73\" Rectangle, White Matte BOPP. 1000 qty = $148.32. Standard turnaround. No 3\u00d73 available."
+        }
+      ],
+      "comparison_notes": "Axiom 2\"\u00d73\"/1000: $148.32. Reference only \u2014 Axiom has no 3\u00d73 option."
+    },
+    {
+      "query_id": "axiom-2x3-2500-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 2\"\u00d73\" Rectangle, 2500 pcs (reference)",
+      "spec": {
+        "width_in": 2,
+        "height_in": 3,
+        "quantity": 2500,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Reference spec \u2014 not our target. For context only."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_different_size",
+          "total_price": 213.27,
+          "unit_price": 0.0853,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 2\"\u00d73\" Rectangle, White Matte BOPP. 2500 qty = $213.27. Standard turnaround. No 3\u00d73 available."
+        }
+      ],
+      "comparison_notes": "Axiom 2\"\u00d73\"/2500: $213.27. Reference only \u2014 Axiom has no 3\u00d73 option."
+    },
+    {
+      "query_id": "axiom-3x4-250-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 3\"\u00d74\" Rectangle, 250 pcs (closest to 3\u00d73 benchmark)",
+      "spec": {
+        "width_in": 3,
+        "height_in": 4,
+        "quantity": 250,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Axiom closest available to our 3\u00d73 target. 3\u00d74 is larger spec."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_closest_size",
+          "total_price": 120.28,
+          "unit_price": 0.4811,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 3\"\u00d74\" Rectangle (closest to 3\u00d73 \u2014 no 3\u00d73 available). 250 qty = $120.28. Standard turnaround."
+        }
+      ],
+      "comparison_notes": "Axiom 3\"\u00d74\"/250: $120.28. CLOSEST TO BENCHMARK \u2014 Axiom max std qty=2500 (5k = custom quote)."
+    },
+    {
+      "query_id": "axiom-3x4-500-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 3\"\u00d74\" Rectangle, 500 pcs (closest to 3\u00d73 benchmark)",
+      "spec": {
+        "width_in": 3,
+        "height_in": 4,
+        "quantity": 500,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Axiom closest available to our 3\u00d73 target. 3\u00d74 is larger spec."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_closest_size",
+          "total_price": 139.45,
+          "unit_price": 0.2789,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 3\"\u00d74\" Rectangle (closest to 3\u00d73 \u2014 no 3\u00d73 available). 500 qty = $139.45. Standard turnaround."
+        }
+      ],
+      "comparison_notes": "Axiom 3\"\u00d74\"/500: $139.45. CLOSEST TO BENCHMARK \u2014 Axiom max std qty=2500 (5k = custom quote)."
+    },
+    {
+      "query_id": "axiom-3x4-1000-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 3\"\u00d74\" Rectangle, 1000 pcs (closest to 3\u00d73 benchmark)",
+      "spec": {
+        "width_in": 3,
+        "height_in": 4,
+        "quantity": 1000,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Axiom closest available to our 3\u00d73 target. 3\u00d74 is larger spec."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_closest_size",
+          "total_price": 176.67,
+          "unit_price": 0.1767,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 3\"\u00d74\" Rectangle (closest to 3\u00d73 \u2014 no 3\u00d73 available). 1000 qty = $176.67. Standard turnaround."
+        }
+      ],
+      "comparison_notes": "Axiom 3\"\u00d74\"/1000: $176.67. CLOSEST TO BENCHMARK \u2014 Axiom max std qty=2500 (5k = custom quote)."
+    },
+    {
+      "query_id": "axiom-3x4-2500-bopp",
+      "product_type": "roll_labels",
+      "query_label": "Axiom Print 3\"\u00d74\" Rectangle, 2500 pcs (closest to 3\u00d73 benchmark)",
+      "spec": {
+        "width_in": 3,
+        "height_in": 4,
+        "quantity": 2500,
+        "material": "White Matte BOPP",
+        "shape": "rectangle",
+        "color_mode": "CMYK",
+        "format": "roll"
+      },
+      "our_price": {
+        "note": "Axiom closest available to our 3\u00d73 target. 3\u00d74 is larger spec."
+      },
+      "competitor_results": [
+        {
+          "competitor": "axiomprint",
+          "competitor_display": "Axiom Print",
+          "status": "live",
+          "coverage": "confirmed_closest_size",
+          "total_price": 277.76,
+          "unit_price": 0.1111,
+          "currency": "USD",
+          "confidence": "high",
+          "notes": "Antd dropdown capture. 3\"\u00d74\" Rectangle (closest to 3\u00d73 \u2014 no 3\u00d73 available). 2500 qty = $277.76. Standard turnaround."
+        }
+      ],
+      "comparison_notes": "Axiom 3\"\u00d74\"/2500: $277.76. CLOSEST TO BENCHMARK \u2014 Axiom max std qty=2500 (5k = custom quote)."
     }
   ],
   "all_captured_price_points": {
-    "description": "Index of all individual price points. See competitor-pricing-datacenter.html for interactive view.",
+    "description": "Index of all individual price points. See competitor-pricing-datacenter.html for interactive view. Updated: added Packola boxes/pouches and UPrinting 2x4 labels.",
     "last_updated": "2026-04-17",
     "points": [
       {
@@ -1672,6 +2266,197 @@
         "material": "Thick Gauge White",
         "confidence": "high",
         "status": "live"
+      },
+      {
+        "id": "up-2x4-1000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 4,
+        "qty": 1000,
+        "material": "White BOPP",
+        "finish": "Gloss Indoor",
+        "total": 203.66,
+        "unit": 0.20366,
+        "confidence": "high",
+        "status": "live",
+        "note": "Via calculator.digitalroom.com API"
+      },
+      {
+        "id": "up-2x4-5000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 4,
+        "qty": 5000,
+        "material": "White BOPP",
+        "finish": "Gloss Indoor",
+        "total": 463.4,
+        "unit": 0.09268,
+        "confidence": "high",
+        "status": "live",
+        "note": "Via calculator.digitalroom.com API"
+      },
+      {
+        "id": "up-2x4-10000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 4,
+        "qty": 10000,
+        "material": "White BOPP",
+        "finish": "Gloss Indoor",
+        "total": 683.03,
+        "unit": 0.0683,
+        "confidence": "high",
+        "status": "live",
+        "note": "Via calculator.digitalroom.com API"
+      },
+      {
+        "id": "up-2x2-10000",
+        "product_type": "roll_labels",
+        "competitor": "UPrinting",
+        "w": 2,
+        "h": 2,
+        "qty": 10000,
+        "material": "White BOPP",
+        "finish": "Gloss Indoor",
+        "total": 400,
+        "unit": 0.04,
+        "confidence": "high",
+        "status": "live",
+        "note": "API-confirmed via calculator.digitalroom.com"
+      },
+      {
+        "id": "packola-box-ste-250",
+        "product_type": "folding_cartons",
+        "competitor": "Packola",
+        "qty": 250,
+        "total": 717.5,
+        "unit": 2.87,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "packola-box-ste-500",
+        "product_type": "folding_cartons",
+        "competitor": "Packola",
+        "qty": 500,
+        "total": 1255,
+        "unit": 2.51,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "packola-box-ste-1000",
+        "product_type": "folding_cartons",
+        "competitor": "Packola",
+        "qty": 1000,
+        "total": 1800,
+        "unit": 1.8,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "packola-box-ste-2000",
+        "product_type": "folding_cartons",
+        "competitor": "Packola",
+        "qty": 2000,
+        "total": 2160,
+        "unit": 1.08,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "packola-box-ste-2500",
+        "product_type": "folding_cartons",
+        "competitor": "Packola",
+        "qty": 2500,
+        "total": 2400,
+        "unit": 0.96,
+        "style": "Straight Tuck End",
+        "dims": "4x2x5in",
+        "material": "Cardstock",
+        "coating": "Gloss",
+        "confidence": "high",
+        "status": "live"
+      },
+      {
+        "id": "packola-pouch-sup-250",
+        "product_type": "stand_up_pouches",
+        "competitor": "Packola",
+        "qty": 250,
+        "total": 421.51,
+        "unit": 1.69,
+        "dims": "~4x6in_Medium",
+        "material": "White",
+        "confidence": "medium",
+        "status": "live",
+        "note": "Medium size (~4x6in) \u2014 directional proxy for 4.375x6x2in"
+      },
+      {
+        "id": "packola-pouch-sup-500",
+        "product_type": "stand_up_pouches",
+        "competitor": "Packola",
+        "qty": 500,
+        "total": 462.76,
+        "unit": 0.93,
+        "dims": "~4x6in_Medium",
+        "material": "White",
+        "confidence": "medium",
+        "status": "live"
+      },
+      {
+        "id": "packola-pouch-sup-1000",
+        "product_type": "stand_up_pouches",
+        "competitor": "Packola",
+        "qty": 1000,
+        "total": 545.29,
+        "unit": 0.55,
+        "dims": "~4x6in_Medium",
+        "material": "White",
+        "confidence": "medium",
+        "status": "live"
+      },
+      {
+        "id": "packola-pouch-sup-2500",
+        "product_type": "stand_up_pouches",
+        "competitor": "Packola",
+        "qty": 2500,
+        "total": 792.83,
+        "unit": 0.32,
+        "dims": "~4x6in_Medium",
+        "material": "White",
+        "confidence": "medium",
+        "status": "live"
+      },
+      {
+        "id": "packola-pouch-sup-5000",
+        "product_type": "stand_up_pouches",
+        "competitor": "Packola",
+        "qty": 5000,
+        "total": 1205.42,
+        "unit": 0.24,
+        "dims": "~4x6in_Medium",
+        "material": "White",
+        "confidence": "medium",
+        "status": "live"
       }
     ]
   },
@@ -1679,7 +2464,7 @@
     "roll_labels": [
       {
         "competitor": "gotprint",
-        "gap": "Price blocked by Vue.js upload wall for all specs. Spec confirmed (3x3 Square-Rounded, White BOPP, Matte, qty 5k). Manual human click-through needed to get price."
+        "gap": "Partially resolved: live pricing is now captured via /service/rest/v1/products/300158845/prices for shape=4 (Square-Rounded), size=452 (3x3), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). The original blocker pattern was reactive configurator sequencing, not a permanent upload wall. Remaining gap: capture the exact Matte variant (finish=3) for the same spec. Full table captured for the clear-gloss path: 100/$76.28, 250/$86.16, 500/$123.00, 1k/$148.91, 2.5k/$226.86, 5k/$356.80, 10k/$618.83."
       },
       {
         "competitor": "stickermule",
@@ -1691,23 +2476,23 @@
       },
       {
         "competitor": "axiomprint",
-        "gap": "No 3x3 in standard configurator. Max qty 2500. Custom quote required for 3x3 and 5k+ qty."
+        "gap": "PARTIAL \u2014 no 3\u00d73 in standard configurator. Captured: 2\u00d73 (250/500/1k/2.5k) and 3\u00d74 (250/500/1k/2.5k) via Antd dropdown. Max std qty=2500. 5k+ requires custom quote."
       }
     ],
     "folding_cartons": [
       {
-        "note": "UPrinting pricing curve fully captured (50-2500 pcs). No other competitor data yet. GotPrint, Vistaprint, Axiom, Sticker Mule all uncaptured for this product type."
+        "note": "UPrinting + Packola pricing captured for all 5 qty tiers (250-2500 pcs). Both exact 4\"\u00d72\"\u00d75\" spec confirmed. Need: GotPrint, Axiom, and other packaging-specialist competitors."
       },
       {
-        "note": "Internal HP 15K pricing model not yet documented \u2014 can't calculate our_price for comparison."
+        "note": "Internal HP 15K pricing model not yet documented \u2014 cannot calculate our_price for comparison."
       }
     ],
     "stand_up_pouches": [
       {
-        "note": "UPrinting pricing curve fully captured (100-5000 pcs). No other competitor data yet."
+        "note": "UPrinting exact-spec pricing captured (100-5000 pcs). Packola Medium (~4\"\u00d76\") directional pricing added (250-5000 pcs). Packola does not offer 100 pcs minimum. Need: exact Packola 4.375\"\u00d76\"\u00d72\" spec confirmation."
       },
       {
-        "note": "Internal Karlville poucher pricing model not yet documented \u2014 can't calculate our_price for comparison."
+        "note": "Internal Karlville poucher pricing model not yet documented."
       }
     ],
     "uncaptured_product_types": [
@@ -1732,7 +2517,9 @@
     "gotprint_packaging": "GotPrint does not offer folding cartons or pouches (catalog discovery confirmed, only \"Folders\" = presentation folders).",
     "stickermule_packaging": "Sticker Mule: custom labels only. No folding cartons or pouches.",
     "packaging_competitor_landscape": "For boxes and pouches, UPrinting is currently the only confirmed benchmark. Other dedicated suppliers (Packlane, noissue, PrintingForLess) would need separate exploration.",
-    "gotprint_roll_labels": "GotPrint roll label price still blocked by Vue.js cascade \u2014 paper/finish selects stay disabled after shape+size dispatch. REST API 401. Configurator selects did not render in headless (no DOM elements found in latest pass). Manual human click-through is the only remaining path.",
-    "stickermule_roll_labels": "Upload-first confirmed. $47 starting price from JSON-LD. 5k pricing requires manual quote with artwork upload."
+    "gotprint_roll_labels": "GotPrint roll labels are no longer fully blocked. A live pricing capture now exists for 3x3 Square-Rounded, White BOPP, Clear Gloss via /service/rest/v1/products/300158845/prices after the correct configurator sequence. Remaining gap: capture the exact Matte finish for the same spec and document the precise session/configuration steps that unlock that request.",
+    "stickermule_roll_labels": "Upload-first confirmed. $47 starting price from JSON-LD. 5k pricing requires manual quote with artwork upload.",
+    "packola_boxes": "Packola STE boxes: exact 4\"\u00d72\"\u00d75\" spec captured at 250/500/1000/2000/2500 qty. Dimensions confirmed via L/W/D input fields. Price via DOM extraction from product page calculator.",
+    "packola_pouches": "Packola stand-up pouches: Medium (~4\"\u00d76\") is closest to our 4.375\"\u00d76\"\u00d72\" spec. Captured at 250/500/1000/2500/5000 qty. Directional \u2014 exact Packola dimensions not configurable (predefined size tiers)."
   }
 }

@@ -1,0 +1,574 @@
+{
+  "sm": {
+    "price": null,
+    "unitPrice": null,
+    "pricingSource": null,
+    "formElements": [],
+    "apiResponses": [],
+    "pricingInJs": null,
+    "htmlStructure": "<div id=\"__mainNextjsAppContainerLayer\" data-global-layer=\"true\"><div id=\"__next\"><a href=\"#mainContent\" class=\"jsx-2386019876 skipToContent\">Skip to main content</a><div aria-label=\"Manage cookies\" aria-modal=\"true\" role=\"dialog\" class=\"jsx-3927863502 banner\"><div class=\"jsx-3927863502 content\"><p class=\"jsx-3927863502 consentText\">Sticker Mule and our third-party partners use cookies and other tools to collect information you provide as well as your interaction with our websites for performance improvement, analytics, and to assist in our marketing efforts. By clicking \"Agree\" or \"Manage Settings\", you consent to the use of cookies and other tools as described in our <a class=\"jsx-284336425 jsx-3974232275 jsx-3523161911 link uiAccent\" href=\"/legal/cookies\" rel=\"noreferrer\" target=\"_blank\"><span class=\"contentAndIcon\"><span class=\"content\">Privacy Policy</span></span></a> in accordance with your settings, and you accept our <a class=\"jsx-284336425 jsx-3974232275 jsx-3523161911 link uiAccent\" href=\"/legal/terms\" rel=\"noreferrer\" target=\"_blank\"><span class=\"contentAndIcon\"><span class=\"content\">Terms of Service</span></span></a>. Please see our <a class=\"jsx-284336425 jsx-3974232275 jsx-3523161911 link uiAccent\" href=\"/legal/privacy\" rel=\"noreferrer\" target=\"_blank\"><span class=\"contentAndIcon\"><span class=\"content\">Privacy Policy</span></span></a> for more information on our privacy practices.</p><div class=\"jsx-3927863502 actions\"><button type=\"button\" data-testid=\"ConsentButton\" class=\"jsx-a0ff4284903c21f6 jsx-1137354919 button uiAccent sm standard\"><span class=\"jsx-a0ff4284903c21f6 content\"><span class=\"jsx-1681716694 jsx-3153587330 jsx-345125589 jsx-3662335265 jsx-3409655891\">Agree</span></span></button><button type=\"button\" data-testid=\"ConsentButton\" class=\"jsx-a0ff4284903c21f6 jsx-767623282 button colorless sm standard colorlessButton\"><span class=\"jsx-a0ff4284903c21f6 content\"><span class=\"jsx-1681716694 jsx-3153587330 jsx-345125589 jsx-3662335265 jsx-3409655891\">Decline non-essential</span></span></button><button type=\"button\" data-testid=\"ConsentButton\" class=\"jsx-a0ff4284903c21f6 jsx-767623282 button colorless sm standard colorlessButton\"><span class=\"jsx-a0ff4284903c21f6 content\"><span class=\"jsx-1681716694 jsx-3153587330 jsx-345125589 jsx-3662335265 jsx-3409655891\">Manage settings</span></span></button></div></div></div><div class=\"jsx-7d69e678f3ce8b2c layout\"><div class=\"jsx-7d69e678f3ce8b2c\"><div class=\"jsx-552477282 jsx-2321963471 spacer mobileOnly\"></div><div class=\"jsx-552477282 jsx-2321963471 mobileOnly\"><nav data-testid=\"MobileNavigation\" role=\"navigation\" class=\"jsx-1350306156 \"><div class=\"jsx-1350306156 mainNav\"><div class=\"jsx-1350306156 section\"><h2 class=\"jsx-1350306156 sectionTitle\">Products</h2><ul class=\"jsx-bbbe78c7f9f824a\"><li class=\"jsx-939221288\"><a href=\"/custom-stickers\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"Custom stickers\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-stickers_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-stickers_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-stickers_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Stickers</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/custom-labels\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"Custom labels\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-labels_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-labels_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-labels_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Labels</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/products/custom-magnets\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"Custom magnets\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-magnets_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-magnets_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-magnets_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Magnets</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/custom-buttons\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"Custom buttons\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-buttons_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-buttons_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-buttons_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Buttons</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/custom-packaging\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"Custom packaging\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-tape_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-tape_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-tape_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Packaging</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/custom-apparel\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-t-shirts_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-t-shirts_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-t-shirts_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Apparel</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/custom-acrylics\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-keychains_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-keychains_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-keychains_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Acrylics</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/samples\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/samples_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/samples_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/samples_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">Samples</p></div></a></li><li class=\"jsx-939221288\"><a href=\"/more-products\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><img alt=\"\" srcset=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-posters_1x.png 1x, https://cdn.stickermule.com/content/shared/assets/navigation/custom-posters_2x.png 2x\" src=\"https://cdn.stickermule.com/content/shared/assets/navigation/custom-posters_1x.png\" class=\"jsx-bbbe78c7f9f824a icon\"></div><div class=\"jsx-939221288 label\"><p class=\"jsx-955262882 regular\">More products</p></div></a></li></ul></div><div class=\"jsx-1350306156 section\"><h2 class=\"jsx-1350306156 sectionTitle\">Discover</h2><div class=\"jsx-1542182793 wrapper\"><ul class=\"jsx-1542182793\"><li class=\"jsx-939221288\"><a href=\"/samples\" class=\"jsx-939221288\"><div class=\"jsx-939221288 icon\"><div class=\"jsx-939221288 iconBackground\"><span class=\"jsx-4274043710 configurationDefault\"><svg fill=\"currentColor\" viewBox=\"0 0 512 512\"><path d=\"M61 64C28 64 0 92 0 125v259c0 35 29 64 64",
+    "error": null,
+    "allApiUrls": [
+      "https://www.stickermule.com/notify/graphql",
+      "https://www.stickermule.com/core/graphql",
+      "https://www.stickermule.com/bridge/backend/graphql",
+      "https://googleads.g.doubleclick.net/pagead/id?slf_rd=1",
+      "https://fast.wistia.com/embed/medias/wwj5utismp.json",
+      "https://fast.wistia.com/embed/captions/wwj5utismp.json",
+      "https://js.stripe.com/v3/.deploy_status_henson.json",
+      "https://js.stripe.com/v3/.deploy_status_henson.json",
+      "https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT",
+      "https://m.stripe.com/6",
+      "https://www.youtube.com/youtubei/v1/log_event?alt=json"
+    ]
+  },
+  "up": {
+    "defaultSpec": {
+      "price": "$131.23",
+      "unitPrice": "( $0.13 for each)",
+      "priceWrapText": "Quantity :\n1,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $131.23\n( $0.13 for each)",
+      "selects": [],
+      "numInputs": [
+        {
+          "id": "desktop_search",
+          "name": "",
+          "value": "",
+          "placeholder": "Search (e.g. labels, boxes, etc)",
+          "ngModel": null
+        },
+        {
+          "id": "zip_code",
+          "name": "zip_code",
+          "value": "",
+          "placeholder": "Enter Zip",
+          "ngModel": "zipCode"
+        },
+        {
+          "id": "",
+          "name": "email",
+          "value": "",
+          "placeholder": "Enter your email",
+          "ngModel": "email"
+        },
+        {
+          "id": "",
+          "name": "email",
+          "value": "",
+          "placeholder": "Enter your email",
+          "ngModel": "email"
+        },
+        {
+          "id": "",
+          "name": "newsletter_email",
+          "value": "",
+          "placeholder": "Enter your email",
+          "ngModel": "newsletter_email"
+        },
+        {
+          "id": "",
+          "name": "newsletter_email",
+          "value": "",
+          "placeholder": "",
+          "ngModel": "$parent.newsletter_email"
+        },
+        {
+          "id": "share_calc_config_input",
+          "name": "",
+          "value": "https://www.uprinting.com/roll-labels.html?attr3=1405&attr4=1425&attr5=1428&attr6=1440&attr10=1381&attr17=1418&attr25=1413&attr27=1420&attr315=18971&product_id=33&calc_variant=GRID",
+          "placeholder": "",
+          "ngModel": "shareCalcConfigLink"
+        },
+        {
+          "id": "share_product_email",
+          "name": "",
+          "value": "",
+          "placeholder": "Enter Email Address",
+          "ngModel": "emailAddress"
+        },
+        {
+          "id": "vendor-search-handler",
+          "name": "vendor-search-handler",
+          "value": "",
+          "placeholder": "Search…",
+          "ngModel": null
+        }
+      ],
+      "qtyEls": [
+        {
+          "tag": "LI",
+          "text": "100",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "100",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "250",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "250",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "500",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "500",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "1,000",
+          "class": "blurb-list-dropdown dropdown-menu-item selected",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "1,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "2,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "2,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "2,500",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "2,500",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "3,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "3,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "4,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "4,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "5,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "5,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "6,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "6,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "7,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "7,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "8,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "8,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "9,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "9,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "10,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "10,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "LI",
+          "text": "15,000",
+          "class": "blurb-list-dropdown dropdown-menu-item ",
+          "ngClick": null,
+          "href": null
+        },
+        {
+          "tag": "A",
+          "text": "15,000",
+          "class": "attr-value val-wrap ",
+          "ngClick": null,
+          "href": null
+        }
+      ]
+    },
+    "sizeChanged": false,
+    "qtyChanged": true,
+    "price": 131.23,
+    "unitPrice": null,
+    "priceWrapText": "Quantity :\n1,000\n100\n250\n500\n1,000\n2,000\n2,500\n3,000\n4,000\n5,000\n6,000\n7,000\n8,000\n9,000\n10,000\n15,000\n20,000\n25,000\n30,000\n35,000\n40,000\n45,000\n50,000\n55,000\n60,000\n65,000\n70,000\n75,000\n80,000\n85,000\n90,000\n95,000\n100,000\nPrinting Time:\n6 Business Days\nPrinting Cost: $131.23\n( $0.13 for each)",
+    "calcPricingData": {
+      "raw": "{\"request\":{\"product_id\":\"33\",\"initial_price_data\":{\"attr3\":\"1405\",\"attr4\":\"1425\",\"attr5\":\"1428\",\"attr6\":\"1440\",\"attr10\":\"1381\",\"attr17\":\"1418\",\"attr25\":\"1413\",\"attr27\":\"1420\",\"attr315\":\"18971\",\"attr948\":\"99589\"}},\"response\":{\"price\":{\"price_source\":\"GRID_STACK\",\"orig_price\":131.23,\"total_price\":\"131.23\",\"price\":\"131.23\",\"product_markup\":0,\"product_markdown\":0,\"min_markup\":0,\"has_markdown\":0,\"exceeded_pricing_threshold\":\"n\",\"unit_price\":\"0.13123\",\"in_stock_flag\":\"y\",\"shipping_computation_type_id\":\"1\",\"shipping_grid_stack_id\":null,\"product_id\":\"33\",\"item_name\":\"Roll Labels\",\"pricing_system\":\"OFF\",\"account_type_code\":\"DIGI\",\"turnaround\":6,\"max_turnaround\":6,\"qty\":1000,\"sheet_qty\":1,\"page_qty\":1,\"maximum_order_quantity\":0,\"width\":\"2\",\"height\":\"2\",\"spine_width\":0,\"stock_attr_val_id\":\"295\",\"stake\":0,\"sku\":null,\"is_digital\":4,\"is_lfp\":0,\"has_mailing\":0,\"order_specs\":[{\"attr_val_order_spec_id\":\"21\",\"attr_val_id\":\"21\",\"attribute_id\":\"3\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"SZ\",\"order_spec_value\":\"2\\\" x 2\\\"\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Size\",\"sort\":\"2\",\"attribute_name\":\"Size\"},{\"attr_val_order_spec_id\":\"125\",\"attr_val_id\":\"87\",\"attribute_id\":\"4\",\"order_spec_option_id\":\"13\",\"order_spec_code\":\"SIDE\",\"order_spec_value\":\"Front Only\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Printed Side\",\"sort\":\"5\",\"attribute_name\":\"Printed Side\"},{\"attr_val_order_spec_id\":\"93\",\"attr_val_id\":\"95\",\"attribute_id\":\"5\",\"order_spec_option_id\":\"0\",\"order_spec_code\":\"QTY\",\"order_spec_value\":\"1,000\",\"custom_flag\":\"n\",\"allow_reorder_flag\":null,\"order_spec\":\"Quantity\",\"sort\":\"7\",\"attribute_name\":\"Quantity\"},{\"attr_val_order_spec_id\":\"22677\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"5460\",\"order_spec_code\":\"DIECUT\",\"order_spec_value\":\"Square (Rounded Corners)\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Die-Cutting\",\"sort\":\"17\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"283\",\"attr_val_id\":\"292\",\"attribute_id\":\"10\",\"order_spec_option_id\":\"7512\",\"order_spec_code\":\"SHAPE\",\"order_spec_value\":\"Rounded Corners\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Shape\",\"sort\":\"33\",\"attribute_name\":\"Shape\"},{\"attr_val_order_spec_id\":\"126\",\"attr_val_id\":\"129\",\"attribute_id\":\"6\",\"order_spec_option_id\":\"32\",\"order_spec_code\":\"TA\",\"order_spec_value\":\"6 Business Days\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Turnaround\",\"sort\":\"41\",\"attribute_name\":\"Turnaround\"},{\"attr_val_order_spec_id\":\"26576\",\"attr_val_id\":\"302\",\"attribute_id\":\"27\",\"order_spec_option_id\":\"129\",\"order_spec_code\":\"WIND\",\"order_spec_value\":\"Not Important\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Unwind Direction\",\"sort\":\"42\",\"attribute_name\":\"Unwind Direction\"},{\"attr_val_order_spec_id\":\"35274\",\"attr_val_id\":\"300\",\"attribute_id\":\"17\",\"order_spec_option_id\":\"8464\",\"order_spec_code\":\"FLAM\",\"order_spec_value\":\"Gloss Indoor\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Front Lamination\",\"sort\":\"1405\",\"attribute_name\":\"Lamination\"},{\"attr_val_order_spec_id\":\"35275\",\"attr_val_id\":\"300\",\"attribute_id\":\"17\",\"order_spec_option_id\":\"8398\",\"order_spec_code\":\"BLAM\",\"order_spec_value\":\"None\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Back Lamination\",\"sort\":\"1406\",\"attribute_name\":\"Lamination\"},{\"attr_val_order_spec_id\":\"34990\",\"attr_val_id\":\"295\",\"attribute_id\":\"25\",\"order_spec_option_id\":\"8182\",\"order_spec_code\":\"SUBST\",\"order_spec_value\":\"White BOPP Label - Roll\",\"custom_flag\":\"n\",\"allow_reorder_flag\":\"y\",\"order_spec\":\"Substrate\",\"sort\":\"1431\",\"attribute_name\":\"Material\"}],\"display_specs\":[{\"attribute_id\":\"10\",\"attribute_name\":\"Shape\",\"attr_value\":\"Square (Rounded Corners)\",\"sort\":\"2\",\"prod_attr_val_id\":\"1381\",\"order_spec_codes\":[\"SHAPE\",\"DIECUT\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"3\",\"attribute_name\":\"Size\",\"attr_value\":\"2\\\" x 2\\\"\",\"sort\":\"3\",\"prod_attr_val_id\":\"1405\",\"order_spec_codes\":[\"SZ\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"25\",\"attribute_name\":\"Material\",\"attr_value\":\"White BOPP\",\"sort\":\"4\",\"prod_attr_val_id\":\"1413\",\"order_spec_codes\":[\"SUBST\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"17\",\"attribute_name\":\"Lamination\",\"attr_value\":\"Gloss Laminate\",\"sort\":\"5\",\"prod_attr_val_id\":\"1418\",\"order_spec_codes\":[\"FLAM\",\"BLAM\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"315\",\"attribute_name\":\"Color\",\"attr_value\":\"Full Color\",\"sort\":\"6\",\"prod_attr_val_id\":\"18971\",\"order_spec_codes\":[],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"27\",\"attribute_name\":\"Unwind Direction\",\"attr_value\":\"Not Important\",\"sort\":\"8\",\"prod_attr_val_id\":\"1420\",\"order_spec_codes\":[\"WIND\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"4\",\"attribute_name\":\"Printed Side\",\"attr_value\":\"Front Only\",\"sort\":\"9\",\"prod_attr_val_id\":\"1425\",\"order_spec_codes\":[\"SIDE\"],\"hide_to_customer_flag\":\"n\"},{\"attribute_id\":\"5\",\"attribute_name\":\"Quantity\",\"attr_value\":\"1,000\",\"sort\":\"10\",\"prod_attr_val_id\":\"1428\",\"order_spec_codes\":[\"QTY\"],\"hide_to_customer_flag\":\"n\"},",
+      "parseError": "Unexpected non-whitespace character after JSON at position 7563 (line 1 column 7564)"
+    },
+    "allPagePrices": [
+      131.23
+    ],
+    "error": null,
+    "qtyElements": [
+      {
+        "tag": "LI",
+        "text": "100",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "100",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "250",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "250",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "500",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "500",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "1,000",
+        "class": "blurb-list-dropdown dropdown-menu-item selected",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "1,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "2,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "2,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "2,500",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "2,500",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "3,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "3,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "4,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "4,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "5,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "5,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "6,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "6,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "7,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "7,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "8,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "8,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "9,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "9,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "10,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "10,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "LI",
+        "text": "15,000",
+        "class": "blurb-list-dropdown dropdown-menu-item ",
+        "ngClick": null,
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "15,000",
+        "class": "attr-value val-wrap ",
+        "ngClick": null,
+        "href": null
+      }
+    ],
+    "sizeElements": [],
+    "interactions": [
+      {
+        "action": "dispatchClick",
+        "target": "5,000 text"
+      }
+    ],
+    "requestUrls": [
+      "https://www.uprinting.com/roll-labels.html",
+      "https://staticecp.uprinting.com/11783/530x530/Label-Roll.webp",
+      "https://s1.uprinting.com/assets/img/uprinting-logo-new.webp",
+      "https://s1.uprinting.com/assets/libraries/headjs/1.0.3/head.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://s1.uprinting.com/assets/scripts_min/headjs_loaders/info-scripts.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://module-api.uprinting.com/js/ab-test-library/dri/optimizely-lib/dist/optimizely-lib.js",
+      "https://s1.uprinting.com/assets/img/uprinting-logo-new.svg",
+      "https://staticecp.uprinting.com/15131/530x530/BOPP-Material_Video_Thumbnail-1.jpeg",
+      "https://staticecp.uprinting.com/6763/Square-Rounded.svg",
+      "https://staticecp.uprinting.com/6759/Rectangle-Rounded.svg",
+      "https://staticecp.uprinting.com/6750/Circle.svg",
+      "https://staticecp.uprinting.com/6757/Oval.svg",
+      "https://staticecp.uprinting.com/6749/Arch.svg",
+      "https://staticecp.uprinting.com/6754/Hexagon.svg",
+      "https://staticecp.uprinting.com/6753/Heart.svg",
+      "https://staticecp.uprinting.com/6764/Starburst.svg",
+      "https://staticecp.uprinting.com/6756/Lolipop.svg",
+      "https://staticecp.uprinting.com/6751/Custom.svg",
+      "https://s1.uprinting.com/assets/css_min/page-product/page-product-btf.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://s1.uprinting.com/assets/css_min/global-styles/global-styles-btf-3.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://s1.uprinting.com/assets/css_min/components/calculators/calculator-variants/gridlist-calc.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://s1.uprinting.com/assets/scripts_min/headjs_loaders/global-scripts-2.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://s1.uprinting.com/assets/scripts_min/headjs_loaders/page-product-scripts.min.js?v=c71ebefb8a0a9cd185d586105adbed36200a8d33",
+      "https://www.uprinting.com/muffins/info-1.0.3-min.js",
+      "https://www.uprinting.com/above-fold-assets/img/cart.svg",
+      "https://www.uprinting.com/above-fold-assets/img/icons/magnifier.svg",
+      "https://www.uprinting.com/above-fold-assets/img/icons/magnifier.cur",
+      "https://www.uprinting.com/above-fold-assets/img/icons/checkmark.svg",
+      "https://www.uprinting.com/page/dri/up-base-css/assets/fonts/dri-lyons/fonts/dri-lyons.ttf?aj9z69",
+      "https://s1.uprinting.com/assets/css_min/page-product/page-product-mobile-btf.min.css?v=c71ebefb8a0a9cd185d586105adbed36200a8d33"
+    ]
+  }
+}

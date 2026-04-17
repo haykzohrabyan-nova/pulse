@@ -1,0 +1,5 @@
+{
+  "prices": [],
+  "fullPriceTable": {},
+  "error": "Too many arguments. If you need to pass more than 1 argument to the function wrap them in an object."
+}

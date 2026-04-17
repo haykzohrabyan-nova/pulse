@@ -1,0 +1,811 @@
+{
+  "run_date": "2026-04-17T22:51:38.237Z",
+  "results": {
+    "axiom": {
+      "prices": [],
+      "error": null,
+      "selectCount": 2,
+      "structure": {
+        "title": "Custom Roll Labels, Print Labels on Roll wholesale in Los Angeles | AxiomPrint",
+        "selects": [
+          {
+            "name": "widget-filter",
+            "id": "widget-filter",
+            "opts": [
+              {
+                "v": "high",
+                "t": "Highest to Lowest"
+              },
+              {
+                "v": "new",
+                "t": "Newest to Oldest"
+              },
+              {
+                "v": "featured",
+                "t": "Favorite Reviews"
+              }
+            ]
+          },
+          {
+            "name": "widget-filter2",
+            "id": "widget-filter2",
+            "opts": [
+              {
+                "v": "all",
+                "t": "All Ratings"
+              },
+              {
+                "v": "5",
+                "t": "5 ★ Reviews"
+              },
+              {
+                "v": "4",
+                "t": "4 ★ Reviews"
+              },
+              {
+                "v": "3",
+                "t": "3 ★ Reviews"
+              },
+              {
+                "v": "2",
+                "t": "2 ★ Reviews"
+              },
+              {
+                "v": "1",
+                "t": "1 ★ Reviews"
+              }
+            ]
+          }
+        ],
+        "priceEl": "Estimated Ready:Fri, Apr 24 - 5:00PMTotal:$112.68$0.45 each"
+      },
+      "apiCalls": [
+        {
+          "url": "https://axiomprint.com/_next/data/RlPVA5h4EgkBXC5cx-8np/index.json",
+          "bodyPreview": "{\"pageProps\":{\"metaData\":{\"title\":\"Online Printing in Los Angeles, Same Day Rush Printing in LA | AxiomPrint.com\",\"description\":\"We specialize in custom printing services in Los Angeles. Same day printing orders are Welcome! Digital, Large format, Offset Printing & Mailing Services. High Quality and"
+        },
+        {
+          "url": "https://px.ads.linkedin.com/attribution_trigger?pid=3030114&time=1776466299572&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Froll-labels-335",
+          "bodyPreview": "{}"
+        }
+      ]
+    },
+    "uprinting4x2": {
+      "prices": [
+        {
+          "size": "4x2",
+          "qty": 1000,
+          "result": {
+            "key": "priceData",
+            "val": {
+              "price_source": "GRID_STACK",
+              "orig_price": 131.23,
+              "total_price": "131.23",
+              "price": "131.23",
+              "product_markup": 0,
+              "product_markdown": 0,
+              "min_markup": 0,
+              "has_markdown": 0,
+              "exceeded_pricing_threshold": "n",
+              "unit_price": "0.13123",
+              "in_stock_flag": "y",
+              "shipping_computation_type_id": "1",
+              "shipping_grid_stack_id": null,
+              "product_id": "33",
+              "item_name": "Roll Labels",
+              "pricing_system": "OFF",
+              "account_type_code": "DIGI",
+              "turnaround": 6,
+              "max_turnaround": 6,
+              "qty": 1000,
+              "sheet_qty": 1,
+              "page_qty": 1,
+              "maximum_order_quantity": 0,
+              "width": "2",
+              "height": "2",
+              "spine_width": 0,
+              "stock_attr_val_id": "295",
+              "stake": 0,
+              "sku": null,
+              "is_digital": 4,
+              "is_lfp": 0,
+              "has_mailing": 0,
+              "order_specs": [
+                {
+                  "attr_val_order_spec_id": "21",
+                  "attr_val_id": "21",
+                  "attribute_id": "3",
+                  "order_spec_option_id": "0",
+                  "order_spec_code": "SZ",
+                  "order_spec_value": "2\" x 2\"",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": null,
+                  "order_spec": "Size",
+                  "sort": "2",
+                  "attribute_name": "Size"
+                },
+                {
+                  "attr_val_order_spec_id": "125",
+                  "attr_val_id": "87",
+                  "attribute_id": "4",
+                  "order_spec_option_id": "13",
+                  "order_spec_code": "SIDE",
+                  "order_spec_value": "Front Only",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Printed Side",
+                  "sort": "5",
+                  "attribute_name": "Printed Side"
+                },
+                {
+                  "attr_val_order_spec_id": "93",
+                  "attr_val_id": "95",
+                  "attribute_id": "5",
+                  "order_spec_option_id": "0",
+                  "order_spec_code": "QTY",
+                  "order_spec_value": "1,000",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": null,
+                  "order_spec": "Quantity",
+                  "sort": "7",
+                  "attribute_name": "Quantity"
+                },
+                {
+                  "attr_val_order_spec_id": "22677",
+                  "attr_val_id": "292",
+                  "attribute_id": "10",
+                  "order_spec_option_id": "5460",
+                  "order_spec_code": "DIECUT",
+                  "order_spec_value": "Square (Rounded Corners)",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Die-Cutting",
+                  "sort": "17",
+                  "attribute_name": "Shape"
+                },
+                {
+                  "attr_val_order_spec_id": "283",
+                  "attr_val_id": "292",
+                  "attribute_id": "10",
+                  "order_spec_option_id": "7512",
+                  "order_spec_code": "SHAPE",
+                  "order_spec_value": "Rounded Corners",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Shape",
+                  "sort": "33",
+                  "attribute_name": "Shape"
+                },
+                {
+                  "attr_val_order_spec_id": "126",
+                  "attr_val_id": "129",
+                  "attribute_id": "6",
+                  "order_spec_option_id": "32",
+                  "order_spec_code": "TA",
+                  "order_spec_value": "6 Business Days",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Turnaround",
+                  "sort": "41",
+                  "attribute_name": "Turnaround"
+                },
+                {
+                  "attr_val_order_spec_id": "26576",
+                  "attr_val_id": "302",
+                  "attribute_id": "27",
+                  "order_spec_option_id": "129",
+                  "order_spec_code": "WIND",
+                  "order_spec_value": "Not Important",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Unwind Direction",
+                  "sort": "42",
+                  "attribute_name": "Unwind Direction"
+                },
+                {
+                  "attr_val_order_spec_id": "35274",
+                  "attr_val_id": "300",
+                  "attribute_id": "17",
+                  "order_spec_option_id": "8464",
+                  "order_spec_code": "FLAM",
+                  "order_spec_value": "Gloss Indoor",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Front Lamination",
+                  "sort": "1405",
+                  "attribute_name": "Lamination"
+                },
+                {
+                  "attr_val_order_spec_id": "35275",
+                  "attr_val_id": "300",
+                  "attribute_id": "17",
+                  "order_spec_option_id": "8398",
+                  "order_spec_code": "BLAM",
+                  "order_spec_value": "None",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Back Lamination",
+                  "sort": "1406",
+                  "attribute_name": "Lamination"
+                },
+                {
+                  "attr_val_order_spec_id": "34990",
+                  "attr_val_id": "295",
+                  "attribute_id": "25",
+                  "order_spec_option_id": "8182",
+                  "order_spec_code": "SUBST",
+                  "order_spec_value": "White BOPP Label - Roll",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Substrate",
+                  "sort": "1431",
+                  "attribute_name": "Material"
+                }
+              ],
+              "display_specs": [
+                {
+                  "attribute_id": "10",
+                  "attribute_name": "Shape",
+                  "attr_value": "Square (Rounded Corners)",
+                  "sort": "2",
+                  "prod_attr_val_id": "1381",
+                  "order_spec_codes": [
+                    "SHAPE",
+                    "DIECUT"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "3",
+                  "attribute_name": "Size",
+                  "attr_value": "2\" x 2\"",
+                  "sort": "3",
+                  "prod_attr_val_id": "1405",
+                  "order_spec_codes": [
+                    "SZ"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "25",
+                  "attribute_name": "Material",
+                  "attr_value": "White BOPP",
+                  "sort": "4",
+                  "prod_attr_val_id": "1413",
+                  "order_spec_codes": [
+                    "SUBST"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "17",
+                  "attribute_name": "Lamination",
+                  "attr_value": "Gloss Laminate",
+                  "sort": "5",
+                  "prod_attr_val_id": "1418",
+                  "order_spec_codes": [
+                    "FLAM",
+                    "BLAM"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "315",
+                  "attribute_name": "Color",
+                  "attr_value": "Full Color",
+                  "sort": "6",
+                  "prod_attr_val_id": "18971",
+                  "order_spec_codes": [],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "27",
+                  "attribute_name": "Unwind Direction",
+                  "attr_value": "Not Important",
+                  "sort": "8",
+                  "prod_attr_val_id": "1420",
+                  "order_spec_codes": [
+                    "WIND"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "4",
+                  "attribute_name": "Printed Side",
+                  "attr_value": "Front Only",
+                  "sort": "9",
+                  "prod_attr_val_id": "1425",
+                  "order_spec_codes": [
+                    "SIDE"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "5",
+                  "attribute_name": "Quantity",
+                  "attr_value": "1,000",
+                  "sort": "10",
+                  "prod_attr_val_id": "1428",
+                  "order_spec_codes": [
+                    "QTY"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "6",
+                  "attribute_name": "Printing Time",
+                  "attr_value": "6 Business Days",
+                  "sort": "11",
+                  "prod_attr_val_id": "1440",
+                  "order_spec_codes": [
+                    "TA"
+                  ],
+                  "hide_to_customer_flag": "n"
+                }
+              ],
+              "allow_reorder_flag": "y",
+              "qpi": 135,
+              "wtpi": 0.00067,
+              "cpp_d": 0.683,
+              "sht_height_d": 38.58,
+              "sht_width_d": 12.48,
+              "markup_amt_digital": 180,
+              "no_sd": 1,
+              "max_to": 6,
+              "min_to": 6,
+              "lead_time": 6,
+              "flat_area": "4.0000000000000000",
+              "flat_area_sq_ft": "0.0277777777777777",
+              "finished_width": "2",
+              "finished_height": "2",
+              "finished_area": "4.0000000000000000",
+              "finished_area_sq_ft": "0.0277777777777777",
+              "cpp": 0.683,
+              "sht_height": 38.58,
+              "sht_width": 12.48,
+              "no_sht": 1,
+              "qty_per_group": 1,
+              "no_groups": 1000,
+              "sets_per_pad": 1,
+              "weight_factors": [],
+              "material_factors": [],
+              "factors": {
+                "width": "2",
+                "height": "2",
+                "is_digital": 4,
+                "qpi": 135,
+                "wtpi": 0.00067,
+                "cpp_d": 0.683,
+                "sht_height_d": 38.58,
+                "sht_width_d": 12.48,
+                "markup_amt_digital": 180,
+                "no_sd": 1,
+                "qty": 1000,
+                "max_to": 6,
+                "min_to": 6,
+                "lead_time": 6,
+                "flat_area": "4.0000000000000000",
+                "flat_area_sq_ft": "0.0277777777777777",
+                "finished_width": "2",
+                "finished_height": "2",
+                "finished_area": "4.0000000000000000",
+                "finished_area_sq_ft": "0.0277777777777777",
+                "cpp": 0.683,
+                "sht_height": 38.58,
+                "sht_width": 12.48,
+                "no_sht": 1,
+                "qty_per_group": 1,
+                "no_groups": 1000,
+                "sets_per_pad": 1,
+                "weight_factors": [],
+                "material_factors": []
+              },
+              "weight": 2.68,
+              "bln_custom_size": false,
+              "bln_custom_qty": false,
+              "calc_version": 2,
+              "price_data": {
+                "attr3": "1405",
+                "attr4": "1425",
+                "attr5": "1428",
+                "attr6": "1440",
+                "attr10": "1381",
+                "attr17": "1418",
+                "attr25": "1413",
+                "attr27": "1420",
+                "attr315": "18971",
+                "product_id": "33",
+                "addon_attributes_limit": [],
+                "get_shipping_base_price": true
+              },
+              "shipping_base_price": "131.23",
+              "addon_attrs": [],
+              "available_turnaround_options": [],
+              "cached_data": false,
+              "cached_price": false,
+              "cached": false,
+              "use_local_memcache": true,
+              "response_milliseconds": "323",
+              "discounted_price": null
+            }
+          }
+        },
+        {
+          "size": "4x2",
+          "qty": 10000,
+          "result": {
+            "key": "priceData",
+            "val": {
+              "price_source": "GRID_STACK",
+              "orig_price": 400,
+              "total_price": "400.00",
+              "price": "400.00",
+              "product_markup": 0,
+              "product_markdown": 0,
+              "min_markup": 0,
+              "has_markdown": 0,
+              "exceeded_pricing_threshold": "n",
+              "unit_price": "0.04000",
+              "in_stock_flag": "y",
+              "shipping_computation_type_id": "1",
+              "shipping_grid_stack_id": null,
+              "product_id": "33",
+              "item_name": "Roll Labels",
+              "pricing_system": "OFF",
+              "account_type_code": "DIGI",
+              "turnaround": 6,
+              "max_turnaround": 6,
+              "qty": 10000,
+              "sheet_qty": 1,
+              "page_qty": 1,
+              "maximum_order_quantity": 0,
+              "width": "2",
+              "height": "2",
+              "spine_width": 0,
+              "stock_attr_val_id": "295",
+              "stake": 0,
+              "sku": null,
+              "is_digital": 3,
+              "is_lfp": 0,
+              "has_mailing": 0,
+              "order_specs": [
+                {
+                  "attr_val_order_spec_id": "21",
+                  "attr_val_id": "21",
+                  "attribute_id": "3",
+                  "order_spec_option_id": "0",
+                  "order_spec_code": "SZ",
+                  "order_spec_value": "2\" x 2\"",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": null,
+                  "order_spec": "Size",
+                  "sort": "2",
+                  "attribute_name": "Size"
+                },
+                {
+                  "attr_val_order_spec_id": "125",
+                  "attr_val_id": "87",
+                  "attribute_id": "4",
+                  "order_spec_option_id": "13",
+                  "order_spec_code": "SIDE",
+                  "order_spec_value": "Front Only",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Printed Side",
+                  "sort": "5",
+                  "attribute_name": "Printed Side"
+                },
+                {
+                  "attr_val_order_spec_id": "102",
+                  "attr_val_id": "104",
+                  "attribute_id": "5",
+                  "order_spec_option_id": "0",
+                  "order_spec_code": "QTY",
+                  "order_spec_value": "10,000",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": null,
+                  "order_spec": "Quantity",
+                  "sort": "7",
+                  "attribute_name": "Quantity"
+                },
+                {
+                  "attr_val_order_spec_id": "22677",
+                  "attr_val_id": "292",
+                  "attribute_id": "10",
+                  "order_spec_option_id": "5460",
+                  "order_spec_code": "DIECUT",
+                  "order_spec_value": "Square (Rounded Corners)",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Die-Cutting",
+                  "sort": "17",
+                  "attribute_name": "Shape"
+                },
+                {
+                  "attr_val_order_spec_id": "283",
+                  "attr_val_id": "292",
+                  "attribute_id": "10",
+                  "order_spec_option_id": "7512",
+                  "order_spec_code": "SHAPE",
+                  "order_spec_value": "Rounded Corners",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Shape",
+                  "sort": "33",
+                  "attribute_name": "Shape"
+                },
+                {
+                  "attr_val_order_spec_id": "126",
+                  "attr_val_id": "129",
+                  "attribute_id": "6",
+                  "order_spec_option_id": "32",
+                  "order_spec_code": "TA",
+                  "order_spec_value": "6 Business Days",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Turnaround",
+                  "sort": "41",
+                  "attribute_name": "Turnaround"
+                },
+                {
+                  "attr_val_order_spec_id": "26576",
+                  "attr_val_id": "302",
+                  "attribute_id": "27",
+                  "order_spec_option_id": "129",
+                  "order_spec_code": "WIND",
+                  "order_spec_value": "Not Important",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Unwind Direction",
+                  "sort": "42",
+                  "attribute_name": "Unwind Direction"
+                },
+                {
+                  "attr_val_order_spec_id": "35274",
+                  "attr_val_id": "300",
+                  "attribute_id": "17",
+                  "order_spec_option_id": "8464",
+                  "order_spec_code": "FLAM",
+                  "order_spec_value": "Gloss Indoor",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Front Lamination",
+                  "sort": "1405",
+                  "attribute_name": "Lamination"
+                },
+                {
+                  "attr_val_order_spec_id": "35275",
+                  "attr_val_id": "300",
+                  "attribute_id": "17",
+                  "order_spec_option_id": "8398",
+                  "order_spec_code": "BLAM",
+                  "order_spec_value": "None",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Back Lamination",
+                  "sort": "1406",
+                  "attribute_name": "Lamination"
+                },
+                {
+                  "attr_val_order_spec_id": "34990",
+                  "attr_val_id": "295",
+                  "attribute_id": "25",
+                  "order_spec_option_id": "8182",
+                  "order_spec_code": "SUBST",
+                  "order_spec_value": "White BOPP Label - Roll",
+                  "custom_flag": "n",
+                  "allow_reorder_flag": "y",
+                  "order_spec": "Substrate",
+                  "sort": "1431",
+                  "attribute_name": "Material"
+                }
+              ],
+              "display_specs": [
+                {
+                  "attribute_id": "10",
+                  "attribute_name": "Shape",
+                  "attr_value": "Square (Rounded Corners)",
+                  "sort": "2",
+                  "prod_attr_val_id": "1381",
+                  "order_spec_codes": [
+                    "SHAPE",
+                    "DIECUT"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "3",
+                  "attribute_name": "Size",
+                  "attr_value": "2\" x 2\"",
+                  "sort": "3",
+                  "prod_attr_val_id": "1405",
+                  "order_spec_codes": [
+                    "SZ"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "25",
+                  "attribute_name": "Material",
+                  "attr_value": "White BOPP",
+                  "sort": "4",
+                  "prod_attr_val_id": "1413",
+                  "order_spec_codes": [
+                    "SUBST"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "17",
+                  "attribute_name": "Lamination",
+                  "attr_value": "Gloss Laminate",
+                  "sort": "5",
+                  "prod_attr_val_id": "1418",
+                  "order_spec_codes": [
+                    "FLAM",
+                    "BLAM"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "315",
+                  "attribute_name": "Color",
+                  "attr_value": "Full Color",
+                  "sort": "6",
+                  "prod_attr_val_id": "18971",
+                  "order_spec_codes": [],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "27",
+                  "attribute_name": "Unwind Direction",
+                  "attr_value": "Not Important",
+                  "sort": "8",
+                  "prod_attr_val_id": "1420",
+                  "order_spec_codes": [
+                    "WIND"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "4",
+                  "attribute_name": "Printed Side",
+                  "attr_value": "Front Only",
+                  "sort": "9",
+                  "prod_attr_val_id": "1425",
+                  "order_spec_codes": [
+                    "SIDE"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "5",
+                  "attribute_name": "Quantity",
+                  "attr_value": "10,000",
+                  "sort": "10",
+                  "prod_attr_val_id": "1431",
+                  "order_spec_codes": [
+                    "QTY"
+                  ],
+                  "hide_to_customer_flag": "n"
+                },
+                {
+                  "attribute_id": "6",
+                  "attribute_name": "Printing Time",
+                  "attr_value": "6 Business Days",
+                  "sort": "11",
+                  "prod_attr_val_id": "1440",
+                  "order_spec_codes": [
+                    "TA"
+                  ],
+                  "hide_to_customer_flag": "n"
+                }
+              ],
+              "allow_reorder_flag": "y",
+              "qpi": 135,
+              "wtpi": 0.00067,
+              "cpp_d": 0.683,
+              "sht_height_d": 38.58,
+              "sht_width_d": 12.48,
+              "markup_amt_digital": 180,
+              "no_sd": 1,
+              "max_to": 6,
+              "min_to": 6,
+              "lead_time": 6,
+              "net_markup": 10,
+              "flat_area": "4.0000000000000000",
+              "flat_area_sq_ft": "0.0277777777777777",
+              "finished_width": "2",
+              "finished_height": "2",
+              "finished_area": "4.0000000000000000",
+              "finished_area_sq_ft": "0.0277777777777777",
+              "cpp": 0.683,
+              "sht_height": 38.58,
+              "sht_width": 12.48,
+              "no_sht": 1,
+              "qty_per_group": 1,
+              "no_groups": 10000,
+              "sets_per_pad": 1,
+              "weight_factors": [],
+              "material_factors": [],
+              "factors": {
+                "width": "2",
+                "height": "2",
+                "is_digital": 3,
+                "qpi": 135,
+                "wtpi": 0.00067,
+                "cpp_d": 0.683,
+                "sht_height_d": 38.58,
+                "sht_width_d": 12.48,
+                "markup_amt_digital": 180,
+                "no_sd": 1,
+                "qty": 10000,
+                "max_to": 6,
+                "min_to": 6,
+                "lead_time": 6,
+                "net_markup": 10,
+                "flat_area": "4.0000000000000000",
+                "flat_area_sq_ft": "0.0277777777777777",
+                "finished_width": "2",
+                "finished_height": "2",
+                "finished_area": "4.0000000000000000",
+                "finished_area_sq_ft": "0.0277777777777777",
+                "cpp": 0.683,
+                "sht_height": 38.58,
+                "sht_width": 12.48,
+                "no_sht": 1,
+                "qty_per_group": 1,
+                "no_groups": 10000,
+                "sets_per_pad": 1,
+                "weight_factors": [],
+                "material_factors": []
+              },
+              "weight": 26.8,
+              "bln_custom_size": false,
+              "bln_custom_qty": false,
+              "calc_version": 2,
+              "price_data": {
+                "attr3": "1405",
+                "attr4": "1425",
+                "attr5": 1431,
+                "attr6": "1440",
+                "attr10": "1381",
+                "attr17": "1418",
+                "attr25": "1413",
+                "attr27": "1420",
+                "attr315": "18971",
+                "product_id": "33",
+                "addon_attributes_limit": [],
+                "get_shipping_base_price": true
+              },
+              "shipping_base_price": "400.00",
+              "addon_attrs": [],
+              "available_turnaround_options": [],
+              "cached_data": true,
+              "cached_price": false,
+              "cached": false,
+              "use_local_memcache": true,
+              "response_milliseconds": "209",
+              "discounted_price": null
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    "gotprint": {
+      "endpoints": [],
+      "jsBundle": null,
+      "pageData": {
+        "title": "Custom Roll Label Printing at GotPrint.com",
+        "url": "https://www.gotprint.com/products/roll-labels/order",
+        "interesting": [
+          "skipLoggerAjax"
+        ],
+        "interestingData": {
+          "skipLoggerAjax": "{\"0\":{\"url\":\"/service/rest/v1/oauth/token\",\"method\":\"POST\",\"status\":401},\"1\":{\"url\":\"/service/rest/v1/users/self/cart/checkout/prices\",\"method\":\"GET\",\"status\":400},\"2\":{\"url\":\"/service/rest/v1/products\",\"method\":\"GET\",\"status\":400},\"3\":{\"url\":\"/service/rest/v1/users/self/coupons\",\"method\":\"GET\",\"status\":404},\"4\":{\"url\":\"/service/rest/v1/users/self/password/reset\",\"method\":\"POST\",\"status\":400},\"5\":{\"url\":\"/service/rest/v1/oauth/token\",\"method\":\"POST\",\"status\":403},\"6\":{\"url\":\"/service/rest/v1/use"
+        }
+      }
+    }
+  }
+}

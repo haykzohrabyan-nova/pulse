@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Next — Bazaar Print</title>
+  <script src="shared.js?v=20260415-1"></script>
+  <script src="auth.js?v=20260415-1"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fbff;
+      --panel-alt: #f1f5f9;
+      --border: #dbe4f0;
+      --text: #172033;
+      --muted: #64748b;
+      --nav: #0f172a;
+      --nav-soft: #1e293b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #16a34a;
+      --green-soft: #ecfdf5;
+      --amber: #d97706;
+      --amber-soft: #fff7ed;
+      --red: #dc2626;
+      --red-soft: #fef2f2;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button, input, select, textarea { font: inherit; }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
+    .sidebar {
+      background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      color: #e2e8f0;
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+    .brand { padding: 8px 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.04em; }
+    .brand p { margin: 6px 0 0; font-size: 12px; color: #94a3b8; line-height: 1.45; }
+    .create-btn, .primary-btn, .secondary-btn, .ghost-btn, .danger-btn {
+      border: 0; border-radius: 14px; padding: 12px 14px; cursor: pointer; font-weight: 700;
+    }
+    .create-btn, .primary-btn {
+      background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;
+      box-shadow: 0 14px 24px rgba(37, 99, 235, 0.24);
+    }
+    .secondary-btn { background: #e2e8f0; color: #0f172a; }
+    .ghost-btn { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .danger-btn { background: #fee2e2; color: #b91c1c; }
+    .nav-section-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 2px 10px 0;
+    }
+    .nav-list, .nav-sub { display: flex; flex-direction: column; gap: 6px; }
+    .nav-item, .nav-sub button {
+      border: 0; background: transparent; color: #dbeafe; text-align: left; border-radius: 12px; cursor: pointer;
+    }
+    .nav-item { padding: 11px 12px; font-size: 14px; font-weight: 700; }
+    .nav-sub { margin: -2px 0 4px 10px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.08); }
+    .nav-sub button { padding: 8px 10px; font-size: 13px; color: #94a3b8; }
+    .nav-item.active, .nav-item:hover, .nav-sub button.active, .nav-sub button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .nav-footer {
+      margin-top: auto; padding: 14px; border-radius: 16px; background: rgba(255,255,255,0.06); font-size: 12px; color: #cbd5e1; line-height: 1.5;
+    }
+    .main { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .topbar {
+      padding: 16px 18px; display: grid; grid-template-columns: minmax(260px, 1fr) auto; gap: 16px; align-items: center;
+    }
+    .search {
+      display: flex; align-items: center; gap: 10px; background: var(--panel-soft); border: 1px solid var(--border); border-radius: 14px; padding: 0 14px; min-height: 46px;
+    }
+    .search input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 14px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; justify-content: flex-end; color: var(--muted); font-size: 13px; font-weight: 600; }
+    .icon-pill {
+      min-width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel-soft);
+      display: inline-flex; align-items: center; justify-content: center; padding: 0 10px;
+    }
+    .page-head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 22px;
+    }
+    .page-head h2 { margin: 0; font-size: 28px; }
+    .page-head p { margin: 8px 0 0; color: var(--muted); max-width: 820px; line-height: 1.5; }
+    .page-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700;
+      background: var(--blue-soft); color: #1d4ed8;
+    }
+    .pill {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700;
+    }
+    .pill.blue { background: var(--blue-soft); color: #1d4ed8; }
+    .pill.green { background: var(--green-soft); color: #15803d; }
+    .pill.amber { background: var(--amber-soft); color: #b45309; }
+    .pill.red { background: var(--red-soft); color: #b91c1c; }
+    .pill.purple { background: var(--purple-soft); color: #6d28d9; }
+    .grid-4, .grid-3, .grid-2 { display: grid; gap: 16px; }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mini-card { padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--panel-soft); }
+    .mini-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 800; margin-bottom: 8px; }
+    .mini-card .value { font-size: 30px; font-weight: 800; margin-bottom: 5px; }
+    .mini-card .sub { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .section { padding: 18px; }
+    .section h3 { margin: 0; font-size: 18px; }
+    .section p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 18px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #edf2f7; vertical-align: top; text-align: left; font-size: 13px; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: #f8fafc; }
+    tr:hover td { background: #fafcff; }
+    .split { display: grid; grid-template-columns: 1.4fr 0.95fr; gap: 18px; }
+    .list { display: flex; flex-direction: column; gap: 12px; }
+    .list-item {
+      border: 1px solid var(--border); border-radius: 16px; padding: 14px; background: #fff;
+      display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;
+    }
+    .list-item strong { display: block; margin-bottom: 5px; }
+    .list-item p, .list-item span { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .actions-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 10px; min-height: 180px; padding-top: 16px; }
+    .chart-bar-wrap { flex: 1; text-align: center; }
+    .chart-bar {
+      width: 100%; border-radius: 14px 14px 6px 6px; background: linear-gradient(180deg, #60a5fa, #2563eb); min-height: 28px;
+      display: flex; align-items: flex-end; justify-content: center; color: white; font-size: 11px; font-weight: 700; padding-bottom: 8px;
+    }
+    .chart-bar.secondary { background: linear-gradient(180deg, #86efac, #16a34a); }
+    .chart-label { margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .tab-row, .filter-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tab-btn, .filter-chip {
+      border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 999px; padding: 9px 12px; cursor: pointer; font-size: 13px; font-weight: 700;
+    }
+    .tab-btn.active, .filter-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .summary-box {
+      border: 1px dashed var(--border); border-radius: 16px; padding: 14px; background: var(--panel-soft);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 800; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 14px; background: #fff; color: var(--text); padding: 11px 12px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .wizard-stepper { display: flex; gap: 10px; flex-wrap: wrap; }
+    .wizard-pill {
+      padding: 10px 12px; border-radius: 12px; background: var(--panel-alt); color: var(--muted); font-size: 12px; font-weight: 800; border: 1px solid var(--border);
+    }
+    .wizard-pill.active { background: var(--blue-soft); color: #1d4ed8; border-color: #bfdbfe; }
+    .wizard-pill.done { background: var(--green-soft); color: #15803d; border-color: #bbf7d0; }
+    .line-item {
+      border: 1px solid var(--border); border-radius: 16px; padding: 14px; background: #fff; display: flex; justify-content: space-between; gap: 16px;
+    }
+    .line-item h4 { margin: 0 0 6px; font-size: 15px; }
+    .line-meta { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .empty {
+      text-align: center; padding: 32px; color: var(--muted); border: 1px dashed var(--border); border-radius: 18px; background: var(--panel-soft);
+    }
+    .toast {
+      position: fixed; right: 18px; bottom: 18px; z-index: 1000; background: #0f172a; color: white; padding: 12px 14px; border-radius: 14px; box-shadow: 0 18px 30px rgba(0,0,0,0.18); display: none;
+    }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: none; align-items: center; justify-content: center; z-index: 999;
+      padding: 24px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      width: min(760px, 100%); background: #fff; border-radius: 22px; box-shadow: 0 22px 50px rgba(15, 23, 42, 0.22); max-height: 88vh; overflow: auto;
+      border: 1px solid var(--border);
+    }
+    .modal-head { padding: 22px 22px 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .modal-body { padding: 18px 22px 22px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .right-note { font-size: 12px; color: var(--muted); }
+    .stack { display: flex; flex-direction: column; gap: 14px; }
+    .metric-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+    .metric-row strong { font-size: 14px; }
+    @media (max-width: 1280px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3, .split, .field-grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .topbar { grid-template-columns: 1fr; }
+      .field-grid, .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>BAZAAR ADMIN NEXT</h1>
+      <p>Standalone local operating system for front desk, quotes, orders, production support, finance, reports, CRM, inventory, and tasks.</p>
+    </div>
+    <button class="create-btn" id="quickCreateBtn">+ Create Order</button>
+
+    <div class="nav-section-title">Operations</div>
+    <div class="nav-list">
+      <button class="nav-item" data-view="dashboard">Dashboard</button>
+      <button class="nav-item" data-view="orders">Orders</button>
+      <button class="nav-item" data-view="quotes">Quotes</button>
+      <button class="nav-item" data-view="frontdesk">Front Desk / New Order</button>
+      <button class="nav-item" data-view="tasks">My Tasks</button>
+    </div>
+
+    <div class="nav-section-title">Finance</div>
+    <div class="nav-sub">
+      <button data-view="finance" data-sub="payments">Payments</button>
+      <button data-view="finance" data-sub="invoices">Non-Order Invoices</button>
+      <button data-view="finance" data-sub="expenses">Expenses</button>
+      <button data-view="finance" data-sub="payroll">Payroll</button>
+    </div>
+
+    <div class="nav-section-title">Intelligence</div>
+    <div class="nav-sub">
+      <button data-view="reports" data-sub="sales">Sales</button>
+      <button data-view="reports" data-sub="production">Production</button>
+      <button data-view="reports" data-sub="inventory">Inventory</button>
+      <button data-view="reports" data-sub="financial">Financial</button>
+      <button data-view="reports" data-sub="customers">Customers</button>
+      <button data-view="reports" data-sub="employees">Employees</button>
+    </div>
+
+    <div class="nav-section-title">Management</div>
+    <div class="nav-sub">
+      <button data-view="customers">Customers</button>
+      <button data-view="inventory">Inventory</button>
+    </div>
+
+    <div class="nav-footer">
+      <strong>Standalone first.</strong><br>
+      Saves locally in this browser only, and stays separate from the current admin so we can iterate safely.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar card">
+      <div class="search">
+        <span>🔎</span>
+        <input id="globalSearch" placeholder="Search orders, customers, quotes, tasks, materials, team..." aria-label="Search">
+      </div>
+      <div class="top-actions">
+        <span class="icon-pill" id="alertCount">0 alerts</span>
+        <span class="icon-pill">💬</span>
+        <span>Hayk / Admin</span>
+      </div>
+    </div>
+
+    <div id="app"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="genericModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle" style="margin:0;font-size:22px;"></h3>
+        <p id="modalSubtitle" style="margin:8px 0 0;color:var(--muted);"></p>
+      </div>
+      <button class="ghost-btn" onclick="closeModal()">Close</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+initAuth('admin');
+
+const STORAGE_KEY = 'bazaar_admin_next_state_v4';
+const APP_VERSION = '2026-04-15-qa2';
+
+const ORDER_VIEWS = [
+  { key: 'active-clients', label: 'Active Orders by Client' },
+  { key: 'active', label: 'Active Orders' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'awaiting', label: 'Awaiting Pickup / Shipping' },
+  { key: 'archive', label: 'Archive' }
+];
+
+const REPORT_TABS = ['sales', 'production', 'inventory', 'financial', 'customers', 'employees'];
+const FINANCE_TABS = ['payments', 'invoices', 'expenses', 'payroll'];
+const TASK_COLUMNS = ['todo', 'today', 'waiting', 'done'];
+
+const DEFAULT_ITEM_OPTIONS = [
+  { label: 'Roll Labels', productType: 'Labels (Roll)', material: 'White BOPP', qty: 25000, price: 685, productionMinutes: 240 },
+  { label: 'Sheet Labels', productType: 'Labels (Sheet)', material: 'Gloss Label Sheet', qty: 5000, price: 295, productionMinutes: 105 },
+  { label: 'Folding Cartons', productType: 'Folding Cartons / Boxes', material: '18pt C1S', qty: 10000, price: 2200, productionMinutes: 560 },
+  { label: 'Pouches', productType: 'Pouches', material: 'Clear Cosmetic Web', qty: 12000, price: 3100, productionMinutes: 620 },
+  { label: 'Business Cards', productType: 'Business Cards', material: '16pt C2S', qty: 5000, price: 265, productionMinutes: 95 },
+  { label: 'Vinyl Signage', productType: 'Vinyl Signage', material: 'White Vinyl', qty: 1200, price: 890, productionMinutes: 180 }
+];
+
+const INITIAL_STATE = {
+  version: APP_VERSION,
+  ui: {
+    currentView: 'dashboard',
+    financeTab: 'payments',
+    reportTab: 'sales',
+    ordersTab: 'active-clients',
+    customerFilter: 'all',
+    inventoryFilter: 'all',
+    globalSearch: ''
+  },
+  frontDesk: {
+    stage: 'details',
+    customerId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    orderType: 'order',
+    dueDate: '',
+    fulfillment: 'pickup',
+    shippingMethod: '',
+    notes: '',
+    promoCode: '',
+    salesRep: 'Hayk',
+    items: [],
+    taxRate: 0.1025,
+    depositPercent: 0.5,
+    paymentMethod: 'card',
+    paymentMode: 'deposit',
+    appliedPayment: 0,
+    linkedQuoteId: ''
+  },
+  customers: [
+    { id: uid('cust'), name: 'Sundaze Wellness', email: 'ops@sundaze.com', phone: '(323) 555-2121', tier: 'Gold', credit: 1200, city: 'Los Angeles', spendYtd: 42850, ordersCount: 18, quotesCount: 4, permit: 'On File', notifications: 'Email + SMS', tags: ['labels', 'rush'], lastOrderAt: daysAgo(1), artworkCount: 13 },
+    { id: uid('cust'), name: 'Nori Labs', email: 'production@nori.co', phone: '(213) 555-8401', tier: 'Silver', credit: 0, city: 'Vernon', spendYtd: 19120, ordersCount: 9, quotesCount: 2, permit: 'Pending', notifications: 'Email', tags: ['boxes'], lastOrderAt: daysAgo(3), artworkCount: 7 },
+    { id: uid('cust'), name: 'Glow House', email: 'team@glowhouse.com', phone: '(818) 555-3111', tier: 'Platinum', credit: 5000, city: 'Burbank', spendYtd: 86400, ordersCount: 31, quotesCount: 3, permit: 'On File', notifications: 'Email + SMS', tags: ['pouches', 'proof-heavy'], lastOrderAt: daysAgo(0), artworkCount: 24 },
+    { id: uid('cust'), name: 'Pacific Candle Co', email: 'studio@pacificcandle.co', phone: '(310) 555-4432', tier: 'Bronze', credit: 300, city: 'Torrance', spendYtd: 7420, ordersCount: 5, quotesCount: 5, permit: 'Not Needed', notifications: 'Phone', tags: ['vinyl'], lastOrderAt: daysAgo(10), artworkCount: 4 }
+  ],
+  quotes: [
+    { id: uid('quo'), quoteNo: 'Q-24081', customerId: '', customerName: 'Sundaze Wellness', createdAt: daysAgo(2), dueDate: daysAhead(5), status: 'sent', salesRep: 'Hayk', notes: 'Waiting on approval for matte sample.', items: [makeItem(DEFAULT_ITEM_OPTIONS[0], { quantity: 50000, price: 1240, artworkStatus: 'Proof Sent' })], shipping: 38, tax: 127.92, depositRequired: 702.96 },
+    { id: uid('quo'), quoteNo: 'Q-24082', customerId: '', customerName: 'Glow House', createdAt: daysAgo(1), dueDate: daysAhead(7), status: 'draft', salesRep: 'Hayk', notes: 'Customer requested alternate foil pricing.', items: [makeItem(DEFAULT_ITEM_OPTIONS[3], { quantity: 15000, price: 3880, artworkStatus: 'Artwork Needed' })], shipping: 0, tax: 397.7, depositRequired: 2138.85 },
+    { id: uid('quo'), quoteNo: 'Q-24083', customerId: '', customerName: 'Pacific Candle Co', createdAt: daysAgo(5), dueDate: daysAhead(4), status: 'approved', salesRep: 'Ernesto', notes: 'Ready to convert if customer confirms pickup.', items: [makeItem(DEFAULT_ITEM_OPTIONS[5], { quantity: 1800, price: 1220, artworkStatus: 'Approved' })], shipping: 95, tax: 134.73, depositRequired: 724.86 }
+  ],
+  orders: [
+    makeOrder({ orderNo: '17982', customerName: 'Glow House', salesRep: 'Hayk', status: 'in-production', fulfillment: 'ship', dueDate: daysAhead(2), stage: 'Press 6K', paymentStatus: 'Deposit paid', workflowState: 'Proof approved', items: [makeItem(DEFAULT_ITEM_OPTIONS[3], { quantity: 12000, price: 3100, artworkStatus: 'Approved' })], priority: 'Rush', lastActivity: 'Queued at Karlville after laser cut.', percentComplete: 58 }),
+    makeOrder({ orderNo: '17983', customerName: 'Sundaze Wellness', salesRep: 'Gary Gharibyan', status: 'prepress', fulfillment: 'pickup', dueDate: daysAhead(1), stage: 'Proofing', paymentStatus: 'Awaiting payment', workflowState: 'Proof sent', items: [makeItem(DEFAULT_ITEM_OPTIONS[0], { quantity: 35000, price: 945, artworkStatus: 'Proof Sent' }), makeItem(DEFAULT_ITEM_OPTIONS[1], { quantity: 6000, price: 350, artworkStatus: 'Artwork Received' })], priority: 'High', lastActivity: 'AM requested logo size tweak.', percentComplete: 18 }),
+    makeOrder({ orderNo: '17984', customerName: 'Nori Labs', salesRep: 'Bob Werner', status: 'ready', fulfillment: 'ship', dueDate: daysAhead(0), stage: 'Ready to Ship', paymentStatus: 'Paid in full', workflowState: 'QC passed', items: [makeItem(DEFAULT_ITEM_OPTIONS[2], { quantity: 8000, price: 1960, artworkStatus: 'Approved' })], priority: 'Normal', lastActivity: 'Boxed and waiting for UPS pickup.', percentComplete: 100 }),
+    makeOrder({ orderNo: '17970', customerName: 'Pacific Candle Co', salesRep: 'Ernesto', status: 'completed', fulfillment: 'pickup', dueDate: daysAgo(2), stage: 'Completed', paymentStatus: 'Paid in full', workflowState: 'Picked up', items: [makeItem(DEFAULT_ITEM_OPTIONS[5], { quantity: 1400, price: 990, artworkStatus: 'Approved' })], priority: 'Normal', lastActivity: 'Order closed.', percentComplete: 100, createdAt: daysAgo(8) }),
+    makeOrder({ orderNo: '17941', customerName: 'Moonwater Studio', salesRep: 'Tiko', status: 'archived', fulfillment: 'ship', dueDate: daysAgo(20), stage: 'Archived', paymentStatus: 'Paid in full', workflowState: 'Delivered', items: [makeItem(DEFAULT_ITEM_OPTIONS[4], { quantity: 10000, price: 420, artworkStatus: 'Approved' })], priority: 'Normal', lastActivity: 'Archived after re-order cycle.', percentComplete: 100, createdAt: daysAgo(35) })
+  ],
+  inventory: [
+    { id: uid('inv'), sku: 'MAT-101', material: 'White BOPP', location: '16th Street', category: 'Labels', type: 'Roll', onHand: 18, unit: 'rolls', reorderAt: 10, status: 'In Stock', avgPrice: 188, monthlyUse: 14, openPO: 2 },
+    { id: uid('inv'), sku: 'MAT-205', material: '18pt C1S', location: '16th Street', category: 'Cartons', type: 'Sheets', onHand: 9200, unit: 'sheets', reorderAt: 6000, status: 'In Stock', avgPrice: 0.18, monthlyUse: 11200, openPO: 1 },
+    { id: uid('inv'), sku: 'MAT-318', material: 'Clear Cosmetic Web', location: '16th Street', category: 'Pouches', type: 'Roll', onHand: 4, unit: 'rolls', reorderAt: 6, status: 'Out Of Stock Soon', avgPrice: 460, monthlyUse: 7, openPO: 1 },
+    { id: uid('inv'), sku: 'MAT-402', material: 'White Vinyl', location: 'Boyd Street', category: 'Large Format', type: 'Roll', onHand: 11, unit: 'rolls', reorderAt: 5, status: 'In Stock', avgPrice: 225, monthlyUse: 6, openPO: 0 },
+    { id: uid('inv'), sku: 'MAT-509', material: 'Gloss Label Sheet', location: '16th Street', category: 'Labels', type: 'Sheets', onHand: 2400, unit: 'sheets', reorderAt: 3000, status: 'Order Failed', avgPrice: 0.11, monthlyUse: 5200, openPO: 0 }
+  ],
+  tasks: [
+    { id: uid('task'), title: 'Send revised Sundaze proof', status: 'today', owner: 'Hayk', dueDate: daysAhead(0), priority: 'High', thumbnail: '🧾', note: 'Customer wants logo 6% larger before approval.', linkType: 'order', linkId: '17983' },
+    { id: uid('task'), title: 'Approve pouch overtime plan', status: 'waiting', owner: 'Hayk', dueDate: daysAhead(1), priority: 'Urgent', thumbnail: '⚙️', note: 'Need Mauricio confirmation for late Karlville slot.', linkType: 'order', linkId: '17982' },
+    { id: uid('task'), title: 'Follow up on Pacific quote', status: 'todo', owner: 'Hayk', dueDate: daysAhead(0), priority: 'Normal', thumbnail: '💬', note: 'Customer asked if Friday pickup is still possible.', linkType: 'quote', linkId: 'Q-24083' },
+    { id: uid('task'), title: 'Close completed invoice batch', status: 'done', owner: 'Hayk', dueDate: daysAgo(0), priority: 'Normal', thumbnail: '💵', note: 'Marked all received non-order invoices paid.', linkType: 'finance', linkId: 'payments' }
+  ],
+  finance: {
+    payments: [
+      { id: uid('pay'), orderNo: '17982', customerName: 'Glow House', amount: 1550, method: 'Card', status: 'Verified', createdAt: daysAgo(0), transactionId: 'ch_91A2', type: 'Deposit' },
+      { id: uid('pay'), orderNo: '17984', customerName: 'Nori Labs', amount: 1960, method: 'ACH', status: 'Verified', createdAt: daysAgo(1), transactionId: 'ach_201K', type: 'Full' },
+      { id: uid('pay'), orderNo: '17970', customerName: 'Pacific Candle Co', amount: 990, method: 'Cash', status: 'Refunded', createdAt: daysAgo(8), transactionId: 'cash_404', type: 'Full' }
+    ],
+    invoices: [
+      { id: uid('invx'), invoiceNo: 'INV-7001', customerName: 'Studio Luma', amount: 620, status: 'Paid', createdAt: daysAgo(4), account: 'Design Services', pdfReady: true },
+      { id: uid('invx'), invoiceNo: 'INV-7002', customerName: 'Portland Matcha', amount: 1450, status: 'Open', createdAt: daysAgo(1), account: 'Consulting', pdfReady: true }
+    ],
+    expenses: [
+      { id: uid('exp'), merchant: 'Uline', amount: 438.12, status: 'Recorded', createdAt: daysAgo(1), account: 'Packaging Supplies', transactionId: 'UL-1138' },
+      { id: uid('exp'), merchant: 'FedEx Office', amount: 72.43, status: 'Recorded', createdAt: daysAgo(3), account: 'Office Expense', transactionId: 'FX-2041' }
+    ],
+    payroll: [
+      { id: uid('payroll'), team: 'Production', week: 'Apr 13 - Apr 19', amount: 12480, status: 'Pending Review' },
+      { id: uid('payroll'), team: 'Sales', week: 'Apr 13 - Apr 19', amount: 6840, status: 'Approved' }
+    ]
+  }
+};
+
+let state = loadState();
+
+function uid(prefix) { return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36).slice(-4)}`; }
+function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); }
+function daysAhead(n) { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function formatDateShort(value) { if (!value) return '—'; return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+function formatDateTime(value) { if (!value) return '—'; return new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function currency(value) { return `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+function intFmt(value) { return Number(value || 0).toLocaleString('en-US'); }
+
+function makeItem(base, overrides = {}) {
+  const item = {
+    id: uid('item'),
+    label: base.label,
+    productType: base.productType,
+    material: base.material,
+    quantity: base.qty,
+    price: base.price,
+    productionMinutes: base.productionMinutes,
+    artworkStatus: 'Artwork Needed',
+    proofStatus: 'Needed',
+    notes: '',
+    ...overrides
+  };
+  return item;
+}
+
+function makeOrder(overrides = {}) {
+  const items = overrides.items || [];
+  const subtotal = overrides.subtotal ?? items.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const shipping = overrides.shipping ?? (overrides.fulfillment === 'ship' ? 45 : 0);
+  const tax = overrides.tax ?? +(subtotal * 0.1025).toFixed(2);
+  const total = overrides.total ?? +(subtotal + shipping + tax).toFixed(2);
+  const depositRequired = overrides.depositRequired ?? +(total * 0.5).toFixed(2);
+  const paidAmount = Number(overrides.paidAmount || 0);
+  return {
+    id: uid('ord'),
+    orderNo: overrides.orderNo || String(Math.floor(17980 + Math.random() * 100)),
+    customerName: overrides.customerName || 'Walk-in Customer',
+    customerId: overrides.customerId || '',
+    salesRep: overrides.salesRep || 'Hayk',
+    createdAt: overrides.createdAt || new Date().toISOString(),
+    dueDate: overrides.dueDate || daysAhead(3),
+    status: overrides.status || 'prepress',
+    stage: overrides.stage || 'New',
+    paymentStatus: overrides.paymentStatus || 'Awaiting payment',
+    workflowState: overrides.workflowState || 'New order',
+    fulfillment: overrides.fulfillment || 'pickup',
+    priority: overrides.priority || 'Normal',
+    percentComplete: overrides.percentComplete ?? 0,
+    subtotal,
+    shipping,
+    tax,
+    total,
+    depositRequired,
+    balanceDue: overrides.balanceDue ?? +(total - paidAmount).toFixed(2),
+    paidAmount,
+    items,
+    lastActivity: overrides.lastActivity || 'Order created.',
+    linkedQuoteId: overrides.linkedQuoteId || '',
+    archivedAt: overrides.archivedAt || '',
+    customerNotes: overrides.customerNotes || '',
+    blockerReason: overrides.blockerReason || '',
+    proofStatus: overrides.proofStatus || '',
+    invoiceStatus: overrides.invoiceStatus || (paidAmount >= total ? 'Paid' : (paidAmount > 0 ? 'Partially Paid' : 'Uninvoiced')),
+    shipMethod: overrides.shipMethod || '',
+    assignedTeam: overrides.assignedTeam || inferAssignedTeam(items),
+    timeline: overrides.timeline || []
+  };
+}
+
+function inferAssignedTeam(items = []) {
+  const labels = items.map(item => `${item.productType || ''} ${item.material || ''}`.toLowerCase()).join(' ');
+  if (/pouch/.test(labels)) return 'Karlville';
+  if (/carton|c1s|box/.test(labels)) return 'HP Indigo 15K';
+  if (/vinyl|sign/.test(labels)) return 'Large Format';
+  return 'HP Indigo 6K';
+}
+
+function normalizeStateShape(input) {
+  const normalized = input;
+  normalized.version = APP_VERSION;
+  normalized.frontDesk = deepMerge(structuredClone(INITIAL_STATE.frontDesk), normalized.frontDesk || {});
+  normalized.ui = deepMerge(structuredClone(INITIAL_STATE.ui), normalized.ui || {});
+  normalized.customers = (normalized.customers || []).map(customer => ({ notifications: 'Email', tags: [], notes: '', lastContactAt: customer?.lastOrderAt || '', companyType: 'Brand', ...customer }));
+  normalized.quotes = (normalized.quotes || []).map(quote => ({ status: 'draft', salesRep: 'Hayk', notes: '', ...quote, items: (quote.items || []).map(item => ({ proofStatus: deriveProofState(item), ...item })) }));
+  normalized.orders = (normalized.orders || []).map(order => {
+    const items = (order.items || []).map(item => ({ ...item, proofStatus: item.proofStatus || deriveProofState(item) }));
+    const normalizedOrder = makeOrder({ ...order, items, subtotal: order.subtotal, shipping: order.shipping, tax: order.tax, total: order.total, depositRequired: order.depositRequired, paidAmount: order.paidAmount, balanceDue: order.balanceDue });
+    normalizedOrder.blockerReason = order.blockerReason || '';
+    normalizedOrder.invoiceStatus = order.invoiceStatus || (normalizedOrder.balanceDue <= 0 ? 'Paid' : (normalizedOrder.paidAmount > 0 ? 'Partially Paid' : 'Uninvoiced'));
+    normalizedOrder.shipMethod = order.shipMethod || '';
+    normalizedOrder.assignedTeam = order.assignedTeam || inferAssignedTeam(items);
+    normalizedOrder.timeline = Array.isArray(order.timeline) ? order.timeline : [];
+    normalizedOrder.proofStatus = deriveOrderProofStatus(normalizedOrder);
+    return normalizedOrder;
+  });
+  normalized.inventory = (normalized.inventory || []).map(item => ({ vendor: 'General Supplier', eta: '', lastPoAt: '', notes: '', ...item }));
+  normalized.tasks = (normalized.tasks || []).map(task => ({ linkType: '', linkId: '', ...task }));
+  normalized.finance = deepMerge(structuredClone(INITIAL_STATE.finance), normalized.finance || {});
+  return normalized;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return normalizeStateShape(structuredClone(INITIAL_STATE));
+    const parsed = JSON.parse(raw);
+    if (!parsed.version) return normalizeStateShape(structuredClone(INITIAL_STATE));
+    return normalizeStateShape(deepMerge(structuredClone(INITIAL_STATE), parsed));
+  } catch (error) {
+    console.error(error);
+    return normalizeStateShape(structuredClone(INITIAL_STATE));
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function setState(mutator, message) {
+  mutator(state);
+  saveState();
+  render();
+  if (message) showToast(message);
+}
+
+function deepMerge(base, extra) {
+  if (Array.isArray(base) || Array.isArray(extra)) return extra ?? base;
+  const output = { ...base };
+  Object.keys(extra || {}).forEach(key => {
+    if (base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]) && typeof extra[key] === 'object' && !Array.isArray(extra[key])) {
+      output[key] = deepMerge(base[key], extra[key]);
+    } else {
+      output[key] = extra[key];
+    }
+  });
+  return output;
+}
+
+function showToast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.style.display = 'block';
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => { el.style.display = 'none'; }, 2200);
+}
+
+function filteredTextMatch(text) {
+  const q = (state.ui.globalSearch || '').trim().toLowerCase();
+  if (!q) return true;
+  return String(text || '').toLowerCase().includes(q);
+}
+
+function getMetrics() {
+  const orders = state.orders;
+  const quotes = state.quotes;
+  const customers = state.customers;
+  const payments = state.finance.payments;
+  return {
+    openOrders: orders.filter(o => !['completed', 'archived'].includes(o.status)).length,
+    rushOrders: orders.filter(o => o.priority === 'Rush' && !['completed', 'archived'].includes(o.status)).length,
+    todaysRevenue: payments.filter(p => formatDateShort(p.createdAt) === formatDateShort(new Date().toISOString())).reduce((sum, p) => sum + Number(p.amount || 0), 0),
+    quotesOutstanding: quotes.filter(q => ['draft', 'sent'].includes(q.status)).length,
+    activeCustomers: customers.filter(c => c.ordersCount > 0).length,
+    inventoryAlerts: state.inventory.filter(i => i.onHand <= i.reorderAt || /failed|out/i.test(i.status)).length,
+    taskCount: state.tasks.filter(t => t.status !== 'done').length
+  };
+}
+
+function getOrderBuckets() {
+  return {
+    'active-clients': state.orders.filter(o => ['prepress', 'in-production', 'ready'].includes(o.status)),
+    'active': state.orders.filter(o => ['prepress', 'in-production'].includes(o.status)),
+    'completed': state.orders.filter(o => o.status === 'completed'),
+    'awaiting': state.orders.filter(o => o.status === 'ready'),
+    'archive': state.orders.filter(o => o.status === 'archived')
+  };
+}
+
+function statusPill(status) {
+  const map = {
+    draft: 'amber', sent: 'blue', approved: 'green', expired: 'red', blocked: 'red', partial: 'amber', open: 'amber', paid: 'green', uninvoiced: 'amber',
+    prepress: 'blue', 'in-production': 'purple', ready: 'green', completed: 'green', archived: 'amber',
+    todo: 'blue', today: 'amber', waiting: 'purple', done: 'green', urgent: 'red', verified: 'green', refunded: 'red'
+  };
+  return `<span class="pill ${map[status] || 'blue'}">${escapeHtml(labelize(status))}</span>`;
+}
+
+function deriveProofState(item = {}) {
+  if (item.proofStatus) return item.proofStatus;
+  const art = String(item.artworkStatus || '').toLowerCase();
+  if (art.includes('approved')) return 'Approved';
+  if (art.includes('proof')) return 'Sent';
+  if (art.includes('received')) return 'Prep';
+  return 'Needed';
+}
+
+function deriveOrderProofStatus(order) {
+  const statuses = (order.items || []).map(item => String(item.proofStatus || deriveProofState(item)).toLowerCase());
+  if (!statuses.length) return 'Needed';
+  if (statuses.every(status => status === 'approved')) return 'Approved';
+  if (statuses.some(status => status === 'sent')) return 'Sent';
+  if (statuses.some(status => status === 'prep')) return 'Prep';
+  return 'Needed';
+}
+
+function estimateMaterialDemand(item = {}, inventoryItem = {}) {
+  const qty = Number(item.quantity || 0);
+  const unit = String(inventoryItem.unit || '').toLowerCase();
+  const material = `${item.material || ''} ${item.productType || ''}`.toLowerCase();
+  if (unit.includes('sheet')) return Math.max(1, Math.ceil(qty / 2500));
+  if (material.includes('vinyl')) return Math.max(1, Math.ceil(qty / 800));
+  if (material.includes('pouch')) return Math.max(1, Math.ceil(qty / 6000));
+  return Math.max(1, Math.ceil(qty / 10000));
+}
+
+function getInventoryReservation(item) {
+  const reserved = state.orders.filter(order => ['prepress', 'in-production', 'ready'].includes(order.status)).reduce((sum, order) => {
+    return sum + (order.items || []).reduce((itemSum, orderItem) => {
+      if ((orderItem.material || '') !== item.material) return itemSum;
+      return itemSum + estimateMaterialDemand(orderItem, item);
+    }, 0);
+  }, 0);
+  const available = Number(item.onHand || 0) - reserved;
+  const reorderRisk = available <= Number(item.reorderAt || 0);
+  return { reserved, available, reorderRisk };
+}
+
+function addTaskEntry(task) {
+  state.tasks.unshift({ id: uid('task'), status: 'todo', owner: 'Hayk', priority: 'Normal', dueDate: daysAhead(0), thumbnail: '📌', note: '', linkType: '', linkId: '', ...task });
+}
+
+function labelize(value) {
+  return String(value || '').replace(/-/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function render() {
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.view === state.ui.currentView));
+  document.querySelectorAll('.nav-sub button').forEach(btn => {
+    const matches = btn.dataset.view === state.ui.currentView && (!btn.dataset.sub || btn.dataset.sub === state.ui.financeTab || btn.dataset.sub === state.ui.reportTab);
+    btn.classList.toggle('active', matches);
+  });
+  document.getElementById('globalSearch').value = state.ui.globalSearch || '';
+  document.getElementById('alertCount').textContent = `${getMetrics().inventoryAlerts + getMetrics().rushOrders} alerts`;
+
+  const app = document.getElementById('app');
+  const view = state.ui.currentView;
+  if (view === 'dashboard') app.innerHTML = renderDashboard();
+  if (view === 'orders') app.innerHTML = renderOrders();
+  if (view === 'quotes') app.innerHTML = renderQuotes();
+  if (view === 'frontdesk') app.innerHTML = renderFrontDesk();
+  if (view === 'customers') app.innerHTML = renderCustomers();
+  if (view === 'inventory') app.innerHTML = renderInventory();
+  if (view === 'tasks') app.innerHTML = renderTasks();
+  if (view === 'finance') app.innerHTML = renderFinance();
+  if (view === 'reports') app.innerHTML = renderReports();
+}
+
+function renderDashboard() {
+  const metrics = getMetrics();
+  const pipeline = [
+    { label: 'Quotes waiting', value: metrics.quotesOutstanding, sub: 'Draft + sent quotes that still need action' },
+    { label: 'Open orders', value: metrics.openOrders, sub: 'Across prepress, production, ready-to-ship' },
+    { label: 'Rush jobs', value: metrics.rushOrders, sub: 'Need close follow-through today' },
+    { label: 'Today collected', value: currency(metrics.todaysRevenue), sub: 'Verified payment activity only' }
+  ];
+  const recentOrders = state.orders.filter(o => filteredTextMatch(`${o.orderNo} ${o.customerName} ${o.stage}`)).slice(0, 5);
+  const recentPayments = [...state.finance.payments].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0, 5);
+  const weekly = [6200, 7900, 8800, 7100, 9450, 10200, 8600];
+  const top = Math.max(...weekly, 1);
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Operations center</span>
+          <h2>Dashboard</h2>
+          <p>Daily snapshot of sales, workflow pressure, payments, inventory risk, and the jobs that need human follow-through first.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="goToView('frontdesk')">New order</button>
+          <button class="ghost-btn" onclick="goToView('quotes')">Review quotes</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="grid-4">
+          ${pipeline.map(card => `<div class="mini-card"><div class="label">${escapeHtml(card.label)}</div><div class="value">${card.value}</div><div class="sub">${escapeHtml(card.sub)}</div></div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="card section">
+        <div class="section-head"><div><h3>Weekly sales</h3><p>Modeled after the Figma KPI cards and chart area.</p></div><span class="pill green">On pace</span></div>
+        <div class="chart-bars">
+          ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day, i) => `<div class="chart-bar-wrap"><div class="chart-bar ${i>4?'secondary':''}" style="height:${Math.max(32, Math.round((weekly[i]/top)*160))}px">${Math.round(weekly[i]/100)/10}k</div><div class="chart-label">${day}</div></div>`).join('')}
+        </div>
+      </div>
+      <div class="card section">
+        <div class="section-head"><div><h3>Needs attention</h3><p>Operational pressure points, not just raw counts.</p></div></div>
+        <div class="list">
+          ${state.orders.filter(o => o.priority === 'Rush' || o.paymentStatus === 'Awaiting payment' || o.workflowState.toLowerCase().includes('proof')).slice(0,5).map(order => `
+            <div class="list-item">
+              <div>
+                <strong>#${escapeHtml(order.orderNo)} · ${escapeHtml(order.customerName)}</strong>
+                <p>${escapeHtml(order.lastActivity)}</p>
+              </div>
+              <div class="stack" style="align-items:flex-end;">
+                ${statusPill(order.status)}
+                <span class="right-note">Due ${formatDateShort(order.dueDate)}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="card section">
+        <div class="section-head"><div><h3>Recent orders</h3><p>Dense operational list like the design recordings.</p></div><button class="ghost-btn" onclick="goToView('orders')">Open orders</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order</th><th>Stage</th><th>Due</th><th>Payment</th><th>Progress</th></tr></thead>
+            <tbody>
+              ${recentOrders.map(order => `<tr>
+                <td><strong>#${escapeHtml(order.orderNo)}</strong><br><span style="color:var(--muted)">${escapeHtml(order.customerName)}</span></td>
+                <td>${escapeHtml(order.stage)}<br>${statusPill(order.status)}</td>
+                <td>${formatDateShort(order.dueDate)}</td>
+                <td>${escapeHtml(order.paymentStatus)}</td>
+                <td>${order.percentComplete}%</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card section">
+        <div class="section-head"><div><h3>Transaction history</h3><p>Finance activity feed.</p></div><button class="ghost-btn" onclick="goToView('finance', 'payments')">Open finance</button></div>
+        <div class="list">
+          ${recentPayments.map(payment => `<div class="list-item"><div><strong>${escapeHtml(payment.customerName)}</strong><p>${escapeHtml(payment.type)} · ${escapeHtml(payment.method)} · ${escapeHtml(payment.transactionId)}</p></div><div class="stack" style="align-items:flex-end;"><strong>${currency(payment.amount)}</strong>${statusPill(payment.status.toLowerCase())}</div></div>`).join('')}
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderOrders() {
+  const buckets = getOrderBuckets();
+  const rows = buckets[state.ui.ordersTab].filter(order => filteredTextMatch(`${order.orderNo} ${order.customerName} ${order.stage} ${order.salesRep} ${order.blockerReason}`));
+  const blockedCount = rows.filter(order => order.blockerReason).length;
+  const proofCount = rows.filter(order => deriveOrderProofStatus(order) !== 'Approved').length;
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Orders system</span>
+          <h2>Orders</h2>
+          <p>Expanded for proof flow, blockers, row-level payment capture, and production follow-up. Each row now behaves more like an actual operating queue.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="goToView('frontdesk')">Create new order</button>
+          <button class="ghost-btn" onclick="openProductionBoard()">Production tasks</button>
+        </div>
+      </div>
+      <div class="section stack">
+        <div class="grid-4">
+          <div class="mini-card"><div class="label">Visible orders</div><div class="value">${rows.length}</div><div class="sub">Current bucket count</div></div>
+          <div class="mini-card"><div class="label">Proof work</div><div class="value">${proofCount}</div><div class="sub">Rows still needing proof progress</div></div>
+          <div class="mini-card"><div class="label">Blocked</div><div class="value">${blockedCount}</div><div class="sub">Needs unblock / escalation</div></div>
+          <div class="mini-card"><div class="label">A/R in view</div><div class="value">${currency(rows.reduce((sum, order) => sum + Number(order.balanceDue || 0), 0))}</div><div class="sub">Outstanding balance on visible rows</div></div>
+        </div>
+        <div class="tab-row">
+          ${ORDER_VIEWS.map(tab => `<button class="tab-btn ${state.ui.ordersTab === tab.key ? 'active' : ''}" onclick="setOrdersTab('${tab.key}')">${tab.label}</button>`).join('')}
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Order</th><th>Proof / Blockers</th><th>Production</th><th>Payment / Invoice</th><th>Due</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows.map(order => {
+                const proofState = deriveOrderProofStatus(order);
+                return `<tr>
+                  <td>
+                    <strong>#${escapeHtml(order.orderNo)}</strong><br>
+                    <span style="color:var(--muted)">${escapeHtml(order.customerName)} · ${escapeHtml(order.salesRep)}</span><br>
+                    ${order.priority === 'Rush' ? '<span class="pill red">Rush</span>' : '<span class="right-note">' + escapeHtml(order.assignedTeam || 'Assigned') + '</span>'}
+                  </td>
+                  <td>
+                    ${statusPill(proofState.toLowerCase())}
+                    ${order.blockerReason ? `<div style="margin-top:6px;">${statusPill('blocked')}<br><span style="color:var(--muted)">${escapeHtml(order.blockerReason)}</span></div>` : `<div style="margin-top:6px;color:var(--muted)">No blocker logged</div>`}
+                  </td>
+                  <td>
+                    <strong>${escapeHtml(order.stage)}</strong><br>
+                    ${statusPill(order.status)}<br>
+                    <span style="color:var(--muted)">${escapeHtml(order.workflowState)}</span>
+                  </td>
+                  <td>${escapeHtml(order.paymentStatus)}<br><span style="color:var(--muted)">${currency(order.balanceDue)} balance · ${escapeHtml(order.invoiceStatus || 'Uninvoiced')}</span></td>
+                  <td>${formatDateShort(order.dueDate)}<br><span style="color:var(--muted)">${order.percentComplete}% complete</span></td>
+                  <td>
+                    <div class="actions-row">
+                      <button class="ghost-btn" onclick="viewOrder('${order.id}')">View</button>
+                      <button class="secondary-btn" onclick="advanceOrder('${order.id}')">Advance</button>
+                      <button class="ghost-btn" onclick="toggleOrderProof('${order.id}')">Proof</button>
+                      <button class="ghost-btn" onclick="toggleOrderBlocker('${order.id}')">${order.blockerReason ? 'Clear blocker' : 'Blocker'}</button>
+                      ${Number(order.balanceDue || 0) > 0 ? `<button class="primary-btn" onclick="collectOrderBalance('${order.id}')">Collect</button>` : ''}
+                      <button class="ghost-btn" onclick="createOrderTask('${order.id}')">Task</button>
+                      ${order.status === 'ready' ? `<button class="primary-btn" onclick="completeOrder('${order.id}')">Complete</button>` : ''}
+                      ${order.status !== 'archived' && ['completed'].includes(order.status) ? `<button class="ghost-btn" onclick="archiveOrder('${order.id}')">Archive</button>` : ''}
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('') : `<tr><td colspan="6"><div class="empty">No orders in this view.</div></td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderQuotes() {
+  const rows = state.quotes.filter(q => filteredTextMatch(`${q.quoteNo} ${q.customerName} ${q.status}`));
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Quotes</span>
+          <h2>Quotes</h2>
+          <p>Draft, send, resend, and convert approved quotes directly into local orders with totals, deposit logic, and customer context preserved.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="startQuoteFromScratch()">New quote</button>
+          <button class="ghost-btn" onclick="goToView('frontdesk')">Front desk builder</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="list">
+          ${rows.map(quote => `
+            <div class="list-item">
+              <div style="flex:1;">
+                <strong>${escapeHtml(quote.quoteNo)} · ${escapeHtml(quote.customerName)}</strong>
+                <p>${quote.items.map(i => `${i.label} (${intFmt(i.quantity)})`).join(' • ')}</p>
+                <span>Created ${formatDateShort(quote.createdAt)} · Due ${formatDateShort(quote.dueDate)} · ${escapeHtml(quote.notes || 'No notes')}</span>
+              </div>
+              <div class="stack" style="align-items:flex-end; min-width:220px;">
+                ${statusPill(quote.status)}
+                <strong>${currency(getQuoteTotal(quote).total)}</strong>
+                <div class="actions-row">
+                  <button class="ghost-btn" onclick="resendQuote('${quote.id}')">Resend</button>
+                  ${quote.status !== 'approved' ? `<button class="secondary-btn" onclick="approveQuote('${quote.id}')">Approve</button>` : ''}
+                  <button class="primary-btn" onclick="convertQuote('${quote.id}')">Convert to order</button>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderFrontDesk() {
+  const fd = state.frontDesk;
+  const summary = calculateFrontDeskSummary(fd);
+  const customerOptions = state.customers.map(c => `<option value="${c.id}" ${fd.customerId === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  const stageIndex = ['details', 'items', 'checkout', 'payment'].indexOf(fd.stage);
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Front desk / new order</span>
+          <h2>New Order Builder</h2>
+          <p>Add customer, add items, review shipping/tax/deposit math, and capture payment. You can save as quote or create an order immediately.</p>
+        </div>
+        <div class="page-actions">
+          <button class="ghost-btn" onclick="resetFrontDesk()">Reset</button>
+          <button class="secondary-btn" onclick="saveFrontDeskAsQuote()">Save as quote</button>
+          <button class="primary-btn" onclick="submitFrontDesk()">${fd.orderType === 'quote' ? 'Create quote' : 'Create order'}</button>
+        </div>
+      </div>
+      <div class="section stack">
+        <div class="wizard-stepper">
+          ${['details','items','checkout','payment'].map((step, i) => `<div class="wizard-pill ${fd.stage === step ? 'active' : i < stageIndex ? 'done' : ''}">${i + 1}. ${labelize(step)}</div>`).join('')}
+        </div>
+        <div class="split">
+          <div class="stack">
+            <div class="card section" style="box-shadow:none;">
+              <div class="section-head"><div><h3>Order details</h3><p>Customer, fulfillment, rep, due date, and internal notes.</p></div></div>
+              <div class="field-grid">
+                <div class="field"><label>Existing customer</label><select onchange="setFrontDeskCustomer(this.value)"><option value="">Walk-in / new customer</option>${customerOptions}</select></div>
+                <div class="field"><label>Order type</label><select onchange="updateFrontDeskField('orderType', this.value)"><option value="order" ${fd.orderType==='order'?'selected':''}>Order</option><option value="quote" ${fd.orderType==='quote'?'selected':''}>Quote</option></select></div>
+                <div class="field"><label>Customer name</label><input value="${escapeHtml(fd.customerName)}" oninput="updateFrontDeskField('customerName', this.value)"></div>
+                <div class="field"><label>Email</label><input value="${escapeHtml(fd.customerEmail)}" oninput="updateFrontDeskField('customerEmail', this.value)"></div>
+                <div class="field"><label>Phone</label><input value="${escapeHtml(fd.customerPhone)}" oninput="updateFrontDeskField('customerPhone', this.value)"></div>
+                <div class="field"><label>Sales rep</label><input value="${escapeHtml(fd.salesRep)}" oninput="updateFrontDeskField('salesRep', this.value)"></div>
+                <div class="field"><label>Due date</label><input type="date" value="${fd.dueDate}" onchange="updateFrontDeskField('dueDate', this.value)"></div>
+                <div class="field"><label>Fulfillment</label><select onchange="updateFrontDeskField('fulfillment', this.value)"><option value="pickup" ${fd.fulfillment==='pickup'?'selected':''}>Pickup</option><option value="ship" ${fd.fulfillment==='ship'?'selected':''}>Ship</option></select></div>
+                <div class="field"><label>Shipping method</label><input value="${escapeHtml(fd.shippingMethod)}" oninput="updateFrontDeskField('shippingMethod', this.value)" placeholder="UPS Ground, messenger, customer label..."></div>
+                <div class="field"><label>Promo code</label><input value="${escapeHtml(fd.promoCode)}" oninput="updateFrontDeskField('promoCode', this.value)"></div>
+              </div>
+              <div class="field" style="margin-top:12px;"><label>General notes</label><textarea oninput="updateFrontDeskField('notes', this.value)" placeholder="General, design, production, or delivery notes">${escapeHtml(fd.notes)}</textarea></div>
+            </div>
+            <div class="card section" style="box-shadow:none;">
+              <div class="section-head"><div><h3>Line items</h3><p>Add item modal flow condensed into a working local builder.</p></div><button class="primary-btn" onclick="openAddItemModal()">+ Add item</button></div>
+              <div class="stack">
+                ${fd.items.length ? fd.items.map(item => `
+                  <div class="line-item">
+                    <div>
+                      <h4>${escapeHtml(item.label)}</h4>
+                      <div class="line-meta">${escapeHtml(item.productType)} · ${escapeHtml(item.material)} · ${intFmt(item.quantity)} pcs</div>
+                      <div class="line-meta">Artwork: ${escapeHtml(item.artworkStatus)} · Notes: ${escapeHtml(item.notes || 'None')}</div>
+                    </div>
+                    <div class="stack" style="align-items:flex-end;">
+                      <strong>${currency(item.price)}</strong>
+                      <div class="actions-row">
+                        <button class="ghost-btn" onclick="editFrontDeskItem('${item.id}')">Edit</button>
+                        <button class="danger-btn" onclick="removeFrontDeskItem('${item.id}')">Remove</button>
+                      </div>
+                    </div>
+                  </div>`).join('') : `<div class="empty">No items yet. Add the first item to move the workflow forward.</div>`}
+              </div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card section" style="box-shadow:none;">
+              <div class="section-head"><div><h3>Checkout summary</h3><p>Live pricing, shipping, tax, and deposit math.</p></div></div>
+              <div class="summary-box">
+                <div class="metric-row"><span>Items subtotal</span><strong>${currency(summary.subtotal)}</strong></div>
+                <div class="metric-row"><span>Shipping</span><strong>${currency(summary.shipping)}</strong></div>
+                <div class="metric-row"><span>Tax</span><strong>${currency(summary.tax)}</strong></div>
+                <div class="metric-row"><span>Total</span><strong>${currency(summary.total)}</strong></div>
+                <div class="metric-row"><span>Minimum deposit</span><strong>${currency(summary.depositRequired)}</strong></div>
+                <div class="metric-row"><span>Estimated production</span><strong>${summary.productionHours} hrs</strong></div>
+              </div>
+              <div class="field-grid" style="margin-top:14px;">
+                <div class="field"><label>Deposit %</label><input type="number" min="0" max="100" value="${Math.round((fd.depositPercent || 0) * 100)}" oninput="updateFrontDeskPercent('depositPercent', this.value)"></div>
+                <div class="field"><label>Tax %</label><input type="number" min="0" max="20" step="0.01" value="${((fd.taxRate || 0) * 100).toFixed(2)}" oninput="updateFrontDeskPercent('taxRate', this.value)"></div>
+              </div>
+            </div>
+            <div class="card section" style="box-shadow:none;">
+              <div class="section-head"><div><h3>Payment</h3><p>Deposit, full, cash, card, offline, or no payment.</p></div></div>
+              <div class="field-grid">
+                <div class="field"><label>Payment mode</label><select onchange="updateFrontDeskField('paymentMode', this.value)"><option value="deposit" ${fd.paymentMode==='deposit'?'selected':''}>Deposit only</option><option value="full" ${fd.paymentMode==='full'?'selected':''}>Pay in full</option><option value="none" ${fd.paymentMode==='none'?'selected':''}>No payment yet</option></select></div>
+                <div class="field"><label>Method</label><select onchange="updateFrontDeskField('paymentMethod', this.value)"><option value="card" ${fd.paymentMethod==='card'?'selected':''}>Card</option><option value="cash" ${fd.paymentMethod==='cash'?'selected':''}>Cash</option><option value="ach" ${fd.paymentMethod==='ach'?'selected':''}>ACH</option><option value="offline" ${fd.paymentMethod==='offline'?'selected':''}>Offline / phone</option></select></div>
+                <div class="field"><label>Apply payment now</label><input type="number" min="0" step="0.01" value="${fd.appliedPayment || 0}" oninput="updateFrontDeskField('appliedPayment', Number(this.value))"></div>
+              </div>
+              <div class="actions-row" style="margin-top:14px;">
+                <button class="ghost-btn" onclick="advanceFrontDeskStage()">Advance stage</button>
+                <button class="secondary-btn" onclick="goToView('quotes')">Review saved quotes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderCustomers() {
+  const rows = state.customers.filter(c => filteredTextMatch(`${c.name} ${c.email} ${c.city} ${c.tags.join(' ')} ${c.notes || ''}`));
+  const dormant = rows.filter(customer => customer.lastOrderAt && (Date.now() - new Date(customer.lastOrderAt).getTime()) > 1000 * 60 * 60 * 24 * 21).length;
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Customers / CRM</span>
+          <h2>Customers</h2>
+          <p>Customer list, tiering, spend, permit status, credit, notifications, last contact, and follow-up task creation.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="openCustomerModal()">Add customer</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="grid-4" style="margin-bottom:16px;">
+          <div class="mini-card"><div class="label">Total customers</div><div class="value">${rows.length}</div><div class="sub">Local CRM records</div></div>
+          <div class="mini-card"><div class="label">Returning</div><div class="value">${rows.filter(c => c.ordersCount > 1).length}</div><div class="sub">More than one order</div></div>
+          <div class="mini-card"><div class="label">Dormant 21+ days</div><div class="value">${dormant}</div><div class="sub">Good follow-up targets</div></div>
+          <div class="mini-card"><div class="label">Credit balance</div><div class="value">${currency(rows.reduce((s,c)=>s+Number(c.credit||0),0))}</div><div class="sub">Open customer credit</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Tier</th><th>Spend</th><th>Permit / Credit</th><th>Activity</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${rows.map(customer => `<tr>
+                <td><strong>${escapeHtml(customer.name)}</strong><br><span style="color:var(--muted)">${escapeHtml(customer.email)} · ${escapeHtml(customer.phone)}</span></td>
+                <td>${statusPill(customer.tier.toLowerCase())}<br><span style="color:var(--muted)">${escapeHtml(customer.companyType || 'Brand')}</span></td>
+                <td>${currency(customer.spendYtd)}<br><span style="color:var(--muted)">${customer.ordersCount} orders · ${customer.quotesCount} quotes</span></td>
+                <td>${escapeHtml(customer.permit)}<br><span style="color:var(--muted)">Credit ${currency(customer.credit)}</span></td>
+                <td>${escapeHtml(customer.city)}<br><span style="color:var(--muted)">Last ${formatDateShort(customer.lastContactAt || customer.lastOrderAt)}</span></td>
+                <td><div class="actions-row"><button class="ghost-btn" onclick="viewCustomer('${customer.id}')">Profile</button><button class="secondary-btn" onclick="prefillFrontDeskCustomer('${customer.id}')">New order</button><button class="ghost-btn" onclick="createCustomerTask('${customer.id}')">Follow up</button></div></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderInventory() {
+  const rows = state.inventory.filter(item => filteredTextMatch(`${item.material} ${item.location} ${item.category} ${item.status} ${item.vendor || ''}`));
+  const totalValue = rows.reduce((sum, item) => sum + Number(item.avgPrice || 0) * Number(item.onHand || 0), 0);
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Inventory</span>
+          <h2>Inventory</h2>
+          <p>Expanded with reserved stock, available stock after active orders, and quick PO rescue actions.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="openInventoryModal()">Add material</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="grid-4" style="margin-bottom:16px;">
+          <div class="mini-card"><div class="label">Inventory value</div><div class="value">${currency(totalValue)}</div><div class="sub">On-hand estimated value</div></div>
+          <div class="mini-card"><div class="label">Low / failed</div><div class="value">${rows.filter(i => getInventoryReservation(i).reorderRisk || /failed|out/i.test(i.status)).length}</div><div class="sub">Needs purchasing follow-up</div></div>
+          <div class="mini-card"><div class="label">Open PO lines</div><div class="value">${rows.reduce((s,i)=>s+Number(i.openPO||0),0)}</div><div class="sub">Inbound replenishment</div></div>
+          <div class="mini-card"><div class="label">Reserved</div><div class="value">${intFmt(rows.reduce((s,i)=>s+getInventoryReservation(i).reserved,0))}</div><div class="sub">Allocated to active work</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Material</th><th>Location</th><th>Stock</th><th>Reserved / Available</th><th>Cost / Vendor</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${rows.map(item => {
+                const reservation = getInventoryReservation(item);
+                return `<tr>
+                  <td><strong>${escapeHtml(item.material)}</strong><br><span style="color:var(--muted)">${escapeHtml(item.category)} · ${escapeHtml(item.type)}</span></td>
+                  <td>${escapeHtml(item.location)}</td>
+                  <td>${intFmt(item.onHand)} ${escapeHtml(item.unit)}<br>${statusPill((reservation.reorderRisk ? 'blocked' : item.status).toLowerCase().replace(/\s+/g,'-'))}</td>
+                  <td>${intFmt(reservation.reserved)} reserved<br><span style="color:var(--muted)">${intFmt(reservation.available)} available after reservations</span></td>
+                  <td>${currency(item.avgPrice)} avg<br><span style="color:var(--muted)">${escapeHtml(item.vendor || 'General Supplier')}</span></td>
+                  <td><div class="actions-row"><button class="secondary-btn" onclick="restockInventory('${item.id}')">+ Restock</button><button class="ghost-btn" onclick="createPurchaseOrder('${item.id}')">Create PO</button><button class="ghost-btn" onclick="editInventoryEntry('${item.id}')">Edit</button></div></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderTasks() {
+  const columns = {
+    todo: state.tasks.filter(t => t.status === 'todo' && filteredTextMatch(`${t.title} ${t.note} ${t.owner}`)),
+    today: state.tasks.filter(t => t.status === 'today' && filteredTextMatch(`${t.title} ${t.note} ${t.owner}`)),
+    waiting: state.tasks.filter(t => t.status === 'waiting' && filteredTextMatch(`${t.title} ${t.note} ${t.owner}`)),
+    done: state.tasks.filter(t => t.status === 'done' && filteredTextMatch(`${t.title} ${t.note} ${t.owner}`))
+  };
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">My tasks</span>
+          <h2>My Tasks</h2>
+          <p>Task cards by status, tied back to orders, quotes, customers, and finance follow-ups.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="openTaskModal()">Add task</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="grid-4">
+          ${TASK_COLUMNS.map(key => `<div class="mini-card" style="background:#fff;">
+            <div class="section-head"><div><h3 style="font-size:15px;">${labelize(key)}</h3><p>${columns[key].length} task(s)</p></div></div>
+            <div class="stack">
+              ${columns[key].length ? columns[key].map(task => `<div class="list-item" style="padding:12px;"><div><strong>${escapeHtml(task.thumbnail)} ${escapeHtml(task.title)}</strong><p>${escapeHtml(task.note)}</p><span>Due ${formatDateShort(task.dueDate)} · ${escapeHtml(task.priority)}${task.linkId ? ` · ${escapeHtml(task.linkType)} ${escapeHtml(task.linkId)}` : ''}</span></div><div class="actions-row"><button class="ghost-btn" onclick="moveTask('${task.id}')">Move</button>${task.linkType === 'order' ? `<button class="ghost-btn" onclick="viewOrderByNumber('${task.linkId}')">Open</button>` : ''}</div></div>`).join('') : `<div class="empty" style="padding:20px;">Nothing here.</div>`}
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderFinance() {
+  const tab = state.ui.financeTab;
+  const data = state.finance[tab];
+  const outstanding = state.orders.reduce((sum, order) => sum + Number(order.balanceDue || 0), 0);
+  const uninvoiced = state.orders.filter(order => (order.invoiceStatus || 'Uninvoiced') === 'Uninvoiced').length;
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Finance</span>
+          <h2>Finance</h2>
+          <p>Payments, non-order invoices, expenses, payroll, plus lightweight A/R and invoice status tied back to orders.</p>
+        </div>
+        <div class="page-actions">
+          <button class="primary-btn" onclick="openFinanceModal('${tab}')">Add ${labelize(tab.slice(0, -1) || tab)}</button>
+        </div>
+      </div>
+      <div class="section stack">
+        <div class="grid-4">
+          <div class="mini-card"><div class="label">Outstanding A/R</div><div class="value">${currency(outstanding)}</div><div class="sub">Open order balances</div></div>
+          <div class="mini-card"><div class="label">Uninvoiced orders</div><div class="value">${uninvoiced}</div><div class="sub">Need invoice or deposit request</div></div>
+          <div class="mini-card"><div class="label">Payments logged</div><div class="value">${state.finance.payments.length}</div><div class="sub">Including manual entries</div></div>
+          <div class="mini-card"><div class="label">Expenses</div><div class="value">${currency(state.finance.expenses.reduce((sum, row) => sum + Number(row.amount || 0), 0))}</div><div class="sub">Tracked spend</div></div>
+        </div>
+        <div class="tab-row">
+          ${FINANCE_TABS.map(item => `<button class="tab-btn ${item === tab ? 'active' : ''}" onclick="goToView('finance', '${item}')">${labelize(item)}</button>`).join('')}
+        </div>
+        ${tab === 'payments' ? renderPaymentsTable(data) : ''}
+        ${tab === 'invoices' ? renderInvoicesTable(data) : ''}
+        ${tab === 'expenses' ? renderExpensesTable(data) : ''}
+        ${tab === 'payroll' ? renderPayrollTable(data) : ''}
+      </div>
+    </section>`;
+}
+
+function renderPaymentsTable(rows) {
+  return `<div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(row => `<tr><td>#${escapeHtml(row.orderNo)}</td><td>${escapeHtml(row.customerName)}</td><td>${currency(row.amount)}</td><td>${escapeHtml(row.method)}<br><span style="color:var(--muted)">${escapeHtml(row.transactionId)}</span></td><td>${statusPill(row.status.toLowerCase())}</td><td><div class="actions-row"><button class="ghost-btn" onclick="togglePaymentStatus('${row.id}')">Toggle verify</button></div></td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderInvoicesTable(rows) {
+  return `<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Customer</th><th>Amount</th><th>Account</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.invoiceNo)}</td><td>${escapeHtml(row.customerName)}</td><td>${currency(row.amount)}</td><td>${escapeHtml(row.account)}</td><td>${statusPill(row.status.toLowerCase())}</td><td><div class="actions-row"><button class="ghost-btn" onclick="toggleInvoiceStatus('${row.id}')">Apply payment</button></div></td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderExpensesTable(rows) {
+  return `<div class="table-wrap"><table><thead><tr><th>Merchant</th><th>Amount</th><th>Account</th><th>Transaction</th><th>Status</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.merchant)}</td><td>${currency(row.amount)}</td><td>${escapeHtml(row.account)}</td><td>${escapeHtml(row.transactionId)}<br><span style="color:var(--muted)">${formatDateShort(row.createdAt)}</span></td><td>${statusPill(row.status.toLowerCase())}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderPayrollTable(rows) {
+  return `<div class="table-wrap"><table><thead><tr><th>Team</th><th>Week</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.team)}</td><td>${escapeHtml(row.week)}</td><td>${currency(row.amount)}</td><td>${statusPill(row.status.toLowerCase().replace(/\s+/g,'-'))}</td><td><div class="actions-row"><button class="ghost-btn" onclick="togglePayrollStatus('${row.id}')">Advance</button></div></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderReports() {
+  const tab = state.ui.reportTab;
+  const reportHtml = {
+    sales: renderSalesReport(),
+    production: renderProductionReport(),
+    inventory: renderInventoryReport(),
+    financial: renderFinancialReport(),
+    customers: renderCustomerReport(),
+    employees: renderEmployeeReport()
+  }[tab];
+  return `
+    <section class="card">
+      <div class="page-head">
+        <div>
+          <span class="badge">Reports</span>
+          <h2>Reports</h2>
+          <p>Sales, production, inventory, financial, customers, and employee summaries with stronger local analytics.</p>
+        </div>
+        <div class="page-actions"><button class="ghost-btn" onclick="showToast('Export stub ready for next pass')">Export</button></div>
+      </div>
+      <div class="section stack">
+        <div class="tab-row">
+          ${REPORT_TABS.map(item => `<button class="tab-btn ${item === tab ? 'active' : ''}" onclick="goToView('reports', '${item}')">${labelize(item)}</button>`).join('')}
+        </div>
+        ${reportHtml}
+      </div>
+    </section>`;
+}
+
+function renderSalesReport() {
+  const totalSales = state.orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const avgOrder = totalSales / Math.max(1, state.orders.length);
+  const topProducts = summarizeItems();
+  const convertedQuotes = state.orders.filter(order => order.linkedQuoteId).length;
+  return `<div class="grid-4"><div class="mini-card"><div class="label">Gross sales</div><div class="value">${currency(totalSales)}</div><div class="sub">Local standalone order book</div></div><div class="mini-card"><div class="label">Average order</div><div class="value">${currency(avgOrder)}</div><div class="sub">Across all tracked orders</div></div><div class="mini-card"><div class="label">Outstanding quotes</div><div class="value">${state.quotes.filter(q => q.status !== 'approved').length}</div><div class="sub">Still convertible</div></div><div class="mini-card"><div class="label">Quote conversions</div><div class="value">${convertedQuotes}</div><div class="sub">Orders linked back to quotes</div></div></div><div class="card section" style="box-shadow:none;"><div class="section-head"><div><h3>Top selling products</h3><p>Ranked by quantity across quotes and orders.</p></div></div><div class="list">${topProducts.slice(0,5).map(item => `<div class="list-item"><div><strong>${escapeHtml(item.name)}</strong><p>${intFmt(item.qty)} units</p></div><strong>${currency(item.revenue)}</strong></div>`).join('')}</div></div>`;
+}
+function renderProductionReport() {
+  const active = state.orders.filter(o => ['prepress', 'in-production', 'ready'].includes(o.status));
+  const blocked = active.filter(order => order.blockerReason);
+  const proofQueue = active.filter(order => deriveOrderProofStatus(order) !== 'Approved');
+  return `<div class="grid-4"><div class="mini-card"><div class="label">Active jobs</div><div class="value">${active.length}</div><div class="sub">Prepress through ready</div></div><div class="mini-card"><div class="label">Blocked jobs</div><div class="value">${blocked.length}</div><div class="sub">Require intervention</div></div><div class="mini-card"><div class="label">Proof queue</div><div class="value">${proofQueue.length}</div><div class="sub">Not yet approved</div></div><div class="mini-card"><div class="label">Avg progress</div><div class="value">${Math.round(active.reduce((s,o)=>s+o.percentComplete,0)/Math.max(1,active.length))}%</div><div class="sub">Completion across active work</div></div></div><div class="card section" style="box-shadow:none;"><div class="list">${active.map(order => `<div class="list-item"><div><strong>#${escapeHtml(order.orderNo)} · ${escapeHtml(order.customerName)}</strong><p>${escapeHtml(order.stage)} · ${escapeHtml(order.lastActivity)}</p><span style="color:var(--muted)">${escapeHtml(deriveOrderProofStatus(order))}${order.blockerReason ? ` · Blocked: ${escapeHtml(order.blockerReason)}` : ''}</span></div><strong>${order.percentComplete}%</strong></div>`).join('') || '<div class="empty">No active production orders right now.</div>'}</div></div>`;
+}
+function renderInventoryReport() {
+  const risk = state.inventory.filter(i => getInventoryReservation(i).reorderRisk || /failed|out/i.test(i.status));
+  return `<div class="grid-4"><div class="mini-card"><div class="label">Stock alerts</div><div class="value">${risk.length}</div><div class="sub">Needs restock or PO rescue</div></div><div class="mini-card"><div class="label">Purchasing spend</div><div class="value">${currency(state.inventory.reduce((s,i)=>s + (i.openPO * i.avgPrice * 10),0))}</div><div class="sub">Approx open replenishment value</div></div><div class="mini-card"><div class="label">Reserved units</div><div class="value">${intFmt(state.inventory.reduce((s,i)=>s + getInventoryReservation(i).reserved,0))}</div><div class="sub">Allocated to active work</div></div><div class="mini-card"><div class="label">Tracked materials</div><div class="value">${state.inventory.length}</div><div class="sub">Across both locations</div></div></div><div class="card section" style="box-shadow:none;"><div class="list">${risk.map(item => { const r = getInventoryReservation(item); return `<div class="list-item"><div><strong>${escapeHtml(item.material)}</strong><p>${escapeHtml(item.location)} · ${intFmt(item.onHand)} ${escapeHtml(item.unit)} on hand</p><span style="color:var(--muted)">${intFmt(r.available)} available after reservations</span></div>${statusPill('blocked')}</div>`; }).join('') || '<div class="empty">No inventory risks right now.</div>'}</div></div>`;
+}
+function renderFinancialReport() {
+  const collected = state.finance.payments.filter(p => p.status !== 'Refunded').reduce((s,p)=>s+Number(p.amount||0),0);
+  const expenses = state.finance.expenses.reduce((s,e)=>s+Number(e.amount||0),0);
+  const ar = state.orders.reduce((sum, order) => sum + Number(order.balanceDue || 0), 0);
+  return `<div class="grid-4"><div class="mini-card"><div class="label">Collected</div><div class="value">${currency(collected)}</div><div class="sub">Excluding refunded payments</div></div><div class="mini-card"><div class="label">Expenses</div><div class="value">${currency(expenses)}</div><div class="sub">Tracked local expense log</div></div><div class="mini-card"><div class="label">Net</div><div class="value">${currency(collected - expenses)}</div><div class="sub">Simple local contribution view</div></div><div class="mini-card"><div class="label">A/R</div><div class="value">${currency(ar)}</div><div class="sub">Order balances still open</div></div></div>`;
+}
+function renderCustomerReport() {
+  const sorted = [...state.customers].sort((a,b)=>b.spendYtd-a.spendYtd);
+  const dormant = state.customers.filter(customer => customer.lastOrderAt && (Date.now() - new Date(customer.lastOrderAt).getTime()) > 1000 * 60 * 60 * 24 * 21);
+  return `<div class="grid-4"><div class="mini-card"><div class="label">Returning customers</div><div class="value">${state.customers.filter(c => c.ordersCount > 1).length}</div><div class="sub">Repeat buying accounts</div></div><div class="mini-card"><div class="label">New customers</div><div class="value">${state.customers.filter(c => c.ordersCount <= 1).length}</div><div class="sub">Early-stage accounts</div></div><div class="mini-card"><div class="label">Dormant</div><div class="value">${dormant.length}</div><div class="sub">21+ days since last order</div></div><div class="mini-card"><div class="label">Top customer</div><div class="value" style="font-size:22px;">${escapeHtml(sorted[0]?.name || '—')}</div><div class="sub">${currency(sorted[0]?.spendYtd || 0)} YTD</div></div></div>`;
+}
+function renderEmployeeReport() {
+  const reps = Object.entries(state.orders.reduce((acc, order) => {
+    acc[order.salesRep] = acc[order.salesRep] || { revenue: 0, orders: 0, tasks: 0 };
+    acc[order.salesRep].revenue += Number(order.total || 0);
+    acc[order.salesRep].orders += 1;
+    acc[order.salesRep].tasks = state.tasks.filter(task => task.owner === order.salesRep && task.status !== 'done').length;
+    return acc;
+  }, {}));
+  return `<div class="card section" style="box-shadow:none;"><div class="section-head"><div><h3>Account manager performance</h3><p>Local revenue, order count, and open follow-up load.</p></div></div><div class="list">${reps.map(([name, data]) => `<div class="list-item"><div><strong>${escapeHtml(name)}</strong><p>${data.orders} handled orders · ${data.tasks} open tasks</p></div><strong>${currency(data.revenue)}</strong></div>`).join('')}</div></div>`;
+}
+
+function summarizeItems() {
+  const map = {};
+  [...state.orders, ...state.quotes].forEach(entry => {
+    (entry.items || []).forEach(item => {
+      map[item.label] = map[item.label] || { name: item.label, qty: 0, revenue: 0 };
+      map[item.label].qty += Number(item.quantity || 0);
+      map[item.label].revenue += Number(item.price || 0);
+    });
+  });
+  return Object.values(map).sort((a,b)=>b.revenue-a.revenue);
+}
+
+function calculateFrontDeskSummary(fd) {
+  const subtotal = (fd.items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const shipping = fd.fulfillment === 'ship' ? Math.max(25, Math.round(subtotal * 0.03)) : 0;
+  const promoDiscount = fd.promoCode ? Math.round(subtotal * 0.05) : 0;
+  const taxedBase = Math.max(0, subtotal - promoDiscount) + shipping;
+  const tax = +(taxedBase * Number(fd.taxRate || 0)).toFixed(2);
+  const total = +(taxedBase + tax).toFixed(2);
+  const depositRequired = +(total * Number(fd.depositPercent || 0)).toFixed(2);
+  const productionHours = ((fd.items || []).reduce((sum, item) => sum + Number(item.productionMinutes || 0), 0) / 60).toFixed(1);
+  return { subtotal: subtotal - promoDiscount, shipping, tax, total, depositRequired, productionHours };
+}
+
+function getQuoteTotal(quote) {
+  const subtotal = (quote.items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const shipping = Number(quote.shipping || 0);
+  const tax = Number(quote.tax || 0);
+  return { subtotal, shipping, tax, total: subtotal + shipping + tax };
+}
+
+function goToView(view, sub) {
+  setState(s => {
+    s.ui.currentView = view;
+    if (view === 'finance' && sub) s.ui.financeTab = sub;
+    if (view === 'reports' && sub) s.ui.reportTab = sub;
+  });
+}
+
+function setOrdersTab(tab) { setState(s => { s.ui.ordersTab = tab; }); }
+function updateFrontDeskField(field, value) { setState(s => { s.frontDesk[field] = value; }); }
+function updateFrontDeskPercent(field, value) { setState(s => { s.frontDesk[field] = Number(value || 0) / 100; }); }
+function advanceFrontDeskStage() { setState(s => {
+  const steps = ['details','items','checkout','payment'];
+  const idx = steps.indexOf(s.frontDesk.stage);
+  s.frontDesk.stage = steps[Math.min(idx + 1, steps.length - 1)];
+}, 'Front desk advanced'); }
+
+function resetFrontDesk() { setState(s => { s.frontDesk = structuredClone(INITIAL_STATE.frontDesk); }, 'Front desk reset'); }
+
+function setFrontDeskCustomer(id) {
+  setState(s => {
+    s.frontDesk.customerId = id;
+    const customer = s.customers.find(c => c.id === id);
+    if (customer) {
+      s.frontDesk.customerName = customer.name;
+      s.frontDesk.customerEmail = customer.email;
+      s.frontDesk.customerPhone = customer.phone;
+    }
+  });
+}
+
+function prefillFrontDeskCustomer(id) {
+  setFrontDeskCustomer(id);
+  goToView('frontdesk');
+  showToast('Customer loaded into new order');
+}
+
+function openAddItemModal(existingId = '') {
+  const item = existingId ? state.frontDesk.items.find(i => i.id === existingId) : null;
+  const options = DEFAULT_ITEM_OPTIONS.map((opt, idx) => `<option value="${idx}" ${item && item.label === opt.label ? 'selected' : ''}>${opt.label}</option>`).join('');
+  openModal(item ? 'Edit item' : 'Add item', 'Item category, quantity, artwork intake, and pricing.', `
+    <div class="field-grid">
+      <div class="field"><label>Preset</label><select id="itemPreset">${options}</select></div>
+      <div class="field"><label>Label</label><input id="itemLabel" value="${escapeHtml(item?.label || '')}" placeholder="Custom item name"></div>
+      <div class="field"><label>Product type</label><input id="itemProductType" value="${escapeHtml(item?.productType || '')}"></div>
+      <div class="field"><label>Material</label><input id="itemMaterial" value="${escapeHtml(item?.material || '')}"></div>
+      <div class="field"><label>Quantity</label><input id="itemQty" type="number" min="1" value="${item?.quantity || 1000}"></div>
+      <div class="field"><label>Price</label><input id="itemPrice" type="number" min="0" step="0.01" value="${item?.price || 0}"></div>
+      <div class="field"><label>Artwork status</label><select id="itemArtwork"><option ${item?.artworkStatus==='Artwork Needed'?'selected':''}>Artwork Needed</option><option ${item?.artworkStatus==='Artwork Received'?'selected':''}>Artwork Received</option><option ${item?.artworkStatus==='Proof Sent'?'selected':''}>Proof Sent</option><option ${item?.artworkStatus==='Approved'?'selected':''}>Approved</option></select></div>
+      <div class="field"><label>Production minutes</label><input id="itemMinutes" type="number" min="0" value="${item?.productionMinutes || 120}"></div>
+    </div>
+    <div class="field" style="margin-top:12px;"><label>Item notes</label><textarea id="itemNotes">${escapeHtml(item?.notes || '')}</textarea></div>
+    <div class="modal-actions">
+      <button class="ghost-btn" onclick="applyPresetToModal()">Use preset values</button>
+      <button class="primary-btn" onclick="saveFrontDeskItem('${existingId}')">Save item</button>
+    </div>
+  `);
+}
+
+function applyPresetToModal() {
+  const index = Number(document.getElementById('itemPreset').value || 0);
+  const preset = DEFAULT_ITEM_OPTIONS[index];
+  document.getElementById('itemLabel').value = preset.label;
+  document.getElementById('itemProductType').value = preset.productType;
+  document.getElementById('itemMaterial').value = preset.material;
+  document.getElementById('itemQty').value = preset.qty;
+  document.getElementById('itemPrice').value = preset.price;
+  document.getElementById('itemMinutes').value = preset.productionMinutes;
+}
+
+function saveFrontDeskItem(existingId = '') {
+  const item = {
+    id: existingId || uid('item'),
+    label: document.getElementById('itemLabel').value.trim(),
+    productType: document.getElementById('itemProductType').value.trim(),
+    material: document.getElementById('itemMaterial').value.trim(),
+    quantity: Number(document.getElementById('itemQty').value || 0),
+    price: Number(document.getElementById('itemPrice').value || 0),
+    artworkStatus: document.getElementById('itemArtwork').value,
+    productionMinutes: Number(document.getElementById('itemMinutes').value || 0),
+    notes: document.getElementById('itemNotes').value.trim(),
+    proofStatus: 'Needed'
+  };
+  if (!item.label || !item.quantity) return showToast('Item needs at least a name and quantity');
+  setState(s => {
+    const idx = s.frontDesk.items.findIndex(i => i.id === existingId);
+    if (idx >= 0) s.frontDesk.items[idx] = item;
+    else s.frontDesk.items.push(item);
+    if (s.frontDesk.stage === 'details') s.frontDesk.stage = 'items';
+  }, existingId ? 'Item updated' : 'Item added');
+  closeModal();
+}
+
+function editFrontDeskItem(id) { openAddItemModal(id); }
+function removeFrontDeskItem(id) { setState(s => { s.frontDesk.items = s.frontDesk.items.filter(i => i.id !== id); }, 'Item removed'); }
+
+function submitFrontDesk() {
+  const fd = state.frontDesk;
+  if (!fd.customerName || !fd.items.length) return showToast('Customer name and at least one item are required');
+  if (fd.orderType === 'quote') return saveFrontDeskAsQuote();
+  const summary = calculateFrontDeskSummary(fd);
+  const order = makeOrder({
+    customerName: fd.customerName,
+    customerId: fd.customerId,
+    salesRep: fd.salesRep,
+    dueDate: fd.dueDate || daysAhead(3),
+    fulfillment: fd.fulfillment,
+    status: 'prepress',
+    stage: 'Prepress',
+    workflowState: 'Order received',
+    paymentStatus: fd.paymentMode === 'none' ? 'Awaiting payment' : (fd.paymentMode === 'deposit' ? 'Deposit paid' : 'Paid in full'),
+    items: fd.items.map(item => ({ ...item })),
+    subtotal: summary.subtotal,
+    shipping: summary.shipping,
+    tax: summary.tax,
+    total: summary.total,
+    depositRequired: summary.depositRequired,
+    paidAmount: Number(fd.appliedPayment || 0),
+    balanceDue: +(summary.total - Number(fd.appliedPayment || 0)).toFixed(2),
+    customerNotes: fd.notes,
+    linkedQuoteId: fd.linkedQuoteId,
+    percentComplete: 6,
+    lastActivity: `Created at front desk. ${fd.fulfillment === 'ship' ? 'Shipping requested.' : 'Pickup requested.'}`
+  });
+  setState(s => {
+    s.orders.unshift(order);
+    ensureCustomerFromFrontDesk(s, order);
+    if (fd.appliedPayment > 0) {
+      s.finance.payments.unshift({
+        id: uid('pay'),
+        orderNo: order.orderNo,
+        customerName: order.customerName,
+        amount: Number(fd.appliedPayment),
+        method: labelize(fd.paymentMethod),
+        status: 'Verified',
+        createdAt: new Date().toISOString(),
+        transactionId: uid('txn').slice(0, 10),
+        type: fd.paymentMode === 'full' ? 'Full' : 'Deposit'
+      });
+    }
+    if (fd.linkedQuoteId) {
+      const quote = s.quotes.find(q => q.id === fd.linkedQuoteId);
+      if (quote) quote.status = 'approved';
+    }
+    s.frontDesk = structuredClone(INITIAL_STATE.frontDesk);
+    s.ui.currentView = 'orders';
+    s.ui.ordersTab = 'active';
+  }, `Order #${order.orderNo} created`);
+}
+
+function saveFrontDeskAsQuote() {
+  const fd = state.frontDesk;
+  if (!fd.customerName || !fd.items.length) return showToast('Customer name and at least one item are required');
+  const summary = calculateFrontDeskSummary(fd);
+  const quote = {
+    id: uid('quo'),
+    quoteNo: `Q-${Math.floor(24080 + Math.random() * 900)}`,
+    customerId: fd.customerId,
+    customerName: fd.customerName,
+    createdAt: new Date().toISOString(),
+    dueDate: fd.dueDate || daysAhead(4),
+    status: 'draft',
+    salesRep: fd.salesRep,
+    notes: fd.notes,
+    items: fd.items.map(item => ({ ...item })),
+    shipping: summary.shipping,
+    tax: summary.tax,
+    depositRequired: summary.depositRequired
+  };
+  setState(s => {
+    ensureCustomerFromFrontDesk(s, quote);
+    s.quotes.unshift(quote);
+    s.frontDesk.linkedQuoteId = quote.id;
+    s.ui.currentView = 'quotes';
+  }, `Quote ${quote.quoteNo} saved`);
+}
+
+function ensureCustomerFromFrontDesk(s, source) {
+  const fd = s.frontDesk;
+  let customer = s.customers.find(c => c.id === fd.customerId || c.name.toLowerCase() === (fd.customerName || '').toLowerCase());
+  if (!customer) {
+    customer = {
+      id: uid('cust'),
+      name: fd.customerName,
+      email: fd.customerEmail,
+      phone: fd.customerPhone,
+      tier: 'Bronze',
+      credit: 0,
+      city: 'Los Angeles',
+      spendYtd: source.total || 0,
+      ordersCount: source.orderNo ? 1 : 0,
+      quotesCount: source.quoteNo ? 1 : 0,
+      permit: 'Pending',
+      notifications: 'Email',
+      tags: [],
+      notes: '',
+      lastOrderAt: new Date().toISOString(),
+      lastContactAt: new Date().toISOString(),
+      companyType: 'Brand',
+      artworkCount: (fd.items || []).length
+    };
+    s.customers.unshift(customer);
+  } else {
+    customer.email = fd.customerEmail || customer.email;
+    customer.phone = fd.customerPhone || customer.phone;
+    customer.lastOrderAt = new Date().toISOString();
+    customer.lastContactAt = new Date().toISOString();
+    customer.artworkCount += (fd.items || []).length;
+    if (source.orderNo) {
+      customer.ordersCount += 1;
+      customer.spendYtd += Number(source.total || 0);
+    }
+    if (source.quoteNo) customer.quotesCount += 1;
+  }
+}
+
+function resendQuote(id) { setState(s => { const quote = s.quotes.find(q => q.id === id); if (quote) quote.status = 'sent'; }, 'Quote re-sent'); }
+function approveQuote(id) { setState(s => { const quote = s.quotes.find(q => q.id === id); if (quote) quote.status = 'approved'; }, 'Quote approved'); }
+function startQuoteFromScratch() { setState(s => { s.ui.currentView = 'frontdesk'; s.frontDesk.orderType = 'quote'; }, 'Ready for a new quote'); }
+
+function convertQuote(id) {
+  const quote = state.quotes.find(q => q.id === id);
+  if (!quote) return;
+  setState(s => {
+    s.frontDesk = {
+      ...structuredClone(INITIAL_STATE.frontDesk),
+      stage: 'checkout',
+      orderType: 'order',
+      customerId: quote.customerId,
+      customerName: quote.customerName,
+      dueDate: quote.dueDate,
+      salesRep: quote.salesRep,
+      items: quote.items.map(item => ({ ...item })),
+      linkedQuoteId: quote.id,
+      notes: quote.notes
+    };
+    s.ui.currentView = 'frontdesk';
+  }, `${quote.quoteNo} loaded into order builder`);
+}
+
+function advanceOrder(id) {
+  const flow = [
+    { status: 'prepress', stage: 'Proofing', workflowState: 'Proof sent', percent: 18 },
+    { status: 'in-production', stage: 'Press 6K', workflowState: 'Proof approved', percent: 48 },
+    { status: 'in-production', stage: 'Finishing / QC', workflowState: 'Production running', percent: 82 },
+    { status: 'ready', stage: 'Ready to Ship', workflowState: 'QC passed', percent: 100 },
+    { status: 'completed', stage: 'Completed', workflowState: 'Picked up / shipped', percent: 100 }
+  ];
+  setState(s => {
+    const order = s.orders.find(o => o.id === id);
+    if (!order) return;
+    const idx = flow.findIndex(step => step.status === order.status && step.stage === order.stage);
+    const next = flow[Math.min(idx + 1, flow.length - 1)] || flow[1];
+    order.status = next.status;
+    order.stage = next.stage;
+    order.workflowState = next.workflowState;
+    order.percentComplete = next.percent;
+    order.lastActivity = `Advanced to ${next.stage}.`;
+    if (next.status === 'completed') order.completedAt = new Date().toISOString();
+  }, 'Order advanced');
+}
+
+function completeOrder(id) { setState(s => { const order = s.orders.find(o => o.id === id); if (order) { order.status = 'completed'; order.stage = 'Completed'; order.workflowState = 'Closed'; order.percentComplete = 100; order.lastActivity = 'Order completed.'; } }, 'Order completed'); }
+function archiveOrder(id) { setState(s => { const order = s.orders.find(o => o.id === id); if (order) { order.status = 'archived'; order.archivedAt = new Date().toISOString(); order.stage = 'Archived'; } }, 'Order archived'); }
+
+function viewOrder(id) {
+  const order = state.orders.find(o => o.id === id);
+  if (!order) return;
+  const proofState = deriveOrderProofStatus(order);
+  openModal(`Order #${order.orderNo}`, `${order.customerName} · ${order.salesRep}`, `
+    <div class="grid-2">
+      <div class="summary-box">
+        <div class="metric-row"><span>Status</span><strong>${labelize(order.status)}</strong></div>
+        <div class="metric-row"><span>Stage</span><strong>${escapeHtml(order.stage)}</strong></div>
+        <div class="metric-row"><span>Due</span><strong>${formatDateShort(order.dueDate)}</strong></div>
+        <div class="metric-row"><span>Payment</span><strong>${escapeHtml(order.paymentStatus)}</strong></div>
+        <div class="metric-row"><span>Total</span><strong>${currency(order.total)}</strong></div>
+      </div>
+      <div class="summary-box">
+        <div class="metric-row"><span>Workflow</span><strong>${escapeHtml(order.workflowState)}</strong></div>
+        <div class="metric-row"><span>Proof</span><strong>${escapeHtml(proofState)}</strong></div>
+        <div class="metric-row"><span>Blocker</span><strong>${escapeHtml(order.blockerReason || 'None')}</strong></div>
+        <div class="metric-row"><span>Balance due</span><strong>${currency(order.balanceDue)}</strong></div>
+        <div class="metric-row"><span>Completion</span><strong>${order.percentComplete}%</strong></div>
+      </div>
+    </div>
+    <div class="card section" style="box-shadow:none;margin-top:16px;">
+      <div class="section-head"><div><h3>Items and proof flow</h3></div></div>
+      <div class="list">${order.items.map(item => `<div class="list-item"><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.productType)} · ${escapeHtml(item.material)} · ${intFmt(item.quantity)} pcs</p><span style="color:var(--muted)">Artwork ${escapeHtml(item.artworkStatus)} · Proof ${escapeHtml(item.proofStatus || deriveProofState(item))}</span></div><strong>${currency(item.price)}</strong></div>`).join('')}</div>
+    </div>
+    <div class="card section" style="box-shadow:none;margin-top:16px;">
+      <div class="section-head"><div><h3>Latest activity</h3></div></div>
+      <p>${escapeHtml(order.lastActivity)}</p>
+      <p style="color:var(--muted)">${escapeHtml(order.customerNotes || 'No customer notes.')}</p>
+      <div class="modal-actions"><button class="secondary-btn" onclick="advanceOrder('${order.id}'); closeModal();">Advance order</button><button class="ghost-btn" onclick="toggleOrderProof('${order.id}'); closeModal();">Advance proof</button><button class="ghost-btn" onclick="toggleOrderBlocker('${order.id}'); closeModal();">Toggle blocker</button>${Number(order.balanceDue || 0) > 0 ? `<button class="primary-btn" onclick="collectOrderBalance('${order.id}'); closeModal();">Collect balance</button>` : ''}</div>
+    </div>
+  `);
+}
+
+function openProductionBoard() {
+  const buckets = [
+    { title: 'Proof queue', rows: state.orders.filter(order => ['prepress', 'in-production'].includes(order.status) && deriveOrderProofStatus(order) !== 'Approved') },
+    { title: 'Blocked', rows: state.orders.filter(order => order.blockerReason) },
+    { title: 'On press / floor', rows: state.orders.filter(order => order.status === 'in-production') },
+    { title: 'Ready', rows: state.orders.filter(order => order.status === 'ready') }
+  ];
+  openModal('Production tasks', 'Grouped local board for proofs, blockers, work in progress, and ready jobs.', `
+    <div class="grid-2">
+      ${buckets.map(bucket => `<div class="card section" style="box-shadow:none;"><div class="section-head"><div><h3>${escapeHtml(bucket.title)}</h3><p>${bucket.rows.length} order(s)</p></div></div><div class="list">${bucket.rows.map(order => `<div class="list-item"><div><strong>#${escapeHtml(order.orderNo)} · ${escapeHtml(order.customerName)}</strong><p>${escapeHtml(order.stage)} · ${escapeHtml(order.assignedTeam || '')}</p><span style="color:var(--muted)">${escapeHtml(order.blockerReason || deriveOrderProofStatus(order))}</span></div><div class="actions-row"><button class="ghost-btn" onclick="viewOrder('${order.id}')">Open</button></div></div>`).join('') || '<div class="empty">No orders here.</div>'}</div></div>`).join('')}
+    </div>
+  `);
+}
+
+function viewCustomer(id) {
+  const customer = state.customers.find(c => c.id === id);
+  if (!customer) return;
+  const orders = state.orders.filter(o => o.customerName === customer.name).slice(0, 5);
+  const quotes = state.quotes.filter(q => q.customerName === customer.name).slice(0, 5);
+  openModal(customer.name, `${customer.tier} tier · ${currency(customer.spendYtd)} YTD`, `
+    <div class="grid-2">
+      <div class="summary-box">
+        <div class="metric-row"><span>Email</span><strong>${escapeHtml(customer.email)}</strong></div>
+        <div class="metric-row"><span>Phone</span><strong>${escapeHtml(customer.phone)}</strong></div>
+        <div class="metric-row"><span>Permit</span><strong>${escapeHtml(customer.permit)}</strong></div>
+        <div class="metric-row"><span>Credit</span><strong>${currency(customer.credit)}</strong></div>
+        <div class="metric-row"><span>Notifications</span><strong>${escapeHtml(customer.notifications)}</strong></div>
+      </div>
+      <div class="summary-box">
+        <div class="metric-row"><span>Orders</span><strong>${customer.ordersCount}</strong></div>
+        <div class="metric-row"><span>Quotes</span><strong>${customer.quotesCount}</strong></div>
+        <div class="metric-row"><span>Artwork files</span><strong>${customer.artworkCount}</strong></div>
+        <div class="metric-row"><span>Last order</span><strong>${formatDateShort(customer.lastOrderAt)}</strong></div>
+        <div class="metric-row"><span>Last contact</span><strong>${formatDateShort(customer.lastContactAt || customer.lastOrderAt)}</strong></div>
+      </div>
+    </div>
+    <div class="card section" style="box-shadow:none;margin-top:16px;"><div class="section-head"><div><h3>Recent orders</h3></div></div><div class="list">${orders.map(order => `<div class="list-item"><div><strong>#${escapeHtml(order.orderNo)}</strong><p>${escapeHtml(order.stage)} · Due ${formatDateShort(order.dueDate)}</p></div>${statusPill(order.status)}</div>`).join('') || '<div class="empty">No orders yet.</div>'}</div></div>
+    <div class="card section" style="box-shadow:none;margin-top:16px;"><div class="section-head"><div><h3>Quotes</h3></div></div><div class="list">${quotes.map(quote => `<div class="list-item"><div><strong>${escapeHtml(quote.quoteNo)}</strong><p>${escapeHtml(quote.notes || 'No notes')}</p></div>${statusPill(quote.status)}</div>`).join('') || '<div class="empty">No quotes yet.</div>'}</div></div>
+    <div class="modal-actions"><button class="secondary-btn" onclick="prefillFrontDeskCustomer('${customer.id}'); closeModal();">New order</button><button class="ghost-btn" onclick="createCustomerTask('${customer.id}'); closeModal();">Create follow-up</button></div>
+  `);
+}
+
+function openCustomerModal() {
+  openModal('Add customer', 'Create a local customer profile.', `
+    <div class="field-grid">
+      <div class="field"><label>Name</label><input id="custName"></div>
+      <div class="field"><label>Email</label><input id="custEmail"></div>
+      <div class="field"><label>Phone</label><input id="custPhone"></div>
+      <div class="field"><label>City</label><input id="custCity"></div>
+      <div class="field"><label>Tier</label><select id="custTier"><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option></select></div>
+      <div class="field"><label>Permit</label><select id="custPermit"><option>Pending</option><option>On File</option><option>Not Needed</option></select></div>
+    </div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveCustomer()">Save customer</button></div>
+  `);
+}
+
+function saveCustomer() {
+  const customer = {
+    id: uid('cust'),
+    name: document.getElementById('custName').value.trim(),
+    email: document.getElementById('custEmail').value.trim(),
+    phone: document.getElementById('custPhone').value.trim(),
+    city: document.getElementById('custCity').value.trim() || 'Los Angeles',
+    tier: document.getElementById('custTier').value,
+    permit: document.getElementById('custPermit').value,
+    credit: 0,
+    spendYtd: 0,
+    ordersCount: 0,
+    quotesCount: 0,
+    notifications: 'Email',
+    tags: [],
+    notes: '',
+    lastOrderAt: '',
+    lastContactAt: new Date().toISOString(),
+    companyType: 'Brand',
+    artworkCount: 0
+  };
+  if (!customer.name) return showToast('Customer needs a name');
+  setState(s => { s.customers.unshift(customer); }, 'Customer added');
+  closeModal();
+}
+
+function openInventoryModal(existingId = '') {
+  const item = existingId ? state.inventory.find(i => i.id === existingId) : null;
+  openModal(item ? 'Edit inventory item' : 'Add inventory item', 'Track material, stock state, and reorder point.', `
+    <div class="field-grid">
+      <div class="field"><label>Material</label><input id="invMaterialName" value="${escapeHtml(item?.material || '')}"></div>
+      <div class="field"><label>SKU</label><input id="invSku" value="${escapeHtml(item?.sku || '')}"></div>
+      <div class="field"><label>Location</label><input id="invLocation" value="${escapeHtml(item?.location || '16th Street')}"></div>
+      <div class="field"><label>Category</label><input id="invCategory" value="${escapeHtml(item?.category || '')}"></div>
+      <div class="field"><label>Type</label><input id="invType" value="${escapeHtml(item?.type || '')}"></div>
+      <div class="field"><label>On hand</label><input id="invOnHand" type="number" value="${item?.onHand || 0}"></div>
+      <div class="field"><label>Unit</label><input id="invUnit" value="${escapeHtml(item?.unit || 'rolls')}"></div>
+      <div class="field"><label>Reorder at</label><input id="invReorder" type="number" value="${item?.reorderAt || 0}"></div>
+      <div class="field"><label>Avg price</label><input id="invPrice" type="number" step="0.01" value="${item?.avgPrice || 0}"></div>
+      <div class="field"><label>Status</label><input id="invStatus" value="${escapeHtml(item?.status || 'In Stock')}"></div>
+    </div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveInventoryItem('${existingId}')">Save item</button></div>
+  `);
+}
+
+function saveInventoryItem(existingId = '') {
+  const item = {
+    id: existingId || uid('inv'),
+    material: document.getElementById('invMaterialName').value.trim(),
+    sku: document.getElementById('invSku').value.trim() || uid('sku').slice(0,8).toUpperCase(),
+    location: document.getElementById('invLocation').value.trim(),
+    category: document.getElementById('invCategory').value.trim(),
+    type: document.getElementById('invType').value.trim(),
+    onHand: Number(document.getElementById('invOnHand').value || 0),
+    unit: document.getElementById('invUnit').value.trim(),
+    reorderAt: Number(document.getElementById('invReorder').value || 0),
+    avgPrice: Number(document.getElementById('invPrice').value || 0),
+    monthlyUse: 0,
+    openPO: 0,
+    status: document.getElementById('invStatus').value.trim() || 'In Stock'
+  };
+  if (!item.material) return showToast('Material name is required');
+  setState(s => {
+    const idx = s.inventory.findIndex(i => i.id === existingId);
+    if (idx >= 0) s.inventory[idx] = { ...s.inventory[idx], ...item };
+    else s.inventory.unshift(item);
+  }, existingId ? 'Inventory updated' : 'Inventory item added');
+  closeModal();
+}
+
+function editInventoryEntry(id) { openInventoryModal(id); }
+function restockInventory(id) {
+  const qty = Number(prompt('Quantity to add', '5') || 0);
+  if (!qty) return;
+  setState(s => {
+    const item = s.inventory.find(i => i.id === id);
+    if (item) {
+      item.onHand += qty;
+      item.status = item.onHand <= item.reorderAt ? 'Out Of Stock Soon' : 'In Stock';
+      if (item.openPO > 0) item.openPO = Math.max(0, item.openPO - 1);
+    }
+  }, 'Inventory restocked');
+}
+
+function openTaskModal() {
+  openModal('Add task', 'Create a follow-up task for sales, production, or finance.', `
+    <div class="field-grid">
+      <div class="field"><label>Title</label><input id="taskTitle"></div>
+      <div class="field"><label>Status</label><select id="taskStatus"><option value="todo">To Do</option><option value="today">Today</option><option value="waiting">Waiting</option><option value="done">Done</option></select></div>
+      <div class="field"><label>Owner</label><input id="taskOwner" value="Hayk"></div>
+      <div class="field"><label>Priority</label><select id="taskPriority"><option>Normal</option><option>High</option><option>Urgent</option></select></div>
+      <div class="field"><label>Due date</label><input id="taskDue" type="date" value="${daysAhead(0)}"></div>
+      <div class="field"><label>Thumbnail</label><input id="taskThumb" value="📌"></div>
+    </div>
+    <div class="field" style="margin-top:12px;"><label>Note</label><textarea id="taskNote"></textarea></div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveTask()">Save task</button></div>
+  `);
+}
+
+function saveTask() {
+  const task = {
+    id: uid('task'),
+    title: document.getElementById('taskTitle').value.trim(),
+    status: document.getElementById('taskStatus').value,
+    owner: document.getElementById('taskOwner').value.trim(),
+    priority: document.getElementById('taskPriority').value,
+    dueDate: document.getElementById('taskDue').value,
+    thumbnail: document.getElementById('taskThumb').value.trim(),
+    note: document.getElementById('taskNote').value.trim(),
+    linkType: '',
+    linkId: ''
+  };
+  if (!task.title) return showToast('Task title is required');
+  setState(s => { s.tasks.unshift(task); }, 'Task added');
+  closeModal();
+}
+
+function moveTask(id) {
+  const next = { todo: 'today', today: 'waiting', waiting: 'done', done: 'todo' };
+  setState(s => {
+    const task = s.tasks.find(t => t.id === id);
+    if (task) task.status = next[task.status] || 'todo';
+  }, 'Task moved');
+}
+
+function openFinanceModal(tab) {
+  const titles = { payments: 'payment', invoices: 'invoice', expenses: 'expense', payroll: 'payroll row' };
+  openModal(`Add ${titles[tab]}`, 'Lightweight local finance entry.', renderFinanceForm(tab));
+}
+
+function renderFinanceForm(tab) {
+  if (tab === 'payments') return `
+    <div class="field-grid"><div class="field"><label>Order #</label><input id="fOrder"></div><div class="field"><label>Customer</label><input id="fCustomer"></div><div class="field"><label>Amount</label><input id="fAmount" type="number" step="0.01"></div><div class="field"><label>Method</label><select id="fMethod"><option>Card</option><option>Cash</option><option>ACH</option><option>Offline</option></select></div></div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveFinanceEntry('payments')">Save payment</button></div>`;
+  if (tab === 'invoices') return `
+    <div class="field-grid"><div class="field"><label>Invoice #</label><input id="fInvoice"></div><div class="field"><label>Customer</label><input id="fCustomer"></div><div class="field"><label>Amount</label><input id="fAmount" type="number" step="0.01"></div><div class="field"><label>Account</label><input id="fAccount"></div></div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveFinanceEntry('invoices')">Save invoice</button></div>`;
+  if (tab === 'expenses') return `
+    <div class="field-grid"><div class="field"><label>Merchant</label><input id="fMerchant"></div><div class="field"><label>Amount</label><input id="fAmount" type="number" step="0.01"></div><div class="field"><label>Account</label><input id="fAccount"></div><div class="field"><label>Transaction ID</label><input id="fTxn"></div></div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveFinanceEntry('expenses')">Save expense</button></div>`;
+  return `
+    <div class="field-grid"><div class="field"><label>Team</label><input id="fTeam"></div><div class="field"><label>Week</label><input id="fWeek"></div><div class="field"><label>Amount</label><input id="fAmount" type="number" step="0.01"></div><div class="field"><label>Status</label><select id="fStatus"><option>Pending Review</option><option>Approved</option><option>Paid</option></select></div></div>
+    <div class="modal-actions"><button class="primary-btn" onclick="saveFinanceEntry('payroll')">Save payroll</button></div>`;
+}
+
+function saveFinanceEntry(tab) {
+  setState(s => {
+    if (tab === 'payments') s.finance.payments.unshift({ id: uid('pay'), orderNo: document.getElementById('fOrder').value.trim(), customerName: document.getElementById('fCustomer').value.trim(), amount: Number(document.getElementById('fAmount').value || 0), method: document.getElementById('fMethod').value, status: 'Verified', createdAt: new Date().toISOString(), transactionId: uid('txn').slice(0, 8), type: 'Manual' });
+    if (tab === 'invoices') s.finance.invoices.unshift({ id: uid('invx'), invoiceNo: document.getElementById('fInvoice').value.trim(), customerName: document.getElementById('fCustomer').value.trim(), amount: Number(document.getElementById('fAmount').value || 0), account: document.getElementById('fAccount').value.trim(), status: 'Open', createdAt: new Date().toISOString(), pdfReady: true });
+    if (tab === 'expenses') s.finance.expenses.unshift({ id: uid('exp'), merchant: document.getElementById('fMerchant').value.trim(), amount: Number(document.getElementById('fAmount').value || 0), account: document.getElementById('fAccount').value.trim(), transactionId: document.getElementById('fTxn').value.trim(), status: 'Recorded', createdAt: new Date().toISOString() });
+    if (tab === 'payroll') s.finance.payroll.unshift({ id: uid('payroll'), team: document.getElementById('fTeam').value.trim(), week: document.getElementById('fWeek').value.trim(), amount: Number(document.getElementById('fAmount').value || 0), status: document.getElementById('fStatus').value });
+  }, `${labelize(tab.slice(0, -1) || tab)} added`);
+  closeModal();
+}
+
+function togglePaymentStatus(id) { setState(s => { const row = s.finance.payments.find(p => p.id === id); if (row) row.status = row.status === 'Verified' ? 'Refunded' : 'Verified'; }, 'Payment updated'); }
+function toggleInvoiceStatus(id) { setState(s => { const row = s.finance.invoices.find(p => p.id === id); if (row) row.status = row.status === 'Paid' ? 'Open' : 'Paid'; }, 'Invoice updated'); }
+function togglePayrollStatus(id) { const next = { 'Pending Review': 'Approved', 'Approved': 'Paid', 'Paid': 'Pending Review' }; setState(s => { const row = s.finance.payroll.find(p => p.id === id); if (row) row.status = next[row.status] || 'Pending Review'; }, 'Payroll updated'); }
+
+function toggleOrderProof(id) {
+  setState(s => {
+    const order = s.orders.find(o => o.id === id);
+    if (!order) return;
+    const next = { Needed: 'Prep', Prep: 'Sent', Sent: 'Approved', Approved: 'Needed' };
+    const current = deriveOrderProofStatus(order);
+    const target = next[current] || 'Needed';
+    (order.items || []).forEach(item => {
+      item.proofStatus = target;
+      item.artworkStatus = target === 'Approved' ? 'Approved' : (target === 'Sent' ? 'Proof Sent' : (target === 'Prep' ? 'Artwork Received' : 'Artwork Needed'));
+    });
+    order.proofStatus = target;
+    order.workflowState = target === 'Approved' ? 'Proof approved' : (target === 'Sent' ? 'Proof sent' : (target === 'Prep' ? 'Preparing proof' : 'Artwork needed'));
+    order.lastActivity = `Proof status changed to ${target}.`;
+  }, 'Proof status updated');
+}
+
+function toggleOrderBlocker(id) {
+  const order = state.orders.find(o => o.id === id);
+  if (!order) return;
+  if (order.blockerReason) {
+    setState(s => {
+      const row = s.orders.find(o => o.id === id);
+      if (!row) return;
+      row.blockerReason = '';
+      row.lastActivity = 'Blocker cleared.';
+    }, 'Blocker cleared');
+    return;
+  }
+  const reason = prompt('Blocker reason', 'Waiting on customer proof approval');
+  if (!reason) return;
+  setState(s => {
+    const row = s.orders.find(o => o.id === id);
+    if (!row) return;
+    row.blockerReason = reason;
+    row.lastActivity = `Blocked: ${reason}`;
+    addTaskEntry({ title: `Unblock order #${row.orderNo}`, note: reason, owner: row.salesRep || 'Hayk', priority: 'Urgent', status: 'today', thumbnail: '⛔', linkType: 'order', linkId: row.orderNo });
+  }, 'Blocker logged');
+}
+
+function collectOrderBalance(id) {
+  setState(s => {
+    const order = s.orders.find(o => o.id === id);
+    if (!order || Number(order.balanceDue || 0) <= 0) return;
+    const amount = Number(order.balanceDue || 0);
+    order.paidAmount = Number(order.paidAmount || 0) + amount;
+    order.balanceDue = 0;
+    order.paymentStatus = 'Paid in full';
+    order.invoiceStatus = 'Paid';
+    order.lastActivity = `Collected remaining balance of ${currency(amount)}.`;
+    s.finance.payments.unshift({ id: uid('pay'), orderNo: order.orderNo, customerName: order.customerName, amount, method: 'Manual', status: 'Verified', createdAt: new Date().toISOString(), transactionId: uid('txn').slice(0, 8), type: 'Balance' });
+  }, 'Remaining balance collected');
+}
+
+function createOrderTask(id) {
+  setState(s => {
+    const order = s.orders.find(o => o.id === id);
+    if (!order) return;
+    addTaskEntry({ title: `Follow up order #${order.orderNo}`, note: order.blockerReason || order.lastActivity, owner: order.salesRep || 'Hayk', priority: order.priority === 'Rush' ? 'Urgent' : 'High', status: 'today', thumbnail: '🧾', linkType: 'order', linkId: order.orderNo });
+  }, 'Order follow-up task added');
+}
+
+function createCustomerTask(id) {
+  setState(s => {
+    const customer = s.customers.find(c => c.id === id);
+    if (!customer) return;
+    addTaskEntry({ title: `Follow up ${customer.name}`, note: `Check in on re-order timing and artwork needs for ${customer.name}.`, owner: 'Hayk', priority: 'Normal', status: 'todo', thumbnail: '💬', linkType: 'customer', linkId: customer.name });
+    customer.lastContactAt = new Date().toISOString();
+  }, 'Customer follow-up task added');
+}
+
+function createPurchaseOrder(id) {
+  setState(s => {
+    const item = s.inventory.find(row => row.id === id);
+    if (!item) return;
+    item.openPO = Number(item.openPO || 0) + 1;
+    item.status = 'PO Placed';
+    item.lastPoAt = new Date().toISOString();
+    item.eta = daysAhead(5);
+    addTaskEntry({ title: `Confirm PO for ${item.material}`, note: `PO placed for ${item.material}. Verify ETA ${formatDateShort(item.eta)}.`, owner: 'Hayk', priority: 'High', status: 'waiting', thumbnail: '📦', linkType: 'inventory', linkId: item.sku });
+  }, 'Purchase order created');
+}
+
+function viewOrderByNumber(orderNo) {
+  const order = state.orders.find(row => row.orderNo === orderNo);
+  if (order) viewOrder(order.id);
+}
+
+function openModal(title, subtitle, body) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalSubtitle').textContent = subtitle || '';
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('genericModal').classList.add('active');
+}
+function closeModal() { document.getElementById('genericModal').classList.remove('active'); }
+
+document.getElementById('genericModal').addEventListener('click', (event) => { if (event.target.id === 'genericModal') closeModal(); });
+document.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', () => goToView(btn.dataset.view, btn.dataset.sub)));
+document.getElementById('quickCreateBtn').addEventListener('click', () => goToView('frontdesk'));
+document.getElementById('globalSearch').addEventListener('input', (event) => setState(s => { s.ui.globalSearch = event.target.value; }));
+
+render();
+</script>
+</body>
+</html>

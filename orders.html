@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders — Bazaar Print</title>
+  <script src="shared.js?v=20260414-1358"></script>
+  <script src="auth.js?v=20260414-1358"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<!-- Page Header -->
+<div class="orders-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;font-size:22px;font-weight:700;">📦 Orders</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">All job orders across facilities — live from Pulse data</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn" onclick="setMainView('report')" id="btnReport">📊 Report</button>
+      <button class="btn btn-primary" onclick="createOrder()">+ Create Order</button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="statsBar" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;"></div>
+</div>
+
+<!-- Main views -->
+<div id="viewList">
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <button class="filter-btn active" data-sf="all"      onclick="setStatusFilter('all')">All</button>
+      <button class="filter-btn"        data-sf="new"      onclick="setStatusFilter('new')">New</button>
+      <button class="filter-btn"        data-sf="prepress" onclick="setStatusFilter('prepress')">Prepress</button>
+      <button class="filter-btn"        data-sf="production" onclick="setStatusFilter('production')">Production</button>
+      <button class="filter-btn"        data-sf="qc"       onclick="setStatusFilter('qc')">QC</button>
+      <button class="filter-btn"        data-sf="ready"    onclick="setStatusFilter('ready')">Ready / Ship</button>
+      <button class="filter-btn"        data-sf="done"     onclick="setStatusFilter('done')">Completed</button>
+      <button class="filter-btn"        data-sf="hold"     onclick="setStatusFilter('hold')">On Hold</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+      <select id="filterAM" onchange="renderList()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Account Managers</option>
+      </select>
+      <select id="filterFacility" onchange="renderList()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Facilities</option>
+        <option value="16th-street">16th Street</option>
+        <option value="boyd-street">Boyd Street</option>
+      </select>
+      <input id="searchInput" type="text" placeholder="🔍 Search order # or customer..." oninput="renderList()"
+        style="padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--card);color:var(--text);width:220px;outline:none;">
+      <span id="resultCount" style="font-size:12px;color:var(--text-muted);"></span>
+    </div>
+  </div>
+
+  <!-- Orders table -->
+  <div style="overflow-x:auto;padding:0 20px 40px;">
+    <table class="orders-table" id="ordersTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('orderId')" class="sortable">Order # <span id="sort-orderId"></span></th>
+          <th onclick="sortBy('createdAt')" class="sortable">Created <span id="sort-createdAt"></span></th>
+          <th onclick="sortBy('customer')" class="sortable">Customer <span id="sort-customer"></span></th>
+          <th>PO #</th>
+          <th>Product</th>
+          <th onclick="sortBy('status')" class="sortable">Status <span id="sort-status"></span></th>
+          <th onclick="sortBy('dueDate')" class="sortable">Due <span id="sort-dueDate"></span></th>
+          <th>Invoice</th>
+          <th onclick="sortBy('accountManager')" class="sortable">Account Manager <span id="sort-accountManager"></span></th>
+          <th>Facility</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+    <div id="emptyState" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted);">
+      <div style="font-size:40px;margin-bottom:12px;">📭</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No orders found</div>
+      <div style="font-size:13px;margin-bottom:20px;" id="emptyMsg">Try adjusting your filters, or create the first order.</div>
+      <button class="btn btn-primary" onclick="createOrder()">+ Create Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Report view -->
+<div id="viewReport" style="display:none;padding:20px;max-width:1100px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h3 style="margin:0;font-size:17px;font-weight:700;">📊 Orders Report</h3>
+    <button class="btn btn-sm" onclick="setMainView('list')">← Back to List</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="reportGrids">
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">By Status</h4>
+      <div id="reportByStatus"></div>
+    </div>
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">By Account Manager</h4>
+      <div id="reportByAM"></div>
+    </div>
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">By Facility</h4>
+      <div id="reportByFacility"></div>
+    </div>
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">Rush Orders</h4>
+      <div id="reportRush"></div>
+    </div>
+  </div>
+  <div class="report-card" style="margin-top:20px;">
+    <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">Overdue Orders</h4>
+    <div id="reportOverdue"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">💰 Revenue by Account Manager</h4>
+      <div id="reportRevByAM"></div>
+    </div>
+    <div class="report-card">
+      <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">📋 Invoice Status</h4>
+      <div id="reportInvoiceStatus"></div>
+    </div>
+  </div>
+  <div class="report-card" style="margin-top:20px;">
+    <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">⚠️ Uninvoiced Closed Orders</h4>
+    <div id="reportUninvoiced"></div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="closeDetail(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 id="modalTitle" style="margin:0;font-size:18px;font-weight:700;"></h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" id="modalEditBtn" onclick="openJobTicket()">Open Job Ticket</button>
+        <button class="btn btn-sm" onclick="closeDetail()">✕ Close</button>
+      </div>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+  injectThemeCSS();
+  document.getElementById('nav').innerHTML = renderNav('orders');
+  initAuth('orders');
+
+  document.getElementById('page-styles').textContent = `
+    .orders-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .filter-bar {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .filter-btn {
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { background: var(--card-hover); color: var(--text); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .orders-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .orders-table th.sortable { cursor: pointer; user-select: none; }
+    .orders-table th.sortable:hover { color: var(--text); }
+    .orders-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .orders-table tr:hover td { background: var(--card-hover); }
+
+    .order-num {
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .order-num:hover { text-decoration: underline; }
+
+    .due-overdue { color: #dc2626; font-weight: 600; }
+    .due-soon    { color: #d97706; font-weight: 600; }
+
+    .facility-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .fac-16th { background: #eff6ff; color: #1d4ed8; }
+    .fac-boyd { background: #fef3c7; color: #92400e; }
+
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      min-width: 70px;
+      transition: all 0.15s;
+    }
+    .stat-pill:hover { background: var(--card-hover); }
+    .stat-pill.active { background: var(--accent); border-color: var(--accent); }
+    .stat-pill.active .sp-val, .stat-pill.active .sp-label { color: #fff !important; }
+    .sp-val { font-size: 22px; font-weight: 700; color: var(--text); }
+    .sp-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; }
+    .modal-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      max-width: 760px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+      margin-bottom: 16px;
+    }
+    .detail-field { display: flex; flex-direction: column; gap: 2px; }
+    .detail-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .detail-value { font-size: 13px; color: var(--text); font-weight: 500; }
+
+    .activity-row {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 4px; }
+
+    .report-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .report-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .report-row:last-child { border-bottom: none; }
+    .report-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      margin: 0 12px;
+    }
+    .report-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--accent);
+      min-width: 4px;
+      transition: width 0.3s;
+    }
+    .sub-ticket-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+  `;
+
+  // ── State ──────────────────────────────────────────────────
+  let allOrders = [];
+  let filteredOrders = [];
+  let statusFilter = 'all';
+  let sortCol = 'createdAt';
+  let sortDir = -1; // -1 = desc, 1 = asc
+  let currentOrderId = null; // DB id of open detail
+
+  const STATUS_GROUPS = {
+    all: null,
+    new: ['new', 'pending-confirmation', 'pending-review', 'waiting-approval'],
+    prepress: ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager'],
+    production: ['in-production'],
+    qc: ['qc-checkout', 'qc-failed', 'reprint'],
+    ready: ['ready-to-ship', 'shipped', 'waiting-pickup', 'received'],
+    done: ['completed'],
+    hold: ['on-hold'],
+  };
+
+  const FACILITY_LABELS = {
+    '16th-street': '16th St',
+    'boyd-street':  'Boyd St',
+  };
+
+  // ── Bootstrap ──────────────────────────────────────────────
+  async function init() {
+    await loadPersonnel();
+    await loadOrders();
+  }
+
+  async function loadPersonnel() {
+    try {
+      const personnel = await getAllPersonnel();
+      const ams = personnel.filter(p =>
+        (p.role || '').toLowerCase().includes('account') ||
+        (p.role || '').toLowerCase().includes('rep') ||
+        (p.role || '').toLowerCase().includes('sales')
+      );
+      const sel = document.getElementById('filterAM');
+      ams.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.name;
+        o.textContent = p.name;
+        sel.appendChild(o);
+      });
+    } catch(e) { /* ignore — personnel store may be empty */ }
+  }
+
+  async function loadOrders() {
+    try {
+      allOrders = await getAllOrders();
+      // Sort newest first by default
+      allOrders.sort((a, b) => {
+        const at = a.createdAt || a.updatedAt || '';
+        const bt = b.createdAt || b.updatedAt || '';
+        return bt.localeCompare(at);
+      });
+    } catch(e) {
+      allOrders = [];
+    }
+    renderStats();
+    renderList();
+  }
+
+  // Listen for cross-tab updates
+  onDBUpdate(() => loadOrders());
+
+  // ── Stats ──────────────────────────────────────────────────
+  function renderStats() {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const active = allOrders.filter(o => !['completed','shipped','received','cancelled'].includes(o.status));
+    const overdue = allOrders.filter(o => o.dueDate && o.dueDate < today && !['completed','shipped','received'].includes(o.status));
+    const ready   = allOrders.filter(o => o.status === 'ready-to-ship');
+    const rush    = allOrders.filter(o => o.isRush && !['completed','shipped','received'].includes(o.status));
+
+    const activeRevenue = allOrders
+      .filter(o => !['completed','shipped','received','cancelled'].includes(o.status))
+      .reduce((sum, o) => sum + (parseFloat(o.orderTotal) || 0), 0);
+    const unpaidCount = allOrders.filter(o =>
+      ['invoiced','partially-paid'].includes(o.invoiceStatus) &&
+      !['cancelled'].includes(o.status)
+    ).length;
+
+    const stats = [
+      { label: 'Total',    val: allOrders.length,  sf: 'all' },
+      { label: 'Active',   val: active.length,      sf: null },
+      { label: 'Ready',    val: ready.length,        sf: 'ready' },
+      { label: 'Overdue',  val: overdue.length,      sf: null, warn: overdue.length > 0 },
+      { label: 'Rush',     val: rush.length,          sf: null },
+    ];
+
+    const bar = document.getElementById('statsBar');
+    let statsHtml = stats.map(s => `
+      <div class="stat-pill ${s.sf === statusFilter ? 'active' : ''}" ${s.sf ? `onclick="setStatusFilter('${s.sf}')"` : ''}>
+        <span class="sp-val" style="${s.warn && s.val > 0 ? 'color:#dc2626' : ''}">${s.val}</span>
+        <span class="sp-label">${s.label}</span>
+      </div>
+    `).join('');
+
+    if (activeRevenue > 0) {
+      statsHtml += `<div class="stat-pill" style="border-color:rgba(22,163,74,0.3);background:rgba(22,163,74,0.05);">
+        <span class="sp-val" style="font-size:15px;color:#16a34a;">$${activeRevenue >= 1000 ? (activeRevenue/1000).toFixed(1)+'K' : activeRevenue.toFixed(0)}</span>
+        <span class="sp-label" style="color:#16a34a;">Active $</span>
+      </div>`;
+    }
+    if (unpaidCount > 0) {
+      statsHtml += `<div class="stat-pill" style="border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.05);">
+        <span class="sp-val" style="font-size:17px;color:#d97706;">${unpaidCount}</span>
+        <span class="sp-label" style="color:#d97706;">Unpaid Inv</span>
+      </div>`;
+    }
+    bar.innerHTML = statsHtml;
+  }
+
+  // ── Filter / Sort ──────────────────────────────────────────
+  function setStatusFilter(sf) {
+    statusFilter = sf;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.sf === sf));
+    renderStats();
+    renderList();
+  }
+
+  function sortBy(col) {
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = 1; }
+    renderList();
+  }
+
+  function applySort(list) {
+    return [...list].sort((a, b) => {
+      let av = a[sortCol] || '';
+      let bv = b[sortCol] || '';
+      if (typeof av === 'number') return (av - bv) * sortDir;
+      return av.toString().localeCompare(bv.toString()) * sortDir;
+    });
+  }
+
+  function renderList() {
+    const group = STATUS_GROUPS[statusFilter];
+    const am  = document.getElementById('filterAM').value;
+    const fac = document.getElementById('filterFacility').value;
+    const q   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+    filteredOrders = allOrders.filter(o => {
+      if (group && !group.includes(o.status)) return false;
+      if (am  && o.accountManager !== am)  return false;
+      if (fac && o.facility !== fac)        return false;
+      if (q) {
+        const hay = [o.orderId, o.customer, o.customerName, o.accountManager, o.productType, o.jobDescription, o.material, o.customerPO, o.quoteRef, o.invoiceNumber]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    filteredOrders = applySort(filteredOrders);
+
+    // Update sort indicators
+    ['orderId','createdAt','customer','status','dueDate','accountManager'].forEach(col => {
+      const el = document.getElementById(`sort-${col}`);
+      if (el) el.textContent = sortCol === col ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+    });
+
+    document.getElementById('resultCount').textContent =
+      filteredOrders.length === allOrders.length
+        ? `${allOrders.length} orders`
+        : `${filteredOrders.length} of ${allOrders.length}`;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const soon  = new Date(Date.now() + 2*86400000).toISOString().slice(0, 10);
+
+    const body = document.getElementById('ordersBody');
+    const empty = document.getElementById('emptyState');
+
+    if (filteredOrders.length === 0) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      document.getElementById('emptyMsg').textContent =
+        allOrders.length === 0
+          ? 'No orders exist yet. Create the first one.'
+          : 'No orders match the current filters.';
+      return;
+    }
+    empty.style.display = 'none';
+
+    body.innerHTML = filteredOrders.map(o => {
+      const cust = o.customerName || o.customer || '—';
+      const product = [o.productType, o.material].filter(Boolean).join(' · ') || o.jobDescription || '—';
+      const am   = o.accountManager || '—';
+      const fac  = o.facility || '';
+      const facChip = fac
+        ? `<span class="facility-chip ${fac === '16th-street' ? 'fac-16th' : 'fac-boyd'}">${FACILITY_LABELS[fac] || fac}</span>`
+        : '—';
+
+      let dueHtml = '—';
+      if (o.dueDate) {
+        const cls = o.dueDate < today ? 'due-overdue' : o.dueDate <= soon ? 'due-soon' : '';
+        const label = formatDate(o.dueDate);
+        dueHtml = `<span class="${cls}">${label}</span>`;
+        if (o.dueDate < today && !['completed','shipped','received'].includes(o.status)) {
+          dueHtml += ' <span style="font-size:10px;color:#dc2626;">OVERDUE</span>';
+        }
+      }
+
+      const rushBadge = o.isRush ? ' <span style="font-size:10px;font-weight:700;color:#dc2626;background:#fee2e2;padding:1px 5px;border-radius:4px;">RUSH</span>' : '';
+
+      const poHtml = o.customerPO
+        ? `<span style="font-size:11px;font-family:monospace;color:var(--text);">${escHtml(o.customerPO)}</span>`
+        : '<span style="color:var(--text-muted);font-size:11px;">—</span>';
+      const invBadge = renderInvoiceBadge(o.invoiceStatus);
+
+      return `
+        <tr>
+          <td><span class="order-num" onclick="openDetail(${o.id})">${o.orderId || o.id}</span>${rushBadge}</td>
+          <td style="font-size:12px;color:var(--text-muted);">${formatDate(o.createdAt)}</td>
+          <td style="font-weight:500;">${escHtml(cust)}</td>
+          <td style="white-space:nowrap;">${poHtml}</td>
+          <td style="font-size:12px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(product)}">${escHtml(product)}</td>
+          <td>${renderStatusBadge(o.status)}</td>
+          <td>${dueHtml}</td>
+          <td style="white-space:nowrap;">${invBadge}</td>
+          <td style="font-size:12px;">${escHtml(am)}</td>
+          <td>${facChip}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-sm" onclick="openDetail(${o.id})" title="View detail">👁</button>
+              <button class="btn btn-sm" onclick="editOrder('${escHtml(o.orderId || '')}', ${o.id})" title="Open Job Ticket">✏️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── Detail Modal ───────────────────────────────────────────
+  async function openDetail(dbId) {
+    currentOrderId = dbId;
+    const o = allOrders.find(x => x.id === dbId);
+    if (!o) return;
+
+    document.getElementById('modalTitle').innerHTML =
+      `Order ${o.orderId || o.id} ${o.isRush ? '<span style="font-size:12px;font-weight:700;color:#dc2626;background:#fee2e2;padding:2px 7px;border-radius:4px;margin-left:6px;">RUSH</span>' : ''}`;
+
+    // Build detail content
+    const today = new Date().toISOString().slice(0, 10);
+    const isOverdue = o.dueDate && o.dueDate < today && !['completed','shipped','received'].includes(o.status);
+
+    const cust = o.customerName || o.customer || '—';
+    const product = [o.productType, o.material].filter(Boolean).join(' · ') || o.jobDescription || '—';
+
+    let html = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        ${renderStatusBadge(o.status)}
+        ${isOverdue ? '<span style="font-size:11px;font-weight:700;color:#dc2626;background:#fee2e2;padding:2px 8px;border-radius:4px;">OVERDUE</span>' : ''}
+        <span style="font-size:12px;color:var(--text-muted);">Created ${formatDate(o.createdAt)}</span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-field"><span class="detail-label">Customer</span><span class="detail-value">${escHtml(cust)}</span></div>
+        <div class="detail-field"><span class="detail-label">Account Manager</span><span class="detail-value">${escHtml(o.accountManager || '—')}</span></div>
+        <div class="detail-field"><span class="detail-label">Facility</span><span class="detail-value">${FACILITY_LABELS[o.facility] || o.facility || '—'}</span></div>
+        <div class="detail-field"><span class="detail-label">Due Date</span><span class="detail-value ${isOverdue ? 'due-overdue' : ''}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span></div>
+        <div class="detail-field"><span class="detail-label">Product</span><span class="detail-value">${escHtml(product)}</span></div>
+        <div class="detail-field"><span class="detail-label">Quantity</span><span class="detail-value">${o.quantity ? Number(o.quantity).toLocaleString() : '—'}</span></div>
+        <div class="detail-field"><span class="detail-label">Print Type</span><span class="detail-value">${escHtml(o.printType || '—')}</span></div>
+        <div class="detail-field"><span class="detail-label">Lamination</span><span class="detail-value">${escHtml(o.lamination || '—')}</span></div>
+        <div class="detail-field"><span class="detail-label">Color Mode</span><span class="detail-value">${escHtml(o.colorMode || o.colors || '—')}</span></div>
+        <div class="detail-field"><span class="detail-label">Cut Method</span><span class="detail-value">${escHtml(o.cutMethod || '—')}</span></div>
+      </div>
+
+      <!-- Sales & Billing section (shown only when any field has data) -->
+      ${(o.customerPO || o.quoteRef || o.pricePerUnit || o.orderTotal || o.paymentTerms || o.invoiceNumber || (o.invoiceStatus && o.invoiceStatus !== 'not-invoiced')) ? `
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;background:var(--bg);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:10px;">💰 Sales &amp; Billing</div>
+        <div class="detail-grid" style="margin-bottom:0;">
+          ${o.customerPO ? `<div class="detail-field"><span class="detail-label">Customer PO #</span><span class="detail-value" style="font-family:monospace;">${escHtml(o.customerPO)}</span></div>` : ''}
+          ${o.quoteRef ? `<div class="detail-field"><span class="detail-label">Quote Ref #</span><span class="detail-value" style="font-family:monospace;">${escHtml(o.quoteRef)}</span></div>` : ''}
+          ${o.pricePerUnit != null ? `<div class="detail-field"><span class="detail-label">Price / Unit</span><span class="detail-value">$${parseFloat(o.pricePerUnit).toFixed(4)}</span></div>` : ''}
+          ${o.orderTotal != null ? `<div class="detail-field"><span class="detail-label">Order Total</span><span class="detail-value" style="font-size:15px;font-weight:700;color:#16a34a;">$${parseFloat(o.orderTotal).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>` : ''}
+          ${o.paymentTerms ? `<div class="detail-field"><span class="detail-label">Payment Terms</span><span class="detail-value">${escHtml(PAYMENT_TERMS_LABELS[o.paymentTerms] || o.paymentTerms)}</span></div>` : ''}
+          ${o.invoiceNumber ? `<div class="detail-field"><span class="detail-label">Invoice #</span><span class="detail-value" style="font-family:monospace;">${escHtml(o.invoiceNumber)}</span></div>` : ''}
+          <div class="detail-field"><span class="detail-label">Invoice Status</span><span class="detail-value">${renderInvoiceBadge(o.invoiceStatus || 'not-invoiced')}</span></div>
+        </div>
+      </div>
+      ` : ''}
+    `;
+
+    // Special notes
+    if (o.specialNotes) {
+      html += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;">
+        <strong>Notes:</strong> ${escHtml(o.specialNotes)}
+      </div>`;
+    }
+
+    // Hold / issue reason
+    if (o.holdReason) {
+      html += `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:#92400e;">
+        <strong>On Hold:</strong> ${escHtml(o.holdReason)}
+      </div>`;
+    }
+    if (o.prepressIssueComment) {
+      html += `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:#b91c1c;">
+        <strong>Prepress Issue:</strong> ${escHtml(o.prepressIssueComment)}
+        ${o.prepressIssueCategory ? `<span style="font-size:11px;margin-left:6px;opacity:0.7;">[${escHtml(o.prepressIssueCategory)}]</span>` : ''}
+      </div>`;
+    }
+
+    // Sub-tickets
+    let subHtml = '';
+    try {
+      const subs = await getSubTickets(o.orderId);
+      if (subs && subs.length > 0) {
+        subHtml = `<div style="margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">Sub-tickets (${subs.length})</div>
+          ${subs.map(s => `
+            <div class="sub-ticket-row">
+              <span style="font-weight:700;color:var(--accent);cursor:pointer;" onclick="closeDetail();setTimeout(()=>editOrder('${escHtml(s.orderId)}',${s.id}),100);">${escHtml(s.orderId)}</span>
+              ${renderStatusBadge(s.status)}
+              <span style="color:var(--text-muted);">${escHtml(s.productType || s.jobDescription || '')}</span>
+              <span style="margin-left:auto;color:var(--text-muted);">${s.quantity ? Number(s.quantity).toLocaleString() + ' units' : ''}</span>
+            </div>
+          `).join('')}
+          <button class="btn btn-sm" style="margin-top:6px;" onclick="addSubTicket('${escHtml(o.orderId)}')">+ Add Sub-ticket</button>
+        </div>`;
+      }
+    } catch(e) {}
+
+    if (subHtml) html += subHtml;
+
+    // Activity log
+    let actHtml = '';
+    try {
+      const log = await getActivityLog(o.id);
+      if (log && log.length > 0) {
+        const recent = log.slice(-20).reverse();
+        actHtml = `<div>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">Activity Log (${log.length} entries)</div>
+          <div style="max-height:200px;overflow-y:auto;">
+          ${recent.map(a => `
+            <div class="activity-row">
+              <div class="activity-dot"></div>
+              <div style="flex:1;">
+                <span style="font-weight:600;">${escHtml(a.message || a.type || '')}</span>
+                ${a.by ? `<span style="color:var(--text-muted);"> · ${escHtml(a.by)}</span>` : ''}
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;">${formatDateTime(a.timestamp)}</div>
+              </div>
+            </div>
+          `).join('')}
+          </div>
+        </div>`;
+      }
+    } catch(e) {}
+
+    if (actHtml) html += actHtml;
+    else html += `<div style="color:var(--text-muted);font-size:12px;">No activity log entries yet.</div>`;
+
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('detailModal').classList.add('open');
+  }
+
+  function closeDetail(e) {
+    if (e && e.target !== document.getElementById('detailModal')) return;
+    document.getElementById('detailModal').classList.remove('open');
+    currentOrderId = null;
+  }
+
+  function openJobTicket() {
+    const o = allOrders.find(x => x.id === currentOrderId);
+    if (!o) return;
+    window.location.href = `job-ticket.html?order=${encodeURIComponent(o.orderId || o.id)}`;
+  }
+
+  // ── Actions ────────────────────────────────────────────────
+  function createOrder() {
+    window.location.href = 'job-ticket.html';
+  }
+
+  function editOrder(orderId, dbId) {
+    if (orderId) {
+      window.location.href = `job-ticket.html?order=${encodeURIComponent(orderId)}`;
+    } else {
+      window.location.href = `job-ticket.html`;
+    }
+  }
+
+  function addSubTicket(parentOrderId) {
+    window.location.href = `job-ticket.html?parent=${encodeURIComponent(parentOrderId)}`;
+  }
+
+  // ── Report View ────────────────────────────────────────────
+  function setMainView(v) {
+    document.getElementById('viewList').style.display   = v === 'list'   ? '' : 'none';
+    document.getElementById('viewReport').style.display = v === 'report' ? '' : 'none';
+    document.getElementById('btnReport').textContent    = v === 'list'   ? '📊 Report' : '← List';
+    document.getElementById('btnReport').onclick        = v === 'list'   ? () => setMainView('report') : () => setMainView('list');
+    if (v === 'report') renderReport();
+  }
+
+  function renderReport() {
+    const today = new Date().toISOString().slice(0, 10);
+
+    // By status
+    const byStatus = {};
+    allOrders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
+    const maxStatus = Math.max(...Object.values(byStatus), 1);
+    document.getElementById('reportByStatus').innerHTML =
+      Object.entries(byStatus).sort((a,b) => b[1]-a[1]).map(([s, n]) => `
+        <div class="report-row">
+          ${renderStatusBadge(s)}
+          <div class="report-bar-wrap">
+            <div class="report-bar" style="width:${Math.round(n/maxStatus*120)}px;"></div>
+          </div>
+          <span style="font-weight:700;min-width:24px;text-align:right;">${n}</span>
+        </div>
+      `).join('') || '<div style="color:var(--text-muted);font-size:12px;">No data</div>';
+
+    // By AM
+    const byAM = {};
+    allOrders.forEach(o => { const am = o.accountManager || 'Unassigned'; byAM[am] = (byAM[am] || 0) + 1; });
+    const maxAM = Math.max(...Object.values(byAM), 1);
+    document.getElementById('reportByAM').innerHTML =
+      Object.entries(byAM).sort((a,b) => b[1]-a[1]).map(([am, n]) => `
+        <div class="report-row">
+          <span style="min-width:120px;font-size:12px;">${escHtml(am)}</span>
+          <div class="report-bar-wrap">
+            <div class="report-bar" style="width:${Math.round(n/maxAM*120)}px;background:#10b981;"></div>
+          </div>
+          <span style="font-weight:700;min-width:24px;text-align:right;">${n}</span>
+        </div>
+      `).join('') || '<div style="color:var(--text-muted);font-size:12px;">No data</div>';
+
+    // By facility
+    const byFac = {};
+    allOrders.forEach(o => { const f = FACILITY_LABELS[o.facility] || o.facility || 'Unknown'; byFac[f] = (byFac[f] || 0) + 1; });
+    const maxFac = Math.max(...Object.values(byFac), 1);
+    document.getElementById('reportByFacility').innerHTML =
+      Object.entries(byFac).sort((a,b) => b[1]-a[1]).map(([f, n]) => `
+        <div class="report-row">
+          <span style="min-width:100px;font-size:12px;">${escHtml(f)}</span>
+          <div class="report-bar-wrap">
+            <div class="report-bar" style="width:${Math.round(n/maxFac*120)}px;background:#8b5cf6;"></div>
+          </div>
+          <span style="font-weight:700;min-width:24px;text-align:right;">${n}</span>
+        </div>
+      `).join('') || '<div style="color:var(--text-muted);font-size:12px;">No data</div>';
+
+    // Rush orders
+    const rushOrders = allOrders.filter(o => o.isRush && !['completed','shipped','received'].includes(o.status));
+    document.getElementById('reportRush').innerHTML = rushOrders.length === 0
+      ? '<div style="color:var(--text-muted);font-size:12px;">No active rush orders.</div>'
+      : rushOrders.map(o => `
+        <div class="report-row">
+          <span class="order-num" onclick="openDetail(${o.id})">${escHtml(o.orderId || String(o.id))}</span>
+          ${renderStatusBadge(o.status)}
+          <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">${escHtml(o.customerName || o.customer || '—')}</span>
+        </div>
+      `).join('');
+
+    // Overdue orders
+    const overdueOrders = allOrders.filter(o =>
+      o.dueDate && o.dueDate < today && !['completed','shipped','received'].includes(o.status)
+    ).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+    document.getElementById('reportOverdue').innerHTML = overdueOrders.length === 0
+      ? '<div style="color:var(--text-muted);font-size:12px;">No overdue orders.</div>'
+      : `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Order</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Customer</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Status</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Due</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">AM</th>
+          </tr></thead>
+          <tbody>${overdueOrders.map(o => `
+            <tr>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);"><span class="order-num" onclick="openDetail(${o.id})">${escHtml(o.orderId || String(o.id))}</span></td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${escHtml(o.customerName || o.customer || '—')}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${renderStatusBadge(o.status)}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);color:#dc2626;font-weight:600;">${o.dueDate}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${escHtml(o.accountManager || '—')}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+
+    // Revenue by Account Manager
+    const revByAM = {};
+    const countByAM = {};
+    allOrders.forEach(o => {
+      if (['cancelled'].includes(o.status)) return;
+      const am = o.accountManager || 'Unassigned';
+      revByAM[am] = (revByAM[am] || 0) + (parseFloat(o.orderTotal) || 0);
+      countByAM[am] = (countByAM[am] || 0) + 1;
+    });
+    const amRevEntries = Object.entries(revByAM).sort((a,b) => b[1]-a[1]);
+    const maxRev = Math.max(...amRevEntries.map(e=>e[1]), 1);
+    const anyRevData = amRevEntries.some(e => e[1] > 0);
+    document.getElementById('reportRevByAM').innerHTML = !anyRevData
+      ? '<div style="color:var(--text-muted);font-size:12px;">No pricing data yet. Enter unit prices on job tickets to see revenue totals here.</div>'
+      : amRevEntries.map(([am, rev]) => {
+          const countStr = `${countByAM[am]} order${countByAM[am] !== 1 ? 's' : ''}`;
+          const revStr = rev > 0
+            ? `<span style="font-weight:700;color:#16a34a;">$${rev.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>`
+            : `<span style="color:var(--text-muted);">No pricing</span>`;
+          return `<div class="report-row">
+            <span style="min-width:120px;font-size:12px;">${escHtml(am)}</span>
+            <div class="report-bar-wrap">
+              <div class="report-bar" style="width:${rev > 0 ? Math.round(rev/maxRev*120) : 2}px;background:#16a34a;opacity:${rev > 0 ? 1 : 0.2};"></div>
+            </div>
+            <span style="font-size:11px;min-width:90px;text-align:right;">${revStr}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);text-align:right;padding-right:4px;margin-top:-6px;margin-bottom:4px;">${countStr}</div>`;
+        }).join('');
+
+    // Invoice Status breakdown
+    const invCounts = {};
+    let invTotal = 0;
+    allOrders.forEach(o => {
+      if (['cancelled'].includes(o.status)) return;
+      const s = o.invoiceStatus || 'not-invoiced';
+      invCounts[s] = (invCounts[s] || 0) + 1;
+      invTotal++;
+    });
+    const invOrder = ['paid', 'invoiced', 'partially-paid', 'not-invoiced', 'voided'];
+    const invColors = { 'paid': '#16a34a', 'invoiced': '#2563eb', 'partially-paid': '#d97706', 'not-invoiced': '#9ca3af', 'voided': '#dc2626' };
+    document.getElementById('reportInvoiceStatus').innerHTML = invTotal === 0
+      ? '<div style="color:var(--text-muted);font-size:12px;">No orders.</div>'
+      : invOrder.filter(s => invCounts[s]).map(s => {
+          const n = invCounts[s] || 0;
+          const cfg = INVOICE_LABELS[s] || { label: s, color: '#6b7280', bg: 'rgba(0,0,0,0.05)' };
+          const pct = Math.round(n / invTotal * 100);
+          return `<div class="report-row">
+            <span style="min-width:110px;font-size:12px;">${renderInvoiceBadge(s)}</span>
+            <div class="report-bar-wrap">
+              <div class="report-bar" style="width:${Math.round(n/invTotal*120)}px;background:${cfg.color};"></div>
+            </div>
+            <span style="font-weight:700;min-width:50px;text-align:right;font-size:12px;">${n} <span style="font-weight:400;color:var(--text-muted);">(${pct}%)</span></span>
+          </div>`;
+        }).join('');
+
+    // Uninvoiced closed orders (shipped/completed/received but not invoiced)
+    const uninvoiced = allOrders.filter(o =>
+      ['completed','shipped','received','waiting-pickup'].includes(o.status) &&
+      (!o.invoiceStatus || o.invoiceStatus === 'not-invoiced')
+    ).sort((a,b) => (a.dueDate||'').localeCompare(b.dueDate||''));
+    document.getElementById('reportUninvoiced').innerHTML = uninvoiced.length === 0
+      ? '<div style="color:var(--text-muted);font-size:12px;">All closed orders have been invoiced. ✅</div>'
+      : `<div style="font-size:12px;color:#92400e;margin-bottom:8px;">${uninvoiced.length} closed order${uninvoiced.length !== 1 ? 's' : ''} need${uninvoiced.length === 1 ? 's' : ''} to be invoiced.</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Order</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Customer</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Status</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">Order Total</th>
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">AM</th>
+          </tr></thead>
+          <tbody>${uninvoiced.map(o => `
+            <tr>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);"><span class="order-num" onclick="openDetail(${o.id})">${escHtml(o.orderId || String(o.id))}</span></td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${escHtml(o.customerName || o.customer || '—')}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${renderStatusBadge(o.status)}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;">${o.orderTotal ? '$'+parseFloat(o.orderTotal).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '<span style="color:var(--text-muted);">No price</span>'}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${escHtml(o.accountManager || '—')}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+  }
+
+  // ── Invoice Badge ──────────────────────────────────────────
+  const INVOICE_LABELS = {
+    'not-invoiced': { label: 'Not Invoiced', color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+    'invoiced':     { label: 'Invoiced',     color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
+    'partially-paid': { label: 'Partial',    color: '#d97706', bg: 'rgba(217,119,6,0.12)' },
+    'paid':         { label: 'Paid',         color: '#16a34a', bg: 'rgba(22,163,74,0.12)' },
+    'voided':       { label: 'Voided',       color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
+  };
+
+  function renderInvoiceBadge(status) {
+    if (!status || status === 'not-invoiced') {
+      return '<span style="font-size:10px;color:var(--text-muted);">—</span>';
+    }
+    const cfg = INVOICE_LABELS[status] || { label: status, color: '#6b7280', bg: 'rgba(107,114,128,0.12)' };
+    return `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:${cfg.bg};color:${cfg.color};white-space:nowrap;">${cfg.label}</span>`;
+  }
+
+  const PAYMENT_TERMS_LABELS = {
+    'net-30': 'Net 30', 'net-60': 'Net 60', 'net-90': 'Net 90',
+    'due-on-receipt': 'Due on Receipt', 'prepaid': 'Prepaid', 'cod': 'COD'
+  };
+
+  // ── Helpers ────────────────────────────────────────────────
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
+    return isNaN(d) ? iso : d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function formatDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  // ── Start ──────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>

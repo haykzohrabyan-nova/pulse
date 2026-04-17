@@ -1,0 +1,430 @@
+{
+  "vistaprint": {
+    "defaultPrices": {
+      "1000": 110.24
+    },
+    "price5000": null,
+    "unit5000": null,
+    "sizeOptionsFound": [
+      {
+        "name": "auto-id-n5ndpa3yw-9",
+        "value": "Circle",
+        "id": "auto-id-n5ndpa3yw-4",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "Circle",
+        "wrapperText": "Circle"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-9",
+        "value": "Oval",
+        "id": "auto-id-n5ndpa3yw-5",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "Oval",
+        "wrapperText": "Oval"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-9",
+        "value": "Rounded Square",
+        "id": "auto-id-n5ndpa3yw-6",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "Rounded Square",
+        "wrapperText": "Rounded Square"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-9",
+        "value": "Rounded Rectangle",
+        "id": "auto-id-n5ndpa3yw-7",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "Rounded Rectangle",
+        "wrapperText": "Rounded Rectangle"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-9",
+        "value": "Custom",
+        "id": "auto-id-n5ndpa3yw-8",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "Custom (Die-Cut)",
+        "wrapperText": "Custom (Die-Cut)"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-21",
+        "value": "8906c6fd-ad88-411a-8b63-fd65469fc699:v6",
+        "id": "auto-id-n5ndpa3yw-16",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "black",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-21",
+        "value": "6c739d66-7a74-445a-a209-2ad92a793c7d:v6",
+        "id": "auto-id-n5ndpa3yw-17",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "orange",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-21",
+        "value": "e60ce7fe-196f-484f-892f-888371fba17e:v6",
+        "id": "auto-id-n5ndpa3yw-18",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "red",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-21",
+        "value": "04443bc6-f4e9-4d73-b40c-0e7a3f41a69f:v6",
+        "id": "auto-id-n5ndpa3yw-19",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark brown",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-21",
+        "value": "34fa3daa-7c1e-43f6-8ba9-8b17ff198973:v6",
+        "id": "auto-id-n5ndpa3yw-20",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark purple",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-27",
+        "value": "4123209",
+        "id": "auto-id-n5ndpa3yw-22",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "black",
+        "wrapperText": "blackwhitedark bluebrownforest green+3"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-27",
+        "value": "4123210",
+        "id": "auto-id-n5ndpa3yw-23",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "blackwhitedark bluebrownforest green+3"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-27",
+        "value": "4123211",
+        "id": "auto-id-n5ndpa3yw-24",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark blue",
+        "wrapperText": "blackwhitedark bluebrownforest green+3"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-27",
+        "value": "4123212",
+        "id": "auto-id-n5ndpa3yw-25",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "brown",
+        "wrapperText": "blackwhitedark bluebrownforest green+3"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-27",
+        "value": "4123213",
+        "id": "auto-id-n5ndpa3yw-26",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "forest green",
+        "wrapperText": "blackwhitedark bluebrownforest green+3"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-29",
+        "value": "ce57adb9-116f-47ea-9516-fc3e3690454b:v1",
+        "id": "auto-id-n5ndpa3yw-28",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "dark brown",
+        "wrapperText": "dark brown"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-34",
+        "value": "4798513",
+        "id": "auto-id-n5ndpa3yw-30",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-34",
+        "value": "4798514",
+        "id": "auto-id-n5ndpa3yw-31",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-34",
+        "value": "4798515",
+        "id": "auto-id-n5ndpa3yw-32",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-34",
+        "value": "4798516",
+        "id": "auto-id-n5ndpa3yw-33",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-40",
+        "value": "dab8aace-a121-425a-84c5-47ea7c1dc609:v3",
+        "id": "auto-id-n5ndpa3yw-35",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "black",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-40",
+        "value": "0b961759-a53c-4b38-b3c3-c7bbfc02f95b:v3",
+        "id": "auto-id-n5ndpa3yw-36",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "orange",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-40",
+        "value": "552b2ed3-70df-42a9-8526-5fa52910a420:v3",
+        "id": "auto-id-n5ndpa3yw-37",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "red",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-40",
+        "value": "14f7d2f1-5e60-4188-aed7-ce0adc5d6c5b:v3",
+        "id": "auto-id-n5ndpa3yw-38",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark brown",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-40",
+        "value": "d709db0a-1c8d-4b28-9756-35f4fc45b20a:v3",
+        "id": "auto-id-n5ndpa3yw-39",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark purple",
+        "wrapperText": "blackorangereddark browndark purple+5"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-46",
+        "value": "57384952-ebb7-4804-a41d-7d1c40994a4e:v2",
+        "id": "auto-id-n5ndpa3yw-41",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "dark gray",
+        "wrapperText": "dark graydark bluedark purpleblacklight pink+2"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-46",
+        "value": "29a46863-8267-4494-9ccf-f5cac17a50bf:v2",
+        "id": "auto-id-n5ndpa3yw-42",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark blue",
+        "wrapperText": "dark graydark bluedark purpleblacklight pink+2"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-46",
+        "value": "512fe3bd-25c8-4e8e-bf85-92242c84d529:v2",
+        "id": "auto-id-n5ndpa3yw-43",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "dark purple",
+        "wrapperText": "dark graydark bluedark purpleblacklight pink+2"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-46",
+        "value": "bddfb2a4-6735-4390-ac74-acf4526559b3:v2",
+        "id": "auto-id-n5ndpa3yw-44",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "black",
+        "wrapperText": "dark graydark bluedark purpleblacklight pink+2"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-46",
+        "value": "da4ab12b-a0e1-45ed-a7bc-9e042e5fd2af:v2",
+        "id": "auto-id-n5ndpa3yw-45",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "light pink",
+        "wrapperText": "dark graydark bluedark purpleblacklight pink+2"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-52",
+        "value": "53d95978-c0f9-4fce-952a-ed1ecec011c0:v1",
+        "id": "auto-id-n5ndpa3yw-47",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "black",
+        "wrapperText": "blackturquoiseredseafoam greenseafoam green+6"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-52",
+        "value": "18ae2b57-3d54-46b1-8f2a-f05f1c48bece:v1",
+        "id": "auto-id-n5ndpa3yw-48",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "turquoise",
+        "wrapperText": "blackturquoiseredseafoam greenseafoam green+6"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-52",
+        "value": "af54849e-4a48-4d6c-be7c-cf18082ad7b4:v1",
+        "id": "auto-id-n5ndpa3yw-49",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "red",
+        "wrapperText": "blackturquoiseredseafoam greenseafoam green+6"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-52",
+        "value": "40d0807a-f136-41bc-b8a4-05eaf1c02016:v1",
+        "id": "auto-id-n5ndpa3yw-50",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "seafoam green",
+        "wrapperText": "blackturquoiseredseafoam greenseafoam green+6"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-52",
+        "value": "06c2cc7e-6912-4373-9187-950d202bfceb:v1",
+        "id": "auto-id-n5ndpa3yw-51",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "seafoam green",
+        "wrapperText": "blackturquoiseredseafoam greenseafoam green+6"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-57",
+        "value": "5062861",
+        "id": "auto-id-n5ndpa3yw-53",
+        "checked": true,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-57",
+        "value": "5062862",
+        "id": "auto-id-n5ndpa3yw-54",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-57",
+        "value": "5062863",
+        "id": "auto-id-n5ndpa3yw-55",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "auto-id-n5ndpa3yw-57",
+        "value": "5062864",
+        "id": "auto-id-n5ndpa3yw-56",
+        "checked": false,
+        "ariaLabel": null,
+        "labelText": "white",
+        "wrapperText": "whitewhitewhitewhite"
+      },
+      {
+        "name": "",
+        "value": "on",
+        "id": "",
+        "checked": false,
+        "ariaLabel": "Filter by 5 stars",
+        "wrapperText": "5stars(90%)"
+      },
+      {
+        "name": "",
+        "value": "on",
+        "id": "",
+        "checked": false,
+        "ariaLabel": "Filter by 4 stars",
+        "wrapperText": "4stars(4%)"
+      },
+      {
+        "name": "",
+        "value": "on",
+        "id": "",
+        "checked": false,
+        "ariaLabel": "Filter by 3 stars",
+        "wrapperText": "3stars(2%)"
+      },
+      {
+        "name": "",
+        "value": "on",
+        "id": "",
+        "checked": false,
+        "ariaLabel": "Filter by 2 stars",
+        "wrapperText": "2stars(1%)"
+      },
+      {
+        "name": "",
+        "value": "on",
+        "id": "",
+        "checked": false,
+        "ariaLabel": "Filter by 1 star",
+        "wrapperText": "1star(3%)"
+      }
+    ],
+    "sizeClicked": null,
+    "sizeMethod": null,
+    "capturedAfterSize": false,
+    "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('#auto-id-n5ndpa3yw-8')\n    - locator resolved to <input type=\"radio\" value=\"Custom\" id=\"auto-id-n5ndpa3yw-8\" name=\"auto-id-n5ndpa3yw-9\" class=\"swan-selection-set-input swan-radio\"/>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"swan-col-6 swan-col-xs-6\">…</div> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"swan-col-6 swan-col-xs-6\">…</div> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    54 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"swan-col-6 swan-col-xs-6\">…</div> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+  },
+  "axiom": {
+    "price": 112.68,
+    "sizeSelected": null,
+    "materialSelected": null,
+    "qtySelected": null,
+    "allDropdownOptions": {
+      "0": [
+        "2\" x 3\"",
+        "2\" x 3.5\"",
+        "2\" x 4\"",
+        "2\" x 4.5\"",
+        "3\" x 4\"",
+        "3\" x 5\""
+      ]
+    },
+    "error": null
+  },
+  "gotprint": {
+    "accessToken": "[\n    {\n        \"path\": \"https://www.gotprint.com\",\n        \"label\": \"GP-Production\",\n        \"token\": \"bb601953-a518-4817-b64a-993a4af65c84\"\n    },\n    {\n        \"path\": \"https://www.gotprint-com-staging.com\",\n        \"label\": \"GP-Staging\",\n        \"token\": \"bb601953-a518-4817-b64a-993a4af65c84\"\n    },\n    {\n        \"path\": \"https://www.gotprint-com-testing.com\", \n        \"label\": \"GP-Testing\",\n        \"token\": \"bb601953-a518-4817-b64a-993a4af65c84\"\n    },\n    {\n        \"path\": \"https://www.got",
+    "rollLabelProductType": null,
+    "price": null,
+    "priceSpec": null,
+    "error": "Too many arguments. If you need to pass more than 1 argument to the function wrap them in an object."
+  }
+}

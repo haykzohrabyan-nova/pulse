@@ -1,0 +1,55 @@
+{
+  "prices": [
+    {
+      "size": "2x3",
+      "qty": 250,
+      "price": "$112.68",
+      "unit": "Fri, Apr 24 - 5:00PM"
+    },
+    {
+      "size": "2x3",
+      "qty": 500,
+      "price": "$112.68",
+      "unit": "Fri, Apr 24 - 5:00PM"
+    },
+    {
+      "size": "2x3",
+      "qty": 1000,
+      "price": "$112.68",
+      "unit": "Fri, Apr 24 - 5:00PM"
+    },
+    {
+      "size": "2x3",
+      "qty": 2500,
+      "price": "$112.68",
+      "unit": "Fri, Apr 24 - 5:00PM"
+    }
+  ],
+  "allPriceTableVisible": [
+    {
+      "price": "$112.68",
+      "cls": "typography_lato_16__BlEhb ",
+      "parentCls": "ProductInfo_selectedTurnAroundButton__e1gkO",
+      "nearQty": "$112.68"
+    },
+    {
+      "price": "$147.62",
+      "cls": "typography_lato_16__BlEhb ",
+      "parentCls": "ProductInfo_turnaround__ZLgmR",
+      "nearQty": "$147.62"
+    },
+    {
+      "price": "$221.15",
+      "cls": "typography_lato_16__BlEhb ",
+      "parentCls": "ProductInfo_turnaround__ZLgmR",
+      "nearQty": "$221.15"
+    },
+    {
+      "price": "$112.68",
+      "cls": "ProductInfo_finalPrice__lqRBP",
+      "parentCls": "ProductInfo_totalBlock__Ona1l",
+      "nearQty": "$112.68"
+    }
+  ],
+  "error": null
+}

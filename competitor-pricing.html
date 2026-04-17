@@ -208,7 +208,7 @@
             <strong>Axiom Print — no 3×3 option:</strong> Standard configurator does NOT offer 3×3. Available: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. Best available: 3×4 at $112.68/250. 5,000+ = custom quote (747-888-7777).
           </div>
           <div>
-            <strong>GotPrint — spec confirmed, price blocked:</strong> Real URL: <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">/products/roll-labels/order</code>. 3"×3" Square-Rounded confirmed, White BOPP + Matte + qty 5k available, variantId=32. Vue cascade keeps paper/finish disabled after shape+size JS dispatch. REST API 401. Price requires completing full human flow or authenticated session.
+            <strong>GotPrint — PRICE CAPTURED:</strong> Real URL: <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">/products/roll-labels/order</code>. 3"×3" Square-Rounded, White BOPP, Gloss, 5k = <strong>$356.80</strong> (excludes shipping). Captured via <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">/service/rest/v1/products/300158845/prices</code>. Upload wall resolved — paper/finish selects enabled after shape+size. Matte finish price pending (separate pass).
           </div>
           <div>
             <strong>Sticker Mule — upload-first confirmed:</strong> All visible click paths exhausted. Cookie consent dismissed. GraphQL introspection disabled. No configure-then-price path exists. $47 starting price is the only captured data. Manual quote with placeholder artwork upload is the only path.
@@ -436,32 +436,47 @@ const COMPETITOR_DATA = [
     name: 'Axiom Print',
     url: 'https://axiomprint.com/product/roll-labels-335',
     status: 'partial',
-    statusReason: 'Configurator prices captured: 2,500 qty = $213.27 (max qty)',
-    capturedPrice: 213.27,
-    capturedSpec: '2"×3" rectangle roll labels, 2,500 qty (configurator max)',
+    statusReason: 'Full price curve captured for 2×3 and 3×4 (closest to 3×3). No 3×3 option. Max std qty = 2,500.',
+    capturedPrice: 277.76,
+    capturedSpec: '3"×4" Rectangle (closest to 3×3 — no 3×3 available), 2,500 qty',
     capturedQty: 2500,
     turnaround: null,
     shippingIncluded: null,
     confidence: 'high',
-    notes: 'Real prices via Playwright + Ant Design dropdown. Product at /product/roll-labels-335. Standard configurator max qty = 2,500 — 5,000+ requires custom quote. 250 qty = $112.68; 2,500 qty = $213.27. Materials: White Matte BOPP, Silver Gloss BOPP, Clear Gloss BOPP, 60# Matte Paper, Holographic.',
+    notes: 'Ant Design dropdown capture. No 3×3 in configurator — closest is 3×4. Standard configurator max = 2,500 qty; 5,000+ requires custom quote (747-888-7777). Standard turnaround. Materials available: White Matte BOPP, Silver Gloss BOPP, Clear Gloss BOPP, 60# Matte Paper, Holographic.',
     verifiedPrices: [
-      { qty: 250, total: 112.68, unit: 0.451, spec: '2×3 default' },
-      { qty: 2500, total: 213.27, unit: 0.0853, spec: '2×3 default' }
+      { qty: 250,  total: 112.68, unit: 0.4507, spec: '2×3 Rectangle White Matte BOPP' },
+      { qty: 500,  total: 124.76, unit: 0.2495, spec: '2×3 Rectangle White Matte BOPP' },
+      { qty: 1000, total: 148.32, unit: 0.1483, spec: '2×3 Rectangle White Matte BOPP' },
+      { qty: 2500, total: 213.27, unit: 0.0853, spec: '2×3 Rectangle White Matte BOPP' },
+      { qty: 250,  total: 120.28, unit: 0.4811, spec: '3×4 Rectangle (closest to 3×3 benchmark)' },
+      { qty: 500,  total: 139.45, unit: 0.2789, spec: '3×4 Rectangle (closest to 3×3 benchmark)' },
+      { qty: 1000, total: 176.67, unit: 0.1767, spec: '3×4 Rectangle (closest to 3×3 benchmark)' },
+      { qty: 2500, total: 277.76, unit: 0.1111, spec: '3×4 Rectangle (closest to 3×3 benchmark)' }
     ]
   },
   {
     id: 'gotprint',
     name: 'GotPrint',
     url: 'https://www.gotprint.com/products/roll-labels/order',
-    status: 'partial',
-    statusReason: 'Spec CONFIRMED: 3"×3" Square-Rounded, White BOPP, Matte, qty 5k — price blocked by Vue cascade + REST API 401',
-    capturedPrice: null,
-    capturedSpec: '3"×3" Square-Rounded, White BOPP (paper ID 12), Matte Finish (Indoor), variantId=32, qty 5k available',
-    capturedQty: null,
+    status: 'live',
+    statusReason: 'VERIFIED: 3"×3" Square-Rounded, White BOPP, Gloss, 5,000 qty = $356.80 (API capture)',
+    capturedPrice: 356.80,
+    capturedSpec: '3"×3" Square-Rounded, White BOPP, Clear Gloss Indoor, 5,000 qty',
+    capturedQty: 5000,
     turnaround: null,
-    shippingIncluded: null,
-    confidence: 'none',
-    notes: 'Real URL: /products/roll-labels/order (old /store URL redirects to home.html). Browser click-through confirmed: Square-Rounded shape → 3"×3" size → variantId=32, qtys [25,50,100,250,500,...,5000]. White BOPP Label (paper ID 12) and Matte Finish (Indoor) both in spec. Vue.js paper/finish selects stay disabled after JS dispatch shape+size — Vue cascade requires upload to complete. All REST pricing endpoints 401. Price NOT captured.',
+    shippingIncluded: false,
+    confidence: 'high',
+    notes: 'Price captured via /service/rest/v1/products/300158845/prices API (Playwright session). shape=4 (Square-Rounded), size=452 (3"×3"), paper=12 (White BOPP), finish=1 (Clear Gloss Indoor). Upload wall resolved — material/finish selects now enabled after shape+size selection. Matte (finish=3) price not yet captured separately. Shipping excluded.',
+    verifiedPrices: [
+      { qty: 100,  total: 76.28,  unit: 0.7628, spec: '3×3 White BOPP Gloss' },
+      { qty: 250,  total: 86.16,  unit: 0.3446, spec: '3×3 White BOPP Gloss' },
+      { qty: 500,  total: 123.00, unit: 0.2460, spec: '3×3 White BOPP Gloss' },
+      { qty: 1000, total: 148.91, unit: 0.1489, spec: '3×3 White BOPP Gloss' },
+      { qty: 2500, total: 226.86, unit: 0.0907, spec: '3×3 White BOPP Gloss' },
+      { qty: 5000, total: 356.80, unit: 0.0714, spec: '3×3 White BOPP Gloss ← TARGET SPEC' },
+      { qty: 10000,total: 618.83, unit: 0.0619, spec: '3×3 White BOPP Gloss' }
+    ]
   },
   {
     id: 'uprinting',
@@ -484,7 +499,8 @@ const COMPETITOR_DATA = [
       { qty: 5000, total: 309.16,  unit: 0.06183,  spec: '2×2 White BOPP' },
       { qty: 5000, total: 505.85,  unit: 0.10117,  spec: '3×3 White BOPP ← TARGET SPEC', turnaround: 6 },
       { qty: 5000, total: 204.27,  unit: 0.04085,  spec: '2×3 White BOPP' },
-      { qty: 5000, total: 789.05,  unit: 0.15781,  spec: '4×4 White BOPP' }
+      { qty: 5000, total: 789.05,  unit: 0.15781,  spec: '4×4 White BOPP' },
+      { qty: 10000, total: 400.00, unit: 0.04000,  spec: '2×2 White BOPP' }
     ]
   },
   {
@@ -619,8 +635,8 @@ function renderCoverageGrid() {
   const grid = document.getElementById('coverageGrid');
   const items = [
     { name: 'Vistaprint',   status: 'partial', detail: '$544.86/5k directional (Rounded Square + W=3/H=3 injected) · $219.19/5k default size · $110.24/1k 1×1 — size not DOM-confirmed' },
-    { name: 'Axiom Print',  status: 'partial', detail: '$112.68/250 · $213.27/2.5k — 2×3 default (Ant Design dropdown) — no 3×3 in standard configurator' },
-    { name: 'GotPrint',     status: 'partial', detail: 'Spec CONFIRMED: 3"×3" Square-Rounded, White BOPP, Matte, qty 5k — price NOT captured (Vue cascade + REST 401)' },
+    { name: 'Axiom Print',  status: 'partial', detail: 'FULL CURVE: 2×3: $112.68/250 · $124.76/500 · $148.32/1k · $213.27/2.5k | 3×4: $120.28/250 · $139.45/500 · $176.67/1k · $277.76/2.5k — no 3×3 in configurator, max 2.5k std qty' },
+    { name: 'GotPrint',     status: 'live',    detail: 'LIVE: $76.28/100 · $148.91/1k · $356.80/5k · $618.83/10k — 3"×3" White BOPP Gloss (API capture via /service/rest/v1/products/300158845/prices). Upload wall resolved.' },
     { name: 'UPrinting',    status: 'live',    detail: '$222.26/1k · $505.85/5k — 3×3 White BOPP (EXACT SPEC, verified dropdown)' },
     { name: 'Sticker Mule', status: 'partial', detail: '$47 starting price (JSON-LD only) — upload-first confirmed after exhausting all click paths, no configure-then-price path' }
   ];

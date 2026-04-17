@@ -1,0 +1,59 @@
+{
+  "run_date": "2026-04-17T22:47:41.739Z",
+  "results": [
+    {
+      "id": "up-label-0.5xxxx0.5x-1000-pri8",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 1000,
+      "total_price": 95.87,
+      "unit_price": 0.09587,
+      "spec": {
+        "width_in": 0.5,
+        "height_in": 0.5,
+        "size_label": "0.5\" x 0.5\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "uprinting_angular_dispatchevent"
+    },
+    {
+      "id": "up-label-0.5xxxx0.5x-5000-pri8",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 5000,
+      "total_price": 204.27,
+      "unit_price": 0.04085,
+      "spec": {
+        "width_in": 0.5,
+        "height_in": 0.5,
+        "size_label": "0.5\" x 0.5\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "uprinting_angular_dispatchevent"
+    },
+    {
+      "id": "up-label-0.5xxxx0.5x-10000-pri8",
+      "site": "UPrinting",
+      "competitor": "uprinting",
+      "product_type": "roll_labels",
+      "qty": 10000,
+      "total_price": 212.43,
+      "unit_price": 0.02124,
+      "spec": {
+        "width_in": 0.5,
+        "height_in": 0.5,
+        "size_label": "0.5\" x 0.5\"",
+        "material": "White BOPP Label - Roll",
+        "lamination": "Gloss Indoor"
+      },
+      "confidence": "high",
+      "method": "uprinting_angular_dispatchevent"
+    }
+  ]
+}

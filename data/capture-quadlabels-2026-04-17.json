@@ -1,0 +1,274 @@
+{
+  "run_date": "2026-04-17T22:46:05.779Z",
+  "results": {
+    "openEndpoints": {
+      "config": {
+        "status": 200,
+        "body": {
+          "currencyDisplay": "USD",
+          "measurementSystem": "inch",
+          "orderMaxQuantity": 100000000,
+          "region": "USA",
+          "orderMinQuantity": 100,
+          "customDiePrice": 140,
+          "smallDiePrice": 220,
+          "customShapePrice": 220,
+          "rushFeePercent": 30,
+          "upsFlatRate": 50,
+          "searchDieCoefficient": 0.5,
+          "dieType": "DIECUT",
+          "searchDieMaxHeight": 24,
+          "searchDieMinHeight": 0.25,
+          "searchDieMaxWidth": 12,
+          "searchDieMinWidth": 0.5,
+          "rePrintText": "With Exact Reprint option we'll process the job with the same specs done before.",
+          "rushFeeText": "Rush service adds a 30% surcharge and allows processing within one business day. Orders placed after 12:00 PM PST may be processed the next business day. Rush orders must be submitted before 12:00 PM PST.",
+          "quoteText2": "Thank you for this opportunity to quote this project. Our prices are valid for 30 days. This estimate is based on current material prices, which can occasionally change within the 30 day period.",
+          "quoteText3": "Please note, a setup fee of $5.00 per version will apply on versions with less than 500 copies. If you have any questions or comments concerning this quote, please feel free to contact us.",
+          "orderInfoText": "Please note: Production turnaround times are calculated from the time final digital proofs are approved, not from when the order is submitted or payment is made.",
+          "tax": 9.75,
+          "taxType": "SALES",
+          "varnishThicknessUnit": "mil",
+          "labelSizeUnit": "inch",
+          "centerToCenterUnit": "mm",
+          "gapSizeUnit": "mm",
+          "dieThicknessUnit": "mm",
+          "rollLengthUnit": "ft",
+          "rollWidthUnit": "mm",
+          "materialThicknessUnit": "mm",
+          "materialPricingUnit": "sqm",
+          "finishingThicknessUnit": "mil",
+          "labelWeightUnit": "kg/sqm",
+          "variableDataPricingUnit": "msi"
+        }
+      }
+    },
+    "configurator": {
+      "pagesVisited": [
+        "https://orders.quadlabels.com/home",
+        "https://orders.quadlabels.com/home",
+        "https://orders.quadlabels.com/login"
+      ],
+      "apiCallsCaptured": [
+        {
+          "url": "//open/get-project-configuration",
+          "status": 200,
+          "bodyPreview": "{\"currencyDisplay\":\"USD\",\"measurementSystem\":\"inch\",\"orderMaxQuantity\":100000000,\"region\":\"USA\",\"orderMinQuantity\":100,\"customDiePrice\":140,\"smallDiePrice\":220,\"customShapePrice\":220,\"rushFeePercent\":30,\"upsFlatRate\":50,\"searchDieCoefficient\":0.5,\"dieType\":\"DIECUT\",\"searchDieMaxHeight\":24,\"searchDieMinHeight\":0.25,\"searchDieMaxWidth\":12,\"searchDieMinWidth\":0.5,\"rePrintText\":\"With Exact Reprint opt"
+        },
+        {
+          "url": "//open/home-page/info",
+          "status": 200,
+          "bodyPreview": "{\"homePageSlideShows\":[{\"photo\":\"https://api.quadlabels.com/slideShow/2fb8ff05c7_1564e.jpg\"}],\"settings\":{\"title\":\"QUADLABELS\",\"body\":\"Is a trade label printing house. We only work with resellers, print brokers, printing houses, co-packers, print shops, distributors, and major manufacturers.\",\"address\":\"28410 Witherspoon Pkwy, Valencia, CA 91355, USA\",\"email\":\"info@quadrigausa.com\",\"contactNumber\""
+        },
+        {
+          "url": "/slideShow/2fb8ff05c7_1564e.jpg",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "//open/home-page/products",
+          "status": 200,
+          "bodyPreview": "{\"products\":[{\"id\":14,\"name\":\"PAPER label\",\"positionNumber\":0,\"photoUrl\":\"https://api.quadlabels.com/slideShow/1_3d419_yPsRyPyx5e.png\"},{\"id\":15,\"name\":\"SYNTHETIC label\",\"positionNumber\":1,\"photoUrl\":\"https://api.quadlabels.com/slideShow/2_35240_tDBXGaajVt.png\"},{\"id\":20,\"name\":\"SILVER label\",\"positionNumber\":2,\"photoUrl\":\"https://api.quadlabels.com/slideShow/3_14b1c_fl0RbffyK9.png\"},{\"id\":23,\"nam"
+        },
+        {
+          "url": "/slideShow/14_2aaa0_nr3vPVoBD4.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/3_14b1c_fl0RbffyK9.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/4_d1593_VdtWfUTDIS.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/1_3d419_yPsRyPyx5e.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/2_35240_tDBXGaajVt.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/9_25203_w5PHm8edT7.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/6_29304_BbH6RN8iRy.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/8_95e2b_giugBMlMBu.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/5_1e0b2_GlxJWLXdMn.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/2fb8ff05c7_1564e.jpg",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "//open/get-project-configuration",
+          "status": 200,
+          "bodyPreview": "{\"currencyDisplay\":\"USD\",\"measurementSystem\":\"inch\",\"orderMaxQuantity\":100000000,\"region\":\"USA\",\"orderMinQuantity\":100,\"customDiePrice\":140,\"smallDiePrice\":220,\"customShapePrice\":220,\"rushFeePercent\":30,\"upsFlatRate\":50,\"searchDieCoefficient\":0.5,\"dieType\":\"DIECUT\",\"searchDieMaxHeight\":24,\"searchDieMinHeight\":0.25,\"searchDieMaxWidth\":12,\"searchDieMinWidth\":0.5,\"rePrintText\":\"With Exact Reprint opt"
+        },
+        {
+          "url": "//open/home-page/info",
+          "status": 200,
+          "bodyPreview": "{\"homePageSlideShows\":[{\"photo\":\"https://api.quadlabels.com/slideShow/2fb8ff05c7_1564e.jpg\"}],\"settings\":{\"title\":\"QUADLABELS\",\"body\":\"Is a trade label printing house. We only work with resellers, print brokers, printing houses, co-packers, print shops, distributors, and major manufacturers.\",\"address\":\"28410 Witherspoon Pkwy, Valencia, CA 91355, USA\",\"email\":\"info@quadrigausa.com\",\"contactNumber\""
+        },
+        {
+          "url": "/slideShow/1_3d419_yPsRyPyx5e.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/2_35240_tDBXGaajVt.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/3_14b1c_fl0RbffyK9.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/4_d1593_VdtWfUTDIS.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/5_1e0b2_GlxJWLXdMn.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/6_29304_BbH6RN8iRy.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/8_95e2b_giugBMlMBu.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/9_25203_w5PHm8edT7.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/14_2aaa0_nr3vPVoBD4.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "//open/home-page/products",
+          "status": 200,
+          "bodyPreview": "{\"products\":[{\"id\":14,\"name\":\"PAPER label\",\"positionNumber\":0,\"photoUrl\":\"https://api.quadlabels.com/slideShow/1_3d419_yPsRyPyx5e.png\"},{\"id\":15,\"name\":\"SYNTHETIC label\",\"positionNumber\":1,\"photoUrl\":\"https://api.quadlabels.com/slideShow/2_35240_tDBXGaajVt.png\"},{\"id\":20,\"name\":\"SILVER label\",\"positionNumber\":2,\"photoUrl\":\"https://api.quadlabels.com/slideShow/3_14b1c_fl0RbffyK9.png\"},{\"id\":23,\"nam"
+        },
+        {
+          "url": "/slideShow/2fb8ff05c7_1564e.jpg",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "//open/get-project-configuration",
+          "status": 200,
+          "bodyPreview": "{\"currencyDisplay\":\"USD\",\"measurementSystem\":\"inch\",\"orderMaxQuantity\":100000000,\"region\":\"USA\",\"orderMinQuantity\":100,\"customDiePrice\":140,\"smallDiePrice\":220,\"customShapePrice\":220,\"rushFeePercent\":30,\"upsFlatRate\":50,\"searchDieCoefficient\":0.5,\"dieType\":\"DIECUT\",\"searchDieMaxHeight\":24,\"searchDieMinHeight\":0.25,\"searchDieMaxWidth\":12,\"searchDieMinWidth\":0.5,\"rePrintText\":\"With Exact Reprint opt"
+        },
+        {
+          "url": "//open/home-page/info",
+          "status": 200,
+          "bodyPreview": "{\"homePageSlideShows\":[{\"photo\":\"https://api.quadlabels.com/slideShow/2fb8ff05c7_1564e.jpg\"}],\"settings\":{\"title\":\"QUADLABELS\",\"body\":\"Is a trade label printing house. We only work with resellers, print brokers, printing houses, co-packers, print shops, distributors, and major manufacturers.\",\"address\":\"28410 Witherspoon Pkwy, Valencia, CA 91355, USA\",\"email\":\"info@quadrigausa.com\",\"contactNumber\""
+        },
+        {
+          "url": "/slideShow/1_3d419_yPsRyPyx5e.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/2_35240_tDBXGaajVt.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/3_14b1c_fl0RbffyK9.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/4_d1593_VdtWfUTDIS.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/5_1e0b2_GlxJWLXdMn.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/6_29304_BbH6RN8iRy.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/8_95e2b_giugBMlMBu.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/9_25203_w5PHm8edT7.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "/slideShow/14_2aaa0_nr3vPVoBD4.png",
+          "status": 200,
+          "bodyPreview": "{}"
+        },
+        {
+          "url": "//open/home-page/products",
+          "status": 200,
+          "bodyPreview": "{\"products\":[{\"id\":14,\"name\":\"PAPER label\",\"positionNumber\":0,\"photoUrl\":\"https://api.quadlabels.com/slideShow/1_3d419_yPsRyPyx5e.png\"},{\"id\":15,\"name\":\"SYNTHETIC label\",\"positionNumber\":1,\"photoUrl\":\"https://api.quadlabels.com/slideShow/2_35240_tDBXGaajVt.png\"},{\"id\":20,\"name\":\"SILVER label\",\"positionNumber\":2,\"photoUrl\":\"https://api.quadlabels.com/slideShow/3_14b1c_fl0RbffyK9.png\"},{\"id\":23,\"nam"
+        }
+      ],
+      "configuratorInteracted": true,
+      "pricingApiFound": false,
+      "priceData": null,
+      "configuratorStructure": {
+        "title": "Quad Labels - Log in",
+        "url": "https://orders.quadlabels.com/login",
+        "selects": [],
+        "inputs": [
+          {
+            "name": "email",
+            "type": "text",
+            "placeholder": "Your email",
+            "value": ""
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "placeholder": "Your password",
+            "value": ""
+          }
+        ],
+        "priceText": []
+      }
+    }
+  }
+}

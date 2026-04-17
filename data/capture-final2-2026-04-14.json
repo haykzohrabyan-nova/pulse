@@ -1,0 +1,34 @@
+{
+  "vistaprint": {
+    "defaultPrice1000": 110.24,
+    "price5000": 219.19,
+    "unit5000": 0.05,
+    "shapeClicked": "Rounded Square",
+    "sizeFilledIn": false,
+    "capturedAfterShape": true,
+    "selectionsAtCapture": {
+      "selections[Roll Finishing Type]": "Slit Roll",
+      "selections[Shape]": "Rounded Square"
+    },
+    "error": null
+  },
+  "axiom": {
+    "price": 112.68,
+    "sizeSelected": "3\" x 4\"",
+    "qtySelected": null,
+    "allPrices": [
+      112.68,
+      147.62,
+      221.15
+    ],
+    "no3x3": true,
+    "error": null
+  },
+  "gotprint": {
+    "accessToken": "bb601953-a518-4817-b64a-993a4af65c84",
+    "tokenType": "GP-Production",
+    "rollLabelProductType": null,
+    "price": null,
+    "error": null
+  }
+}

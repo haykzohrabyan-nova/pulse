@@ -1,0 +1,2668 @@
+{
+  "run_date": "2026-04-17T07:57:52.714Z",
+  "results": [
+    {
+      "id": "up-box-ste-50",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 50,
+      "total_price": 270,
+      "unit_price": 5.4,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 50,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-100",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 100,
+      "total_price": 338,
+      "unit_price": 3.38,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 100,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-250",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 250,
+      "total_price": 675,
+      "unit_price": 2.7,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": "250",
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-500",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 500,
+      "total_price": 1180,
+      "unit_price": 2.36,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 500,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-1000",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 1000,
+      "total_price": 1690,
+      "unit_price": 1.69,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 1000,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-2000",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 2000,
+      "total_price": 2020,
+      "unit_price": 1.01,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 2000,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-box-ste-2500",
+      "site": "UPrinting",
+      "product_type": "straight_tuck_end_box",
+      "qty": 2500,
+      "total_price": 2250,
+      "unit_price": 0.9,
+      "width": 12.75,
+      "height": 10.65,
+      "item_name": "Straight Tuck End Boxes",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "29910",
+          "attr_val_id": "51811",
+          "attribute_id": "1801",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "Custom",
+          "custom_flag": "y",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "29781",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "2958",
+          "order_spec_code": "PPR",
+          "order_spec_value": "18 pt. Cardstock",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Paper",
+          "sort": "3",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29887",
+          "attr_val_id": "51701",
+          "attribute_id": "1795",
+          "order_spec_option_id": "15",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Outside Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Printed Sides"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "QTY",
+          "order_spec_value": 2500,
+          "order_spec": "Quantity",
+          "sort": "7"
+        },
+        {
+          "attr_val_order_spec_id": "31368",
+          "attr_val_id": "52960",
+          "attribute_id": "1791",
+          "order_spec_option_id": "6992",
+          "order_spec_code": "DIECUT",
+          "order_spec_value": "Beam Cut and Crease",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Die-Cutting",
+          "sort": "17",
+          "attribute_name": "Die Cutting"
+        },
+        {
+          "attr_val_order_spec_id": "29816",
+          "attr_val_id": "51729",
+          "attribute_id": "1797",
+          "order_spec_option_id": "6878",
+          "order_spec_code": "TA",
+          "order_spec_value": "8 - 10 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Production Time"
+        },
+        {
+          "attr_val_order_spec_id": "37862",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "1018",
+          "order_spec_code": "FCOAT",
+          "order_spec_value": "Gloss",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Coating",
+          "sort": "1053",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "37863",
+          "attr_val_id": "51695",
+          "attribute_id": "1793",
+          "order_spec_option_id": "8289",
+          "order_spec_code": "BCOAT",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Coating",
+          "sort": "1055",
+          "attribute_name": "Coating"
+        },
+        {
+          "attr_val_order_spec_id": "29859",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "6883",
+          "order_spec_code": "BOXSTYLE",
+          "order_spec_value": "Straight Tuck End -  both lids tuck to Front",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Box Style",
+          "sort": "1073",
+          "attribute_name": "Box Style"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXL",
+          "order_spec_value": "4",
+          "order_spec": "Box Length",
+          "sort": "1083"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXW",
+          "order_spec_value": "2",
+          "order_spec": "Box Width",
+          "sort": "1084"
+        },
+        {
+          "order_spec_option_id": 0,
+          "order_spec_code": "BXD",
+          "order_spec_value": "5",
+          "order_spec": "Box Depth",
+          "sort": "1085"
+        },
+        {
+          "attr_val_order_spec_id": "32060",
+          "attr_val_id": "51765",
+          "attribute_id": "1787",
+          "order_spec_option_id": "7206",
+          "order_spec_code": "ARTCDSTD",
+          "order_spec_value": "PLA2320",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "ArtiosCAD Standard",
+          "sort": "1363",
+          "attribute_name": "Box Style"
+        },
+        {
+          "attr_val_order_spec_id": "29782",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6734",
+          "order_spec_code": "BRDCODE",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardCode",
+          "sort": "1364",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "29783",
+          "attr_val_id": "51693",
+          "attribute_id": "1792",
+          "order_spec_option_id": "6737",
+          "order_spec_code": "BRDDESC",
+          "order_spec_value": "I-SBS-18",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "BoardDescription",
+          "sort": "1365",
+          "attribute_name": "Material"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — STE boxes page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-100",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 100,
+      "total_price": 434.67,
+      "unit_price": 4.3467,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "8558",
+          "attr_val_id": "6227",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "100",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-250",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 250,
+      "total_price": 505.87,
+      "unit_price": 2.02348,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "91",
+          "attr_val_id": "93",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "250",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-500",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 500,
+      "total_price": 630.22,
+      "unit_price": 1.26044,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "92",
+          "attr_val_id": "94",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "500",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-1000",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 1000,
+      "total_price": 897.26,
+      "unit_price": 0.89726,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "93",
+          "attr_val_id": "95",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "1,000",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-2500",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 2500,
+      "total_price": 1664.25,
+      "unit_price": 0.6657,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "275",
+          "attr_val_id": "275",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "2,500",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "id": "up-pouch-5000",
+      "site": "UPrinting",
+      "product_type": "stand_up_pouch",
+      "qty": 5000,
+      "total_price": 2941,
+      "unit_price": 0.5882,
+      "width": "14",
+      "height": "4.375",
+      "item_name": "Stand-Up Pouches",
+      "order_specs": [
+        {
+          "attr_val_order_spec_id": "19327",
+          "attr_val_id": "40257",
+          "attribute_id": "3",
+          "order_spec_option_id": "0",
+          "order_spec_code": "SZ",
+          "order_spec_value": "4.375\" W x 6.0\" H x 2.0\" G",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Size",
+          "sort": "2",
+          "attribute_name": "Size"
+        },
+        {
+          "attr_val_order_spec_id": "20082",
+          "attr_val_id": "41659",
+          "attribute_id": "981",
+          "order_spec_option_id": "13",
+          "order_spec_code": "SIDE",
+          "order_spec_value": "Front Only",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Printed Side",
+          "sort": "5",
+          "attribute_name": "Print Process"
+        },
+        {
+          "attr_val_order_spec_id": "97",
+          "attr_val_id": "99",
+          "attribute_id": "5",
+          "order_spec_option_id": "0",
+          "order_spec_code": "QTY",
+          "order_spec_value": "5,000",
+          "custom_flag": "n",
+          "allow_reorder_flag": null,
+          "order_spec": "Quantity",
+          "sort": "7",
+          "attribute_name": "Quantity"
+        },
+        {
+          "attr_val_order_spec_id": "33412",
+          "attr_val_id": "194",
+          "attribute_id": "12",
+          "order_spec_option_id": "293",
+          "order_spec_code": "HOLE",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Hole Drilling",
+          "sort": "23",
+          "attribute_name": "Hole Drilling"
+        },
+        {
+          "attr_val_order_spec_id": "19338",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "4347",
+          "order_spec_code": "MATRL",
+          "order_spec_value": "Thick Gauge White",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Material",
+          "sort": "26",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "126",
+          "attr_val_id": "129",
+          "attribute_id": "6",
+          "order_spec_option_id": "32",
+          "order_spec_code": "TA",
+          "order_spec_value": "6 Business Days",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Turnaround",
+          "sort": "41",
+          "attribute_name": "Turnaround"
+        },
+        {
+          "attr_val_order_spec_id": "26936",
+          "attr_val_id": "49086",
+          "attribute_id": "1623",
+          "order_spec_option_id": "267",
+          "order_spec_code": "WDW",
+          "order_spec_value": "No",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Window",
+          "sort": "78",
+          "attribute_name": "Clear Window"
+        },
+        {
+          "attr_val_order_spec_id": "19405",
+          "attr_val_id": "40268",
+          "attribute_id": "25",
+          "order_spec_option_id": "1213",
+          "order_spec_code": "PRF",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Proof Required",
+          "sort": "1082",
+          "attribute_name": "Material"
+        },
+        {
+          "attr_val_order_spec_id": "19345",
+          "attr_val_id": "40275",
+          "attribute_id": "1211",
+          "order_spec_option_id": "4296",
+          "order_spec_code": "ZPPR",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Zipper",
+          "sort": "1250",
+          "attribute_name": "Reclosable Zipper"
+        },
+        {
+          "attr_val_order_spec_id": "19348",
+          "attr_val_id": "40278",
+          "attribute_id": "1213",
+          "order_spec_option_id": "4299",
+          "order_spec_code": "TRNTCH",
+          "order_spec_value": "Yes",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Tear Notch",
+          "sort": "1252",
+          "attribute_name": "Tear Notch"
+        },
+        {
+          "attr_val_order_spec_id": "26955",
+          "attr_val_id": "48781",
+          "attribute_id": "1593",
+          "order_spec_option_id": "6485",
+          "order_spec_code": "SETUP",
+          "order_spec_value": "Custom",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Setup",
+          "sort": "1343",
+          "attribute_name": "Setup"
+        },
+        {
+          "attr_val_order_spec_id": "35348",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8397",
+          "order_spec_code": "FLAM",
+          "order_spec_value": "Matte",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Front Lamination",
+          "sort": "1405",
+          "attribute_name": "Lamination"
+        },
+        {
+          "attr_val_order_spec_id": "35349",
+          "attr_val_id": "3745",
+          "attribute_id": "17",
+          "order_spec_option_id": "8398",
+          "order_spec_code": "BLAM",
+          "order_spec_value": "None",
+          "custom_flag": "n",
+          "allow_reorder_flag": "y",
+          "order_spec": "Back Lamination",
+          "sort": "1406",
+          "attribute_name": "Lamination"
+        }
+      ],
+      "status": "live",
+      "confidence": "high",
+      "method": "Angular scope — custom-stand-up-pouches page",
+      "notes": "Default size on page load"
+    },
+    {
+      "site": "GotPrint",
+      "product_type": "catalog_discovery",
+      "all_product_links": [
+        {
+          "text": "FREE Sample Kit",
+          "href": "https://www.gotprint.com/products/sample-kits/free-samples.html?utm_source=promobar&utm_medium=freesamplekit2244&utm_campaign=free_sample_kit_2244"
+        },
+        {
+          "text": "Business Cards",
+          "href": "https://www.gotprint.com/products/business-cards/order.html"
+        },
+        {
+          "text": "Postcards",
+          "href": "https://www.gotprint.com/products/postcards/order.html"
+        },
+        {
+          "text": "Roll Labels",
+          "href": "https://www.gotprint.com/products/roll-labels/order.html"
+        },
+        {
+          "text": "Brochures",
+          "href": "https://www.gotprint.com/products/brochures/order.html"
+        },
+        {
+          "text": "Yard Sign",
+          "href": "https://www.gotprint.com/products/yard-signs/order.html"
+        },
+        {
+          "text": "Folders",
+          "href": "https://www.gotprint.com/products/folders/order.html"
+        },
+        {
+          "text": "Signs & Banners",
+          "href": "https://www.gotprint.com/products/signage/info.html"
+        },
+        {
+          "text": "Shop Apparel",
+          "href": "https://www.gotprint.com/products/apparel/info.html"
+        },
+        {
+          "text": "All Products",
+          "href": "https://www.gotprint.com/products/info.html"
+        },
+        {
+          "text": "Acrylic Boards",
+          "href": "https://www.gotprint.com/products/acrylic-boards/order"
+        },
+        {
+          "text": "A-Frame Signs",
+          "href": "https://www.gotprint.com/products/a-frame-signs/order"
+        },
+        {
+          "text": "Aluminum Boards",
+          "href": "https://www.gotprint.com/products/aluminum-boards/order"
+        },
+        {
+          "text": "Banners",
+          "href": "https://www.gotprint.com/products/banners/order"
+        },
+        {
+          "text": "Biz Card Magnets",
+          "href": "https://www.gotprint.com/products/magnet-business-cards/order"
+        },
+        {
+          "text": "Booklets",
+          "href": "https://www.gotprint.com/products/catalogs/order"
+        },
+        {
+          "text": "Bookmarks",
+          "href": "https://www.gotprint.com/products/bookmarks/order"
+        },
+        {
+          "text": "Brochures",
+          "href": "https://www.gotprint.com/products/brochures/order"
+        },
+        {
+          "text": "Business Cards",
+          "href": "https://www.gotprint.com/products/business-cards/order"
+        },
+        {
+          "text": "Calendars",
+          "href": "https://www.gotprint.com/products/calendars/order"
+        },
+        {
+          "text": "Canvas Prints",
+          "href": "https://www.gotprint.com/products/canvas-prints/order"
+        },
+        {
+          "text": "Car Magnets",
+          "href": "https://www.gotprint.com/products/car-magnets/order"
+        },
+        {
+          "text": "Cardboards",
+          "href": "https://www.gotprint.com/products/cardboards/order"
+        },
+        {
+          "text": "Catalogs",
+          "href": "https://www.gotprint.com/products/catalogs/order"
+        },
+        {
+          "text": "Club Flyers",
+          "href": "https://www.gotprint.com/products/club-flyers/order"
+        },
+        {
+          "text": "Collectors Cards",
+          "href": "https://www.gotprint.com/products/collectors-cards/order"
+        },
+        {
+          "text": "Corrugated Boards",
+          "href": "https://www.gotprint.com/products/corrugated-boards/order"
+        },
+        {
+          "text": "Door Hangers",
+          "href": "https://www.gotprint.com/products/door-hangers/order"
+        },
+        {
+          "text": "Envelopes - Custom",
+          "href": "https://www.gotprint.com/products/envelopes/order"
+        },
+        {
+          "text": "Envelopes - Logo",
+          "href": "https://www.gotprint.com/products/logo-envelopes/order"
+        },
+        {
+          "text": "Event Tickets",
+          "href": "https://www.gotprint.com/products/event-tickets/order"
+        },
+        {
+          "text": "Floor Decals",
+          "href": "https://www.gotprint.com/products/floor-decals/order"
+        },
+        {
+          "text": "Flyers",
+          "href": "https://www.gotprint.com/products/flyers/order"
+        },
+        {
+          "text": "Foam Boards",
+          "href": "https://www.gotprint.com/products/foam-boards/order"
+        },
+        {
+          "text": "Folded Biz Cards",
+          "href": "https://www.gotprint.com/products/folded-business-cards/order"
+        },
+        {
+          "text": "Folded Hang Tags",
+          "href": "https://www.gotprint.com/products/folded-hang-tags/order"
+        },
+        {
+          "text": "Folders",
+          "href": "https://www.gotprint.com/products/folders/order"
+        },
+        {
+          "text": "Framed Prints",
+          "href": "https://www.gotprint.com/products/framed-prints/order"
+        },
+        {
+          "text": "Greeting Cards",
+          "href": "https://www.gotprint.com/products/greeting-cards/order"
+        },
+        {
+          "text": "Hang Tags",
+          "href": "https://www.gotprint.com/products/hang-tags/order"
+        },
+        {
+          "text": "Hats",
+          "href": "https://www.gotprint.com/products/hats/order"
+        },
+        {
+          "text": "Letterheads",
+          "href": "https://www.gotprint.com/products/letterheads/order"
+        },
+        {
+          "text": "Metal Wall Prints",
+          "href": "https://www.gotprint.com/products/metal-wall-prints/order"
+        },
+        {
+          "text": "Mini Menus",
+          "href": "https://www.gotprint.com/products/mini-menus/order"
+        },
+        {
+          "text": "Mounted Wall Prints",
+          "href": "https://www.gotprint.com/products/mounted-wall-prints/order"
+        },
+        {
+          "text": "Mouse Pads",
+          "href": "https://www.gotprint.com/products/mouse-pads/order"
+        },
+        {
+          "text": "Mugs",
+          "href": "https://www.gotprint.com/products/mugs/order"
+        },
+        {
+          "text": "Notepads",
+          "href": "https://www.gotprint.com/products/notepads/order"
+        },
+        {
+          "text": "Pet Bowls",
+          "href": "https://www.gotprint.com/products/pet-bowls/order"
+        },
+        {
+          "text": "Pet Mats",
+          "href": "https://www.gotprint.com/products/pet-mats/order"
+        }
+      ],
+      "packaging_links": [
+        {
+          "text": "Folded",
+          "href": "https://www.gotprint.com/products/folded-business-cards/order?size=384&orientation=1&paper=1&folding=13&color=1&quantity=50&turnaround=1&proofType=31&fileDelivery=5&coating=5&galleryImageOverride=color-3"
+        },
+        {
+          "text": "Order Now",
+          "href": "https://www.gotprint.com/products/brochures/order?size=127&paper=5&folding=3&quantity=100"
+        },
+        {
+          "text": "Brochures\n                       Starting at $53.35",
+          "href": "https://www.gotprint.com/products/brochures/order.html?size=125&paper=5&folding=3&quantity=100"
+        },
+        {
+          "text": "Table Tents\n                       Starting at $71.40",
+          "href": "https://www.gotprint.com/products/table-tents/order.html?size=298&paper=4&color=1&folding=13&quantity=100"
+        }
+      ],
+      "notes": "Product catalog scraped for packaging URLs"
+    }
+  ],
+  "errors": [
+    {
+      "site": "UPrinting-labels",
+      "error": "Error: Too many arguments. If you need to pass more than 1 argument to the function wrap them in an object."
+    }
+  ]
+}

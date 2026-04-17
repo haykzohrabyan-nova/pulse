@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competitor Pricing Data Center — Pulse [INTERNAL]</title>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="page-wrap">
+
+  <div class="private-banner">
+    <span style="font-size:15px;">🔒</span>
+    <div>
+      <strong>INTERNAL USE ONLY — Admin Only. Not linked in navigation.</strong>
+      All captured competitor label pricing positions. Coverage is partial — confidence levels are honest.
+      Do not share with reps or operators.
+    </div>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h2>Competitor Pricing Data Center</h2>
+      <p>
+        12 captured data points across 5 competitors. Query any spec to get exact match or closest
+        available with explicit delta labels. Only verified captures shown — no inferred data.
+      </p>
+    </div>
+    <div class="header-meta">
+      <div>Last capture: <strong>2026-04-14</strong></div>
+      <div>Scope: <strong>Labels only</strong></div>
+      <div style="margin-top:6px;">
+        <a href="competitor-pricing.html" class="meta-link">← Benchmark view</a>
+        &nbsp;·&nbsp;
+        <a href="COMPETITOR-PRICING-NOTES.md" target="_blank" class="meta-link">Capture notes</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 1: All captured data ──────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-title" style="margin:0;">All Captured Data Points</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="filterCompetitor" class="filter-select" onchange="renderCapturesTable()">
+          <option value="">All competitors</option>
+          <option>UPrinting</option>
+          <option>Vistaprint</option>
+          <option>Axiom Print</option>
+          <option>GotPrint</option>
+          <option>Sticker Mule</option>
+        </select>
+        <select id="filterConfidence" class="filter-select" onchange="renderCapturesTable()">
+          <option value="">All confidence</option>
+          <option value="high">High only</option>
+          <option value="medium">Med+</option>
+        </select>
+        <span id="captureCount" class="count-badge"></span>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="capturesTable">
+        <thead>
+          <tr>
+            <th>Competitor</th>
+            <th>Size</th>
+            <th>Qty</th>
+            <th>Material</th>
+            <th>Finish</th>
+            <th>Shape</th>
+            <th>Price</th>
+            <th>Unit Price</th>
+            <th>Status</th>
+            <th>Confidence</th>
+            <th>Method</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="capturesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2: Query builder ──────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Find Closest Match</div>
+    <p style="font-size:12px;color:#64748b;margin:0 0 12px;">
+      Enter the label spec you want to compare. For each competitor, the tool finds an exact match
+      first. If none exists, it selects the closest captured data point and labels what differs.
+    </p>
+    <div class="query-grid">
+      <div class="field">
+        <label>Width (in)</label>
+        <input type="number" id="qW" value="3" min="0.5" max="12" step="0.25" oninput="runMatch()">
+      </div>
+      <div class="field">
+        <label>Height (in)</label>
+        <input type="number" id="qH" value="3" min="0.5" max="12" step="0.25" oninput="runMatch()">
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <select id="qQty" onchange="runMatch()">
+          <option value="100">100</option>
+          <option value="250">250</option>
+          <option value="500">500</option>
+          <option value="1000">1,000</option>
+          <option value="2500">2,500</option>
+          <option value="5000" selected>5,000</option>
+          <option value="10000">10,000</option>
+          <option value="25000">25,000</option>
+          <option value="50000">50,000</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Material</label>
+        <select id="qMat" onchange="runMatch()">
+          <option value="White BOPP">White BOPP</option>
+          <option value="Clear BOPP">Clear BOPP</option>
+          <option value="Silver BOPP">Silver BOPP</option>
+          <option value="White Paper">White Paper</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Finish</label>
+        <select id="qFin" onchange="runMatch()">
+          <option value="Matte">Matte</option>
+          <option value="Gloss">Gloss</option>
+          <option value="None">None</option>
+          <option value="Soft Touch">Soft Touch</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Color Mode</label>
+        <select id="qCol" onchange="runMatch()">
+          <option value="CMYK">CMYK</option>
+          <option value="CMYK+White">CMYK + White</option>
+        </select>
+      </div>
+    </div>
+    <div id="querySpecLine" class="spec-line"></div>
+  </div>
+
+  <!-- ── SECTION 3: Results ─────────────────────────────────────────────────── -->
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;margin-bottom:16px;">
+
+    <!-- Our price -->
+    <div class="card our-price-card">
+      <div class="card-title" style="color:#2563eb;">Our Price (Internal)</div>
+      <div id="ourPriceTotal" class="price-display">—</div>
+      <div id="ourPriceUnit" class="price-unit">—</div>
+      <div id="ourPriceDetails" class="price-details"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:12px;">
+        <a href="pricing-calculator.html" target="_blank" style="color:#2563eb;text-decoration:none;font-weight:600;">Open full calculator →</a>
+      </div>
+    </div>
+
+    <!-- Competitor match results -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title" style="margin:0;">Competitor Match Results</div>
+        <div style="font-size:11px;color:#9ca3af;">
+          Exact match shown where available. Otherwise: closest captured data point with delta labels.
+        </div>
+      </div>
+      <table class="data-table" id="matchTable">
+        <thead>
+          <tr>
+            <th>Competitor</th>
+            <th>Match</th>
+            <th>Captured Price</th>
+            <th>vs Our Price</th>
+            <th>Data Point Used</th>
+            <th>Deltas</th>
+            <th>Turnaround / Ship</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody id="matchRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION 4: Coverage summary ───────────────────────────────────────── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Coverage Status — April 2026</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;" id="coverageSummary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Match Score Legend</div>
+      <div style="margin-top:8px;font-size:12px;color:#374151;line-height:1.7;">
+        <div><strong>EXACT MATCH</strong> — all specified fields match the captured data point</div>
+        <div><strong>CLOSEST MATCH</strong> — best available data point by composite score:</div>
+        <div style="margin-left:12px;color:#64748b;">
+          · Size: area difference ratio (weight ×4)<br>
+          · Qty: log₂ distance (weight ×2)<br>
+          · Material: mismatch penalty if known<br>
+          · Finish: mismatch penalty if known<br>
+          · Unknown fields: small penalty, flagged in deltas
+        </div>
+        <div style="margin-top:8px;"><strong>NO PRICE CAPTURED</strong> — spec confirmed but price not available</div>
+        <div><strong>NO DATA</strong> — no captured data for this competitor</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Competitor Pricing Data Center · Labels Only · Admin Access Only ·
+    12 data points captured via Playwright headless automation (April 14, 2026) ·
+    <a href="competitor-pricing.html">← Benchmark view</a> ·
+    <a href="data/competitor-pricing-raw.json" target="_blank">Raw JSON</a> ·
+    <a href="data/competitor-pricing-normalized.json" target="_blank">Normalized JSON</a>
+  </div>
+
+</div><!-- .page-wrap -->
+
+<script src="shared.js?v=20260414-0100"></script>
+<script src="auth.js?v=20260414-1358"></script>
+<script>
+
+// ─── All captured data points ─────────────────────────────────────────────────
+// 12 total. Only include captures with real price data (no confidence:none entries).
+// Source of truth for closest-match logic.
+
+const ALL_CAPTURES = [
+
+  // ── UPrinting — 4 verified price points (LIVE, high confidence) ─────────────
+  {
+    id: 'up-2x2-1000',
+    competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Angular scope (default configurator state)',
+    specs: { w: 2, h: 2, qty: 1000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 131.23, unit: 0.13123, turnaround: null, shippingIncl: false },
+    note: 'Default configurator state. 2×2, 1k qty. Shipping not included.'
+  },
+  {
+    id: 'up-3x3-1000',
+    competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 3, h: 3, qty: 1000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
+    pricing: { total: 222.26, unit: 0.22226, turnaround: null, shippingIncl: false },
+    note: 'After selecting 3"×3" size, qty=1k. Shipping not included.'
+  },
+  {
+    id: 'up-2x2-5000',
+    competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 2, h: 2, qty: 5000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 309.16, unit: 0.06183, turnaround: 6, shippingIncl: false },
+    note: '2×2 at 5k qty. 6-day turnaround. Shipping not included.'
+  },
+  {
+    id: 'up-3x3-5000',
+    competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 3, h: 3, qty: 5000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
+    pricing: { total: 505.85, unit: 0.10117, turnaround: 6, shippingIncl: false },
+    note: 'PRIMARY BENCHMARK. Exact match for 3"×3"/5k White BOPP. 6-day turnaround. Shipping not included.'
+  },
+
+  // ── Vistaprint — 4 price points (PARTIAL) ───────────────────────────────────
+  {
+    id: 'vp-1x1-50',
+    competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'partial',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Cimpress pricing API intercept',
+    specs: { w: 1, h: 1, qty: 50, material: 'White Paper', finish: 'Matte', shape: 'square', format: 'slit_roll' },
+    pricing: { total: 35.99, unit: 0.72, turnaround: null, shippingIncl: null },
+    note: 'Smallest size/qty from Cimpress estimatedPrices. Product PRD-DF5PWTHC. Shipping unknown.'
+  },
+  {
+    id: 'vp-1x1-1000',
+    competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'partial',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Cimpress pricing API intercept',
+    specs: { w: 1, h: 1, qty: 1000, material: 'White Paper', finish: 'Matte', shape: 'square', format: 'slit_roll' },
+    pricing: { total: 110.24, unit: 0.12, turnaround: null, shippingIncl: null },
+    note: 'From same Cimpress estimatedPrices call — multiple qty tiers returned simultaneously. Shipping unknown.'
+  },
+  {
+    id: 'vp-roundedsq-5000-defaultsize',
+    competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'partial',
+    confidence: 'medium',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Cimpress API (Rounded Square, default size)',
+    specs: { w: null, h: null, qty: 5000, material: null, finish: null, shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 219.19, unit: 0.044, turnaround: null, shippingIncl: null },
+    note: 'Rounded Square shape confirmed via DOM click. Size not confirmed — do NOT treat as 3"×3". 5k qty. Shipping unknown.'
+  },
+  {
+    id: 'vp-3x3-5000-directional',
+    competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'partial',
+    confidence: 'medium',
+    capturedAt: '2026-04-14',
+    method: 'Cimpress API: W=3/H=3 injected alongside Rounded Square selection (DIRECTIONAL)',
+    specs: { w: 3, h: 3, qty: 5000, material: null, finish: null, shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 544.86, unit: 0.10897, turnaround: null, shippingIncl: null },
+    note: 'DIRECTIONAL ONLY — W=3/H=3 injected into Cimpress call, size not DOM-confirmed. pricingContext may not encode custom dimensions. Treat as ballpark. To confirm: DevTools at VP, watch for selections[Custom Width] in Cimpress XHR.'
+  },
+
+  // ── Axiom Print — 2 verified price points (PARTIAL) ─────────────────────────
+  {
+    id: 'axiom-2x3-250',
+    competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Ant Design dropdown (default state)',
+    specs: { w: 2, h: 3, qty: 250, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 112.68, unit: 0.451, turnaround: null, shippingIncl: null },
+    note: 'Default configurator state. Material not confirmed (likely White Matte BOPP default). Note: 3"×3" NOT offered — closest size is 3"×4".'
+  },
+  {
+    id: 'axiom-2x3-2500',
+    competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial',
+    confidence: 'high',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + Ant Design dropdown (qty interaction)',
+    specs: { w: 2, h: 3, qty: 2500, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 213.27, unit: 0.0853, turnaround: null, shippingIncl: null },
+    note: 'Max standard configurator qty = 2,500. 5k+ requires custom quote (747-888-7777). Material not confirmed.'
+  },
+
+  // ── GotPrint — 1 promo price + 1 spec-confirmed-no-price ────────────────────
+  {
+    id: 'gp-2circle-promo',
+    competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'partial',
+    confidence: 'low',
+    capturedAt: '2026-04-14',
+    method: 'HTML scrape — nav cross-sell markup',
+    specs: { w: 2, h: 2, qty: null, material: null, finish: null, shape: 'circle', format: 'roll' },
+    pricing: { total: 72.92, unit: null, turnaround: null, shippingIncl: null },
+    note: 'Promo/example from nav markup. 2" circle, qty NOT stated. Low confidence — not spec-accurate. Do not use for 3×3 comparison.'
+  },
+  {
+    id: 'gp-3x3-spec-confirmed-no-price',
+    competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'partial',
+    confidence: 'medium',
+    capturedAt: '2026-04-14',
+    method: 'Playwright + browser click-through — spec confirmed, price blocked',
+    specs: { w: 3, h: 3, qty: 5000, material: 'White BOPP', finish: 'Matte', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: null, unit: null, turnaround: null, shippingIncl: null },
+    blocker: 'Vue.js cascade keeps paper/finish selects disabled after JS dispatch; REST API 401 on all pricing endpoints. Price requires completing full manual upload flow.',
+    note: 'SPEC CONFIRMED — NO PRICE CAPTURED. Square-Rounded 3"×3" confirmed. White BOPP (paper ID 12) + Matte Finish (Indoor) + qty 5k all available in configurator. variantId=32. Human click-path exists but upload required.'
+  },
+
+  // ── Sticker Mule — 1 starting price (PARTIAL) ───────────────────────────────
+  {
+    id: 'sm-starting-price',
+    competitor: 'Sticker Mule',
+    url: 'https://www.stickermule.com/custom-labels',
+    status: 'partial',
+    confidence: 'medium',
+    capturedAt: '2026-04-14',
+    method: 'JSON-LD AggregateOffer schema extraction',
+    specs: { w: null, h: null, qty: null, material: null, finish: null, shape: null, format: null },
+    pricing: { total: 47, unit: null, turnaround: 4, shippingIncl: true },
+    note: 'STARTING PRICE ONLY — any size, any shape. Free shipping + free proof. 4-day turnaround. Almost certainly a small-run entry price. Upload-first confirmed — no configure-then-price path exists. 5k pricing not captured.'
+  }
+
+];
+
+// ─── Internal pricing constants (mirrors competitor-pricing.html) ─────────────
+
+const CP_TIERS = [
+  { minFrames: 500, standard: 3.40, uv: 4.40 },
+  { minFrames: 238, standard: 4.20, uv: 5.20 },
+  { minFrames: 120, standard: 5.00, uv: 6.00 },
+  { minFrames: 60,  standard: 5.80, uv: 7.30 },
+  { minFrames: 25,  standard: 8.50, uv: 12.50 },
+  { minFrames: 13,  standard: 12.60, uv: 17.10 },
+  { minFrames: 6,   standard: 20.00, uv: 40.00 }
+];
+const PRESS_W = 12, PRESS_H = 39, BLEED = 0.24;
+
+function calcOurPrice(w, h, qty, hasUV) {
+  const pw = w + BLEED, ph = h + BLEED;
+  const across = Math.floor(PRESS_W / pw);
+  const down   = Math.floor(PRESS_H / ph);
+  const fits   = across * down;
+  if (!fits || !qty) return null;
+  const frames = Math.ceil(qty / fits);
+  let tier = CP_TIERS[CP_TIERS.length - 1];
+  for (const t of CP_TIERS) {
+    if (qty >= t.minFrames * fits) { tier = t; break; }
+  }
+  const fprice = hasUV ? tier.uv : tier.standard;
+  const charge = qty * (fprice / fits);
+  return { fits, across, down, frames, tier: tier.minFrames, fprice, charge };
+}
+
+function getLamAdder(lam, charge) {
+  if (lam === 'Soft Touch') return charge * 0.10;
+  if (lam === 'Holo') return 20;
+  return 0;
+}
+
+// ─── Closest-match algorithm ──────────────────────────────────────────────────
+//
+// Scoring per capture vs a query:
+//   Size:     area difference ratio × 4   (0 if exact, penalized if unknown)
+//   Qty:      log₂(queryQty/capQty) × 2  (0 if exact, penalized if unknown)
+//   Material: +1.5 if mismatch between two known values
+//   Finish:   +0.5 if mismatch between two known values
+//   Confidence: +0.3 (low), +0.1 (medium) — tiebreaker
+//
+// isExact: true only if all known fields match within tolerance
+
+function scoreCapture(cap, q) {
+  const deltas = [];
+  let score = 0;
+  let isExact = true;
+
+  // Size
+  if (cap.specs.w != null && cap.specs.h != null) {
+    const qArea  = q.w * q.h;
+    const cArea  = cap.specs.w * cap.specs.h;
+    const areaPct = Math.abs(qArea - cArea) / qArea;
+    score += areaPct * 4;
+    if (areaPct > 0.01) {
+      isExact = false;
+      deltas.push(`size: ${cap.specs.w}"×${cap.specs.h}" (query: ${q.w}"×${q.h}")`);
+    }
+  } else {
+    score += 3;
+    isExact = false;
+    deltas.push('size: unknown in this capture');
+  }
+
+  // Quantity
+  if (cap.specs.qty != null) {
+    const logD = Math.abs(Math.log2(q.qty / cap.specs.qty));
+    score += logD * 2;
+    if (logD > 0.05) {
+      isExact = false;
+      deltas.push(`qty: ${cap.specs.qty.toLocaleString()} (query: ${q.qty.toLocaleString()})`);
+    }
+  } else {
+    score += 2;
+    isExact = false;
+    deltas.push('qty: unknown in this capture');
+  }
+
+  // Material
+  if (cap.specs.material && q.mat) {
+    if (cap.specs.material !== q.mat) {
+      score += 1.5;
+      isExact = false;
+      deltas.push(`material: ${cap.specs.material} (query: ${q.mat})`);
+    }
+  } else if (!cap.specs.material) {
+    score += 0.5;
+    // don't show delta for unknown material — it's a capture limitation, not a spec mismatch
+  }
+
+  // Finish
+  if (cap.specs.finish && q.fin) {
+    if (cap.specs.finish !== q.fin) {
+      score += 0.5;
+      isExact = false;
+      deltas.push(`finish: ${cap.specs.finish} (query: ${q.fin})`);
+    }
+  }
+
+  // Confidence tiebreaker
+  if (cap.confidence === 'low') score += 0.3;
+  else if (cap.confidence === 'medium') score += 0.1;
+
+  return { score, deltas, isExact };
+}
+
+// Per competitor: score ALL their captures (priced and no-price) and return the best.
+// A spec-confirmed-no-price entry can win over a low-confidence promo if it scores better.
+// noPrice=true on the result means the best match has no price captured.
+function findBestMatch(competitor, q) {
+  const all = ALL_CAPTURES.filter(c => c.competitor === competitor);
+  if (!all.length) return null;
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const cap of all) {
+    const { score, deltas, isExact } = scoreCapture(cap, q);
+    if (score < bestScore) {
+      bestScore = score;
+      best = { cap, score, deltas, isExact };
+    }
+  }
+
+  if (!best) return null;
+
+  best.noPrice = best.cap.pricing.total == null;
+
+  // If best has a price, also check whether a no-price spec-confirmed entry
+  // exists that is a significantly better match (within 1 score point) — show as note.
+  if (!best.noPrice) {
+    const noPriceEntries = all.filter(c => c.pricing.total == null && c.blocker);
+    for (const cap of noPriceEntries) {
+      const { score } = scoreCapture(cap, q);
+      if (score < bestScore + 1) {
+        best.specConfirmedNoPrice = cap;
+        break;
+      }
+    }
+  }
+
+  return best;
+}
+
+// ─── Formatting helpers ───────────────────────────────────────────────────────
+
+function fmtMoney(n) {
+  return n == null ? '—' : '$' + n.toFixed(2);
+}
+
+function fmtUnit(n) {
+  return n == null ? '—' : '$' + n.toFixed(4) + '/ea';
+}
+
+function fmtSize(cap) {
+  if (cap.specs.w != null && cap.specs.h != null) return `${cap.specs.w}"×${cap.specs.h}"`;
+  return '<em style="color:#9ca3af;">size unknown</em>';
+}
+
+function fmtQty(cap) {
+  if (cap.specs.qty != null) return cap.specs.qty.toLocaleString();
+  return '<em style="color:#9ca3af;">qty unknown</em>';
+}
+
+function fmtMat(cap) {
+  return cap.specs.material || '<em style="color:#9ca3af;">unknown</em>';
+}
+
+function fmtFin(cap) {
+  return cap.specs.finish || '<em style="color:#9ca3af;">unknown</em>';
+}
+
+function fmtShape(cap) {
+  return cap.specs.shape ? cap.specs.shape.replace('_', ' ') : '<em style="color:#9ca3af;">unknown</em>';
+}
+
+function statusBadge(s) {
+  const m = { live: 'cov-live', partial: 'cov-partial', blocked: 'cov-blocked', manual: 'cov-manual' };
+  const labels = { live: 'LIVE', partial: 'PARTIAL', blocked: 'BLOCKED', manual: 'MANUAL' };
+  return `<span class="cov-badge ${m[s] || 'cov-blocked'}">${labels[s] || s.toUpperCase()}</span>`;
+}
+
+function confBadge(c) {
+  const m = { high: 'conf-high', medium: 'conf-med', low: 'conf-low', none: 'conf-none' };
+  return `<span class="conf-badge ${m[c] || 'conf-none'}">${c.toUpperCase()}</span>`;
+}
+
+function matchBadge(isExact, noPrice) {
+  if (noPrice) return '<span class="match-badge match-noprice">NO PRICE CAPTURED</span>';
+  if (isExact) return '<span class="match-badge match-exact">EXACT MATCH</span>';
+  return '<span class="match-badge match-closest">CLOSEST MATCH</span>';
+}
+
+// ─── Render: all captures table ───────────────────────────────────────────────
+
+function renderCapturesTable() {
+  const filterComp = document.getElementById('filterCompetitor').value;
+  const filterConf = document.getElementById('filterConfidence').value;
+
+  let captures = ALL_CAPTURES;
+  if (filterComp) captures = captures.filter(c => c.competitor === filterComp);
+  if (filterConf === 'high')   captures = captures.filter(c => c.confidence === 'high');
+  if (filterConf === 'medium') captures = captures.filter(c => c.confidence === 'high' || c.confidence === 'medium');
+
+  document.getElementById('captureCount').textContent = `${captures.length} shown`;
+
+  document.getElementById('capturesBody').innerHTML = captures.map(cap => {
+    const hasPriceRow = cap.pricing.total != null;
+    const priceStr = hasPriceRow ? `<strong>${fmtMoney(cap.pricing.total)}</strong>` : '<em style="color:#dc2626;">NO PRICE</em>';
+    const unitStr  = hasPriceRow ? fmtUnit(cap.pricing.unit) : '—';
+    return `
+      <tr${!hasPriceRow ? ' style="background:#fff7f7;"' : ''}>
+        <td><strong>${cap.competitor}</strong><br><a href="${cap.url}" target="_blank" style="font-size:10px;color:#94a3b8;">↗ site</a></td>
+        <td>${fmtSize(cap)}</td>
+        <td style="white-space:nowrap;">${fmtQty(cap)}</td>
+        <td>${fmtMat(cap)}</td>
+        <td>${fmtFin(cap)}</td>
+        <td>${fmtShape(cap)}</td>
+        <td>${priceStr}</td>
+        <td style="white-space:nowrap;">${unitStr}</td>
+        <td>${statusBadge(cap.status)}</td>
+        <td>${confBadge(cap.confidence)}</td>
+        <td style="font-size:10px;color:#64748b;max-width:160px;">${cap.method}</td>
+        <td style="font-size:10px;color:#64748b;max-width:200px;">${cap.note}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── Render: match results table ──────────────────────────────────────────────
+
+const COMPETITOR_ORDER = ['UPrinting', 'Vistaprint', 'Axiom Print', 'GotPrint', 'Sticker Mule'];
+
+function runMatch() {
+  const w   = parseFloat(document.getElementById('qW').value) || 0;
+  const h   = parseFloat(document.getElementById('qH').value) || 0;
+  const qty = parseInt(document.getElementById('qQty').value, 10) || 0;
+  const mat = document.getElementById('qMat').value;
+  const fin = document.getElementById('qFin').value;
+  const col = document.getElementById('qCol').value;
+  const hasUV = col === 'CMYK+White';
+
+  document.getElementById('querySpecLine').textContent =
+    `Query: ${w}" × ${h}" · ${qty.toLocaleString()} pcs · ${mat} · ${fin} · ${col}`;
+
+  // Our price
+  const r = calcOurPrice(w, h, qty, hasUV);
+  if (!r) {
+    document.getElementById('ourPriceTotal').textContent = 'N/A';
+    document.getElementById('ourPriceUnit').textContent = 'Label may not fit 6K press';
+    document.getElementById('ourPriceDetails').innerHTML = '';
+  } else {
+    const lamAdder = getLamAdder(fin, r.charge);
+    const total    = r.charge + lamAdder;
+    const perUnit  = total / qty;
+
+    document.getElementById('ourPriceTotal').textContent = fmtMoney(total);
+    document.getElementById('ourPriceUnit').textContent  = fmtUnit(perUnit);
+
+    let lamNote = '';
+    if (fin === 'Soft Touch') lamNote = ' + Soft Touch (+10%)';
+    else if (fin === 'Holo')  lamNote = ' + Holo ($20 flat)';
+    else if (fin !== 'None')  lamNote = ` (${fin} incl.)`;
+
+    document.getElementById('ourPriceDetails').innerHTML = [
+      `${r.fits} fits/frame (${r.across}×${r.down})`,
+      `${r.frames} frames needed`,
+      `Tier: ${r.tier}-frame min at $${r.fprice.toFixed(2)}/frame`,
+      `Print charge: ${fmtMoney(r.charge)}${lamNote}`,
+      `HP Indigo 6K · 6th St`
+    ].join('<br>');
+
+    renderMatchRows({ w, h, qty, mat, fin }, total);
+  }
+}
+
+function renderMatchRows(q, ourTotal) {
+  const tbody = document.getElementById('matchRows');
+
+  tbody.innerHTML = COMPETITOR_ORDER.map(comp => {
+    const match = findBestMatch(comp, q);
+
+    if (!match) {
+      return `
+        <tr>
+          <td><strong>${comp}</strong></td>
+          <td><span class="match-badge match-nodata">NO DATA</span></td>
+          <td colspan="5" style="color:#9ca3af;font-size:12px;">No captured data for this competitor.</td>
+          <td>—</td>
+        </tr>
+      `;
+    }
+
+    const { cap, deltas, isExact, noPrice } = match;
+
+    // Price cell
+    let priceCell, unitCell;
+    if (noPrice) {
+      priceCell = '<span style="color:#dc2626;font-weight:700;">NO PRICE</span>';
+      unitCell  = '—';
+    } else {
+      priceCell = `<strong>${fmtMoney(cap.pricing.total)}</strong>`;
+      unitCell  = fmtUnit(cap.pricing.unit);
+    }
+
+    // vs Our Price
+    let vsCell = '—';
+    if (!noPrice && cap.pricing.total != null && ourTotal) {
+      const diff = cap.pricing.total - ourTotal;
+      const pct  = ((diff / ourTotal) * 100).toFixed(1);
+      if (diff > 0) {
+        vsCell = `<span class="delta-cheaper">We're $${Math.abs(diff).toFixed(0)} cheaper (${Math.abs(pct)}%)</span>`;
+      } else if (diff < 0) {
+        vsCell = `<span class="delta-higher">They beat us $${Math.abs(diff).toFixed(0)} (${Math.abs(pct)}%)</span>`;
+      } else {
+        vsCell = '<span style="color:#64748b;">Same price</span>';
+      }
+      if (!isExact) {
+        vsCell += '<div style="font-size:10px;color:#f59e0b;margin-top:2px;">⚠ Not exact spec — compare with caution</div>';
+      }
+    }
+
+    // Data point used
+    const specDesc = [
+      cap.specs.w != null ? `${cap.specs.w}"×${cap.specs.h}"` : 'size unknown',
+      cap.specs.qty != null ? cap.specs.qty.toLocaleString() + ' pcs' : 'qty unknown',
+      cap.specs.material || 'mat unknown',
+      cap.specs.finish || 'finish unknown'
+    ].join(' · ');
+
+    // Deltas display
+    let deltaCell;
+    if (isExact) {
+      deltaCell = '<span style="color:#16a34a;font-size:11px;">All matched fields agree ✓</span>';
+    } else if (noPrice) {
+      deltaCell = `<div style="font-size:10px;color:#dc2626;font-weight:600;">PRICE BLOCKED</div>
+                   <div style="font-size:10px;color:#64748b;margin-top:2px;">${cap.blocker || ''}</div>`;
+    } else {
+      deltaCell = deltas.map(d =>
+        `<div style="font-size:10px;color:#b45309;background:#fef3c7;border-radius:4px;padding:2px 6px;margin:1px 0;">⚠ ${d}</div>`
+      ).join('');
+      // Also note unknown fields that weren't mismatch-penalized but are gaps
+      if (!cap.specs.material) deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">material not captured</div>`;
+      if (!cap.specs.finish) deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">finish not captured</div>`;
+    }
+
+    // Turnaround + shipping
+    const ta = cap.pricing.turnaround ? `${cap.pricing.turnaround}d` : '—';
+    const ship = cap.pricing.shippingIncl === true ? '+ free ship' :
+                 cap.pricing.shippingIncl === false ? '+ ship extra' : 'ship unknown';
+
+    // Show spec-confirmed note for GotPrint if we found a promo match but also have confirmed spec
+    let specConfNote = '';
+    if (match.specConfirmedNoPrice) {
+      specConfNote = `<div style="font-size:10px;color:#2563eb;margin-top:4px;background:#eff6ff;padding:3px 6px;border-radius:4px;">
+        ℹ Also: 3"×3" spec <strong>confirmed</strong> in configurator — price blocked by Vue cascade / REST 401
+      </div>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <strong>${comp}</strong>
+          ${statusBadge(cap.status)}
+          <div style="font-size:10px;margin-top:2px;">
+            <a href="${cap.url}" target="_blank" style="color:#94a3b8;text-decoration:none;">↗ site</a>
+          </div>
+        </td>
+        <td>${matchBadge(isExact, noPrice)}</td>
+        <td>${priceCell}<br><span style="font-size:10px;color:#64748b;">${unitCell}</span></td>
+        <td style="font-size:12px;">${vsCell}</td>
+        <td style="font-size:11px;color:#374151;">${specDesc}${specConfNote}</td>
+        <td>${deltaCell}</td>
+        <td style="font-size:11px;white-space:nowrap;">${ta}<br>${ship}</td>
+        <td>${confBadge(cap.confidence)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── Render: coverage summary ─────────────────────────────────────────────────
+
+function renderCoverageSummary() {
+  const items = [
+    { comp: 'UPrinting',    status: 'live',    detail: '4 verified price points · 2×2 and 3×3 at 1k and 5k qty · EXACT MATCH for 3"×3"/5k ($505.85, 6-day)' },
+    { comp: 'Vistaprint',   status: 'partial', detail: '4 price points · 1×1/50 + 1×1/1k (HIGH) · Rounded Square/5k default (MEDIUM) · 3×3/5k directional (MEDIUM, size not DOM-confirmed)' },
+    { comp: 'Axiom Print',  status: 'partial', detail: '2 verified points · 2×3 at 250 + 2500 qty · 3"×3" NOT offered in standard configurator · 5k requires custom quote' },
+    { comp: 'GotPrint',     status: 'partial', detail: '3×3 spec CONFIRMED (Square-Rounded, White BOPP, Matte, 5k qty) · price blocked: Vue cascade + REST API 401 · promo example only ($72.92/2" circle)' },
+    { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · upload-first confirmed · no configure-then-price path exists · free shipping + 4-day included' }
+  ];
+
+  document.getElementById('coverageSummary').innerHTML = items.map(i => `
+    <div style="display:flex;align-items:flex-start;gap:8px;">
+      ${statusBadge(i.status)}
+      <div>
+        <strong style="font-size:12px;">${i.comp}</strong>
+        <div style="font-size:11px;color:#94a3b8;">${i.detail}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+function injectStyles() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .page-wrap { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+    .private-banner {
+      background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px;
+      padding: 10px 16px; margin-bottom: 18px; display: flex; align-items: center;
+      gap: 10px; font-size: 13px; color: #7f1d1d;
+    }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+    .page-header h2 { margin: 0; font-size: 22px; font-weight: 800; }
+    .page-header p  { margin: 6px 0 0; color: #64748b; font-size: 13px; }
+    .header-meta { text-align: right; font-size: 12px; color: #64748b; flex-shrink: 0; }
+    .meta-link { color: #2563eb; text-decoration: none; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
+    .card-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .filter-select { padding: 5px 8px; border: 1px solid #dbe3ee; border-radius: 6px; font-size: 12px; }
+    .count-badge { background: #f1f5f9; color: #64748b; font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+    .query-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 10px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select { padding: 7px 9px; border: 1px solid #dbe3ee; border-radius: 7px; font-size: 13px; }
+    .spec-line { font-size: 12px; color: #64748b; background: #f8fafc; border-radius: 7px; padding: 7px 12px; margin-top: 4px; }
+    .our-price-card { border-left: 4px solid #2563eb; }
+    .price-display { font-size: 28px; font-weight: 800; color: #0f172a; margin: 8px 0 2px; }
+    .price-unit { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+    .price-details { font-size: 11px; color: #94a3b8; line-height: 1.7; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th { padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; border-bottom: 2px solid #e2e8f0; background: #f8fafc; white-space: nowrap; }
+    .data-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #f8fafc; }
+    .cov-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
+    .cov-live    { background: #dcfce7; color: #15803d; }
+    .cov-partial { background: #fef3c7; color: #92400e; }
+    .cov-blocked { background: #fee2e2; color: #991b1b; }
+    .cov-manual  { background: #f3e8ff; color: #6b21a8; }
+    .conf-badge { display: inline-block; padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; }
+    .conf-high { background: #dcfce7; color: #15803d; }
+    .conf-med  { background: #fef3c7; color: #92400e; }
+    .conf-low  { background: #fee2e2; color: #991b1b; }
+    .conf-none { background: #f1f5f9; color: #64748b; }
+    .match-badge { display: inline-block; padding: 3px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap; }
+    .match-exact   { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+    .match-closest { background: #fef3c7; color: #78350f; border: 1px solid #fcd34d; }
+    .match-noprice { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+    .match-nodata  { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+    .delta-cheaper { color: #16a34a; font-weight: 700; font-size: 12px; }
+    .delta-higher  { color: #dc2626; font-weight: 700; font-size: 12px; }
+    .footer-note { text-align: center; margin-top: 20px; font-size: 11px; color: #9ca3af; }
+    .footer-note a { color: #9ca3af; }
+  `;
+  document.head.appendChild(s);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  injectThemeCSS();
+  injectStyles();
+  document.getElementById('nav').innerHTML = renderNav('competitor-pricing');
+  initAuth('competitor-pricing'); // same admin role gate as competitor-pricing.html
+
+  renderCapturesTable();
+  renderCoverageSummary();
+  runMatch();
+});
+
+</script>
+</body>
+</html>

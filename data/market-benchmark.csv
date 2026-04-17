@@ -1,31 +1,44 @@
-query_id,product_type,size_label,quantity,material,finish,competitor,competitor_display,price_type,confidence,coverage,total_price,unit_price,turnaround_days,shipping_included,spec_delta,notes,captured_at
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,694.44,0.1389,,,,Matte lamination included in frame price. 36 fits/frame = floor(12/3.24) × floor(39/3.24) = 3 × 12.,2026-04-17
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,uprinting,UPrinting,exact,high,exact_spec,505.85,0.1012,6,False,"exact match — size, material, qty all confirmed",Bootstrap dropdown size selection + Angular scope read. 6-day turnaround. Shipping not included.,2026-04-17
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,vistaprint,Vistaprint,directional,medium,size_unconfirmed,544.86,0.109,,,qty=5000 (matches). W=3/H=3 injected via Node.js — size not DOM-confirmed.,"DIRECTIONAL — W=3/H=3 injected into Cimpress API alongside Rounded Square selection. Size not confirmed via DOM. To verify: open VP in DevTools, select Rounded Square, check for selections[Custom Width] in Cimpress XHR.",2026-04-17
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,axiomprint,Axiom Print,directional,medium,different_size_and_qty_verified,,,,,"size=3x4 (not 3x3 — no 3x3 in configurator); qty=250 (max standard=2500, 5k = custom quote)","Standard configurator at /product/roll-labels-335 has NO 3x3 option. Available sizes: 2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5. Max qty=2500. 5k requires custom quote: 747-888-7777.",2026-04-17
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,gotprint,GotPrint,directional,medium,configurator_explored_upload_required_for_price,,,,False,"size=3"" x 3"" (EXACT), material=White BOPP (EXACT), qty=5000 available","Configurator at /products/roll-labels/order: shape=Square-Rounded, size=3x3 (variantId=32), White BOPP (paper ID=12), Matte Finish, qty=5000 ALL confirmed. Price blocked: Vue.js cascade disables paper/finish selects until upload completes. REST API 401. Manual human click-through needed.",2026-04-17
-3x3-5000-matte-bopp-cmyk,roll_labels,"3"" x 3""",5000,White BOPP,Matte,stickermule,Sticker Mule,directional,low,starting_price_only,,,4,True,,"$47 starting price from JSON-LD AggregateOffer. Free shipping, 4-day turnaround included. Upload-first site — no configure-then-price path. 5k pricing requires manual quote with artwork upload.",2026-04-17
-2x2-5000-matte-bopp-cmyk,roll_labels,"2"" x 2""",5000,White BOPP,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,500.0,0.1,,,,85 fits/frame = 5×17. 5000/85 = 58.8 → 59 frames. Tier: 25-frame min at $8.50/frame.,2026-04-17
-2x2-5000-matte-bopp-cmyk,roll_labels,"2"" x 2""",5000,White BOPP,Matte,uprinting,UPrinting,exact,high,exact_spec,309.16,0.06183,6,False,exact match,Verified via Playwright Bootstrap dropdown + Angular scope read. Shipping not included.,2026-04-17
-3x3-1000-matte-bopp-cmyk,roll_labels,"3"" x 3""",1000,White BOPP,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,236.11,0.2361,,,,36 fits/frame. 1000/36 = 27.8 → 28 frames. Tier: 25-frame min at $8.50/frame.,2026-04-17
-3x3-1000-matte-bopp-cmyk,roll_labels,"3"" x 3""",1000,White BOPP,Matte,uprinting,UPrinting,exact,high,exact_spec,222.26,0.22226,,False,exact match,Verified via Playwright Bootstrap dropdown + Angular scope read. Shipping not included.,2026-04-17
-2x2-1000-matte-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,235.29,0.2353,,,,85 fits/frame. 1000/85 = 11.76 → 12 frames. Tier: 6-frame min at $20.00/frame.,2026-04-17
-2x2-1000-matte-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Matte,uprinting,UPrinting,exact,high,exact_spec,131.23,0.13123,,False,exact match,Default configurator state. Angular scope read. Shipping not included.,2026-04-17
-2x2-1000-matte-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Matte,vistaprint,Vistaprint,directional,medium,different_size_verified,,,,,qty=1000 (exact); size=1x1 (not 2x2); material=White Paper (not BOPP),Closest VP data: 1×1/1k at $110.24 (high confidence). Size and material differ — expect 2×2 BOPP to be more expensive.,2026-04-17
-2x2-1000-gloss-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Gloss,bazaar_internal,Bazaar (Internal),calculated,high,exact,235.29,0.2353,,,,Gloss included in frame price (same as matte). Same calc as 2x2-1000-matte.,2026-04-17
-2x2-1000-gloss-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Gloss,stickermule,Sticker Mule,directional,medium,starting_price_only,,,,,,Starting price $47 — plausible ballpark for 1000 small labels. Shipping included.,2026-04-17
-2x2-1000-gloss-bopp-cmyk,roll_labels,"2"" x 2""",1000,White BOPP,Gloss,gotprint,GotPrint,directional,low,reference_anchor_only,,,,,,"Reference only: $72.92 for 2"" circles. Qty unknown, shape differs.",2026-04-17
-1x1-1000-matte-paper-cmyk,roll_labels,"1"" x 1""",1000,White Paper,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,71.68,0.0717,,,,279 fits/frame = floor(12/1.24)×floor(39/1.24) = 9×31. 1000/279 = 3.58→4 frames. $20.00/frame. Matte included.,2026-04-17
-1x1-1000-matte-paper-cmyk,roll_labels,"1"" x 1""",1000,White Paper,Matte,vistaprint,Vistaprint,exact,high,exact_spec,110.24,0.12,,,exact match for size/qty/material/finish,Intercepted from Cimpress estimatedPrices API. High confidence. Material=White Paper (not BOPP).,2026-04-17
-4x2-10000-matte-bopp-cmyk,roll_labels,"4"" x 2""",10000,White BOPP,Matte,bazaar_internal,Bazaar (Internal),calculated,high,exact,1111.11,0.1111,,,,45 fits/frame (height-on-web: floor(12/2.24)×floor(39/4.24)=5×9). 10000/45=222.2→223 frames. Tier: 120-frame min at $5/frame.,2026-04-17
-box-ste-4x2x5-250-18pt-gloss,folding_cartons,"L4"" x W2"" x D5""",250,18pt Cardstock (SBS),Gloss front,uprinting,UPrinting,exact,high,exact_spec,675,2.7,10,False,"exact match — all dimensions, material, and qty confirmed","Angular scope read. Style=Straight Tuck End, L=4/W=2/D=5, 18pt SBS cardstock, Gloss front, 8-10 business day turnaround. Flat sheet: 12.75""×10.65"". Shipping not included.",2026-04-17
-box-ste-4x2x5-500-18pt-gloss,folding_cartons,"L4"" x W2"" x D5""",500,18pt Cardstock (SBS),Gloss front,uprinting,UPrinting,exact,high,exact_spec,1180,2.36,10,False,exact match,Angular scope read. Same spec as 250 pcs variant.,2026-04-17
-box-ste-4x2x5-1000-18pt-gloss,folding_cartons,"L4"" x W2"" x D5""",1000,18pt Cardstock (SBS),Gloss front,uprinting,UPrinting,exact,high,exact_spec,1690,1.69,10,False,exact match,,2026-04-17
-box-ste-4x2x5-2000-18pt-gloss,folding_cartons,"L4"" x W2"" x D5""",2000,18pt Cardstock (SBS),Gloss front,uprinting,UPrinting,exact,high,exact_spec,2020,1.01,10,False,exact match,,2026-04-17
-box-ste-4x2x5-2500-18pt-gloss,folding_cartons,"L4"" x W2"" x D5""",2500,18pt Cardstock (SBS),Gloss front,uprinting,UPrinting,exact,high,exact_spec,2250,0.9,10,False,exact match,,2026-04-17
-pouch-sup-4375x6-500-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",500,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,630.22,1.26,6,False,"exact match — all dimensions, material, qty confirmed","Angular scope read. 6-day turnaround. Perf=Yes, Window=No, Hang Hole=None. Shipping not included.",2026-04-17
-pouch-sup-4375x6-100-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",100,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,434.67,4.347,6,False,exact match,,2026-04-17
-pouch-sup-4375x6-250-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",250,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,505.87,2.023,6,False,exact match,,2026-04-17
-pouch-sup-4375x6-1000-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",1000,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,897.26,0.897,6,False,exact match,,2026-04-17
-pouch-sup-4375x6-2500-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",2500,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,1664.25,0.666,6,False,exact match,,2026-04-17
-pouch-sup-4375x6-5000-white,stand_up_pouches,"W4.375"" x H6.0"" x G2.0""",5000,Thick Gauge White,"Front Only, No Window, Perf",uprinting,UPrinting,exact,high,exact_spec,2941,0.588,6,False,exact match,,2026-04-17
+query_id,product_type,competitor,size,quantity,material,total_price,unit_price,confidence,status,capture_date
+3x3-5000-matte-bopp-cmyk,roll_labels,uprinting,3x3,5000,White BOPP,505.85,0.1012,high,live,2026-04-17
+3x3-5000-matte-bopp-cmyk,roll_labels,vistaprint,3x3,5000,White BOPP,544.86,0.109,medium,partial,2026-04-17
+3x3-5000-matte-bopp-cmyk,roll_labels,gotprint,3x3,5000,White BOPP,356.8,0.07136,high,live,2026-04-17
+2x2-5000-matte-bopp-cmyk,roll_labels,uprinting,2x2,5000,White BOPP,309.16,0.06183,high,live,2026-04-17
+3x3-1000-matte-bopp-cmyk,roll_labels,uprinting,3x3,1000,White BOPP,222.26,0.22226,high,live,2026-04-17
+3x3-1000-matte-bopp-cmyk,roll_labels,gotprint,3x3,1000,White BOPP,148.91,0.14891,high,live,2026-04-17
+2x2-1000-matte-bopp-cmyk,roll_labels,uprinting,2x2,1000,White BOPP,131.23,0.13123,high,live,2026-04-17
+1x1-1000-matte-paper-cmyk,roll_labels,vistaprint,1x1,1000,White Paper,110.24,0.12,high,partial,2026-04-17
+4x2-10000-matte-bopp-cmyk,roll_labels,uprinting,4x2,10000,White BOPP,683.03,0.0683,high,live,2026-04-17
+box-ste-4x2x5-250-18pt-gloss,folding_cartons,uprinting,2x?,250,18pt Cardstock (SBS),675,2.7,high,live,2026-04-17
+box-ste-4x2x5-250-18pt-gloss,folding_cartons,packola,2x?,250,18pt Cardstock (SBS),717.5,2.87,high,live,2026-04-17
+box-ste-4x2x5-500-18pt-gloss,folding_cartons,uprinting,2x?,500,18pt Cardstock (SBS),1180,2.36,high,live,2026-04-17
+box-ste-4x2x5-500-18pt-gloss,folding_cartons,packola,2x?,500,18pt Cardstock (SBS),1255,2.51,high,live,2026-04-17
+box-ste-4x2x5-1000-18pt-gloss,folding_cartons,uprinting,2x?,1000,18pt Cardstock (SBS),1690,1.69,high,live,2026-04-17
+box-ste-4x2x5-1000-18pt-gloss,folding_cartons,packola,2x?,1000,18pt Cardstock (SBS),1800,1.8,high,live,2026-04-17
+box-ste-4x2x5-2000-18pt-gloss,folding_cartons,uprinting,2x?,2000,18pt Cardstock (SBS),2020,1.01,high,live,2026-04-17
+box-ste-4x2x5-2000-18pt-gloss,folding_cartons,packola,2x?,2000,18pt Cardstock (SBS),2160,1.08,high,live,2026-04-17
+box-ste-4x2x5-2500-18pt-gloss,folding_cartons,uprinting,2x?,2500,18pt Cardstock (SBS),2250,0.9,high,live,2026-04-17
+box-ste-4x2x5-2500-18pt-gloss,folding_cartons,packola,2x?,2500,18pt Cardstock (SBS),2400,0.96,high,live,2026-04-17
+pouch-sup-4375x6-500-white,stand_up_pouches,uprinting,4.375x6,500,Thick Gauge White,630.22,1.26,high,live,2026-04-17
+pouch-sup-4375x6-500-white,stand_up_pouches,packola,4.375x6,500,Thick Gauge White,462.76,0.93,medium,live,2026-04-17
+pouch-sup-4375x6-100-white,stand_up_pouches,uprinting,4.375x6,100,Thick Gauge White,434.67,4.347,high,live,2026-04-17
+pouch-sup-4375x6-250-white,stand_up_pouches,uprinting,4.375x6,250,Thick Gauge White,505.87,2.023,high,live,2026-04-17
+pouch-sup-4375x6-250-white,stand_up_pouches,packola,4.375x6,250,Thick Gauge White,421.51,1.69,medium,live,2026-04-17
+pouch-sup-4375x6-1000-white,stand_up_pouches,uprinting,4.375x6,1000,Thick Gauge White,897.26,0.897,high,live,2026-04-17
+pouch-sup-4375x6-1000-white,stand_up_pouches,packola,4.375x6,1000,Thick Gauge White,545.29,0.55,medium,live,2026-04-17
+pouch-sup-4375x6-2500-white,stand_up_pouches,uprinting,4.375x6,2500,Thick Gauge White,1664.25,0.666,high,live,2026-04-17
+pouch-sup-4375x6-2500-white,stand_up_pouches,packola,4.375x6,2500,Thick Gauge White,792.83,0.32,medium,live,2026-04-17
+pouch-sup-4375x6-5000-white,stand_up_pouches,uprinting,4.375x6,5000,Thick Gauge White,2941,0.588,high,live,2026-04-17
+pouch-sup-4375x6-5000-white,stand_up_pouches,packola,4.375x6,5000,Thick Gauge White,1205.42,0.24,medium,live,2026-04-17
+up-2x3-1000-matte-bopp,roll_labels,uprinting,2x3,1000,White BOPP,95.87,0.09587,high,live,2026-04-17
+up-2x3-5000-matte-bopp,roll_labels,uprinting,2x3,5000,White BOPP,204.27,0.04085,high,live,2026-04-17
+up-4x4-1000-matte-bopp,roll_labels,uprinting,4x4,1000,White BOPP,268.21,0.26821,high,live,2026-04-17
+up-4x4-5000-matte-bopp,roll_labels,uprinting,4x4,5000,White BOPP,789.05,0.15781,high,live,2026-04-17
+2x2-10000-matte-bopp-cmyk,roll_labels,uprinting,2x2,10000,White BOPP,400,0.04,high,live,2026-04-17
+axiom-2x3-250-bopp,roll_labels,axiomprint,2x3,250,White Matte BOPP,112.68,0.4507,high,live,2026-04-17
+axiom-2x3-500-bopp,roll_labels,axiomprint,2x3,500,White Matte BOPP,124.76,0.2495,high,live,2026-04-17
+axiom-2x3-1000-bopp,roll_labels,axiomprint,2x3,1000,White Matte BOPP,148.32,0.1483,high,live,2026-04-17
+axiom-2x3-2500-bopp,roll_labels,axiomprint,2x3,2500,White Matte BOPP,213.27,0.0853,high,live,2026-04-17
+axiom-3x4-250-bopp,roll_labels,axiomprint,3x4,250,White Matte BOPP,120.28,0.4811,high,live,2026-04-17
+axiom-3x4-500-bopp,roll_labels,axiomprint,3x4,500,White Matte BOPP,139.45,0.2789,high,live,2026-04-17
+axiom-3x4-1000-bopp,roll_labels,axiomprint,3x4,1000,White Matte BOPP,176.67,0.1767,high,live,2026-04-17
+axiom-3x4-2500-bopp,roll_labels,axiomprint,3x4,2500,White Matte BOPP,277.76,0.1111,high,live,2026-04-17
