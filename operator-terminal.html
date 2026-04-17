@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v17"></script>
+  <script src="shared.js?v=20260417-v18"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -638,7 +638,8 @@
           <button class="btn-scan" onclick="doQRScan()">Go</button>
         </div>
       </div>
-      <div style="padding:5px 8px 4px;border-bottom:1px solid #eef0f3;background:#f8f9fb;">
+      <div style="padding:5px 8px 4px;border-bottom:1px solid #eef0f3;background:#f8f9fb;display:grid;gap:6px;">
+        <input type="text" id="queue-filter" placeholder="Filter job, customer, material..." oninput="refreshQueue()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;background:#fff;box-sizing:border-box;">
         <select id="queue-sort" onchange="refreshQueue()" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;background:#fff;">
           <option value="rush-due">🚨 Rush → Due Date</option>
           <option value="due-asc">⏰ Time A→Z (Earliest)</option>
@@ -941,10 +942,10 @@ function startLoginClock() {
 async function populateOperatorList() {
   const sel = document.getElementById('operator-select');
   const names = Object.keys(OPERATOR_PROFILES);
-  // Also load from DB in case there are extra operators
   let dbPeople = [];
   try { dbPeople = await getAllPersonnel(); } catch (e) {}
-  const extraNames = dbPeople.map(p => p.name).filter(n => !names.includes(n));
+  const operatorPeople = dbPeople.filter(p => ['operator','supervisor'].includes(p.role || 'operator'));
+  const extraNames = operatorPeople.map(p => p.name).filter(n => !names.includes(n));
   [...names, ...extraNames].forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
@@ -954,7 +955,7 @@ async function populateOperatorList() {
 }
 
 // ── OPERATOR SELECT ───────────────────────────────────────────────────
-function onOperatorSelect(name) {
+async function onOperatorSelect(name) {
   const preview = document.getElementById('op-preview');
   const btn = document.getElementById('btn-clock-in');
   const userIdRow = document.getElementById('user-id-row');
@@ -966,7 +967,7 @@ function onOperatorSelect(name) {
     if (userIdRow) userIdRow.style.display = 'none';
     return;
   }
-  const profile = OPERATOR_PROFILES[name];
+  const profile = await getOperatorProfile(name);
   if (profile) {
     document.getElementById('prev-name').textContent = name;
     document.getElementById('prev-role').textContent = profile.role;
@@ -996,9 +997,9 @@ function onOperatorSelect(name) {
   }
 }
 
-function onUserIdInput() {
+async function onUserIdInput() {
   const name = document.getElementById('operator-select').value;
-  const profile = OPERATOR_PROFILES[name] || {};
+  const profile = await getOperatorProfile(name) || {};
   const entered = (document.getElementById('user-id-input')?.value || '').trim();
   const btn = document.getElementById('btn-clock-in');
   const result = document.getElementById('user-id-result');
@@ -1245,7 +1246,7 @@ async function refreshCoins() {
 // ── QUEUE REFRESH ─────────────────────────────────────────────────────
 async function refreshQueue() {
   if (!currentOperator) return;
-  const profile = OPERATOR_PROFILES[currentOperator];
+  const profile = await getOperatorProfile(currentOperator);
   const myMachines = profile ? profile.machines : [];
 
   let orders = [];
@@ -1276,6 +1277,17 @@ async function refreshQueue() {
       }
     }
   });
+
+  const queueFilter = (document.getElementById('queue-filter')?.value || '').trim().toLowerCase();
+  if (queueFilter) {
+    const matchesFilter = ({ order, step }) => [order.orderId, order.customer, order.customerName, order.productType, order.material, step?.machine, step?.operation]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(queueFilter);
+    myJobs.splice(0, myJobs.length, ...myJobs.filter(matchesFilter));
+    comingJobs.splice(0, comingJobs.length, ...comingJobs.filter(matchesFilter));
+  }
 
   const sortMode = document.getElementById('queue-sort')?.value || 'rush-due';
   const sortFn = (a, b) => {
@@ -1320,10 +1332,11 @@ async function refreshQueue() {
     const line = getProductionLine(order);
     const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
     const overdue   = isOverdue(order.dueDate);
+    const pausedIcon = step?.status === 'paused' || order.status === 'on-hold' ? '<span title="Paused / on hold" style="margin-left:6px;">⏸️</span>' : '';
     html += `<div class="queue-item ${isActive ? 'active' : ''}"
       style="border-left-color:${lineColor};"
       onclick="selectJob(${order.id})">
-      <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
+      <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)} ${pausedIcon}</div>
       <div class="qi-customer">${escHtml(order.customer || '—')}</div>
       <div class="qi-product">${escHtml(order.productType || '—')}</div>
       <div class="qi-meta">
@@ -1339,10 +1352,11 @@ async function refreshQueue() {
     comingJobs.forEach(({ order, step }) => {
       const line = getProductionLine(order);
       const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
+      const pausedIcon = step?.status === 'paused' || order.status === 'on-hold' ? '<span title="Paused / on hold" style="margin-left:6px;">⏸️</span>' : '';
       html += `<div class="queue-item coming"
         style="border-left-color:${lineColor}; opacity:0.75;"
         onclick="selectJob(${order.id})">
-        <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
+        <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)} ${pausedIcon}</div>
         <div class="qi-customer">${escHtml(order.customer || '—')}</div>
         <div class="qi-product">${escHtml(order.productType || '—')}</div>
         <div class="qi-meta">
@@ -1481,11 +1495,15 @@ async function renderJobDetail(order) {
     ? `${fmtDate(order.dueDate)}${daysLeft !== null ? (daysLeft < 0 ? ` (${Math.abs(daysLeft)}d OVERDUE)` : daysLeft === 0 ? ' (due today!)' : ` (${daysLeft}d left)`) : ''}`
     : '—';
 
+  const pausedBadge = step?.status === 'paused' || order.status === 'on-hold'
+    ? `<span style="font-size:12px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;padding:4px 8px;border-radius:999px;">⏸️ ${order.status === 'on-hold' ? 'Hold' : 'Paused'}</span>`
+    : '';
   html += `<div class="job-header-card" style="border-left-color:${lineColor};">
     <div class="jh-row1">
       <span class="jh-order">#${order.orderId || order.id}</span>
       <span class="jh-customer">${escHtml(order.customer || '—')}</span>
-      ${renderStatusBadge(order.status || 'new')}
+      ${renderStatusBadge(order.status === 'on-hold' ? 'on-hold' : (step?.status === 'paused' ? 'prepress-paused' : (order.status || 'new')))}
+      ${pausedBadge}
       <span class="jh-due ${overdueClass}" style="margin-left:auto;">📅 ${dueStr}</span>
     </div>
     <div class="jh-row2">

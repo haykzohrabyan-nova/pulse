@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v16"></script>
-  <script src="auth.js?v=20260417-v16"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -45,6 +45,7 @@
     </div>
     <div class="sidebar-section">
       <a href="job-ticket.html" class="btn btn-primary" style="width:100%;text-align:center;justify-content:center;">+ New Job</a>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.45;">Ticket editing is done in pop up window. Related ticket examples: 17919_1, 17919_1_R1, 17919_1_RS.</div>
     </div>
     <div class="sidebar-stats" id="sidebarStats"></div>
   </div>
@@ -231,7 +232,7 @@
         <label>Redirect Amount</label>
         <div style="display:flex;gap:8px;margin-top:4px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
-            <input type="radio" name="redirectType" value="full" checked onchange="toggleRedirectQty()"> Full Job
+            <input type="radio" name="redirectType" value="full" checked onchange="toggleRedirectQty()"> Entire Ticket
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
             <input type="radio" name="redirectType" value="partial" onchange="toggleRedirectQty()"> Partial
@@ -1126,7 +1127,7 @@ async function confirmRedirect() {
     // Partial redirect: split the step — keep original with reduced qty, add new step for the partial
     const partialQty = parseInt(document.getElementById('redirectQty').value) || 0;
     if (!partialQty || partialQty <= 0) { alert('Please enter the quantity to redirect.'); return; }
-    if (partialQty >= (order.quantity || 0)) { alert('Partial quantity must be less than the total. Use "Full Job" for full redirect.'); return; }
+    if (partialQty >= (order.quantity || 0)) { alert('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.'); return; }
 
     // Mark the partial redirect on the existing step
     const steps = [...order.workflowSteps];

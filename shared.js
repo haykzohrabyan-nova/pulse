@@ -5,7 +5,7 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v16';
+const PULSE_UI_VERSION = 'v18';
 
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
   const localConfigScript = document.createElement('script');
@@ -1606,11 +1606,27 @@ function _delete(storeName, id) {
 
 // ── Order CRUD ─────────────────────────────────────────────
 
+function getOrderIdBase(orderId) {
+  return String(orderId || '').split('_')[0] || '';
+}
+
+function getNormalizedOrderFamily(orderId) {
+  const raw = String(orderId || '').trim();
+  if (!raw) return { base: '', sub: null, suffix: '' };
+  const parts = raw.split('_');
+  const base = parts[0] || '';
+  const sub = parts[1] || null;
+  const suffix = parts.slice(2).join('_') || '';
+  return { base, sub, suffix };
+}
+
 async function generateOrderId() {
   const orders = await getAllOrders();
-  if (orders.length === 0) return '17900';
-  const maxId = Math.max(...orders.map(o => parseInt(o.orderId) || 0));
-  return String(maxId + 1);
+  const baseIds = orders
+    .map(o => parseInt(getOrderIdBase(o.orderId), 10))
+    .filter(Number.isFinite);
+  if (baseIds.length === 0) return '17900';
+  return String(Math.max(...baseIds) + 1);
 }
 
 function addOrder(order) {
@@ -1642,18 +1658,17 @@ async function getSubTicketProgress(parentOrderId) {
 async function generateSubTicketId(parentOrderId) {
   const all = await getAllOrders();
   const allIds = new Set(all.map(o => String(o.orderId)));
-  const prefix = String(parentOrderId) + '-';
+  const parentBase = getOrderIdBase(parentOrderId);
   let maxNum = 0;
   all.forEach(o => {
-    const id = String(o.orderId);
-    if (id.startsWith(prefix)) {
-      const suffix = parseInt(id.slice(prefix.length)) || 0;
-      if (suffix > maxNum) maxNum = suffix;
+    const { base, sub } = getNormalizedOrderFamily(o.orderId);
+    if (base === parentBase && sub && /^\d+$/.test(sub)) {
+      maxNum = Math.max(maxNum, parseInt(sub, 10));
     }
   });
-  let nextNum = maxNum + 1;
-  while (allIds.has(prefix + nextNum)) nextNum++;
-  return prefix + nextNum;
+  let nextNum = maxNum > 0 ? maxNum + 1 : 1;
+  while (allIds.has(`${parentBase}_${nextNum}`)) nextNum++;
+  return `${parentBase}_${nextNum}`;
 }
 
 function getOrderByOrderId(orderId) {
@@ -1829,6 +1844,21 @@ function addPersonnel(person) {
 function getAllPersonnel() { return _getAll('personnel'); }
 function updatePersonnel(id, changes) { return _update('personnel', id, changes); }
 function deletePersonnel(id) { return _delete('personnel', id); }
+async function getPersonnelByName(name) {
+  const people = await getAllPersonnel();
+  return people.find(p => p.name === name) || null;
+}
+async function getOperatorProfile(name) {
+  const staticProfile = OPERATOR_PROFILES[name] || null;
+  const dbPerson = await getPersonnelByName(name);
+  if (!staticProfile && !dbPerson) return null;
+  return {
+    ...(staticProfile || {}),
+    ...(dbPerson || {}),
+    name,
+    machines: dbPerson?.machines || staticProfile?.machines || [],
+  };
+}
 
 // ── Device CRUD ────────────────────────────────────────────
 
@@ -1949,7 +1979,23 @@ async function createReprintOrderFromSource(sourceOrder, meta = {}) {
   const quantity = parseInt(meta.quantity ?? meta.shortfall ?? sourceOrder.quantity) || 0;
   if (!quantity) throw new Error('Reprint quantity is required');
 
-  const orderId = await generateOrderId();
+  const allOrders = await getAllOrders();
+  const sourceFamily = getNormalizedOrderFamily(sourceOrder.orderId);
+  const orderStem = sourceFamily.sub ? `${sourceFamily.base}_${sourceFamily.sub}` : `${sourceFamily.base}_1`;
+  const isShortage = String(meta.reasonLabel || meta.reason || '').toLowerCase() === 'shortage';
+  let orderId;
+  if (isShortage) {
+    orderId = `${orderStem}_RS`;
+    if (allOrders.some(o => String(o.orderId) === orderId)) {
+      let shortageNum = 2;
+      while (allOrders.some(o => String(o.orderId) === `${orderStem}_RS${shortageNum}`)) shortageNum++;
+      orderId = `${orderStem}_RS${shortageNum}`;
+    }
+  } else {
+    let reprintNum = 1;
+    while (allOrders.some(o => String(o.orderId) === `${orderStem}_R${reprintNum}`)) reprintNum++;
+    orderId = `${orderStem}_R${reprintNum}`;
+  }
   const workflowSteps = (sourceOrder.workflowSteps || []).map((step, idx) => ({
     ...step,
     id: generateStepId(),

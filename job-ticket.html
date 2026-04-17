@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v16"></script>
-  <script src="auth.js?v=20260417-v16"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -58,10 +58,10 @@
           <div style="display:grid;grid-template-columns:minmax(250px,320px) minmax(240px,1fr);gap:16px;align-items:end;">
             <div class="field" style="margin-bottom:0;">
               <label style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;">🎫 Job Ticket #</label>
-              <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 (auto-generated if blank)" style="font-size:16px;font-weight:600;" oninput="clearOrderIdError()">
+              <input type="text" id="jobTicketNumber" placeholder="e.g. 18000 or 18000_1 (auto-generated if blank)" style="font-size:16px;font-weight:600;" oninput="clearOrderIdError()">
             </div>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
-              <div style="font-size:10px;color:var(--text-muted);max-width:340px;line-height:1.35;">Leave blank for auto-assign. Sub-tickets: 18000-1, 18000-2, etc.</div>
+              <div style="font-size:10px;color:var(--text-muted);max-width:340px;line-height:1.35;">Leave blank for auto-assign. Sub-tickets use 18000_1, 18000_2. Reprints use 18000_1_R1. Shortages use 18000_1_RS.</div>
               <div style="display:flex;gap:18px;align-items:center;font-size:12px;flex-wrap:wrap;justify-content:flex-end;">
                 <div style="color:var(--text-muted);">📅 Created: <strong id="creationDateStamp" style="color:var(--text);"></strong></div>
                 <div id="dueDateCountdown" style="font-weight:700;"></div>
@@ -1562,7 +1562,7 @@ function applyEditLock(order) {
   banner.innerHTML = `
     <div>
       <div style="font-size:13px;font-weight:800;color:#9a3412;text-transform:uppercase;">🔒 Editing Locked</div>
-      <div style="font-size:12px;color:#c2410c;margin-top:4px;">Job is in <strong>${order.status}</strong> stage. Only Prepress Not Started and On Hold tickets can be edited directly.</div>
+      <div style="font-size:12px;color:#c2410c;margin-top:4px;">Please note you cannot edit already approved or rejected job tickets. Ticket editing is done in pop up window. Direct editing is only available for Prepress Not Started and On Hold tickets.</div>
     </div>
     <button type="button" onclick="openAdminCodeModal()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔑 Admin Edit</button>
   `;
@@ -2582,8 +2582,9 @@ function renderAccountManagerIssueBanner(order) {
 
   if (order?.status === 'pending-account-manager') {
     banner.style.display = 'block';
-    textEl.textContent = order.prepressIssueComment || 'Prepress sent this ticket back for fixes.';
-    metaEl.textContent = `${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}`;
+    const stampedAt = order.prepressIssueAt ? formatDateTime(order.prepressIssueAt) : '';
+    textEl.textContent = `${stampedAt ? `[${stampedAt}] ` : ''}${order.prepressIssueComment || 'Prepress sent this ticket back for fixes.'}`;
+    metaEl.textContent = `${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}${order.prepressResubmittedAt ? ` • Sales updated ${formatDateTime(order.prepressResubmittedAt)}` : ''}`;
   } else {
     banner.style.display = 'none';
     textEl.textContent = '';
@@ -2904,13 +2905,15 @@ async function renderQueuePane() {
     const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
     const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
+    const editableStatuses = ['prepress','on-hold','new'];
+    const salesLock = editableStatuses.includes(o.status) ? '' : '<span title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
       : o.facility === '16th-street'
       ? '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;margin-left:4px;">16th</span>' : '';
     return '<div class="qp-card" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
       + '<div class="qp-card-info">'
-      + '<div class="qp-card-id">#' + o.orderId + facilityTag + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
+      + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
       + '<div class="qp-card-meta">' + (o.productType||'\u2014') + ' \u00b7 ' + (o.quantity||0).toLocaleString() + ' pcs' + '</div>'
       + '<div class="qp-card-meta">' + (o.material ? '\ud83e\uddfe '+o.material : '') + (o.accountManager ? (o.material?' \u00b7 ':'')+o.accountManager : '') + '</div>'
@@ -2941,7 +2944,7 @@ function showAfterSavePrompt(savedOrderId, customerName, rep) {
       <div style="font-size:36px;margin-bottom:12px;">✅</div>
       <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Job Ticket #${savedOrderId} Saved!</h2>
       <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">${customerName || 'Order'} — ${rep || ''}</p>
-      <p style="font-weight:600;font-size:14px;margin-bottom:20px;">Does this order have more items?<br><span style="font-weight:400;font-size:12px;color:#6b7280;">e.g. boxes, different material, different size</span></p>
+      <p style="font-weight:600;font-size:14px;margin-bottom:20px;">Does this order have more items?<br><span style="font-weight:400;font-size:12px;color:#6b7280;">Use ticket IDs like 17919_1, 17919_1_R1, 17919_1_RS when related items are created.</span></p>
       <div style="display:flex;gap:12px;justify-content:center;">
         <button onclick="window.location.href='production-manager.html'" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;font-size:14px;font-weight:600;cursor:pointer;">No, I'm Done</button>
         <button onclick="window.location.href='job-ticket.html?parent=${savedOrderId}'" style="padding:12px 24px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">➕ Add Sub-Ticket</button>

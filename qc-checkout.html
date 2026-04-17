@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QC Checkout — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v17"></script>
-  <script src="auth.js?v=20260417-v17"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -19,10 +19,18 @@
   <!-- Order Search -->
   <div class="card qc-search-section" id="searchSection">
     <h3 style="margin-bottom:14px;font-size:15px;font-weight:700;">Find Order for QC</h3>
-    <div style="display:flex;gap:10px;align-items:flex-end;">
-      <div class="field" style="flex:1;">
-        <label>Search by Order ID or Customer Name</label>
-        <input type="text" id="qcSearch" placeholder="e.g. 17900 or Green Leaf..." oninput="searchOrders()">
+    <div style="display:grid;gap:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="ci-btn ci-na selected" id="qcFilterQueue" onclick="setQcSearchFilter('queue')">QC Queue</button>
+        <button type="button" class="ci-btn" id="qcFilterFailed" onclick="setQcSearchFilter('failed')">QC Failed</button>
+        <button type="button" class="ci-btn" id="qcFilterDone" onclick="setQcSearchFilter('done')">Done</button>
+        <button type="button" class="ci-btn" id="qcFilterAll" onclick="setQcSearchFilter('all')">All Open</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="field" style="flex:1;">
+          <label>Search by Order ID or Customer Name</label>
+          <input type="text" id="qcSearch" placeholder="e.g. 17919_1 or Green Leaf..." oninput="searchOrders()">
+        </div>
       </div>
     </div>
     <div id="searchResults" style="margin-top:12px;"></div>
@@ -175,6 +183,7 @@ let selectedOrderDbId = null;
 let selectedOrder = null;
 let currentVerdict = null;
 let checklistResults = {}; // { itemId: 'pass'|'fail'|'na' }
+let qcSearchFilter = 'queue';
 
 // ── Init ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -194,17 +203,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ── Search ────────────────────────────────────────────────
+function setQcSearchFilter(filter) {
+  qcSearchFilter = filter;
+  ['queue','failed','done','all'].forEach(key => {
+    const el = document.getElementById(`qcFilter${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+    if (el) el.classList.toggle('selected', key === filter);
+  });
+  searchOrders();
+}
+
 async function searchOrders() {
   const q = document.getElementById('qcSearch').value.trim().toLowerCase();
   const results = document.getElementById('searchResults');
-  if (!q) { results.innerHTML = ''; return; }
 
   const allOrders = await getAllOrders();
-  const filtered = allOrders.filter(o => {
-    if (['shipped', 'received', 'completed'].includes(o.status)) return false;
-    const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
-    return haystack.includes(q);
-  }).slice(0, 8);
+  let filtered = allOrders.filter(o => {
+    if (qcSearchFilter === 'queue') return o.status === 'qc-checkout';
+    if (qcSearchFilter === 'failed') return o.status === 'qc-failed';
+    if (qcSearchFilter === 'done') return ['ready-to-ship','completed','shipped','received'].includes(o.status);
+    return !['shipped', 'received', 'completed'].includes(o.status);
+  });
+
+  if (q) {
+    filtered = filtered.filter(o => {
+      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }
+
+  filtered = filtered.slice(0, 8);
 
   if (filtered.length === 0) {
     results.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No orders found.</div>';

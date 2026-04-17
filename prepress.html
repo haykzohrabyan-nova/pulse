@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v16"></script>
-  <script src="auth.js?v=20260417-v16"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -98,9 +98,10 @@
       <div class="action-stack">
         <button class="btn btn-primary" style="background:#2563eb;" onclick="startReview()">▶ Start Review</button>
         <button class="btn btn-warning" onclick="pauseReview()">⏸ Pause</button>
-        <button class="btn btn-danger" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
+        <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
         <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
       </div>
+      <div id="prepressActionHint" style="font-size:12px;color:#92400e;margin-top:8px;">Start Review before using Send Back to Account Manager.</div>
     </div>
   </aside>
 </div>
@@ -218,7 +219,7 @@ function renderQueue() {
       <div class="queue-item-meta">${order.customerName || order.customer || '—'}</div>
       <div class="queue-item-meta">${order.productType || '—'} · ${(order.quantity || 0).toLocaleString()} pcs</div>
       <div class="queue-item-meta">Rep: ${order.accountManager || '—'}${order.isReprint ? ` · 🔁 from #${order.reprintOfOrderId}` : ''}</div>
-      ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueComment}</div>` : ''}
+      ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}</div>` : ''}
     </div>
   `).join('');
 }
@@ -259,6 +260,9 @@ function renderDetail() {
   document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
   document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
   document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
+  const lockedNotice = ['pending-review','qc-failed','ready-to-ship','completed','shipped','received'].includes(order.status)
+    ? `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #fed7aa;background:#fff7ed;font-size:12px;color:#9a3412;">Please note you cannot edit already approved or rejected job tickets.</div>`
+    : '';
   // (Open Job Ticket link removed per David's request)
 
   document.getElementById('detailInfo').innerHTML = [
@@ -280,7 +284,8 @@ function renderDetail() {
     ...(order.foilFile ? [order.foilFile] : [])
   ];
   document.getElementById('detailArtwork').innerHTML = `
-    ${order.specialNotes ? `<div style="font-size:13px;margin-bottom:12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
+    ${lockedNotice}
+    ${order.specialNotes ? `<div style="font-size:13px;margin:0 0 12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
     ${renderArtwork(artworkFiles)}
   `;
 
@@ -303,7 +308,7 @@ function renderDetail() {
   const issueBox = document.getElementById('lastIssueBox');
   if (order.prepressIssueComment) {
     issueBox.style.display = 'block';
-    issueBox.innerHTML = `<strong>Last prepress issue</strong><br>${order.prepressIssueComment}<br><span style="font-size:11px;">${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}</span>`;
+    issueBox.innerHTML = `<strong>Last prepress issue</strong><br>${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}<br><span style="font-size:11px;">${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}${order.prepressResubmittedAt ? ` • Sales updated ${formatDateTime(order.prepressResubmittedAt)}` : ''}</span>`;
   } else {
     issueBox.style.display = 'none';
     issueBox.innerHTML = '';
@@ -317,8 +322,14 @@ function getSelectedOrder() {
 function updateApproveButtonVisibility() {
   const allChecked = ['checkDetails','checkArtwork','checkSizing','checkCutting'].every(id => document.getElementById(id)?.checked);
   const hasIssue = (document.getElementById('issueCategory')?.value || '') !== '';
+  const order = getSelectedOrder();
+  const reviewStarted = ['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order?.status);
   const btn = document.getElementById('btnApprove');
+  const sendBackBtn = document.getElementById('btnSendBack');
+  const hint = document.getElementById('prepressActionHint');
   if (btn) btn.style.display = (allChecked && !hasIssue) ? '' : 'none';
+  if (sendBackBtn) sendBackBtn.disabled = !reviewStarted;
+  if (hint) hint.style.display = reviewStarted ? 'none' : '';
 }
 
 function collectReviewPatch(order) {
@@ -375,6 +386,10 @@ async function sendBackToAccountManager() {
   if (!order) return;
   const comment = document.getElementById('prepressComment').value.trim();
   const category = document.getElementById('issueCategory').value;
+  if (!['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order.status)) {
+    alert('Start Review before sending this job back.');
+    return;
+  }
   if (!comment) {
     alert('Add a clear prepress comment before sending this back.');
     return;

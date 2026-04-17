@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
-  <script src="shared.js?v=20260414-1358"></script>
-  <script src="auth.js?v=20260414-1358"></script>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -37,7 +37,7 @@
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>Name</th><th>Role</th><th>Facility</th><th>Phone</th><th>Status</th><th>Actions</th>
+            <th>Name</th><th>Role</th><th>User ID</th><th>Facility</th><th>Phone</th><th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="personnelTableBody"></tbody>
         </table>
@@ -250,6 +250,13 @@
           <option value="boyd-street">Boyd Street</option>
           <option value="both">Both</option>
         </select>
+      </div>
+      <div class="field">
+        <label>User ID</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="pUserId" placeholder="Auto-generated operator ID" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="generatePersonnelUserId()">Generate</button>
+        </div>
       </div>
       <div class="field"><label>Phone</label><input type="text" id="pPhone" placeholder="(555) 555-5555"></div>
       <div class="field"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="pActive" checked style="width:16px;height:16px;"> Active</label></div>
@@ -754,17 +761,24 @@ function updateAppDeptTotal() {
 }
 
 // ── PERSONNEL ─────────────────────────────────────────────
+function generatePersonnelUserId() {
+  const name = (document.getElementById('pName').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'USR';
+  const seed = String(Date.now()).slice(-4);
+  document.getElementById('pUserId').value = `${name}${seed}`;
+}
+
 async function loadPersonnel() {
   const people = await getAllPersonnel();
   const tbody = document.getElementById('personnelTableBody');
   if (people.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
     return;
   }
   tbody.innerHTML = people.map(p => `
     <tr>
       <td style="font-weight:600;">${p.name}</td>
       <td><span style="text-transform:capitalize;">${p.role || 'operator'}</span></td>
+      <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
       <td>${FACILITIES[p.facility]?.name || p.facility || '—'}</td>
       <td>${p.phone || '—'}</td>
       <td><span class="${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
@@ -782,6 +796,7 @@ function openPersonnelModal(person) {
   document.getElementById('pName').value = person?.name || '';
   document.getElementById('pRole').value = person?.role || 'operator';
   document.getElementById('pFacility').value = person?.facility || '16th-street';
+  document.getElementById('pUserId').value = person?.userId || '';
   document.getElementById('pPhone').value = person?.phone || '';
   document.getElementById('pActive').checked = person?.active !== false;
   document.getElementById('personnelModal').classList.add('active');
@@ -801,6 +816,7 @@ async function savePersonnel() {
     name,
     role: document.getElementById('pRole').value,
     facility: document.getElementById('pFacility').value,
+    userId: document.getElementById('pUserId').value.trim(),
     phone: document.getElementById('pPhone').value.trim(),
     active: document.getElementById('pActive').checked
   };
