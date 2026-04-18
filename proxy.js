@@ -121,7 +121,7 @@ function isAfterHours() {
 /**
  * Parse structured tags from Claude's response.
  * Tags Claude may emit (each on its own line at the end of the reply):
- *   [CAPTURE: name="...", email="...", phone="...", company="..."]
+ *   [CAPTURE: name="...", email="...", phone="...", company="...", product="...", qty="..."]
  *   [HANDOFF: reason="..."]
  *   [DEAL: stage="quoting|sample|pending_decision", spend_band="<50k|50k-250k|250k+|unknown"]
  *   [GAP: question="..."]
@@ -225,9 +225,13 @@ For small quantities (under 500 units): still engage and capture the lead, but n
 8. Contact info: full name, email, phone, company name
 
 ## Lead Capture (critical — include every turn you have new info)
-Append to your reply whenever you have confirmed contact information:
-[CAPTURE: name="...", email="...", phone="...", company="..."]
-Include only confirmed fields. Accumulate — add new fields as you get them.
+Append to your reply whenever you have confirmed any of these fields:
+[CAPTURE: name="...", email="...", phone="...", company="...", product="...", qty="..."]
+- name, email, phone, company: contact info
+- product: what they want to print/package (e.g. "folding cartons", "roll labels", "stand-up pouches")
+- qty: quantity they mentioned (e.g. "2000 units", "500", "5000")
+Include only confirmed fields. Accumulate — add new fields as you learn them each turn.
+Include product and qty as soon as the buyer mentions them — do not wait for contact info.
 
 ## Deal Signaling
 When you detect purchase intent, include:
@@ -402,10 +406,11 @@ function pickAm() {
 }
 
 /**
- * pushLeadToHubSpot — creates contact + deal and associates them.
- * Fires and forgets (errors are logged, not fatal to the DM flow).
+ * pushLeadToHubSpot — creates contact + deal, associates them, then fires Twilio AM alert.
+ * Twilio alert fires AFTER deal creation so the deal ID is included in the SMS.
+ * Fires and forgets (errors logged, not fatal to the DM flow).
  */
-function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am) {
+function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am, handoffReason) {
   const stageMap = {
     quoting: process.env.HUBSPOT_STAGE_QUOTING || 'quoting',
     sample: process.env.HUBSPOT_STAGE_SAMPLE || 'sample',
@@ -427,38 +432,47 @@ function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am) {
   hubspotPost('/crm/v3/objects/contacts', contactProps, (err, contact) => {
     if (err || !contact.id) {
       console.error('HubSpot contact create failed:', err?.message || JSON.stringify(contact));
+      // Still alert AM even if contact creation failed — better to alert with partial info
+      sendAmAlert(am, cf, brandName, handoffReason, spendBand, null, dealStage);
       return;
     }
     console.log(`✅ HubSpot contact created: ${contact.id} (${cf.email || cf.name})`);
 
     const dealName = `${brandName} IG Lead — ${cf.name || cf.email || 'Unknown'} — ${new Date().toLocaleDateString()}`;
+    const descParts = [
+      cf.product && `Product: ${cf.product}`,
+      cf.qty && `Quantity: ${cf.qty}`,
+      spendBand && spendBand !== 'unknown' && `Annual packaging spend: ${spendBand}`,
+      `Source: Instagram DM (${brandName})`,
+    ].filter(Boolean);
     const dealProps = {
       properties: {
         dealname: dealName,
         pipeline: pipelineId,
         dealstage: stageMap[dealStage] || stageMap.quoting,
         deal_currency_code: 'USD',
+        description: descParts.join('. '),
       },
     };
     if (am.hubspotOwnerId) dealProps.properties.hubspot_owner_id = am.hubspotOwnerId;
-    if (spendBand && spendBand !== 'unknown') {
-      dealProps.properties.description = `Annual packaging spend: ${spendBand}. Source: Instagram DM (${brandName}).`;
-    }
 
     hubspotPost('/crm/v3/objects/deals', dealProps, (err2, deal) => {
       if (err2 || !deal.id) {
         console.error('HubSpot deal create failed:', err2?.message || JSON.stringify(deal));
+        sendAmAlert(am, cf, brandName, handoffReason, spendBand, null, dealStage);
         return;
       }
       console.log(`✅ HubSpot deal created: ${deal.id} (${dealName})`);
 
-      // Associate contact → deal (association type 3)
+      // Associate contact → deal (type 3), then fire Twilio alert with deal ID
       hubspotPut(
         `/crm/v3/objects/deals/${deal.id}/associations/contacts/${contact.id}/3`,
         {},
         (err3) => {
           if (err3) console.error('HubSpot association failed:', err3.message);
           else console.log(`✅ HubSpot contact ${contact.id} → deal ${deal.id} associated`);
+          // Fire Twilio alert with the deal ID regardless of association result
+          sendAmAlert(am, cf, brandName, handoffReason, spendBand, deal.id, dealStage);
         }
       );
     });
@@ -467,8 +481,9 @@ function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ManyChat / Twilio — send SMS alert to assigned AM
+// Always called from inside pushLeadToHubSpot so dealId is available.
 // ─────────────────────────────────────────────────────────────────────────────
-function sendAmAlert(am, cf, brandName, handoffReason, spendBand) {
+function sendAmAlert(am, cf, brandName, handoffReason, spendBand, dealId, dealStage) {
   const accountSid = process.env.PULSE_TWILIO_ACCOUNT_SID;
   const authToken = process.env.PULSE_TWILIO_AUTH_TOKEN;
   const from = process.env.PULSE_TWILIO_FROM || process.env.PULSE_TWILIO_MESSAGING_SERVICE_SID;
@@ -478,16 +493,25 @@ function sendAmAlert(am, cf, brandName, handoffReason, spendBand) {
     return;
   }
 
-  const leadSummary = [
-    cf.name && `Name: ${cf.name}`,
-    cf.email && `Email: ${cf.email}`,
-    cf.phone && `Phone: ${cf.phone}`,
-    cf.company && `Company: ${cf.company}`,
-    spendBand && spendBand !== 'unknown' && `Annual spend: ${spendBand}`,
-    handoffReason && `Reason: ${handoffReason}`,
-  ].filter(Boolean).join(' | ');
+  const portalId = process.env.HUBSPOT_PORTAL_ID || '';
+  const dealRef = dealId
+    ? (portalId ? `HubSpot: app.hubspot.com/contacts/${portalId}/deal/${dealId}` : `HubSpot Deal ID: ${dealId}`)
+    : 'HubSpot: record pending';
 
-  const message = `🔔 New IG lead assigned to you [${brandName}]\n${leadSummary || 'No contact info yet'}\nCheck HubSpot.`;
+  const lines = [
+    `🔔 New IG Lead — ${brandName} → assigned to ${am.name}`,
+    cf.name    && `Name: ${cf.name}`,
+    cf.company && `Company: ${cf.company}`,
+    cf.email   && `Email: ${cf.email}`,
+    cf.phone   && `Phone: ${cf.phone}`,
+    cf.product && `Product: ${cf.product}`,
+    cf.qty     && `Qty: ${cf.qty}`,
+    spendBand && spendBand !== 'unknown' && `Annual spend: ${spendBand}`,
+    dealStage  && `Stage: ${dealStage}`,
+    dealRef,
+  ].filter(Boolean);
+
+  const message = lines.join('\n');
 
   const params = new URLSearchParams();
   params.set('To', am.phone);
@@ -733,11 +757,13 @@ const server = http.createServer((req, res) => {
 
         // Push to HubSpot + alert AM as soon as email is captured (deal stage defaults to quoting).
         // Also fires on handoff even without email (phone alone is enough signal).
+        // HubSpot push + Twilio AM alert always fire together.
+        // Twilio fires from inside pushLeadToHubSpot after deal creation (includes deal ID).
         if (cf.email || (parsed.handoff && cf.phone)) {
           const am = pickAm();
-          console.log(`🤝 Lead push → HubSpot + Twilio alert to ${am.name}`);
-          pushLeadToHubSpot(cf, parsed.dealStage || 'quoting', parsed.spendBand, brand.name, am);
-          sendAmAlert(am, cf, brand.name, parsed.handoffReason, parsed.spendBand);
+          const stage = parsed.dealStage || 'quoting';
+          console.log(`🤝 Lead push → HubSpot (stage: ${stage}) + Twilio to ${am.name}`);
+          pushLeadToHubSpot(cf, stage, parsed.spendBand, brand.name, am, parsed.handoffReason);
         }
 
         if (parsed.handoff) {
