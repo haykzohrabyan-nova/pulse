@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Application Dept — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v18"></script>
-  <script src="auth.js?v=20260417-v18"></script>
+  <script src="shared.js?v=20260418-PUL55"></script>
+  <script src="auth.js?v=20260418-PUL55"></script>
+
   <style id="page-styles"></style>
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 
 <div style="max-width:1100px;margin:0 auto;padding:24px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -106,6 +108,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('application-dept');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Application Dept' }]);
 initAuth('application-dept');
 document.getElementById('page-styles').textContent = ``;
 

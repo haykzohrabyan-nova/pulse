@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260417-v18"></script>
-  <script src="auth.js?v=20260417-v18"></script>
+  <script src="shared.js?v=20260418-PUL55"></script>
+  <script src="auth.js?v=20260418-PUL55"></script>
   <style id="page-styles"></style>
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 
 <div class="pm-layout">
   <!-- Sidebar: Filters + Stats (PrePress-style) -->
@@ -263,6 +264,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('production-manager');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Manager' }]);
 initAuth('production-manager');
 
 document.getElementById('page-styles').textContent = `
@@ -736,11 +738,11 @@ async function changeStatus(dbId, newStatus) {
   if (newStatus === 'ready-to-ship') {
     const hasQcPass = order.qcRecord?.verdict === 'pass' || !!order.qcPassedAt;
     if (!hasQcPass) {
-      showPageToast('❌ Cannot mark Ready to Ship — this order has not passed QC. Use the QC Checkout page to complete the QC inspection first.', 'error');
+      alert('❌ Cannot mark Ready to Ship — this order has not passed QC.\n\nUse the QC Checkout page to complete the QC inspection first.');
       return;
     }
     if (order.status === 'qc-failed') {
-      showPageToast('❌ Cannot mark Ready to Ship — this order has a QC fail on record. Return it to production, fix the defects, then re-run QC.', 'error');
+      alert('❌ Cannot mark Ready to Ship — this order has a QC fail on record.\n\nReturn it to production, fix the defects, then re-run QC.');
       return;
     }
   }
@@ -781,7 +783,7 @@ async function advanceStep(dbId) {
   await addActivity({ orderId: order.orderId, type: 'step-advance', message: `Advanced to step ${nextStep + 1}: ${steps[nextStep]?.machine || 'QC'}`, by: 'Manager' });
   await loadOrders();
   if (newStatus === 'qc-checkout') {
-    showPageToast(`✅ All production steps complete for Order #${order.orderId}. Order sent to QC Checkout — please notify QC to begin inspection.`, 'success');
+    alert(`✅ All production steps complete for Order #${order.orderId}.\n\nOrder has been sent to QC Checkout. Please notify QC to begin inspection.`);
   }
 }
 
@@ -851,9 +853,9 @@ async function submitReprint() {
   const reason = document.getElementById('reprintReason').value;
   const notes = document.getElementById('reprintNotes').value;
   const requestedBy = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
-  if (!qty) { showPageToast('Please enter a quantity.', 'warning'); return; }
+  if (!qty) { alert('Please enter a quantity.'); return; }
   if (qty > (order.quantity || 0)) {
-    showPageToast(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`, 'warning');
+    alert(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`);
     return;
   }
   const recreatedOrder = await createReprintOrderFromSource(order, {
@@ -876,7 +878,7 @@ async function submitReprint() {
   await addActivity({ orderId: recreatedOrder.orderId, type: 'create', message: `Recreated from #${order.orderId} (${reason})`, by: requestedBy });
   closeReprintModal();
   await loadOrders();
-  showPageToast(`✅ Job #${recreatedOrder.orderId} created and added to Prepress.`, 'success');
+  alert(`✅ Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`);
 }
 
 function syncReprintFromQty() {
@@ -917,7 +919,7 @@ function closeAssignModal() {
 
 async function confirmAssign() {
   const name = document.getElementById('assignSelect').value;
-  if (!name) { showPageToast('Please select an operator.', 'warning'); return; }
+  if (!name) { alert('Please select an operator.'); return; }
   const order = allOrders.find(o => o.id === assignTargetOrderDbId);
   if (!order) return;
   const steps = order.workflowSteps.map(s => s.id === assignTargetStepId ? { ...s, assignedTo: name } : s);
@@ -942,7 +944,7 @@ function closeAddStepModal() {
 async function confirmAddStep() {
   const machine = document.getElementById('newStepMachine').value;
   const operation = document.getElementById('newStepOperation').value;
-  if (!machine) { showPageToast('Please select a machine.', 'warning'); return; }
+  if (!machine) { alert('Please select a machine.'); return; }
   const order = allOrders.find(o => o.id === addStepTargetOrderDbId);
   if (!order) return;
   const newStep = {
@@ -1099,7 +1101,7 @@ async function confirmRedirect() {
   const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
   if (!order) return;
   const newMachine = document.getElementById('redirectMachine').value;
-  if (!newMachine) { showPageToast('Please select a machine to redirect to.', 'warning'); return; }
+  if (!newMachine) { alert('Please select a machine to redirect to.'); return; }
 
   const newOp = document.getElementById('redirectOperation').value || (MACHINES[newMachine]?.operations?.[0]) || 'Processing';
   const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
@@ -1122,12 +1124,12 @@ async function confirmRedirect() {
     });
     closeRedirectModal();
     await loadOrders();
-    showPageToast(`✅ Step redirected to ${newMachine} (entire ticket).`, 'success');
+    alert(`✅ Step redirected to ${newMachine} (full job).`);
   } else {
     // Partial redirect: split the step — keep original with reduced qty, add new step for the partial
     const partialQty = parseInt(document.getElementById('redirectQty').value) || 0;
-    if (!partialQty || partialQty <= 0) { showPageToast('Please enter the quantity to redirect.', 'warning'); return; }
-    if (partialQty >= (order.quantity || 0)) { showPageToast('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.', 'warning'); return; }
+    if (!partialQty || partialQty <= 0) { alert('Please enter the quantity to redirect.'); return; }
+    if (partialQty >= (order.quantity || 0)) { alert('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.'); return; }
 
     // Mark the partial redirect on the existing step
     const steps = [...order.workflowSteps];
@@ -1175,7 +1177,7 @@ async function confirmRedirect() {
     });
     closeRedirectModal();
     await loadOrders();
-    showPageToast(`✅ Split: ${partialQty.toLocaleString()} units redirected to ${newMachine}. Original step continues with remaining.`, 'success');
+    alert(`✅ Split: ${partialQty} units redirected to ${newMachine}. Original step continues with remaining.`);
   }
 }
 
