@@ -10,6 +10,7 @@
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 
 <!-- Split view wrapper -->
 <div id="splitWrapper" style="display:flex;gap:0;min-height:100vh;">
@@ -446,9 +447,27 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- SECTION: Notes                                         -->
     <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- P2-D: Note Type field (INFO / CRITICAL / INSTRUCTIONS) -->
     <div class="form-section">
       <h3 class="section-title">📝 Special Notes</h3>
       <div class="form-row">
+        <div class="field" style="margin-bottom:8px;">
+          <label>Note Type</label>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+              <input type="radio" name="noteType" id="noteTypeInfo" value="INFO" checked onchange="updateNoteTypeStyle()">
+              <span style="padding:2px 10px;border-radius:8px;background:#e0edff;color:#1d4ed8;font-weight:700;font-size:11px;">ℹ️ Info</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+              <input type="radio" name="noteType" id="noteTypeCritical" value="CRITICAL" onchange="updateNoteTypeStyle()">
+              <span style="padding:2px 10px;border-radius:8px;background:#fde8e8;color:#b91c1c;font-weight:700;font-size:11px;">🚨 Critical</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+              <input type="radio" name="noteType" id="noteTypeInstructions" value="INSTRUCTIONS" onchange="updateNoteTypeStyle()">
+              <span style="padding:2px 10px;border-radius:8px;background:#fef3cd;color:#92600a;font-weight:700;font-size:11px;">📋 Instructions</span>
+            </label>
+          </div>
+        </div>
         <div class="field">
           <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
         </div>
@@ -565,6 +584,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('job-ticket');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Job Ticket' }]);
 initAuth('job-ticket');
 
 document.getElementById('page-styles').textContent = `
@@ -1059,6 +1079,21 @@ function onFacilityChange() {
 function autoExpandNotes(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+// P2-D: Update specialNotes textarea border/bg to reflect note type
+function updateNoteTypeStyle() {
+  const val = document.querySelector('input[name="noteType"]:checked')?.value || 'INFO';
+  const ta = document.getElementById('specialNotes');
+  if (!ta) return;
+  const styles = {
+    INFO:         { border: '#bfdbfe', bg: '#f0f7ff' },
+    CRITICAL:     { border: '#fca5a5', bg: '#fff5f5' },
+    INSTRUCTIONS: { border: '#fcd34d', bg: '#fffbeb' },
+  };
+  const s = styles[val] || styles.INFO;
+  ta.style.borderColor = s.border;
+  ta.style.background = s.bg;
 }
 
 function updateFrameSheetLabels() {
@@ -2294,6 +2329,7 @@ async function saveTicket(suppressRedirect = false) {
       packagingInstructions: customBatching ? document.getElementById('packagingInstructions').value.trim() : '',
       dueDate,
       specialNotes: document.getElementById('specialNotes').value.trim(),
+      noteType: (document.querySelector('input[name="noteType"]:checked')?.value) || 'INFO',
       workflowTemplate: workflowKey,
       workflowSteps,
       currentStep: 0,
@@ -2540,6 +2576,10 @@ async function loadOrderIntoForm(order) {
   // Due date / notes
   document.getElementById('dueDate').value = order.dueDate || '';
   document.getElementById('specialNotes').value = order.specialNotes || '';
+  // P2-D: Note type
+  const noteTypeVal = order.noteType || 'INFO';
+  const noteTypeEl = document.querySelector(`input[name="noteType"][value="${noteTypeVal}"]`);
+  if (noteTypeEl) { noteTypeEl.checked = true; updateNoteTypeStyle(); }
 
   // Artwork
   if (order.artworkFiles && order.artworkFiles.length > 0) {

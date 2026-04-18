@@ -10,6 +10,7 @@
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 <div class="prepress-layout">
   <aside class="prepress-queue">
     <div class="queue-header">
@@ -129,6 +130,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('prepress');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Prepress' }]);
 initAuth('prepress');
 
 document.getElementById('page-styles').textContent = `

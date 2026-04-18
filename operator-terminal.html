@@ -601,6 +601,8 @@
 
   <!-- SITE NAV -->
   <div id="site-nav"></div>
+  <!-- P4-C: Breadcrumb -->
+  <div id="op-breadcrumb"></div>
 
   <!-- OPERATOR TOP BAR -->
   <div class="op-topbar" id="op-topbar">
@@ -1048,6 +1050,7 @@ async function enterMainScreen() {
   // Render nav
   const navEl = document.getElementById('site-nav');
   navEl.innerHTML = renderNav('operator-terminal');
+  document.getElementById('op-breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Operator Terminal' }]);
 
   // Populate top bar
   const profile = OPERATOR_PROFILES[currentOperator] || {};
@@ -1539,11 +1542,20 @@ async function renderJobDetail(order) {
   });
   html += `</div>`;
 
-  // ── SPECIAL NOTES ──
-  if (order.notes && order.notes.trim()) {
-    html += `<div class="special-notes-card">
-      <div class="note-label">📝 Special Notes</div>
-      <div class="note-text">${escHtml(order.notes)}</div>
+  // ── SPECIAL NOTES (P2-D: note type badge) ──
+  const noteText = order.specialNotes || order.notes || '';
+  if (noteText.trim()) {
+    const nt = order.noteType || 'INFO';
+    const ntStyles = {
+      CRITICAL:     { card: 'background:#fde8e8;border-color:#dc2626;', label: 'color:#7f1d1d;' },
+      INSTRUCTIONS: { card: 'background:#fffbeb;border-color:#d97706;', label: 'color:#78350f;' },
+      INFO:         { card: '', label: '' },
+    };
+    const s = ntStyles[nt] || ntStyles.INFO;
+    const ntIcons = { CRITICAL: '🚨', INSTRUCTIONS: '📋', INFO: '📝' };
+    html += `<div class="special-notes-card" style="${s.card}">
+      <div class="note-label" style="${s.label}">${ntIcons[nt] || '📝'} Special Notes <span class="note-type-badge ${nt}">${nt}</span></div>
+      <div class="note-text" style="${s.label}">${escHtml(noteText)}</div>
     </div>`;
   }
 
@@ -1578,6 +1590,13 @@ async function renderJobDetail(order) {
       }
     });
     html += `</div></div>`;
+
+    // P1-A: NEXT STEP REQUIRED banner — show the next machine prominently
+    const nextStepIdx = idx + 1;
+    if (nextStepIdx < order.workflowSteps.length) {
+      const ns = order.workflowSteps[nextStepIdx];
+      html += renderNextStepBanner(ns.machine || 'Next Step', ns.operation || '');
+    }
   }
 
   // ── DIE SCAN (if needed) ──

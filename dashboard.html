@@ -10,6 +10,7 @@
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 
 <!-- Header: Filters + Stats -->
 <div class="dash-header">
@@ -71,6 +72,7 @@
 <script>
   injectThemeCSS();
   document.getElementById('nav').innerHTML = renderNav('dashboard');
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Dashboard' }]);
   initAuth('dashboard');
 
   document.getElementById('page-styles').textContent = `

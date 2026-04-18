@@ -10,6 +10,7 @@
 </head>
 <body>
 <div id="nav"></div>
+<div id="breadcrumb"></div>
 
 <div class="pm-layout">
   <!-- Sidebar: Filters + Stats (PrePress-style) -->
@@ -263,6 +264,7 @@
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('production-manager');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Manager' }]);
 initAuth('production-manager');
 
 document.getElementById('page-styles').textContent = `
