@@ -867,19 +867,19 @@ function estimateTotalProductionDays(order) {
 
 // ── Operator Roles & Machine Assignments ───────────────────
 const OPERATOR_PROFILES = {
-  'Arsen':     { facility: 'boyd-street', machines: ['Canon Colorado','Roland Printers','Graphtec Vinyl Cutter x4','Graphtec Flatbed (Large) x2','Graphtec Flatbed (Small)','Laminator (Boyd)'], role: 'operator', shift: '6:00 AM', notes: 'Boyd — all machines' },
-  'Tuoyo':     { facility: '16th-street', machines: ['HP Indigo 15K'], role: 'operator', shift: '2:30 PM', notes: '15K press operator, afternoon shift' },
-  'Mauricio':  { facility: '16th-street', machines: ['HP Indigo 15K','HP Indigo 6K','GM Die Cutter w/ JetFX','GM Laser Cutter w/ JetFX','Moll Brothers Cutter','Moll Brothers Folder-Gluer','Laminator (Nobelus)','Scodix','Guillotine Cutter'], role: 'supervisor', shift: '5:00 AM', notes: 'Supervisor — can run all 16th St machines. Opens shop.' },
-  'Abel':      { facility: '16th-street', machines: ['Scodix','HP Indigo 15K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Scodix, backup 15K. Sometimes runs both.' },
-  'Juan':      { facility: '16th-street', machines: ['HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: '6K press operator' },
-  'Vahe':      { facility: '16th-street', machines: ['GM Die Cutter w/ JetFX','GM Laser Cutter w/ JetFX'], role: 'operator', shift: '6:00 AM', notes: 'GM die cutter + laser cutter + JetFX UV/Foil' },
-  'Hrach':     { facility: '16th-street', machines: [], role: 'prepress', shift: '8:00 AM', notes: 'Prepress — file prep, proofing, plate setup' },
-  'Avgustin':  { facility: '16th-street', machines: ['Moll Brothers Folder-Gluer'], role: 'operator', shift: '6:00 AM', notes: 'Folder & Gluer operator' },
-  'Jaime':     { facility: '16th-street', machines: ['Moll Brothers Cutter'], role: 'operator', shift: '7:00 AM', notes: 'Moll Brothers die cutter' },
-  'Lisandro':  { facility: '16th-street', machines: ['Laminator (Nobelus)','Duplo','Guillotine Cutter'], role: 'operator', shift: '6:00 AM', notes: 'Laminator + Duplo + Guillotine' },
-  'Adrian':    { facility: '16th-street', machines: ['Karlville Poucher','Laminator (Nobelus)'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville poucher, backup laminator' },
-  'Harry':     { facility: '16th-street', machines: ['Karlville Poucher','HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville, knows 6K (not expert)' },
-  'Mike':      { facility: '16th-street', machines: [], role: 'production-manager', shift: '7:00 AM', notes: 'Production manager (new)' },
+  'Arsen':     { userId: 1001, facility: 'boyd-street', machines: ['Canon Colorado','Roland Printers','Graphtec Vinyl Cutter x4','Graphtec Flatbed (Large) x2','Graphtec Flatbed (Small)','Laminator (Boyd)'], role: 'operator', shift: '6:00 AM', notes: 'Boyd — all machines' },
+  'Tuoyo':     { userId: 1002, facility: '16th-street', machines: ['HP Indigo 15K'], role: 'operator', shift: '2:30 PM', notes: '15K press operator, afternoon shift' },
+  'Mauricio':  { userId: 1003, facility: '16th-street', machines: ['HP Indigo 15K','HP Indigo 6K','GM Die Cutter w/ JetFX','GM Laser Cutter w/ JetFX','Moll Brothers Cutter','Moll Brothers Folder-Gluer','Laminator (Nobelus)','Scodix','Guillotine Cutter'], role: 'supervisor', shift: '5:00 AM', notes: 'Supervisor — can run all 16th St machines. Opens shop.' },
+  'Abel':      { userId: 1004, facility: '16th-street', machines: ['Scodix','HP Indigo 15K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Scodix, backup 15K. Sometimes runs both.' },
+  'Juan':      { userId: 1005, facility: '16th-street', machines: ['HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: '6K press operator' },
+  'Vahe':      { userId: 1006, facility: '16th-street', machines: ['GM Die Cutter w/ JetFX','GM Laser Cutter w/ JetFX'], role: 'operator', shift: '6:00 AM', notes: 'GM die cutter + laser cutter + JetFX UV/Foil' },
+  'Hrach':     { userId: 1007, facility: '16th-street', machines: [], role: 'prepress', shift: '8:00 AM', notes: 'Prepress — file prep, proofing, plate setup' },
+  'Avgustin':  { userId: 1008, facility: '16th-street', machines: ['Moll Brothers Folder-Gluer'], role: 'operator', shift: '6:00 AM', notes: 'Folder & Gluer operator' },
+  'Jaime':     { userId: 1009, facility: '16th-street', machines: ['Moll Brothers Cutter'], role: 'operator', shift: '7:00 AM', notes: 'Moll Brothers die cutter' },
+  'Lisandro':  { userId: 1010, facility: '16th-street', machines: ['Laminator (Nobelus)','Duplo','Guillotine Cutter'], role: 'operator', shift: '6:00 AM', notes: 'Laminator + Duplo + Guillotine' },
+  'Adrian':    { userId: 1011, facility: '16th-street', machines: ['Karlville Poucher','Laminator (Nobelus)'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville poucher, backup laminator' },
+  'Harry':     { userId: 1012, facility: '16th-street', machines: ['Karlville Poucher','HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville, knows 6K (not expert)' },
+  'Mike':      { userId: 1013, facility: '16th-street', machines: [], role: 'production-manager', shift: '7:00 AM', notes: 'Production manager (new)' },
   // Account Managers / Sales Reps
   'Gary Gharibyan':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
   'Ernesto Flores':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
@@ -2573,6 +2573,60 @@ const THEME_CSS = `
   .qp-filter-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
   .rt-container { max-width:1200px; margin:0 auto; padding:24px; }
   .rt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+
+  /* ── P4-C: Breadcrumb navigation ── */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 20px; background: var(--bg); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .bc-link { color: var(--accent); text-decoration: none; }
+  .bc-link:hover { text-decoration: underline; }
+  .bc-sep { color: var(--border); margin: 0 2px; }
+  .bc-current { color: var(--text); font-weight: 600; }
+
+  /* ── P4-D: Global page toast ── */
+  #page-toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9998;
+    display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  .page-toast {
+    padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); max-width: 340px;
+    animation: page-toast-in 0.3s ease; pointer-events: auto; cursor: pointer;
+    border-left-width: 4px; border-left-style: solid;
+  }
+  @keyframes page-toast-in {
+    from { transform: translateX(60px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── P1-A: Next-step required banner ── */
+  .next-step-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: #eff6ff; border: 2px solid #2563eb; border-radius: 10px;
+    padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1d4ed8;
+    animation: ns-pulse 2s ease infinite;
+  }
+  @keyframes ns-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+  }
+  .next-step-machine { font-size: 16px; font-weight: 900; }
+
+  /* ── P2-D: Note type badge ── */
+  .note-type-badge { display:inline-block; padding:1px 7px; border-radius:8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+  .note-type-badge.INFO { background:#e0edff; color:#1d4ed8; }
+  .note-type-badge.CRITICAL { background:#fde8e8; color:#b91c1c; }
+  .note-type-badge.INSTRUCTIONS { background:#fef3cd; color:#92600a; }
+
+  /* ── Preview build indicator ── */
+  .preview-build-tag {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 10px; border-radius:999px;
+    background:#fef9c3; border:1px solid #fde047; color:#854d0e;
+    font-size:11px; font-weight:700; letter-spacing:0.02em;
+  }
 `;
 
 function injectThemeCSS() {
@@ -2605,6 +2659,7 @@ function renderNav(activePage) {
       <a href="dashboard.html" style="display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;gap:6px;">
         <img src="pulse-logo.png" alt="Pulse" style="height:88px;width:auto;display:block;">
         <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:0.02em;">${PULSE_UI_VERSION}</span>
+        <span class="preview-build-tag">🔍 UX Preview</span>
       </a>
       <div class="nav-links">
         ${pages.map(p => `<a href="${p.href}" data-page-id="${p.id}" class="nav-link ${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
@@ -2613,10 +2668,84 @@ function renderNav(activePage) {
   `;
 }
 
+// P4-A/P4-B: Status badge with icon prefix for accessibility
+const STATUS_ICONS = {
+  'waiting-approval':       '⏳',
+  'new':                    '🆕',
+  'pending-confirmation':   '⚠️',
+  'pending-review':         '👁',
+  'prepress':               '📋',
+  'prepress-active':        '🟢',
+  'prepress-paused':        '⏸',
+  'pending-account-manager':'↩️',
+  'in-production':          '▶️',
+  'on-hold':                '🔴',
+  'qc-checkout':            '🔍',
+  'ready-to-ship':          '✅',
+  'shipped':                '🚚',
+  'waiting-pickup':         '📦',
+  'received':               '✔️',
+  'completed':              '✔️',
+  'qc-failed':              '❌',
+  'reprint':                '🔁',
+};
+
 function renderStatusBadge(status) {
-  return `<span class="badge badge-${status}">${STATUS_LABELS[status] || status}</span>`;
+  const icon = STATUS_ICONS[status] || '';
+  return `<span class="badge badge-${status}">${icon ? icon + '&thinsp;' : ''}${STATUS_LABELS[status] || status}</span>`;
 }
 
 function renderMaterialOptions() {
   return MATERIALS.map(g => `<optgroup label="${g.category}">${g.items.map(i => `<option value="${i}">${i}</option>`).join('')}</optgroup>`).join('');
+}
+
+// ── P4-C: Breadcrumb navigation ─────────────────────────────
+// items: [{label, href?}] — last item has no href (current page)
+function renderBreadcrumb(items) {
+  const all = [{ label: '🏠 Dashboard', href: 'dashboard.html' }, ...items];
+  return `<nav class="breadcrumb" aria-label="Breadcrumb">` +
+    all.map((c, i) =>
+      i < all.length - 1
+        ? `<a href="${c.href}" class="bc-link">${c.label}</a><span class="bc-sep">›</span>`
+        : `<span class="bc-current">${c.label}</span>`
+    ).join('') +
+  `</nav>`;
+}
+
+// ── P4-D: Global page toast ──────────────────────────────────
+// type: 'success' | 'error' | 'info' | 'warning'
+function showPageToast(message, type = 'info', duration = 4000) {
+  let container = document.getElementById('page-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'page-toast-container';
+    document.body.appendChild(container);
+  }
+  const colors = {
+    success: { bg: '#d4edda', border: '#16a34a', text: '#0f6b2d' },
+    error:   { bg: '#fde8e8', border: '#dc2626', text: '#7f1d1d' },
+    info:    { bg: '#e0edff', border: '#2563eb', text: '#1d4ed8' },
+    warning: { bg: '#fef3cd', border: '#d97706', text: '#78350f' },
+  };
+  const c = colors[type] || colors.info;
+  const el = document.createElement('div');
+  el.className = 'page-toast';
+  el.style.cssText = `background:${c.bg};border-left-color:${c.border};color:${c.text};`;
+  el.innerHTML = message;
+  el.onclick = () => el.remove();
+  container.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, duration);
+}
+
+// ── P1-A: Next-step required banner HTML ────────────────────
+function renderNextStepBanner(nextMachine, nextOperation) {
+  const op = nextOperation ? ` · ${escHtml(nextOperation)}` : '';
+  return `<div class="next-step-banner">
+    <span style="font-size:20px;">➡️</span>
+    <div>
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;opacity:0.75;">Next Required Step</div>
+      <div class="next-step-machine">${escHtml(nextMachine)}${op}</div>
+      <div style="font-size:11px;font-weight:500;margin-top:2px;opacity:0.8;">Send job to this machine when your step is complete</div>
+    </div>
+  </div>`;
 }
