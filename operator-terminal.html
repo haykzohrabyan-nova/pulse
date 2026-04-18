@@ -1505,7 +1505,7 @@ async function renderJobDetail(order) {
     <div class="jh-row1">
       <span class="jh-order">#${order.orderId || order.id}</span>
       <span class="jh-customer">${escHtml(order.customer || '—')}</span>
-      ${renderStatusBadge(order.status === 'on-hold' ? 'on-hold' : (step?.status === 'paused' ? 'prepress-paused' : (order.status || 'new')))}
+      ${renderStatusBadge(order.status === 'on-hold' ? 'on-hold' : (step?.status === 'paused' ? 'step-paused' : (order.status || 'new')))}
       ${pausedBadge}
       <span class="jh-due ${overdueClass}" style="margin-left:auto;">📅 ${dueStr}</span>
     </div>
