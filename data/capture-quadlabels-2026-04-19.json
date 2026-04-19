@@ -1,0 +1,103 @@
+{
+  "run_date": "2026-04-19T01:15:00.000Z",
+  "notes": "Pre-approval deep probe. Login attempted, approval pending. Full product catalog and config extracted from open endpoints.",
+  "results": {
+    "loginStatus": {
+      "attempted": true,
+      "email": "info@pixelpressprint.com",
+      "apiEndpoint": "/customer/login",
+      "status": 200,
+      "approved": false,
+      "message": "Thank you for signing up! The last step is for us to review it and give you access, please check your email.",
+      "messageKey": "reject",
+      "lastChecked": "2026-04-19T01:15:00.000Z"
+    },
+    "openEndpoints": {
+      "config": {
+        "status": 200,
+        "body": {
+          "currencyDisplay": "USD",
+          "measurementSystem": "inch",
+          "orderMaxQuantity": 100000000,
+          "region": "USA",
+          "orderMinQuantity": 100,
+          "customDiePrice": 140,
+          "smallDiePrice": 220,
+          "customShapePrice": 220,
+          "rushFeePercent": 30,
+          "upsFlatRate": 50,
+          "searchDieCoefficient": 0.5,
+          "dieType": "DIECUT",
+          "searchDieMaxHeight": 24,
+          "searchDieMinHeight": 0.25,
+          "searchDieMaxWidth": 12,
+          "searchDieMinWidth": 0.5,
+          "tax": 9.75,
+          "taxType": "SALES",
+          "setupFeePerVersion": 5.0,
+          "setupFeeThresholdQty": 500,
+          "quoteValidityDays": 30,
+          "labelSizeUnit": "inch",
+          "materialPricingUnit": "sqm",
+          "centerToCenterUnit": "mm",
+          "rollWidthUnit": "mm",
+          "rollLengthUnit": "ft"
+        }
+      },
+      "products": {
+        "status": 200,
+        "body": {
+          "products": [
+            { "id": 14, "name": "PAPER label",       "positionNumber": 0 },
+            { "id": 15, "name": "SYNTHETIC label",   "positionNumber": 1, "note": "White BOPP equivalent" },
+            { "id": 20, "name": "SILVER label",      "positionNumber": 2 },
+            { "id": 23, "name": "CLEAR label",       "positionNumber": 3 },
+            { "id": 24, "name": "GOLD label",        "positionNumber": 4 },
+            { "id": 25, "name": "FLUORESCENT label", "positionNumber": 5 },
+            { "id": 26, "name": "HOLOGRAPHIC label", "positionNumber": 6 },
+            { "id": 27, "name": "FELT label",        "positionNumber": 7 },
+            { "id": 28, "name": "UL CERTIFIED label","positionNumber": 8 },
+            { "id": 29, "name": "COVER-UP label",    "positionNumber": 9 },
+            { "id": 30, "name": "BLANK label",       "positionNumber": 10 },
+            { "id": 31, "name": "SECURITY SEAL label","positionNumber": 11 },
+            { "id": 33, "name": "THERMAL label",     "positionNumber": 12 }
+          ]
+        }
+      }
+    },
+    "pricingStatus": {
+      "openPriceEndpointsFound": false,
+      "authRequired": true,
+      "expectedAuthPath": "/customer/products, /customer/configurator, /customer/price",
+      "probedEndpoints": [
+        "//open/product-configurator",
+        "//open/product-materials",
+        "//open/product-finishings",
+        "//open/product-shapes",
+        "//open/product-sizes",
+        "//open/get-price",
+        "//open/price",
+        "//open/calculate-price"
+      ],
+      "allReturned404": true
+    },
+    "intel": {
+      "companyName": "QUADLABELS",
+      "parentCompany": "Quadriga USA",
+      "parentEmail": "info@quadrigausa.com",
+      "address": "28410 Witherspoon Pkwy, Valencia, CA 91355, USA",
+      "tradeOnly": true,
+      "acceptedCustomerTypes": ["resellers", "print brokers", "printing houses", "co-packers", "print shops", "distributors", "major manufacturers"],
+      "productCount": 13,
+      "maxLabelSize": "12\"×24\"",
+      "minLabelSize": "0.5\"×0.25\"",
+      "setupFee": "$5/version for orders under 500 pcs",
+      "customDieFee": "$140",
+      "smallDieFee": "$220",
+      "customShapeFee": "$220",
+      "rushSurcharge": "30%",
+      "upsFlatRate": "$50",
+      "salesTax": "9.75% (California)"
+    }
+  }
+}
