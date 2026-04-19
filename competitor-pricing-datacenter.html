@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Competitor Pricing Data Center — Pulse [INTERNAL]</title>
+  <title>Competitor Pricing Data Center — Pulse [INTERNAL] (PUL-68)</title>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -15,7 +15,7 @@
     <span style="font-size:15px;">🔒</span>
     <div>
       <strong>INTERNAL USE ONLY — Admin Only. Not linked in navigation.</strong>
-      All captured competitor label pricing positions. Coverage is partial — confidence levels are honest.
+      56 price points across labels, folding cartons, and stand-up pouches. Confidence levels are honest.
       Do not share with reps or operators.
     </div>
   </div>
@@ -24,13 +24,14 @@
     <div>
       <h2>Competitor Pricing Data Center</h2>
       <p>
-        12 captured data points across 5 competitors. Query any spec to get exact match or closest
-        available with explicit delta labels. Only verified captures shown — no inferred data.
+        56 captured data points across 3 product categories and 7 competitors.
+        Filter by product type, or use the label benchmark tool below for exact-match comparisons.
+        Only verified captures shown — no inferred data.
       </p>
     </div>
     <div class="header-meta">
-      <div>Last capture: <strong>2026-04-14</strong></div>
-      <div>Scope: <strong>Labels only</strong></div>
+      <div>Last capture: <strong>2026-04-17</strong></div>
+      <div>Scope: <strong>Labels · Folding Cartons · Pouches</strong></div>
       <div style="margin-top:6px;">
         <a href="competitor-pricing.html" class="meta-link">← Benchmark view</a>
         &nbsp;·&nbsp;
@@ -43,7 +44,13 @@
   <div class="card" style="margin-bottom:16px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div class="card-title" style="margin:0;">All Captured Data Points</div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="filterType" class="filter-select" onchange="renderCapturesTable()">
+          <option value="">All types</option>
+          <option value="roll_labels">Roll Labels</option>
+          <option value="folding_cartons">Folding Cartons</option>
+          <option value="stand_up_pouches">Stand-up Pouches</option>
+        </select>
         <select id="filterCompetitor" class="filter-select" onchange="renderCapturesTable()">
           <option value="">All competitors</option>
           <option>UPrinting</option>
@@ -51,6 +58,7 @@
           <option>Axiom Print</option>
           <option>GotPrint</option>
           <option>Sticker Mule</option>
+          <option>Packola</option>
         </select>
         <select id="filterConfidence" class="filter-select" onchange="renderCapturesTable()">
           <option value="">All confidence</option>
@@ -64,17 +72,15 @@
       <table class="data-table" id="capturesTable">
         <thead>
           <tr>
+            <th>Type</th>
             <th>Competitor</th>
-            <th>Size</th>
+            <th>Spec</th>
             <th>Qty</th>
-            <th>Material</th>
-            <th>Finish</th>
-            <th>Shape</th>
+            <th>Material / Finish</th>
             <th>Price</th>
             <th>Unit Price</th>
             <th>Status</th>
             <th>Confidence</th>
-            <th>Method</th>
             <th>Note</th>
           </tr>
         </thead>
@@ -83,12 +89,12 @@
     </div>
   </div>
 
-  <!-- ── SECTION 2: Query builder ──────────────────────────────────────────── -->
+  <!-- ── SECTION 2: Label benchmark query builder ───────────────────────────── -->
   <div class="card" style="margin-bottom:16px;">
-    <div class="card-title">Find Closest Match</div>
+    <div class="card-title">Label Benchmark Tool</div>
     <p style="font-size:12px;color:#64748b;margin:0 0 12px;">
-      Enter the label spec you want to compare. For each competitor, the tool finds an exact match
-      first. If none exists, it selects the closest captured data point and labels what differs.
+      Enter a label spec to find the exact or closest competitor match. Internal price calculated from HP Indigo 6K tiers.
+      For folding cartons and pouches, see the full data table above — internal pricing models are not yet documented for those product types.
     </p>
     <div class="query-grid">
       <div class="field">
@@ -186,7 +192,7 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
     <div class="card">
       <div class="card-title">Coverage Status — April 2026</div>
-      <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;" id="coverageSummary"></div>
+      <div id="coverageSummary" style="margin-top:8px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>
     <div class="card">
       <div class="card-title">Match Score Legend</div>
@@ -202,13 +208,17 @@
         </div>
         <div style="margin-top:8px;"><strong>NO PRICE CAPTURED</strong> — spec confirmed but price not available</div>
         <div><strong>NO DATA</strong> — no captured data for this competitor</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;color:#64748b;">
+          <strong>GotPrint note:</strong> Live prices are for Clear Gloss Indoor finish. Matte finish capture still pending.
+          When querying Matte, GotPrint will show CLOSEST MATCH with a finish delta.
+        </div>
       </div>
     </div>
   </div>
 
   <div class="footer-note">
-    Competitor Pricing Data Center · Labels Only · Admin Access Only ·
-    12 data points captured via Playwright headless automation (April 14, 2026) ·
+    Competitor Pricing Data Center · Labels / Folding Cartons / Stand-up Pouches · Admin Access Only ·
+    56 data points (April 2026) ·
     <a href="competitor-pricing.html">← Benchmark view</a> ·
     <a href="data/competitor-pricing-raw.json" target="_blank">Raw JSON</a> ·
     <a href="data/competitor-pricing-normalized.json" target="_blank">Normalized JSON</a>
@@ -221,181 +231,552 @@
 <script>
 
 // ─── All captured data points ─────────────────────────────────────────────────
-// 12 total. Only include captures with real price data (no confidence:none entries).
-// Source of truth for closest-match logic.
+// 56 total across roll labels, folding cartons, and stand-up pouches.
+// Each entry has a `type` field for filtering.
+// Only include captures with real price data or confirmed spec (no-price entries clearly marked).
 
 const ALL_CAPTURES = [
 
-  // ── UPrinting — 4 verified price points (LIVE, high confidence) ─────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ROLL LABELS
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── UPrinting ─ 12 verified price points ─────────────────────────────────────
   {
-    id: 'up-2x2-1000',
-    competitor: 'UPrinting',
+    id: 'up-2x2-1000', type: 'roll_labels', competitor: 'UPrinting',
     url: 'https://www.uprinting.com/roll-labels.html',
-    status: 'live',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
-    method: 'Playwright + Angular scope (default configurator state)',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-14',
+    method: 'Playwright + Angular scope (default state)',
     specs: { w: 2, h: 2, qty: 1000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
     pricing: { total: 131.23, unit: 0.13123, turnaround: null, shippingIncl: false },
     note: 'Default configurator state. 2×2, 1k qty. Shipping not included.'
   },
   {
-    id: 'up-3x3-1000',
-    competitor: 'UPrinting',
+    id: 'up-3x3-1000', type: 'roll_labels', competitor: 'UPrinting',
     url: 'https://www.uprinting.com/roll-labels.html',
-    status: 'live',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-14',
     method: 'Playwright + Bootstrap dropdown + Angular scope',
     specs: { w: 3, h: 3, qty: 1000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
     pricing: { total: 222.26, unit: 0.22226, turnaround: null, shippingIncl: false },
-    note: 'After selecting 3"×3" size, qty=1k. Shipping not included.'
+    note: '3"×3" size, 1k qty. Shipping not included.'
   },
   {
-    id: 'up-2x2-5000',
-    competitor: 'UPrinting',
+    id: 'up-2x2-5000', type: 'roll_labels', competitor: 'UPrinting',
     url: 'https://www.uprinting.com/roll-labels.html',
-    status: 'live',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-14',
     method: 'Playwright + Bootstrap dropdown + Angular scope',
     specs: { w: 2, h: 2, qty: 5000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
     pricing: { total: 309.16, unit: 0.06183, turnaround: 6, shippingIncl: false },
     note: '2×2 at 5k qty. 6-day turnaround. Shipping not included.'
   },
   {
-    id: 'up-3x3-5000',
-    competitor: 'UPrinting',
+    id: 'up-3x3-5000', type: 'roll_labels', competitor: 'UPrinting',
     url: 'https://www.uprinting.com/roll-labels.html',
-    status: 'live',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-14',
     method: 'Playwright + Bootstrap dropdown + Angular scope',
     specs: { w: 3, h: 3, qty: 5000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
     pricing: { total: 505.85, unit: 0.10117, turnaround: 6, shippingIncl: false },
     note: 'PRIMARY BENCHMARK. Exact match for 3"×3"/5k White BOPP. 6-day turnaround. Shipping not included.'
   },
-
-  // ── Vistaprint — 4 price points (PARTIAL) ───────────────────────────────────
   {
-    id: 'vp-1x1-50',
-    competitor: 'Vistaprint',
+    id: 'up-2x3-1000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 2, h: 3, qty: 1000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 95.87, unit: 0.09587, turnaround: null, shippingIncl: false },
+    note: '2"×3" at 1k qty.'
+  },
+  {
+    id: 'up-2x3-5000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 2, h: 3, qty: 5000, material: 'White BOPP', finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 204.27, unit: 0.04085, turnaround: null, shippingIncl: false },
+    note: '2"×3" at 5k qty.'
+  },
+  {
+    id: 'up-4x4-1000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 4, h: 4, qty: 1000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
+    pricing: { total: 268.21, unit: 0.26821, turnaround: null, shippingIncl: false },
+    note: '4"×4" at 1k qty.'
+  },
+  {
+    id: 'up-4x4-5000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Bootstrap dropdown + Angular scope',
+    specs: { w: 4, h: 4, qty: 5000, material: 'White BOPP', finish: null, shape: 'square', format: 'roll' },
+    pricing: { total: 789.05, unit: 0.15781, turnaround: null, shippingIncl: false },
+    note: '4"×4" at 5k qty.'
+  },
+  {
+    id: 'up-2x4-1000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'calculator.digitalroom.com API (Basic auth intercepted via Playwright)',
+    specs: { w: 2, h: 4, qty: 1000, material: 'White BOPP', finish: 'Gloss', shape: 'rectangle', format: 'roll' },
+    pricing: { total: 203.66, unit: 0.20366, turnaround: 6, shippingIncl: false },
+    note: '2"×4" at 1k qty. Via digitalroom.com API. Gloss Indoor lamination confirmed.'
+  },
+  {
+    id: 'up-2x4-5000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'calculator.digitalroom.com API',
+    specs: { w: 2, h: 4, qty: 5000, material: 'White BOPP', finish: 'Gloss', shape: 'rectangle', format: 'roll' },
+    pricing: { total: 463.40, unit: 0.09268, turnaround: 6, shippingIncl: false },
+    note: '2"×4" at 5k qty.'
+  },
+  {
+    id: 'up-2x4-10000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'calculator.digitalroom.com API',
+    specs: { w: 2, h: 4, qty: 10000, material: 'White BOPP', finish: 'Gloss', shape: 'rectangle', format: 'roll' },
+    pricing: { total: 683.03, unit: 0.06830, turnaround: 6, shippingIncl: false },
+    note: '2"×4" at 10k qty.'
+  },
+  {
+    id: 'up-2x2-10000', type: 'roll_labels', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/roll-labels.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'calculator.digitalroom.com API',
+    specs: { w: 2, h: 2, qty: 10000, material: 'White BOPP', finish: 'Gloss', shape: 'rectangle', format: 'roll' },
+    pricing: { total: 400, unit: 0.04, turnaround: 6, shippingIncl: false },
+    note: '2"×2" at 10k qty. API-confirmed.'
+  },
+
+  // ── Vistaprint ─ 4 price points (PARTIAL) ────────────────────────────────────
+  {
+    id: 'vp-1x1-50', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
-    status: 'partial',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-14',
     method: 'Playwright + Cimpress pricing API intercept',
     specs: { w: 1, h: 1, qty: 50, material: 'White Paper', finish: 'Matte', shape: 'square', format: 'slit_roll' },
     pricing: { total: 35.99, unit: 0.72, turnaround: null, shippingIncl: null },
     note: 'Smallest size/qty from Cimpress estimatedPrices. Product PRD-DF5PWTHC. Shipping unknown.'
   },
   {
-    id: 'vp-1x1-1000',
-    competitor: 'Vistaprint',
+    id: 'vp-1x1-1000', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
-    status: 'partial',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-14',
     method: 'Playwright + Cimpress pricing API intercept',
     specs: { w: 1, h: 1, qty: 1000, material: 'White Paper', finish: 'Matte', shape: 'square', format: 'slit_roll' },
     pricing: { total: 110.24, unit: 0.12, turnaround: null, shippingIncl: null },
     note: 'From same Cimpress estimatedPrices call — multiple qty tiers returned simultaneously. Shipping unknown.'
   },
   {
-    id: 'vp-roundedsq-5000-defaultsize',
-    competitor: 'Vistaprint',
+    id: 'vp-roundedsq-5000-defaultsize', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
-    status: 'partial',
-    confidence: 'medium',
-    capturedAt: '2026-04-14',
+    status: 'partial', confidence: 'medium', capturedAt: '2026-04-14',
     method: 'Playwright + Cimpress API (Rounded Square, default size)',
     specs: { w: null, h: null, qty: 5000, material: null, finish: null, shape: 'rounded_square', format: 'slit_roll' },
     pricing: { total: 219.19, unit: 0.044, turnaround: null, shippingIncl: null },
-    note: 'Rounded Square shape confirmed via DOM click. Size not confirmed — do NOT treat as 3"×3". 5k qty. Shipping unknown.'
+    note: 'Rounded Square shape confirmed via DOM click. Size not confirmed — do NOT treat as 3"×3". 5k qty.'
   },
   {
-    id: 'vp-3x3-5000-directional',
-    competitor: 'Vistaprint',
+    id: 'vp-3x3-5000-directional', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
-    status: 'partial',
-    confidence: 'medium',
-    capturedAt: '2026-04-14',
+    status: 'partial', confidence: 'medium', capturedAt: '2026-04-14',
     method: 'Cimpress API: W=3/H=3 injected alongside Rounded Square selection (DIRECTIONAL)',
     specs: { w: 3, h: 3, qty: 5000, material: null, finish: null, shape: 'rounded_square', format: 'slit_roll' },
     pricing: { total: 544.86, unit: 0.10897, turnaround: null, shippingIncl: null },
-    note: 'DIRECTIONAL ONLY — W=3/H=3 injected into Cimpress call, size not DOM-confirmed. pricingContext may not encode custom dimensions. Treat as ballpark. To confirm: DevTools at VP, watch for selections[Custom Width] in Cimpress XHR.'
+    note: 'DIRECTIONAL ONLY — W=3/H=3 injected into Cimpress call, size not DOM-confirmed. To verify: DevTools at VP, watch for selections[Custom Width] in Cimpress XHR.'
   },
 
-  // ── Axiom Print — 2 verified price points (PARTIAL) ─────────────────────────
+  // ── Axiom Print ─ 8 price points (PARTIAL — no 3×3, max 2500 qty) ─────────────
   {
-    id: 'axiom-2x3-250',
-    competitor: 'Axiom Print',
+    id: 'axiom-2x3-250', type: 'roll_labels', competitor: 'Axiom Print',
     url: 'https://axiomprint.com/product/roll-labels-335',
-    status: 'partial',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
-    method: 'Playwright + Ant Design dropdown (default state)',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-14',
+    method: 'Playwright + Ant Design dropdown',
     specs: { w: 2, h: 3, qty: 250, material: null, finish: null, shape: 'rectangle', format: 'roll' },
-    pricing: { total: 112.68, unit: 0.451, turnaround: null, shippingIncl: null },
-    note: 'Default configurator state. Material not confirmed (likely White Matte BOPP default). Note: 3"×3" NOT offered — closest size is 3"×4".'
+    pricing: { total: 112.68, unit: 0.4507, turnaround: null, shippingIncl: null },
+    note: 'Default configurator state. Note: 3"×3" NOT offered in standard configurator. Available sizes: 2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5.'
   },
   {
-    id: 'axiom-2x3-2500',
-    competitor: 'Axiom Print',
+    id: 'axiom-2x3-500', type: 'roll_labels', competitor: 'Axiom Print',
     url: 'https://axiomprint.com/product/roll-labels-335',
-    status: 'partial',
-    confidence: 'high',
-    capturedAt: '2026-04-14',
-    method: 'Playwright + Ant Design dropdown (qty interaction)',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 2, h: 3, qty: 500, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 124.76, unit: 0.24952, turnaround: null, shippingIncl: null },
+    note: '2"×3" at 500 qty.'
+  },
+  {
+    id: 'axiom-2x3-1000', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 2, h: 3, qty: 1000, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 148.32, unit: 0.14832, turnaround: null, shippingIncl: null },
+    note: '2"×3" at 1k qty.'
+  },
+  {
+    id: 'axiom-2x3-2500', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-14',
+    method: 'Playwright + Ant Design dropdown',
     specs: { w: 2, h: 3, qty: 2500, material: null, finish: null, shape: 'rectangle', format: 'roll' },
     pricing: { total: 213.27, unit: 0.0853, turnaround: null, shippingIncl: null },
-    note: 'Max standard configurator qty = 2,500. 5k+ requires custom quote (747-888-7777). Material not confirmed.'
+    note: 'Max standard configurator qty = 2,500. 5k+ requires custom quote (747-888-7777).'
+  },
+  {
+    id: 'axiom-3x4-250', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 3, h: 4, qty: 250, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 120.28, unit: 0.48112, turnaround: null, shippingIncl: null },
+    note: '3"×4" — closest standard size to 3"×3". No 3×3 in configurator.'
+  },
+  {
+    id: 'axiom-3x4-500', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 3, h: 4, qty: 500, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 139.45, unit: 0.2789, turnaround: null, shippingIncl: null },
+    note: '3"×4" at 500 qty.'
+  },
+  {
+    id: 'axiom-3x4-1000', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 3, h: 4, qty: 1000, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 176.67, unit: 0.17667, turnaround: null, shippingIncl: null },
+    note: '3"×4" at 1k qty.'
+  },
+  {
+    id: 'axiom-3x4-2500', type: 'roll_labels', competitor: 'Axiom Print',
+    url: 'https://axiomprint.com/product/roll-labels-335',
+    status: 'partial', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Ant Design dropdown',
+    specs: { w: 3, h: 4, qty: 2500, material: null, finish: null, shape: 'rectangle', format: 'roll' },
+    pricing: { total: 277.76, unit: 0.11110, turnaround: null, shippingIncl: null },
+    note: '3"×4" at 2.5k qty. Max standard qty = 2,500.'
   },
 
-  // ── GotPrint — 1 promo price + 1 spec-confirmed-no-price ────────────────────
+  // ── GotPrint ─ 8 price points (7 LIVE clear gloss + 1 partial promo) ──────────
+  // BREAKTHROUGH: /service/rest/v1/products/300158845/prices — Clear Gloss Indoor
+  // shape=4 (Square-Rounded), size=452 (3"×3"), paper=12 (White BOPP), finish=1
+  // Matte (finish=3) capture still pending — expect ~5-10% higher than clear gloss.
   {
-    id: 'gp-2circle-promo',
-    competitor: 'GotPrint',
+    id: 'gp-3x3-100', type: 'roll_labels', competitor: 'GotPrint',
     url: 'https://www.gotprint.com/products/roll-labels/order',
-    status: 'partial',
-    confidence: 'low',
-    capturedAt: '2026-04-14',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API /service/rest/v1/products/300158845/prices',
+    specs: { w: 3, h: 3, qty: 100, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 76.28, unit: 0.7628, turnaround: null, shippingIncl: null },
+    note: 'LIVE. Square-Rounded 3"×3", White BOPP, Clear Gloss Indoor. Matte capture pending.'
+  },
+  {
+    id: 'gp-3x3-250', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 250, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 86.16, unit: 0.34464, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 250.'
+  },
+  {
+    id: 'gp-3x3-500', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 500, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 123.00, unit: 0.246, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 500.'
+  },
+  {
+    id: 'gp-3x3-1000', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 1000, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 148.91, unit: 0.14891, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 1k.'
+  },
+  {
+    id: 'gp-3x3-2500', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 2500, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 226.86, unit: 0.09074, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 2.5k.'
+  },
+  {
+    id: 'gp-3x3-5000', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 5000, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 356.80, unit: 0.07136, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 5k.'
+  },
+  {
+    id: 'gp-3x3-10000', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + GotPrint REST API',
+    specs: { w: 3, h: 3, qty: 10000, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
+    pricing: { total: 618.83, unit: 0.06188, turnaround: null, shippingIncl: null },
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 10k.'
+  },
+  {
+    id: 'gp-2circle-promo', type: 'roll_labels', competitor: 'GotPrint',
+    url: 'https://www.gotprint.com/products/roll-labels/order',
+    status: 'partial', confidence: 'low', capturedAt: '2026-04-14',
     method: 'HTML scrape — nav cross-sell markup',
     specs: { w: 2, h: 2, qty: null, material: null, finish: null, shape: 'circle', format: 'roll' },
     pricing: { total: 72.92, unit: null, turnaround: null, shippingIncl: null },
-    note: 'Promo/example from nav markup. 2" circle, qty NOT stated. Low confidence — not spec-accurate. Do not use for 3×3 comparison.'
-  },
-  {
-    id: 'gp-3x3-spec-confirmed-no-price',
-    competitor: 'GotPrint',
-    url: 'https://www.gotprint.com/products/roll-labels/order',
-    status: 'partial',
-    confidence: 'medium',
-    capturedAt: '2026-04-14',
-    method: 'Playwright + browser click-through — spec confirmed, price blocked',
-    specs: { w: 3, h: 3, qty: 5000, material: 'White BOPP', finish: 'Matte', shape: 'square_rounded', format: 'roll' },
-    pricing: { total: null, unit: null, turnaround: null, shippingIncl: null },
-    blocker: 'Vue.js cascade keeps paper/finish selects disabled after JS dispatch; REST API 401 on all pricing endpoints. Price requires completing full manual upload flow.',
-    note: 'SPEC CONFIRMED — NO PRICE CAPTURED. Square-Rounded 3"×3" confirmed. White BOPP (paper ID 12) + Matte Finish (Indoor) + qty 5k all available in configurator. variantId=32. Human click-path exists but upload required.'
+    note: 'Promo example from nav markup. 2" circle, qty NOT stated. Low confidence — do not use for comparison.'
   },
 
-  // ── Sticker Mule — 1 starting price (PARTIAL) ───────────────────────────────
+  // ── Sticker Mule ─ 1 starting price (PARTIAL, upload-first) ──────────────────
   {
-    id: 'sm-starting-price',
-    competitor: 'Sticker Mule',
+    id: 'sm-starting-price', type: 'roll_labels', competitor: 'Sticker Mule',
     url: 'https://www.stickermule.com/custom-labels',
-    status: 'partial',
-    confidence: 'medium',
-    capturedAt: '2026-04-14',
+    status: 'partial', confidence: 'medium', capturedAt: '2026-04-14',
     method: 'JSON-LD AggregateOffer schema extraction',
     specs: { w: null, h: null, qty: null, material: null, finish: null, shape: null, format: null },
     pricing: { total: 47, unit: null, turnaround: 4, shippingIncl: true },
-    note: 'STARTING PRICE ONLY — any size, any shape. Free shipping + free proof. 4-day turnaround. Almost certainly a small-run entry price. Upload-first confirmed — no configure-then-price path exists. 5k pricing not captured.'
+    note: 'STARTING PRICE ONLY — any size, any shape. Free shipping + free proof. 4-day turnaround. Upload-first confirmed — no configure-then-price path exists. 5k pricing not captured.'
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // FOLDING CARTONS — 4"×2"×5" Straight Tuck End, 18pt Gloss
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── UPrinting ─ 7 qty tiers ───────────────────────────────────────────────────
+  {
+    id: 'up-box-ste-50', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope (UPrinting configurator)',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 50, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 270, unit: 5.40, turnaround: null, shippingIncl: false },
+    note: 'Straight Tuck End, 4"×2"×5", 18pt Gloss. 50 qty.'
+  },
+  {
+    id: 'up-box-ste-100', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 100, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 338, unit: 3.38, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 100 qty.'
+  },
+  {
+    id: 'up-box-ste-250', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 250, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 675, unit: 2.70, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 250 qty.'
+  },
+  {
+    id: 'up-box-ste-500', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 500, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 1180, unit: 2.36, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 500 qty.'
+  },
+  {
+    id: 'up-box-ste-1000', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 1000, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 1690, unit: 1.69, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 1k qty.'
+  },
+  {
+    id: 'up-box-ste-2000', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 2000, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 2020, unit: 1.01, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 2k qty.'
+  },
+  {
+    id: 'up-box-ste-2500', type: 'folding_cartons', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/product-boxes.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 2500, material: '18pt Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 2250, unit: 0.90, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 2.5k qty.'
+  },
+
+  // ── Packola ─ 5 qty tiers (exact spec 4"×2"×5" STE) ─────────────────────────
+  {
+    id: 'packola-box-ste-250', type: 'folding_cartons', competitor: 'Packola',
+    url: 'https://www.packola.com/products/product-box',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 250, material: 'Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 717.50, unit: 2.87, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5". Packola is pricier than UPrinting at all captured qty tiers for this spec.'
+  },
+  {
+    id: 'packola-box-ste-500', type: 'folding_cartons', competitor: 'Packola',
+    url: 'https://www.packola.com/products/product-box',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 500, material: 'Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 1255, unit: 2.51, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 500 qty.'
+  },
+  {
+    id: 'packola-box-ste-1000', type: 'folding_cartons', competitor: 'Packola',
+    url: 'https://www.packola.com/products/product-box',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 1000, material: 'Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 1800, unit: 1.80, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 1k qty.'
+  },
+  {
+    id: 'packola-box-ste-2000', type: 'folding_cartons', competitor: 'Packola',
+    url: 'https://www.packola.com/products/product-box',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 2000, material: 'Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 2160, unit: 1.08, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 2k qty.'
+  },
+  {
+    id: 'packola-box-ste-2500', type: 'folding_cartons', competitor: 'Packola',
+    url: 'https://www.packola.com/products/product-box',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { style: 'STE', w: 4, h: 5, d: 2, qty: 2500, material: 'Cardstock', coating: 'Gloss', format: 'box' },
+    pricing: { total: 2400, unit: 0.96, turnaround: null, shippingIncl: false },
+    note: 'STE 4"×2"×5", 2.5k qty.'
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // STAND-UP POUCHES — 4.375"×6" with 2" gusset, White
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── UPrinting ─ 6 qty tiers (exact spec) ─────────────────────────────────────
+  {
+    id: 'up-pouch-100', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 100, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 434.67, unit: 4.3467, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, Thick Gauge White. 100 qty.'
+  },
+  {
+    id: 'up-pouch-250', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 250, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 505.87, unit: 2.0235, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, 250 qty.'
+  },
+  {
+    id: 'up-pouch-500', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 500, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 630.22, unit: 1.2604, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, 500 qty.'
+  },
+  {
+    id: 'up-pouch-1000', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 1000, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 897.26, unit: 0.8973, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, 1k qty.'
+  },
+  {
+    id: 'up-pouch-2500', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 2500, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 1664.25, unit: 0.6657, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, 2.5k qty.'
+  },
+  {
+    id: 'up-pouch-5000', type: 'stand_up_pouches', competitor: 'UPrinting',
+    url: 'https://www.uprinting.com/stand-up-pouches.html',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-17',
+    method: 'Playwright + Angular scope',
+    specs: { w: 4.375, h: 6, gusset: 2, qty: 5000, material: 'Thick Gauge White', format: 'pouch' },
+    pricing: { total: 2941, unit: 0.5882, turnaround: null, shippingIncl: false },
+    note: 'SUP 4.375"×6"×2" gusset, 5k qty.'
+  },
+
+  // ── Packola ─ 5 qty tiers (Medium ~4"×6" — directional proxy) ─────────────────
+  {
+    id: 'packola-pouch-250', type: 'stand_up_pouches', competitor: 'Packola',
+    url: 'https://www.packola.com/products/custom-pouches',
+    status: 'live', confidence: 'medium', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { w: 4, h: 6, gusset: null, qty: 250, material: 'White', format: 'pouch' },
+    pricing: { total: 421.51, unit: 1.69, turnaround: null, shippingIncl: false },
+    note: 'Medium size (~4"×6") — directional proxy for 4.375"×6"×2". Packola uses predefined size tiers; exact dims not configurable.'
+  },
+  {
+    id: 'packola-pouch-500', type: 'stand_up_pouches', competitor: 'Packola',
+    url: 'https://www.packola.com/products/custom-pouches',
+    status: 'live', confidence: 'medium', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { w: 4, h: 6, gusset: null, qty: 500, material: 'White', format: 'pouch' },
+    pricing: { total: 462.76, unit: 0.93, turnaround: null, shippingIncl: false },
+    note: 'Packola Medium ~4"×6", 500 qty.'
+  },
+  {
+    id: 'packola-pouch-1000', type: 'stand_up_pouches', competitor: 'Packola',
+    url: 'https://www.packola.com/products/custom-pouches',
+    status: 'live', confidence: 'medium', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { w: 4, h: 6, gusset: null, qty: 1000, material: 'White', format: 'pouch' },
+    pricing: { total: 545.29, unit: 0.55, turnaround: null, shippingIncl: false },
+    note: 'Packola Medium ~4"×6", 1k qty.'
+  },
+  {
+    id: 'packola-pouch-2500', type: 'stand_up_pouches', competitor: 'Packola',
+    url: 'https://www.packola.com/products/custom-pouches',
+    status: 'live', confidence: 'medium', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { w: 4, h: 6, gusset: null, qty: 2500, material: 'White', format: 'pouch' },
+    pricing: { total: 792.83, unit: 0.32, turnaround: null, shippingIncl: false },
+    note: 'Packola Medium ~4"×6", 2.5k qty.'
+  },
+  {
+    id: 'packola-pouch-5000', type: 'stand_up_pouches', competitor: 'Packola',
+    url: 'https://www.packola.com/products/custom-pouches',
+    status: 'live', confidence: 'medium', capturedAt: '2026-04-17',
+    method: 'DOM extraction from Packola configurator calculator',
+    specs: { w: 4, h: 6, gusset: null, qty: 5000, material: 'White', format: 'pouch' },
+    pricing: { total: 1205.42, unit: 0.24, turnaround: null, shippingIncl: false },
+    note: 'Packola Medium ~4"×6", 5k qty.'
   }
 
 ];
 
-// ─── Internal pricing constants (mirrors competitor-pricing.html) ─────────────
+// ─── Internal pricing constants (HP Indigo 6K — labels only) ─────────────────
 
 const CP_TIERS = [
   { minFrames: 500, standard: 3.40, uv: 4.40 },
@@ -430,9 +811,9 @@ function getLamAdder(lam, charge) {
   return 0;
 }
 
-// ─── Closest-match algorithm ──────────────────────────────────────────────────
+// ─── Closest-match algorithm (label benchmark only) ───────────────────────────
 //
-// Scoring per capture vs a query:
+// Scoring per capture vs a query (labels only — only considers roll_labels captures):
 //   Size:     area difference ratio × 4   (0 if exact, penalized if unknown)
 //   Qty:      log₂(queryQty/capQty) × 2  (0 if exact, penalized if unknown)
 //   Material: +1.5 if mismatch between two known values
@@ -485,7 +866,6 @@ function scoreCapture(cap, q) {
     }
   } else if (!cap.specs.material) {
     score += 0.5;
-    // don't show delta for unknown material — it's a capture limitation, not a spec mismatch
   }
 
   // Finish
@@ -504,11 +884,9 @@ function scoreCapture(cap, q) {
   return { score, deltas, isExact };
 }
 
-// Per competitor: score ALL their captures (priced and no-price) and return the best.
-// A spec-confirmed-no-price entry can win over a low-confidence promo if it scores better.
-// noPrice=true on the result means the best match has no price captured.
+// Per competitor: score all roll_labels captures for that competitor.
 function findBestMatch(competitor, q) {
-  const all = ALL_CAPTURES.filter(c => c.competitor === competitor);
+  const all = ALL_CAPTURES.filter(c => c.competitor === competitor && c.type === 'roll_labels');
   if (!all.length) return null;
 
   let best = null;
@@ -525,20 +903,6 @@ function findBestMatch(competitor, q) {
   if (!best) return null;
 
   best.noPrice = best.cap.pricing.total == null;
-
-  // If best has a price, also check whether a no-price spec-confirmed entry
-  // exists that is a significantly better match (within 1 score point) — show as note.
-  if (!best.noPrice) {
-    const noPriceEntries = all.filter(c => c.pricing.total == null && c.blocker);
-    for (const cap of noPriceEntries) {
-      const { score } = scoreCapture(cap, q);
-      if (score < bestScore + 1) {
-        best.specConfirmedNoPrice = cap;
-        break;
-      }
-    }
-  }
-
   return best;
 }
 
@@ -553,25 +917,44 @@ function fmtUnit(n) {
 }
 
 function fmtSize(cap) {
-  if (cap.specs.w != null && cap.specs.h != null) return `${cap.specs.w}"×${cap.specs.h}"`;
+  const s = cap.specs;
+  if (cap.type === 'folding_cartons') {
+    if (s.w != null && s.h != null && s.d != null)
+      return `${s.w}"×${s.d}"×${s.h}" ${s.style || ''}`;
+    return '—';
+  }
+  if (cap.type === 'stand_up_pouches') {
+    if (s.w != null && s.h != null)
+      return s.gusset ? `${s.w}"×${s.h}" (${s.gusset}" gusset)` : `${s.w}"×${s.h}"`;
+    return '—';
+  }
+  // roll labels
+  if (s.w != null && s.h != null) return `${s.w}"×${s.h}"`;
   return '<em style="color:#9ca3af;">size unknown</em>';
 }
 
 function fmtQty(cap) {
-  if (cap.specs.qty != null) return cap.specs.qty.toLocaleString();
-  return '<em style="color:#9ca3af;">qty unknown</em>';
+  const q = cap.specs.qty;
+  return q != null ? q.toLocaleString() : '<em style="color:#9ca3af;">qty unknown</em>';
 }
 
-function fmtMat(cap) {
-  return cap.specs.material || '<em style="color:#9ca3af;">unknown</em>';
+function fmtMatFin(cap) {
+  const s = cap.specs;
+  const mat = s.material || s.coating || '';
+  const fin = s.finish || '';
+  if (!mat && !fin) return '<em style="color:#9ca3af;">unknown</em>';
+  if (mat && fin) return `${mat} / ${fin}`;
+  return mat || fin;
 }
 
-function fmtFin(cap) {
-  return cap.specs.finish || '<em style="color:#9ca3af;">unknown</em>';
-}
-
-function fmtShape(cap) {
-  return cap.specs.shape ? cap.specs.shape.replace('_', ' ') : '<em style="color:#9ca3af;">unknown</em>';
+function fmtTypeBadge(t) {
+  const map = {
+    roll_labels:    ['type-label', 'Labels'],
+    folding_cartons:['type-box',   'Cartons'],
+    stand_up_pouches:['type-pouch','Pouches']
+  };
+  const [cls, label] = map[t] || ['type-label', t];
+  return `<span class="type-badge ${cls}">${label}</span>`;
 }
 
 function statusBadge(s) {
@@ -594,10 +977,12 @@ function matchBadge(isExact, noPrice) {
 // ─── Render: all captures table ───────────────────────────────────────────────
 
 function renderCapturesTable() {
+  const filterType = document.getElementById('filterType').value;
   const filterComp = document.getElementById('filterCompetitor').value;
   const filterConf = document.getElementById('filterConfidence').value;
 
   let captures = ALL_CAPTURES;
+  if (filterType) captures = captures.filter(c => c.type === filterType);
   if (filterComp) captures = captures.filter(c => c.competitor === filterComp);
   if (filterConf === 'high')   captures = captures.filter(c => c.confidence === 'high');
   if (filterConf === 'medium') captures = captures.filter(c => c.confidence === 'high' || c.confidence === 'medium');
@@ -610,26 +995,24 @@ function renderCapturesTable() {
     const unitStr  = hasPriceRow ? fmtUnit(cap.pricing.unit) : '—';
     return `
       <tr${!hasPriceRow ? ' style="background:#fff7f7;"' : ''}>
+        <td style="white-space:nowrap;">${fmtTypeBadge(cap.type)}</td>
         <td><strong>${cap.competitor}</strong><br><a href="${cap.url}" target="_blank" style="font-size:10px;color:#94a3b8;">↗ site</a></td>
-        <td>${fmtSize(cap)}</td>
+        <td style="white-space:nowrap;">${fmtSize(cap)}</td>
         <td style="white-space:nowrap;">${fmtQty(cap)}</td>
-        <td>${fmtMat(cap)}</td>
-        <td>${fmtFin(cap)}</td>
-        <td>${fmtShape(cap)}</td>
+        <td style="font-size:11px;">${fmtMatFin(cap)}</td>
         <td>${priceStr}</td>
         <td style="white-space:nowrap;">${unitStr}</td>
         <td>${statusBadge(cap.status)}</td>
         <td>${confBadge(cap.confidence)}</td>
-        <td style="font-size:10px;color:#64748b;max-width:160px;">${cap.method}</td>
-        <td style="font-size:10px;color:#64748b;max-width:200px;">${cap.note}</td>
+        <td style="font-size:10px;color:#64748b;max-width:220px;">${cap.note}</td>
       </tr>
     `;
   }).join('');
 }
 
-// ─── Render: match results table ──────────────────────────────────────────────
+// ─── Render: match results table (label benchmark only) ───────────────────────
 
-const COMPETITOR_ORDER = ['UPrinting', 'Vistaprint', 'Axiom Print', 'GotPrint', 'Sticker Mule'];
+const LABEL_COMPETITOR_ORDER = ['UPrinting', 'Vistaprint', 'Axiom Print', 'GotPrint', 'Sticker Mule'];
 
 function runMatch() {
   const w   = parseFloat(document.getElementById('qW').value) || 0;
@@ -677,7 +1060,7 @@ function runMatch() {
 function renderMatchRows(q, ourTotal) {
   const tbody = document.getElementById('matchRows');
 
-  tbody.innerHTML = COMPETITOR_ORDER.map(comp => {
+  tbody.innerHTML = LABEL_COMPETITOR_ORDER.map(comp => {
     const match = findBestMatch(comp, q);
 
     if (!match) {
@@ -721,11 +1104,12 @@ function renderMatchRows(q, ourTotal) {
     }
 
     // Data point used
+    const s = cap.specs;
     const specDesc = [
-      cap.specs.w != null ? `${cap.specs.w}"×${cap.specs.h}"` : 'size unknown',
-      cap.specs.qty != null ? cap.specs.qty.toLocaleString() + ' pcs' : 'qty unknown',
-      cap.specs.material || 'mat unknown',
-      cap.specs.finish || 'finish unknown'
+      s.w != null ? `${s.w}"×${s.h}"` : 'size unknown',
+      s.qty != null ? s.qty.toLocaleString() + ' pcs' : 'qty unknown',
+      s.material || 'mat unknown',
+      s.finish || 'finish unknown'
     ].join(' · ');
 
     // Deltas display
@@ -733,29 +1117,19 @@ function renderMatchRows(q, ourTotal) {
     if (isExact) {
       deltaCell = '<span style="color:#16a34a;font-size:11px;">All matched fields agree ✓</span>';
     } else if (noPrice) {
-      deltaCell = `<div style="font-size:10px;color:#dc2626;font-weight:600;">PRICE BLOCKED</div>
-                   <div style="font-size:10px;color:#64748b;margin-top:2px;">${cap.blocker || ''}</div>`;
+      deltaCell = `<div style="font-size:10px;color:#dc2626;font-weight:600;">PRICE BLOCKED</div>`;
     } else {
       deltaCell = deltas.map(d =>
         `<div style="font-size:10px;color:#b45309;background:#fef3c7;border-radius:4px;padding:2px 6px;margin:1px 0;">⚠ ${d}</div>`
       ).join('');
-      // Also note unknown fields that weren't mismatch-penalized but are gaps
       if (!cap.specs.material) deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">material not captured</div>`;
-      if (!cap.specs.finish) deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">finish not captured</div>`;
+      if (!cap.specs.finish)   deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">finish not captured</div>`;
     }
 
     // Turnaround + shipping
     const ta = cap.pricing.turnaround ? `${cap.pricing.turnaround}d` : '—';
-    const ship = cap.pricing.shippingIncl === true ? '+ free ship' :
+    const ship = cap.pricing.shippingIncl === true  ? '+ free ship' :
                  cap.pricing.shippingIncl === false ? '+ ship extra' : 'ship unknown';
-
-    // Show spec-confirmed note for GotPrint if we found a promo match but also have confirmed spec
-    let specConfNote = '';
-    if (match.specConfirmedNoPrice) {
-      specConfNote = `<div style="font-size:10px;color:#2563eb;margin-top:4px;background:#eff6ff;padding:3px 6px;border-radius:4px;">
-        ℹ Also: 3"×3" spec <strong>confirmed</strong> in configurator — price blocked by Vue cascade / REST 401
-      </div>`;
-    }
 
     return `
       <tr>
@@ -769,7 +1143,7 @@ function renderMatchRows(q, ourTotal) {
         <td>${matchBadge(isExact, noPrice)}</td>
         <td>${priceCell}<br><span style="font-size:10px;color:#64748b;">${unitCell}</span></td>
         <td style="font-size:12px;">${vsCell}</td>
-        <td style="font-size:11px;color:#374151;">${specDesc}${specConfNote}</td>
+        <td style="font-size:11px;color:#374151;">${specDesc}</td>
         <td>${deltaCell}</td>
         <td style="font-size:11px;white-space:nowrap;">${ta}<br>${ship}</td>
         <td>${confBadge(cap.confidence)}</td>
@@ -781,23 +1155,47 @@ function renderMatchRows(q, ourTotal) {
 // ─── Render: coverage summary ─────────────────────────────────────────────────
 
 function renderCoverageSummary() {
-  const items = [
-    { comp: 'UPrinting',    status: 'live',    detail: '4 verified price points · 2×2 and 3×3 at 1k and 5k qty · EXACT MATCH for 3"×3"/5k ($505.85, 6-day)' },
-    { comp: 'Vistaprint',   status: 'partial', detail: '4 price points · 1×1/50 + 1×1/1k (HIGH) · Rounded Square/5k default (MEDIUM) · 3×3/5k directional (MEDIUM, size not DOM-confirmed)' },
-    { comp: 'Axiom Print',  status: 'partial', detail: '2 verified points · 2×3 at 250 + 2500 qty · 3"×3" NOT offered in standard configurator · 5k requires custom quote' },
-    { comp: 'GotPrint',     status: 'partial', detail: '3×3 spec CONFIRMED (Square-Rounded, White BOPP, Matte, 5k qty) · price blocked: Vue cascade + REST API 401 · promo example only ($72.92/2" circle)' },
-    { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · upload-first confirmed · no configure-then-price path exists · free shipping + 4-day included' }
+  const labelItems = [
+    { comp: 'UPrinting',    status: 'live',    detail: '12 verified price points · 2×2, 2×3, 2×4, 3×3, 4×4 at multiple qtys · EXACT MATCH for 3"×3"/5k ($505.85, 6-day)' },
+    { comp: 'Vistaprint',   status: 'partial', detail: '4 points · 1×1/50 + 1×1/1k (HIGH) · Rounded Square/5k default (MED) · 3×3/5k directional $544.86 (size not DOM-confirmed)' },
+    { comp: 'Axiom Print',  status: 'partial', detail: '8 points · 2×3 (250–2500) + 3×4 (250–2500) · 3"×3" NOT in standard configurator · 5k = custom quote' },
+    { comp: 'GotPrint',     status: 'live',    detail: '7 LIVE points · 3"×3" Square-Rounded, White BOPP, Clear Gloss Indoor, qty 100–10k · Matte capture still pending' },
+    { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · Upload-first confirmed · No configure-then-price path · Free shipping + 4-day' }
   ];
 
-  document.getElementById('coverageSummary').innerHTML = items.map(i => `
-    <div style="display:flex;align-items:flex-start;gap:8px;">
-      ${statusBadge(i.status)}
+  const cartonItems = [
+    { comp: 'UPrinting',  status: 'live',    detail: '7 LIVE points · STE 4"×2"×5", 18pt Gloss, qty 50–2500 · EXACT SPEC confirmed' },
+    { comp: 'Packola',    status: 'live',    detail: '5 LIVE points · STE 4"×2"×5", qty 250–2500 · Packola 6–18% pricier than UPrinting at same qtys' },
+    { comp: 'Others',     status: 'partial', detail: 'GotPrint / Axiom do not offer folding cartons. Vistaprint / Sticker Mule: no packaging catalog.' }
+  ];
+
+  const pouchItems = [
+    { comp: 'UPrinting',  status: 'live',    detail: '6 LIVE points · 4.375"×6"×2" gusset, Thick Gauge White, qty 100–5000 · EXACT SPEC confirmed' },
+    { comp: 'Packola',    status: 'live',    detail: '5 LIVE points · Medium ~4"×6" (directional proxy), qty 250–5000 · Packola ~40–65% cheaper at high qtys' },
+    { comp: 'Others',     status: 'partial', detail: 'No other captured competitors offer stand-up pouches in current dataset.' }
+  ];
+
+  function sectionHTML(title, items) {
+    return `
       <div>
-        <strong style="font-size:12px;">${i.comp}</strong>
-        <div style="font-size:11px;color:#94a3b8;">${i.detail}</div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:5px;">${title}</div>
+        ${items.map(i => `
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;">
+            ${statusBadge(i.status)}
+            <div>
+              <strong style="font-size:12px;">${i.comp}</strong>
+              <div style="font-size:11px;color:#94a3b8;">${i.detail}</div>
+            </div>
+          </div>
+        `).join('')}
       </div>
-    </div>
-  `).join('');
+    `;
+  }
+
+  document.getElementById('coverageSummary').innerHTML =
+    sectionHTML('Roll Labels', labelItems) +
+    sectionHTML('Folding Cartons', cartonItems) +
+    sectionHTML('Stand-up Pouches', pouchItems);
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -834,23 +1232,33 @@ function injectStyles() {
     .data-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: #f8fafc; }
+    /* Type badges */
+    .type-badge { display: inline-block; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+    .type-label { background: #dbeafe; color: #1e40af; }
+    .type-box   { background: #f3e8ff; color: #6b21a8; }
+    .type-pouch { background: #d1fae5; color: #065f46; }
+    /* Status badges */
     .cov-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
     .cov-live    { background: #dcfce7; color: #15803d; }
     .cov-partial { background: #fef3c7; color: #92400e; }
     .cov-blocked { background: #fee2e2; color: #991b1b; }
     .cov-manual  { background: #f3e8ff; color: #6b21a8; }
+    /* Confidence badges */
     .conf-badge { display: inline-block; padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; }
     .conf-high { background: #dcfce7; color: #15803d; }
     .conf-med  { background: #fef3c7; color: #92400e; }
     .conf-low  { background: #fee2e2; color: #991b1b; }
     .conf-none { background: #f1f5f9; color: #64748b; }
+    /* Match badges */
     .match-badge { display: inline-block; padding: 3px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap; }
     .match-exact   { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
     .match-closest { background: #fef3c7; color: #78350f; border: 1px solid #fcd34d; }
     .match-noprice { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
     .match-nodata  { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+    /* Delta labels */
     .delta-cheaper { color: #16a34a; font-weight: 700; font-size: 12px; }
     .delta-higher  { color: #dc2626; font-weight: 700; font-size: 12px; }
+    /* Footer */
     .footer-note { text-align: center; margin-top: 20px; font-size: 11px; color: #9ca3af; }
     .footer-note a { color: #9ca3af; }
   `;
