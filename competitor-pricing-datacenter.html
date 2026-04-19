@@ -15,7 +15,7 @@
     <span style="font-size:15px;">🔒</span>
     <div>
       <strong>INTERNAL USE ONLY — Admin Only. Not linked in navigation.</strong>
-      56 price points across labels, folding cartons, and stand-up pouches. Confidence levels are honest.
+      56 price points across labels, folding cartons, and stand-up pouches + Quad Labels tracked (approval pending). Confidence levels are honest.
       Do not share with reps or operators.
     </div>
   </div>
@@ -24,13 +24,13 @@
     <div>
       <h2>Competitor Pricing Data Center</h2>
       <p>
-        56 captured data points across 3 product categories and 7 competitors.
+        56 captured price points across 3 product categories and 7 competitors (+ Quad Labels tracked, approval pending).
         Filter by product type, or use the label benchmark tool below for exact-match comparisons.
         Only verified captures shown — no inferred data.
       </p>
     </div>
     <div class="header-meta">
-      <div>Last capture: <strong>2026-04-17</strong></div>
+      <div>Last capture: <strong>2026-04-19</strong></div>
       <div>Scope: <strong>Labels · Folding Cartons · Pouches</strong></div>
       <div style="margin-top:6px;">
         <a href="competitor-pricing.html" class="meta-link">← Benchmark view</a>
@@ -59,6 +59,7 @@
           <option>GotPrint</option>
           <option>Sticker Mule</option>
           <option>Packola</option>
+          <option>Quad Labels</option>
         </select>
         <select id="filterConfidence" class="filter-select" onchange="renderCapturesTable()">
           <option value="">All confidence</option>
@@ -772,6 +773,25 @@ const ALL_CAPTURES = [
     specs: { w: 4, h: 6, gusset: null, qty: 5000, material: 'White', format: 'pouch' },
     pricing: { total: 1205.42, unit: 0.24, turnaround: null, shippingIncl: false },
     note: 'Packola Medium ~4"×6", 5k qty.'
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // QUAD LABELS — Trade-only wholesale (approval pending as of 2026-04-19)
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Account registered: info@pixelpressprint.com — awaiting reseller approval.
+  // Open API confirmed at api.quadlabels.com — pricing endpoints require auth.
+  // Expected to significantly undercut market rates (possibly 3–4× cheaper per intel).
+  // Products: PAPER label (id:14), SYNTHETIC label/White BOPP (id:15), SILVER label (id:20), +more
+  // Config: USD · inch · min 100 · custom die $140 · custom shape $220 · rush +30% · UPS flat $50
+
+  {
+    id: 'ql-pending', type: 'roll_labels', competitor: 'Quad Labels',
+    url: 'https://orders.quadlabels.com',
+    status: 'blocked', confidence: 'low', capturedAt: '2026-04-19',
+    method: 'Open API probe (api.quadlabels.com/open/*) + login attempt — approval pending',
+    specs: { w: null, h: null, qty: null, material: null, finish: null, shape: null, format: 'roll' },
+    pricing: { total: null, unit: null, turnaround: null, shippingIncl: null },
+    note: 'APPROVAL PENDING — No pricing captured yet. Trade-only reseller platform (Valencia, CA). Login API confirmed at /customer/login. Account info@pixelpressprint.com registered; awaiting access grant. Once approved: probe /customer/products, /customer/price, /customer/configurator. Expected to dramatically undercut retail competitors. PUL-69.'
   }
 
 ];
@@ -1012,7 +1032,7 @@ function renderCapturesTable() {
 
 // ─── Render: match results table (label benchmark only) ───────────────────────
 
-const LABEL_COMPETITOR_ORDER = ['UPrinting', 'Vistaprint', 'Axiom Print', 'GotPrint', 'Sticker Mule'];
+const LABEL_COMPETITOR_ORDER = ['UPrinting', 'Vistaprint', 'Axiom Print', 'GotPrint', 'Sticker Mule', 'Quad Labels'];
 
 function runMatch() {
   const w   = parseFloat(document.getElementById('qW').value) || 0;
@@ -1160,13 +1180,14 @@ function renderCoverageSummary() {
     { comp: 'Vistaprint',   status: 'partial', detail: '4 points · 1×1/50 + 1×1/1k (HIGH) · Rounded Square/5k default (MED) · 3×3/5k directional $544.86 (size not DOM-confirmed)' },
     { comp: 'Axiom Print',  status: 'partial', detail: '8 points · 2×3 (250–2500) + 3×4 (250–2500) · 3"×3" NOT in standard configurator · 5k = custom quote' },
     { comp: 'GotPrint',     status: 'live',    detail: '7 LIVE points · 3"×3" Square-Rounded, White BOPP, Clear Gloss Indoor, qty 100–10k · Matte capture still pending' },
-    { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · Upload-first confirmed · No configure-then-price path · Free shipping + 4-day' }
+    { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · Upload-first confirmed · No configure-then-price path · Free shipping + 4-day' },
+    { comp: 'Quad Labels',  status: 'blocked', detail: 'Trade-only wholesale (Valencia, CA) · Reseller account registered, approval pending as of 2026-04-19 · Expected 3–4× cheaper than retail · Open API confirmed, pricing endpoints require auth · PUL-69' }
   ];
 
   const cartonItems = [
     { comp: 'UPrinting',  status: 'live',    detail: '7 LIVE points · STE 4"×2"×5", 18pt Gloss, qty 50–2500 · EXACT SPEC confirmed' },
     { comp: 'Packola',    status: 'live',    detail: '5 LIVE points · STE 4"×2"×5", qty 250–2500 · Packola 6–18% pricier than UPrinting at same qtys' },
-    { comp: 'Others',     status: 'partial', detail: 'GotPrint / Axiom do not offer folding cartons. Vistaprint / Sticker Mule: no packaging catalog.' }
+    { comp: 'Others',     status: 'partial', detail: 'GotPrint / Axiom do not offer folding cartons. Vistaprint / Sticker Mule: no packaging catalog. Quad Labels: labels-only, no cartons or pouches.' }
   ];
 
   const pouchItems = [
