@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Dashboard — Bazaar Print</title>
-  <script src="shared.js?v=20260418-PUL56"></script>
-  <script src="auth.js?v=20260418-PUL56"></script>
+  <script src="shared.js?v=20260419-PUL70"></script>
+  <script src="auth.js?v=20260419-PUL70"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -281,6 +281,7 @@
     const overtimeHTML = order.needsConfirmation || order.status === 'pending-confirmation'
       ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🕒 ${order.confirmationReason || 'Pending overtime approval'}</div>`
       : '';
+    const currentProductionStep = order.status === 'in-production' ? (order.workflowSteps || [])[order.currentStep || 0] : null;
     const prepressHTML = order.status === 'prepress-active'
       ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
       : order.status === 'prepress-paused'
@@ -289,6 +290,8 @@
       ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">↩ Sent back to account manager</div>`
       : order.status === 'prepress'
       ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
+      : (order.status === 'in-production' && currentProductionStep?.status === 'paused')
+      ? `<div style="font-size:10px;color:#b45309;margin-top:2px;">⏸ ${currentProductionStep.machine || 'Production'} paused</div>`
       : '';
 
     // Queue visualization classes

@@ -5,7 +5,7 @@
 
 const DB_NAME = 'BazaarPrintDB';
 const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v19';
+const PULSE_UI_VERSION = 'v20';
 
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
   const localConfigScript = document.createElement('script');

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260418-PUL62"></script>
-  <script src="auth.js?v=20260418-PUL62"></script>
+  <script src="shared.js?v=20260419-PUL70"></script>
+  <script src="auth.js?v=20260419-PUL70"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -507,7 +507,7 @@ function renderList() {
     }
     // Date filter
     if (dateFilter === 'today') {
-      if (!o.dueDate) return true;
+      if (!o.dueDate) return false;
       const d = new Date(o.dueDate+'T12:00:00'); if (!(d >= today && d < new Date(today.getTime()+86400000))) return false;
     } else if (dateFilter === 'yesterday') {
       if (!o.dueDate) return false;
@@ -585,7 +585,7 @@ function renderOrderBody(order) {
         <div class="step-status ${step.status}">${step.status}</div>
         <div style="display:flex;gap:4px;">
           <button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Redirect</button>
-          <button class="btn btn-sm" onclick="openAssignModal(${order.id},'${step.id || i}')">👤 Assign</button>
+          <button class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="openAssignModal(${order.id},'${step.id || i}')">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
           <button class="btn btn-sm btn-danger" onclick="removeStepByIndex(${order.id},${i})">✕</button>
         </div>
       </div>
@@ -642,7 +642,12 @@ function di(label, val) {
 
 function getActionButtons(order) {
   const btns = [];
-  btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
+  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager'];
+  if (editableStatuses.includes(order.status)) {
+    btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
+  } else {
+    btns.push(`<button class="btn btn-sm" style="opacity:0.5;cursor:default;" title="Ticket locked — order is past the editable stage" disabled>🔒 Ticket Locked</button>`);
+  }
 
   // Prepress operations are handled in the Prepress module — not shown here
   if (order.status === 'new' || order.status === 'pending-review') {
@@ -738,11 +743,11 @@ async function changeStatus(dbId, newStatus) {
   if (newStatus === 'ready-to-ship') {
     const hasQcPass = order.qcRecord?.verdict === 'pass' || !!order.qcPassedAt;
     if (!hasQcPass) {
-      alert('❌ Cannot mark Ready to Ship — this order has not passed QC.\n\nUse the QC Checkout page to complete the QC inspection first.');
+      showPageToast('Cannot mark Ready to Ship — this order has not passed QC. Use the QC Checkout page to complete the QC inspection first.', 'error', 6000);
       return;
     }
     if (order.status === 'qc-failed') {
-      alert('❌ Cannot mark Ready to Ship — this order has a QC fail on record.\n\nReturn it to production, fix the defects, then re-run QC.');
+      showPageToast('Cannot mark Ready to Ship — this order has a QC fail on record. Return it to production, fix the defects, then re-run QC.', 'error', 6000);
       return;
     }
   }
@@ -753,6 +758,19 @@ async function changeStatus(dbId, newStatus) {
   if (newStatus === 'prepress-paused') patch.prepressPausedAt = new Date().toISOString(), patch.prepressPausedBy = by;
   if (newStatus === 'prepress-active' && order.status === 'prepress-paused') patch.prepressResumedAt = new Date().toISOString(), patch.prepressResumedBy = by;
   if (newStatus === 'pending-review' && ['prepress-active','prepress-paused'].includes(order.status)) patch.prepressCompletedAt = new Date().toISOString(), patch.prepressCompletedBy = by;
+  // When approving to production from pending-review, reset prepress completion marker
+  if (newStatus === 'in-production' && order.status === 'pending-review') {
+    patch.prepressCompletedAt = null;
+    patch.prepressCompletedBy = null;
+    patch.prepressStartedAt = null;
+    patch.prepressStartedBy = null;
+    patch.prepressPausedAt = null;
+    patch.prepressPausedBy = null;
+    patch.prepressResumedAt = null;
+    patch.prepressResumedBy = null;
+    patch.prepressApprovedAt = new Date().toISOString();
+    patch.prepressApprovedBy = by;
+  }
   await updateOrder(dbId, patch);
   await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by });
   await loadOrders();
@@ -783,7 +801,7 @@ async function advanceStep(dbId) {
   await addActivity({ orderId: order.orderId, type: 'step-advance', message: `Advanced to step ${nextStep + 1}: ${steps[nextStep]?.machine || 'QC'}`, by: 'Manager' });
   await loadOrders();
   if (newStatus === 'qc-checkout') {
-    alert(`✅ All production steps complete for Order #${order.orderId}.\n\nOrder has been sent to QC Checkout. Please notify QC to begin inspection.`);
+    showPageToast(`All production steps complete for Order #${order.orderId}. Order sent to QC Checkout.`, 'success', 5000);
   }
 }
 
@@ -853,9 +871,9 @@ async function submitReprint() {
   const reason = document.getElementById('reprintReason').value;
   const notes = document.getElementById('reprintNotes').value;
   const requestedBy = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
-  if (!qty) { alert('Please enter a quantity.'); return; }
+  if (!qty) { showPageToast('Please enter a quantity.', 'warning'); return; }
   if (qty > (order.quantity || 0)) {
-    alert(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`);
+    showPageToast(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`, 'warning', 5000);
     return;
   }
   const recreatedOrder = await createReprintOrderFromSource(order, {
@@ -878,7 +896,7 @@ async function submitReprint() {
   await addActivity({ orderId: recreatedOrder.orderId, type: 'create', message: `Recreated from #${order.orderId} (${reason})`, by: requestedBy });
   closeReprintModal();
   await loadOrders();
-  alert(`✅ Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`);
+  showPageToast(`Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`, 'success', 5000);
 }
 
 function syncReprintFromQty() {
@@ -919,10 +937,13 @@ function closeAssignModal() {
 
 async function confirmAssign() {
   const name = document.getElementById('assignSelect').value;
-  if (!name) { alert('Please select an operator.'); return; }
+  if (!name) { showPageToast('Please select an operator.', 'warning'); return; }
   const order = allOrders.find(o => o.id === assignTargetOrderDbId);
   if (!order) return;
-  const steps = order.workflowSteps.map(s => s.id === assignTargetStepId ? { ...s, assignedTo: name } : s);
+  const steps = order.workflowSteps.map((s, i) => {
+    const matches = s.id ? s.id === assignTargetStepId : String(i) === assignTargetStepId;
+    return matches ? { ...s, assignedTo: name } : s;
+  });
   await updateOrder(assignTargetOrderDbId, { workflowSteps: steps });
   await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
   closeAssignModal();
@@ -944,7 +965,7 @@ function closeAddStepModal() {
 async function confirmAddStep() {
   const machine = document.getElementById('newStepMachine').value;
   const operation = document.getElementById('newStepOperation').value;
-  if (!machine) { alert('Please select a machine.'); return; }
+  if (!machine) { showPageToast('Please select a machine.', 'warning'); return; }
   const order = allOrders.find(o => o.id === addStepTargetOrderDbId);
   if (!order) return;
   const newStep = {
@@ -1101,7 +1122,7 @@ async function confirmRedirect() {
   const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
   if (!order) return;
   const newMachine = document.getElementById('redirectMachine').value;
-  if (!newMachine) { alert('Please select a machine to redirect to.'); return; }
+  if (!newMachine) { showPageToast('Please select a machine to redirect to.', 'warning'); return; }
 
   const newOp = document.getElementById('redirectOperation').value || (MACHINES[newMachine]?.operations?.[0]) || 'Processing';
   const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
@@ -1124,12 +1145,12 @@ async function confirmRedirect() {
     });
     closeRedirectModal();
     await loadOrders();
-    alert(`✅ Step redirected to ${newMachine} (full job).`);
+    showPageToast(`Step redirected to ${newMachine} (full job).`, 'success', 4000);
   } else {
     // Partial redirect: split the step — keep original with reduced qty, add new step for the partial
     const partialQty = parseInt(document.getElementById('redirectQty').value) || 0;
-    if (!partialQty || partialQty <= 0) { alert('Please enter the quantity to redirect.'); return; }
-    if (partialQty >= (order.quantity || 0)) { alert('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.'); return; }
+    if (!partialQty || partialQty <= 0) { showPageToast('Please enter the quantity to redirect.', 'warning'); return; }
+    if (partialQty >= (order.quantity || 0)) { showPageToast('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.', 'warning', 5000); return; }
 
     // Mark the partial redirect on the existing step
     const steps = [...order.workflowSteps];
@@ -1177,7 +1198,7 @@ async function confirmRedirect() {
     });
     closeRedirectModal();
     await loadOrders();
-    alert(`✅ Split: ${partialQty} units redirected to ${newMachine}. Original step continues with remaining.`);
+    showPageToast(`Split: ${partialQty} units redirected to ${newMachine}. Original step continues with remaining.`, 'success', 5000);
   }
 }
 

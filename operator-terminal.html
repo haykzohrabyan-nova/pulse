@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260418-PUL56"></script>
+  <script src="shared.js?v=20260419-PUL70"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -1162,29 +1162,39 @@ async function refreshDoneToday() {
   const el = document.getElementById('done-today-list');
   if (!el || !currentOperator) return;
   try {
-    const today = new Date().toISOString().split('T')[0];
     const allOrders = await getAllOrders();
-    const profile = OPERATOR_PROFILES[currentOperator] || {};
-    const myMachines = profile.machines || [];
+    const profile = await getOperatorProfile(currentOperator);
+    const myMachines = (profile ? profile.machines : null) || (OPERATOR_PROFILES[currentOperator] || {}).machines || [];
+    // Show all completed tickets that this operator worked on (any step)
     const done = allOrders.filter(order => {
+      if (!['completed','shipped','received','waiting-pickup','ready-to-ship'].includes(order.status) && !order.workflowSteps?.every(s => s.status === 'completed')) return false;
       if (!order.workflowSteps) return false;
       return order.workflowSteps.some(s =>
         s.status === 'completed' &&
-        s.completedAt &&
-        s.completedAt.startsWith(today) &&
-        (s.completedBy === currentOperator || matchMachine(s.machine, myMachines))
+        (s.completedBy === currentOperator || s.assignedTo === currentOperator || matchMachine(s.machine, myMachines))
       );
     });
     if (!done.length) {
-      el.innerHTML = '<span style="color:var(--text-muted);">No completed jobs yet today.</span>';
+      el.innerHTML = '<span style="color:var(--text-muted);">No completed job tickets yet.</span>';
       return;
     }
-    el.innerHTML = done.map(o => `
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:7px 9px;margin-bottom:5px;text-align:left;">
-        <div style="font-weight:700;color:#166534;font-size:12px;">#${o.orderId} — ${escHtml(o.customerName || o.customer || '—')}</div>
-        <div style="font-size:11px;color:#4d7c5f;margin-top:1px;">${escHtml(o.productType || '—')} · ${(o.quantity||0).toLocaleString()} units</div>
-      </div>
-    `).join('');
+    // Sort by most recently completed
+    done.sort((a, b) => {
+      const aLast = a.workflowSteps.filter(s => s.completedAt).map(s => s.completedAt).sort().pop() || '';
+      const bLast = b.workflowSteps.filter(s => s.completedAt).map(s => s.completedAt).sort().pop() || '';
+      return bLast.localeCompare(aLast);
+    });
+    el.innerHTML = done.map(o => {
+      const lastStep = [...(o.workflowSteps || [])].filter(s => s.completedAt).sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
+      const doneDate = lastStep?.completedAt ? new Date(lastStep.completedAt).toLocaleDateString() : '';
+      return `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:7px 9px;margin-bottom:5px;text-align:left;">
+          <div style="font-weight:700;color:#166534;font-size:12px;">#${o.orderId} — ${escHtml(o.customerName || o.customer || '—')}</div>
+          <div style="font-size:11px;color:#4d7c5f;margin-top:1px;">${escHtml(o.productType || '—')} · ${(o.quantity||0).toLocaleString()} units</div>
+          ${doneDate ? `<div style="font-size:10px;color:#6b7280;margin-top:1px;">Completed ${doneDate}</div>` : ''}
+        </div>
+      `;
+    }).join('');
   } catch (e) {
     el.innerHTML = '<span style="color:var(--text-muted);">—</span>';
   }
@@ -1267,7 +1277,7 @@ async function refreshQueue() {
     if (!step) return;
 
     const atMyMachine = matchMachine(step.machine, myMachines);
-    if (atMyMachine) {
+    if (atMyMachine && order.status === 'in-production') {
       myJobs.push({ order, stepIdx: idx, step });
       return;
     }

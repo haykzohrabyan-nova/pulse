@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260418-PUL55"></script>
-  <script src="auth.js?v=20260418-PUL55"></script>
+  <script src="shared.js?v=20260419-PUL70"></script>
+  <script src="auth.js?v=20260419-PUL70"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -472,6 +473,15 @@
           <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
         </div>
       </div>
+      <!-- Timestamped Notes Log -->
+      <div style="margin-top:12px;">
+        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">📋 Notes Log</label>
+        <div id="notesLogDisplay" style="margin-top:6px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:#f8fafc;padding:8px 10px;"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input type="text" id="newNoteInput" placeholder="Add a timestamped note..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();appendNoteEntry();}">
+          <button type="button" class="btn" onclick="appendNoteEntry()" style="white-space:nowrap;">+ Add Note</button>
+        </div>
+      </div>
     </div>
 
     <div style="display:none;">
@@ -690,6 +700,7 @@ let singleFileData = { white: null, uv: null, foil: null };
 let skuList = [];
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
+let _formDirty = false; // tracks unsaved changes for beforeunload guard
 
 // ─── Parent Order Linking ───────────────────────────────────
 async function linkParentOrder() {
@@ -735,11 +746,28 @@ async function linkParentOrder() {
 
 // ─────────────────────────────────────────────────────────────
 // Init
+// ── Window lock: warn before navigating away with unsaved changes ──
+window.addEventListener('beforeunload', e => {
+  if (_formDirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// Mark form dirty when any input in the ticket form changes
+document.addEventListener('input', e => {
+  if (e.target.closest('#ticketForm')) _formDirty = true;
+});
+document.addEventListener('change', e => {
+  if (e.target.closest('#ticketForm')) _formDirty = true;
+});
+
 // ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   populateProductTypes();
   populateAccountManagers();
   stampCreationDate();
+  renderNotesLog(); // initialize empty notes log display
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -1079,6 +1107,39 @@ function onFacilityChange() {
 function autoExpandNotes(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+// ── Timestamped Notes Log ───────────────────────────────────
+let _notesLog = []; // { text, author, timestamp }
+
+function renderNotesLog() {
+  const el = document.getElementById('notesLogDisplay');
+  if (!el) return;
+  if (!_notesLog.length) {
+    el.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No notes yet.</span>';
+    return;
+  }
+  el.innerHTML = _notesLog.map(entry => {
+    const d = new Date(entry.timestamp);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div style="padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:12px;">
+      <span style="color:var(--text-muted);font-size:11px;">${dateStr} · <strong>${entry.author || 'Unknown'}</strong></span>
+      <div style="margin-top:2px;color:var(--text);">${entry.text.replace(/</g,'&lt;')}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendNoteEntry() {
+  const input = document.getElementById('newNoteInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const author = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Staff';
+  _notesLog.push({ text, author, timestamp: new Date().toISOString() });
+  input.value = '';
+  renderNotesLog();
+  _formDirty = true;
 }
 
 // P2-D: Update specialNotes textarea border/bg to reflect note type
@@ -2362,6 +2423,7 @@ async function saveTicket(suppressRedirect = false) {
       paymentTerms: document.getElementById('paymentTerms').value,
       invoiceNumber: document.getElementById('invoiceNumber').value.trim(),
       invoiceStatus: document.getElementById('invoiceStatus').value || 'not-invoiced',
+      notesLog: _notesLog,
     };
 
     if (editingDbId) {
@@ -2384,6 +2446,7 @@ async function saveTicket(suppressRedirect = false) {
         order.prepressResubmittedBy = order.accountManager || 'Account Manager';
       }
       await updateOrder(editingDbId, order);
+      _formDirty = false; // clear dirty flag after successful save
       await addActivity({ orderId: editingOrderId, type: 'edit', message: `Job ticket edited`, by: order.accountManager || 'User' });
       if (previousOrder?.status === 'pending-account-manager') {
         await addActivity({ orderId: editingOrderId, type: 'prepress-resubmitted', message: 'Account manager updated ticket and sent it back to prepress', by: order.accountManager || 'Account Manager' });
@@ -2451,6 +2514,7 @@ async function saveTicket(suppressRedirect = false) {
         }
       }
       _lastSavedOrderId = order.orderId;
+      _formDirty = false; // clear dirty flag after successful save
       if (suppressRedirect) return; // saveAndAddSubTicket handles navigation
       // Show sub-ticket prompt instead of immediately redirecting
       showAfterSavePrompt(order.orderId, customerName, order.accountManager);
@@ -2580,6 +2644,9 @@ async function loadOrderIntoForm(order) {
   const noteTypeVal = order.noteType || 'INFO';
   const noteTypeEl = document.querySelector(`input[name="noteType"][value="${noteTypeVal}"]`);
   if (noteTypeEl) { noteTypeEl.checked = true; updateNoteTypeStyle(); }
+  // Timestamped notes log
+  _notesLog = Array.isArray(order.notesLog) ? [...order.notesLog] : [];
+  renderNotesLog();
 
   // Artwork
   if (order.artworkFiles && order.artworkFiles.length > 0) {
@@ -2809,8 +2876,30 @@ function setQFilter(f) {
 }
 
 function qrDataURL(text, size) {
-  // Minimal QR using Google Charts API
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+  // Generate QR code locally using qrcodejs (no external API needed)
+  try {
+    if (typeof QRCode !== 'undefined') {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+      document.body.appendChild(div);
+      // eslint-disable-next-line no-new
+      new QRCode(div, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : 1 });
+      const canvas = div.querySelector('canvas');
+      const dataUrl = canvas ? canvas.toDataURL('image/png') : '';
+      div.remove();
+      if (dataUrl) return dataUrl;
+    }
+  } catch (e) {}
+  // Fallback placeholder if library not loaded
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = '#ccc'; ctx.strokeRect(0, 0, size, size);
+  ctx.fillStyle = '#aaa'; ctx.font = `${Math.floor(size / 7)}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('QR', size / 2, size / 2);
+  return canvas.toDataURL('image/png');
 }
 
 async function renderQueuePane() {
