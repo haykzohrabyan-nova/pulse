@@ -438,13 +438,19 @@ function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am, handoffReaso
   if (am.hubspotOwnerId) contactProps.properties.hubspot_owner_id = am.hubspotOwnerId;
 
   hubspotPost('/crm/v3/objects/contacts', contactProps, (err, contact) => {
-    if (err || !contact.id) {
+    // HubSpot returns 409 CONTACT_EXISTS for duplicate email — recover the existing ID
+    const contactId = contact?.id || (contact?.error === 'CONTACT_EXISTS' ? contact.existingObjectId : null);
+    if (err || !contactId) {
       console.error('HubSpot contact create failed:', err?.message || JSON.stringify(contact));
       // Still alert AM even if contact creation failed — better to alert with partial info
       sendAmAlert(am, cf, brandName, handoffReason, spendBand, null, dealStage);
       return;
     }
-    console.log(`✅ HubSpot contact created: ${contact.id} (${cf.email || cf.name})`);
+    if (contact?.error === 'CONTACT_EXISTS') {
+      console.log(`♻️  HubSpot contact already exists: ${contactId} (${cf.email || cf.name}) — creating new deal`);
+    } else {
+      console.log(`✅ HubSpot contact created: ${contactId} (${cf.email || cf.name})`);
+    }
 
     const dealName = `${brandName} IG Lead — ${cf.name || cf.email || 'Unknown'} — ${new Date().toLocaleDateString()}`;
     const descParts = [
@@ -474,11 +480,11 @@ function pushLeadToHubSpot(cf, dealStage, spendBand, brandName, am, handoffReaso
 
       // Associate contact → deal (type 3), then fire Twilio alert with deal ID
       hubspotPut(
-        `/crm/v3/objects/deals/${deal.id}/associations/contacts/${contact.id}/3`,
+        `/crm/v3/objects/deals/${deal.id}/associations/contacts/${contactId}/3`,
         {},
         (err3) => {
           if (err3) console.error('HubSpot association failed:', err3.message);
-          else console.log(`✅ HubSpot contact ${contact.id} → deal ${deal.id} associated`);
+          else console.log(`✅ HubSpot contact ${contactId} → deal ${deal.id} associated`);
           // Fire Twilio alert with the deal ID regardless of association result
           sendAmAlert(am, cf, brandName, handoffReason, spendBand, deal.id, dealStage);
         }
