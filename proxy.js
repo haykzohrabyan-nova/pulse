@@ -780,6 +780,8 @@ const server = http.createServer((req, res) => {
           captured_email: cf.email || '',
           captured_phone: cf.phone || '',
           captured_company: cf.company || '',
+          captured_product: cf.product || '',
+          captured_qty: cf.qty || '',
         }));
       });
       return;
@@ -817,7 +819,8 @@ const server = http.createServer((req, res) => {
 
     // ── DELETE /manychat/session/:id — reset a subscriber session ──────────
     if (req.method === 'DELETE' && req.url.startsWith('/manychat/session/')) {
-      const subscriberId = req.url.replace('/manychat/session/', '').split('?')[0];
+      const rawId = req.url.replace('/manychat/session/', '').split('?')[0];
+      const subscriberId = rawId.replace(/[^a-zA-Z0-9_\-]/g, '');
       const filePath = path.join(SESSION_DIR, `${subscriberId}.json`);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -842,8 +845,8 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`✅ Pulse Proxy running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Pulse Proxy running at http://0.0.0.0:${PORT} (network-accessible)`);
   console.log(`   /proxy/slack            → Slack webhooks`);
   console.log(`   /proxy/hubspot/contacts → HubSpot CRM (browser)`);
   console.log(`   /proxy/twilio/sms       → Twilio SMS relay (browser)`);
