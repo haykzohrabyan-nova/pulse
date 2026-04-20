@@ -1296,13 +1296,15 @@ async function refreshQueue() {
   const sortFn = (a, b) => {
     const ao = a.order, bo = b.order;
     if (sortMode === 'due-asc') {
-      if (!ao.dueDate && !bo.dueDate) return 0;
-      if (!ao.dueDate) return 1; if (!bo.dueDate) return -1;
-      return new Date(ao.dueDate) - new Date(bo.dueDate);
+      const dA = ao.dueDate ? new Date(ao.dueDate.length === 10 ? ao.dueDate + 'T12:00:00' : ao.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const dB = bo.dueDate ? new Date(bo.dueDate.length === 10 ? bo.dueDate + 'T12:00:00' : bo.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      if (dA !== dB) return dA - dB;
+      return new Date(ao.updatedAt || ao.createdAt || 0).getTime() - new Date(bo.updatedAt || bo.createdAt || 0).getTime();
     } else if (sortMode === 'due-desc') {
-      if (!ao.dueDate && !bo.dueDate) return 0;
-      if (!ao.dueDate) return 1; if (!bo.dueDate) return -1;
-      return new Date(bo.dueDate) - new Date(ao.dueDate);
+      const dA = ao.dueDate ? new Date(ao.dueDate.length === 10 ? ao.dueDate + 'T12:00:00' : ao.dueDate).getTime() : 0;
+      const dB = bo.dueDate ? new Date(bo.dueDate.length === 10 ? bo.dueDate + 'T12:00:00' : bo.dueDate).getTime() : 0;
+      if (dA !== dB) return dB - dA;
+      return new Date(bo.updatedAt || bo.createdAt || 0).getTime() - new Date(ao.updatedAt || ao.createdAt || 0).getTime();
     } else if (sortMode === 'units-asc') {
       return (ao.quantity || 0) - (bo.quantity || 0);
     } else if (sortMode === 'units-desc') {

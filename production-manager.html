@@ -353,6 +353,7 @@ let reprintTargetOrderId = null;
 let reprintPiecesPerSheet = 1;
 let assignTargetOrderDbId = null;
 let assignTargetStepId = null;
+let assignTargetStepIndex = null;
 let addStepTargetOrderDbId = null;
 
 // Populate machine selectors
@@ -584,8 +585,8 @@ function renderOrderBody(order) {
         ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
         <div class="step-status ${step.status}">${step.status}</div>
         <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Redirect</button>
-          <button class="btn btn-sm" onclick="openAssignModal(${order.id},'${step.id || i}')">👤 Assign</button>
+          <button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || step.stepId || i}',${i})">🔀 Redirect</button>
+          <button class="btn btn-sm" onclick="openAssignModal(${order.id},'${step.id || step.stepId || i}',${i})">👤 Assign</button>
           <button class="btn btn-sm btn-danger" onclick="removeStepByIndex(${order.id},${i})">✕</button>
         </div>
       </div>
@@ -902,9 +903,10 @@ function syncReprintFromSheetQty() {
 }
 
 // ── Assign Modal ──────────────────────────────────────────
-async function openAssignModal(dbId, stepId) {
+async function openAssignModal(dbId, stepId, stepIndex) {
   assignTargetOrderDbId = dbId;
   assignTargetStepId = stepId;
+  assignTargetStepIndex = stepIndex ?? null;
   const personnel = await getAllPersonnel();
   const sel = document.getElementById('assignSelect');
   sel.innerHTML = '<option value="">— Select —</option>';
@@ -922,7 +924,9 @@ async function confirmAssign() {
   if (!name) { alert('Please select an operator.'); return; }
   const order = allOrders.find(o => o.id === assignTargetOrderDbId);
   if (!order) return;
-  const steps = order.workflowSteps.map(s => s.id === assignTargetStepId ? { ...s, assignedTo: name } : s);
+  const steps = order.workflowSteps.map((s, idx) =>
+    (s.id === assignTargetStepId || s.stepId === assignTargetStepId || idx === assignTargetStepIndex)
+      ? { ...s, assignedTo: name } : s);
   await updateOrder(assignTargetOrderDbId, { workflowSteps: steps });
   await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
   closeAssignModal();
@@ -1033,7 +1037,8 @@ function openRedirectModal(dbId, stepId, stepIndex) {
 
   const order = allOrders.find(o => o.id === dbId);
   if (!order) return;
-  const step = order.workflowSteps.find(s => s.id === stepId);
+  let step = order.workflowSteps.find(s => s.id === stepId || s.stepId === stepId);
+  if (!step) step = order.workflowSteps[redirectTargetStepIndex];
   if (!step) return;
 
   // Show info
@@ -1109,8 +1114,8 @@ async function confirmRedirect() {
 
   if (redirectType === 'full') {
     // Full redirect: just change the machine on the existing step
-    const steps = order.workflowSteps.map(s => {
-      if (s.id === redirectTargetStepId) {
+    const steps = order.workflowSteps.map((s, idx) => {
+      if (idx === redirectTargetStepIndex || s.id === redirectTargetStepId || s.stepId === redirectTargetStepId) {
         return { ...s, machine: newMachine, operation: newOp, redirectedFrom: s.machine, redirectNotes: notes };
       }
       return s;
@@ -1133,8 +1138,9 @@ async function confirmRedirect() {
 
     // Mark the partial redirect on the existing step
     const steps = [...order.workflowSteps];
-    const stepIdx = steps.findIndex(s => s.id === redirectTargetStepId);
-    if (stepIdx === -1) return;
+    let stepIdx = steps.findIndex(s => s.id === redirectTargetStepId || s.stepId === redirectTargetStepId);
+    if (stepIdx === -1) stepIdx = redirectTargetStepIndex;
+    if (stepIdx < 0 || stepIdx >= steps.length) return;
 
     // Add a new split step right after the current one
     const splitStep = {
@@ -1153,7 +1159,7 @@ async function confirmRedirect() {
       splitFromStepId: redirectTargetStepId,
     };
 
-    // Mark the original step as partially redirected
+    // Mark the original step as partially redirected (fall back to stored index if id-lookup fails)
     steps[stepIdx] = {
       ...steps[stepIdx],
       partialRedirect: true,
