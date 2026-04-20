@@ -982,16 +982,11 @@ async function onOperatorSelect(name) {
       ? profile.machines.map(m => `<span class="machine-chip">${m}</span>`).join('')
       : '<span style="font-size:12px;color:var(--text-muted);font-style:italic;">No machines assigned</span>';
     preview.style.display = 'block';
-    // Show User ID field if operator has a userId assigned
-    if (profile.userId) {
-      if (userIdRow) userIdRow.style.display = '';
-      if (userIdInput) { userIdInput.value = ''; }
-      if (userIdResult) userIdResult.textContent = '';
-      btn.disabled = true; // require ID confirmation
-    } else {
-      if (userIdRow) userIdRow.style.display = 'none';
-      btn.disabled = false;
-    }
+    // Always show User ID field and require it before clock-in
+    if (userIdRow) userIdRow.style.display = '';
+    if (userIdInput) { userIdInput.value = ''; }
+    if (userIdResult) userIdResult.textContent = '';
+    btn.disabled = true; // require ID entry
   } else {
     preview.style.display = 'none';
     if (userIdRow) userIdRow.style.display = 'none';
@@ -1005,16 +1000,24 @@ async function onUserIdInput() {
   const entered = (document.getElementById('user-id-input')?.value || '').trim();
   const btn = document.getElementById('btn-clock-in');
   const result = document.getElementById('user-id-result');
-  if (!profile.userId) { btn.disabled = false; return; }
-  if (entered === String(profile.userId)) {
-    result.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ ID verified</span>';
-    btn.disabled = false;
-  } else if (entered.length > 0) {
-    result.innerHTML = '<span style="color:#dc2626;">Incorrect User ID</span>';
-    btn.disabled = true;
-  } else {
+  if (!entered) {
     result.textContent = '';
     btn.disabled = true;
+    return;
+  }
+  if (profile.userId) {
+    // Profile has a specific ID — validate entry matches
+    if (entered === String(profile.userId)) {
+      result.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ ID verified</span>';
+      btn.disabled = false;
+    } else {
+      result.innerHTML = '<span style="color:#dc2626;">Incorrect Operator ID — please try again</span>';
+      btn.disabled = true;
+    }
+  } else {
+    // No profile ID set — accept any entry and record it for tracking
+    result.innerHTML = '<span style="color:#2563eb;font-weight:600;">ID recorded: ' + entered + '</span>';
+    btn.disabled = false;
   }
 }
 
@@ -1022,6 +1025,7 @@ async function onUserIdInput() {
 async function doClockin() {
   const name = document.getElementById('operator-select').value;
   if (!name) return;
+  const enteredId = (document.getElementById('user-id-input')?.value || '').trim();
   // Check for existing open session today
   const existing = await getOperatorSession(name);
   if (existing) {
@@ -1036,8 +1040,13 @@ async function doClockin() {
   currentSession = await _get('operator_sessions', newId);
   currentOperator = name;
   sessionStorage.setItem('op_operator', name);
+  // Record the operator ID in the session for tracking
+  if (enteredId && currentSession) {
+    await _update('operator_sessions', newId, { ...currentSession, registeredOperatorId: enteredId, registeredOperatorIdAt: new Date().toISOString() });
+    currentSession = { ...currentSession, registeredOperatorId: enteredId };
+  }
   await addActivity({
-    type: 'clock-in', operatorName: name, timestamp: new Date().toISOString()
+    type: 'clock-in', operatorName: name, operatorId: enteredId || null, timestamp: new Date().toISOString()
   });
   await enterMainScreen();
 }

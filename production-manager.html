@@ -758,7 +758,7 @@ async function changeStatus(dbId, newStatus) {
   if (newStatus === 'prepress-paused') patch.prepressPausedAt = new Date().toISOString(), patch.prepressPausedBy = by;
   if (newStatus === 'prepress-active' && order.status === 'prepress-paused') patch.prepressResumedAt = new Date().toISOString(), patch.prepressResumedBy = by;
   if (newStatus === 'pending-review' && ['prepress-active','prepress-paused'].includes(order.status)) patch.prepressCompletedAt = new Date().toISOString(), patch.prepressCompletedBy = by;
-  // When approving to production from pending-review, reset prepress completion marker
+  // When approving to production from pending-review, reset prepress review section
   if (newStatus === 'in-production' && order.status === 'pending-review') {
     patch.prepressCompletedAt = null;
     patch.prepressCompletedBy = null;
@@ -770,6 +770,11 @@ async function changeStatus(dbId, newStatus) {
     patch.prepressResumedBy = null;
     patch.prepressApprovedAt = new Date().toISOString();
     patch.prepressApprovedBy = by;
+    // Reset prepress checklist fields (Ticket Details, Artwork, Size/Qty, Die/Cut checkboxes + Issue Category + Comment)
+    patch.prepressChecklist = { details: false, artwork: false, sizing: false, cutting: false };
+    patch.prepressIssueCategory = '';
+    patch.prepressComment = '';
+    patch.prepressIssueComment = '';
   }
   await updateOrder(dbId, patch);
   await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by });
