@@ -332,7 +332,8 @@
           </div>
           <div class="field">
             <label id="ppsLabel">Pieces per Frame</label>
-            <input type="number" id="piecesPerSheet" min="1" value="1" oninput="calcFrames()">
+            <input type="number" id="piecesPerSheet" min="1" value="1" oninput="onPpsInput()">
+            <div id="ppsHint" style="font-size:11px;color:var(--text-muted);margin-top:3px;display:none;"></div>
           </div>
           <div class="field">
             <label id="scLabel">Frame Count (needed)</label>
@@ -1216,6 +1217,19 @@ function onProductTypeChange() {
   autoDetectWorkflow();
   // recalculate capacity hint when product type changes
   updateCapacityHint();
+
+  // Auto-populate pieces-per-sheet for product types with a known default imposition
+  const ppsField = document.getElementById('piecesPerSheet');
+  const ppsHint = document.getElementById('ppsHint');
+  delete ppsField.dataset.manualOverride;
+  if (info.defaultPiecesPerSheet) {
+    ppsField.value = info.defaultPiecesPerSheet;
+    ppsHint.textContent = `Standard: ${info.defaultPiecesPerSheet} up per sheet (adjust if layout differs)`;
+    ppsHint.style.display = '';
+    calcFrames();
+  } else {
+    ppsHint.style.display = 'none';
+  }
 }
 
 function onPrintTypeChange() {
@@ -1346,6 +1360,11 @@ function checkLabelFitMismatch(expectedPerFrame) {
 // ─────────────────────────────────────────────────────────────
 // Frame / Sheet calculation (no recommended overs shown to rep)
 // ─────────────────────────────────────────────────────────────
+function onPpsInput() {
+  document.getElementById('piecesPerSheet').dataset.manualOverride = '1';
+  calcFrames();
+}
+
 function calcFrames() {
   const qty = parseInt(document.getElementById('quantity').value) || 0;
   const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
@@ -2583,7 +2602,6 @@ async function loadOrderIntoForm(order) {
 
   // Quantity & frames
   document.getElementById('quantity').value = order.quantity || '';
-  document.getElementById('piecesPerSheet').value = order.piecesPerSheet || 1;
   document.getElementById('sheetCount').value = order.sheetCount || '';
 
   // Print type / sides
@@ -2647,6 +2665,11 @@ async function loadOrderIntoForm(order) {
   // Cutting
   await new Promise(r => setTimeout(r, 10));
   onProductTypeChange();
+  // Restore saved piecesPerSheet after onProductTypeChange (which may auto-populate a default)
+  if (order.piecesPerSheet) {
+    document.getElementById('piecesPerSheet').value = order.piecesPerSheet;
+    calcFrames();
+  }
   document.getElementById('cutMethod').value = order.cutMethod || 'none';
   onCutMethodChange();
   document.getElementById('dieStatus').value = order.dieStatus || 'existing';

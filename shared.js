@@ -1258,18 +1258,21 @@ const PRODUCT_TYPES = {
   'Business Cards': {
     materials: ['Cardstock', 'Cover Stock'],
     defaultPrintType: 'Sheet',
+    defaultPiecesPerSheet: 16,
     facilities: ['16th-street'],
     notes: 'Cards — 15K → Lamination → Duplo or Guillotine. No text stock.'
   },
   'Flyers / Postcards': {
     materials: ['Cover/Text Stock', 'Cardstock'],
     defaultPrintType: 'Sheet',
+    defaultPiecesPerSheet: 4,
     facilities: ['16th-street'],
     notes: 'Flat sheets — 15K → Lamination → Cutting'
   },
   'Booklets': {
     materials: ['Cover/Text Stock'],
     defaultPrintType: 'Sheet',
+    defaultPiecesPerSheet: 4,
     facilities: ['16th-street'],
     notes: 'Booklets — 15K → Lamination → Booklet Folder → Guillotine'
   },
