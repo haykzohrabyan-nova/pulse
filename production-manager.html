@@ -1059,7 +1059,7 @@ function openRedirectModal(dbId, stepId, stepIndex) {
 
   const order = allOrders.find(o => o.id === dbId);
   if (!order) return;
-  const step = order.workflowSteps.find(s => s.id === stepId);
+  const step = order.workflowSteps.find(s => s.id === stepId || s.stepId === stepId) ?? order.workflowSteps[stepIndex];
   if (!step) return;
 
   // Show info
@@ -1135,8 +1135,8 @@ async function confirmRedirect() {
 
   if (redirectType === 'full') {
     // Full redirect: just change the machine on the existing step
-    const steps = order.workflowSteps.map(s => {
-      if (s.id === redirectTargetStepId) {
+    const steps = order.workflowSteps.map((s, idx) => {
+      if (s.id === redirectTargetStepId || s.stepId === redirectTargetStepId || idx === redirectTargetStepIndex) {
         return { ...s, machine: newMachine, operation: newOp, redirectedFrom: s.machine, redirectNotes: notes };
       }
       return s;
@@ -1159,8 +1159,9 @@ async function confirmRedirect() {
 
     // Mark the partial redirect on the existing step
     const steps = [...order.workflowSteps];
-    const stepIdx = steps.findIndex(s => s.id === redirectTargetStepId);
-    if (stepIdx === -1) return;
+    let stepIdx = steps.findIndex(s => s.id === redirectTargetStepId || s.stepId === redirectTargetStepId);
+    if (stepIdx === -1) stepIdx = redirectTargetStepIndex;
+    if (stepIdx < 0 || stepIdx >= steps.length) return;
 
     // Add a new split step right after the current one
     const splitStep = {
