@@ -67,6 +67,12 @@
         </div>
         <div id="detailSteps" class="steps-list" style="margin-top:12px;"></div>
       </section>
+
+      <!-- Fix #5: Communication History per ticket -->
+      <section class="detail-card" style="margin-top:14px;">
+        <h3>💬 Communication History</h3>
+        <div id="detailCommHistory" style="display:grid;gap:8px;font-size:12px;"></div>
+      </section>
     </div>
   </main>
 
@@ -252,6 +258,7 @@ function selectOrder(id) {
   selectedOrderId = id;
   renderQueue();
   renderDetail();
+  if (_historyOpen) renderHistory(); // Fix #6: AC6.5 — auto-refresh history when ticket selected
 }
 
 function detailLine(label, value) {
@@ -268,7 +275,7 @@ function renderArtwork(files = []) {
   `).join('')}</div>`;
 }
 
-function renderDetail() {
+async function renderDetail() {
   const order = allOrders.find(o => o.id === selectedOrderId);
   const empty = document.getElementById('emptyState');
   const wrap = document.getElementById('detailWrap');
@@ -307,10 +314,37 @@ function renderDetail() {
     ...(order.uvFile ? [order.uvFile] : []),
     ...(order.foilFile ? [order.foilFile] : [])
   ];
+  // Fix #4 AC4.5: render notesLog timeline in "Artwork & Notes" card
+  const notesLogHtml = (() => {
+    const log = Array.isArray(order.notesLog) ? order.notesLog : [];
+    if (!log.length) return '';
+    const rows = log.map(n => {
+      const safeAuthor = String(n.author || 'Unknown').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeText   = String(n.text   || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const ts = n.timestamp ? new Date(n.timestamp).toLocaleString() : '';
+      return `<div style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="font-weight:600;font-size:12px;color:#1e293b;">${safeAuthor}</span>
+          <span style="font-size:11px;color:var(--text-muted);">${ts}</span>
+        </div>
+        <div style="margin-top:3px;font-size:12px;color:#374151;white-space:pre-wrap;">${safeText}</div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:6px;">📋 Notes Log</div>
+      <div style="display:grid;gap:5px;">${rows}</div>
+    </div>`;
+  })();
+
   document.getElementById('detailArtwork').innerHTML = `
     ${lockedNotice}
-    ${order.specialNotes ? `<div style="font-size:13px;margin:0 0 12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
+    ${order.specialNotes ? `<div style="font-size:13px;margin:0 0 12px;line-height:1.5;">${
+      order.noteType === 'CRITICAL'      ? '<span style="padding:2px 8px;border-radius:6px;background:#fde8e8;color:#b91c1c;font-weight:700;font-size:11px;margin-right:6px;">🚨 Critical</span>'
+      : order.noteType === 'INSTRUCTIONS' ? '<span style="padding:2px 8px;border-radius:6px;background:#fef3cd;color:#92600a;font-weight:700;font-size:11px;margin-right:6px;">📋 Instructions</span>'
+      :                                     '<span style="padding:2px 8px;border-radius:6px;background:#e0edff;color:#1d4ed8;font-weight:700;font-size:11px;margin-right:6px;">ℹ️ Info</span>'
+    }${order.specialNotes}</div>` : ''}
     ${renderArtwork(artworkFiles)}
+    ${notesLogHtml}
   `;
 
   const currentStep = order.currentStep || 0;
@@ -336,6 +370,36 @@ function renderDetail() {
   } else {
     issueBox.style.display = 'none';
     issueBox.innerHTML = '';
+  }
+
+  // Fix #5 AC5.2: Populate per-ticket communication history in detail panel
+  const commEl = document.getElementById('detailCommHistory');
+  if (commEl) {
+    commEl.innerHTML = '<div style="color:var(--text-muted);">Loading…</div>';
+    try {
+      const allActivity = await getAllActivity();
+      const history = allActivity
+        .filter(a => a.orderId === order.orderId && PREPRESS_EVENT_TYPES.includes(a.type))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      if (!history.length) {
+        commEl.innerHTML = '<div style="color:var(--text-muted);">No communication history yet.</div>';
+      } else {
+        commEl.innerHTML = history.map(a => {
+          const meta = PREPRESS_EVENT_LABELS[a.type] || { label: a.type, color: '#64748b' };
+          const dir = a.type === 'prepress-resubmitted' ? 'AM → Prepress' : (a.type.startsWith('prepress-') ? 'Prepress → AM' : '');
+          return `<div style="border:1px solid var(--border);border-radius:8px;padding:9px 12px;background:#f8fafc;">
+            <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;">
+              <span style="font-weight:600;color:${meta.color};">${meta.label}</span>
+              <span style="color:var(--text-muted);font-size:11px;">${formatDateTime(a.timestamp)}</span>
+            </div>
+            ${dir ? `<div style="font-size:11px;color:var(--text-muted);">${dir}${a.by ? ` · ${a.by}` : ''}</div>` : (a.by ? `<div style="font-size:11px;color:var(--text-muted);">by ${a.by}</div>` : '')}
+            ${a.message ? `<div style="margin-top:4px;color:#374151;">${a.message}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+    } catch (e) {
+      commEl.innerHTML = '<div style="color:var(--text-muted);">Could not load history.</div>';
+    }
   }
 }
 
@@ -468,7 +532,9 @@ async function approveToProduction() {
   const order = getSelectedOrder();
   if (!order) return;
   const patch = collectReviewPatch(order);
-  patch.status = 'pending-review';
+  patch.status = 'in-production'; // Fix #7: was 'pending-review' — route direct to production
+  patch.currentStep = 0;          // Initialize production step tracking
+  patch.approvals = [...(order.approvals || []), { name: patch.prepressLastUpdatedBy, role: 'prepress', kind: 'signer', at: new Date().toISOString() }];
   patch.needsAccountManagerAction = false;
   patch.prepressIssueComment = '';
   patch.prepressIssueCategory = '';
@@ -500,25 +566,42 @@ function toggleHistoryPanel() {
   if (_historyOpen) renderHistory();
 }
 
+// Fix #6: Per-ticket history — shows only selected ticket's prepress events
+const PREPRESS_EVENT_TYPES = ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'];
+const PREPRESS_EVENT_LABELS = {
+  'prepress-started':     { label: '▶ Started',             color: '#2563eb' },
+  'prepress-paused':      { label: '⏸ Paused',             color: '#d97706' },
+  'prepress-returned':    { label: '↩ Sent back to AM',    color: '#b91c1c' },
+  'prepress-resubmitted': { label: '↪ Resubmitted by AM',  color: '#2563eb' },
+  'prepress-approved':    { label: '✅ Approved to Production', color: '#16a34a' },
+};
+
 async function renderHistory() {
   const listEl = document.getElementById('historyList');
   if (!listEl) return;
+
+  // AC6.3: Show placeholder when no ticket selected
+  if (!selectedOrderId) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Select a ticket to see its history.</div>';
+    return;
+  }
+
   const dateFilter = document.getElementById('historyDateFilter')?.value || 'all';
   const search = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
 
-  // Load all activity and all orders once
   let activity = [];
-  let ordersMap = {};
   try { activity = await getAllActivity(); } catch (e) {}
-  try {
-    const allOrds = await getAllOrders();
-    allOrds.forEach(o => { ordersMap[o.orderId] = o; });
-  } catch (e) {}
 
-  // Filter to prepress-approved events
-  let events = activity.filter(a => a.type === 'prepress-approved');
+  // AC6.1: Filter to selected ticket only
+  // AC6.2: Include all prepress event types, not just prepress-approved
+  const selectedOrder = allOrders.find(o => o.id === selectedOrderId);
+  const selectedOrderIdStr = selectedOrder?.orderId;
+  let events = activity.filter(a =>
+    a.orderId === selectedOrderIdStr &&
+    PREPRESS_EVENT_TYPES.includes(a.type)
+  );
 
-  // Date filter on event timestamp
+  // AC6.4: Date filter within per-ticket scope
   const now = new Date();
   const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
   const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
@@ -535,49 +618,28 @@ async function renderHistory() {
     events = events.filter(a => new Date(a.timestamp) >= monthStart);
   }
 
-  // Search filter
+  // Search within per-ticket scope
   if (search) {
-    events = events.filter(a => {
-      const o = ordersMap[a.orderId] || {};
-      return [a.orderId, o.customerName || o.customer, o.productType, a.by, a.message].join(' ').toLowerCase().includes(search);
-    });
+    events = events.filter(a => [a.by, a.message, a.type].join(' ').toLowerCase().includes(search));
   }
 
-  // Sort newest first
-  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  // Sort chronological (oldest first — shows the story of the ticket)
+  events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
   if (!events.length) {
-    listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">No approved tickets found.</div>';
+    listEl.innerHTML = `<div style="color:var(--text-muted);text-align:center;padding:12px;">No prepress history found for #${selectedOrderIdStr || '—'}.</div>`;
     return;
   }
 
   listEl.innerHTML = events.map(a => {
-    const o = ordersMap[a.orderId] || {};
-    // Gather the ping-pong audit: find all prepress-related activities for this order
-    const pingPong = activity
-      .filter(x => x.orderId === a.orderId && ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'].includes(x.type))
-      .sort((x, y) => new Date(x.timestamp) - new Date(y.timestamp));
-
-    const pingPongHtml = pingPong.length > 1 ? `
-      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9;">
-        ${pingPong.map(p => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px;">
-          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatDateTime(p.timestamp)}</span>
-          <span style="font-size:11px;color:${p.type==='prepress-returned'?'#b91c1c':p.type==='prepress-approved'?'#16a34a':'#64748b'};">${
-            p.type==='prepress-started'?'▶ Started':p.type==='prepress-paused'?'⏸ Paused':p.type==='prepress-returned'?'↩ Sent back':p.type==='prepress-resubmitted'?'↪ Resubmitted':'✅ Approved'
-          }</span>
-          ${p.by ? `<span style="font-size:10px;color:var(--text-muted);">by ${p.by}</span>` : ''}
-        </div>`).join('')}
-      </div>` : '';
-
+    const meta = PREPRESS_EVENT_LABELS[a.type] || { label: a.type, color: '#64748b' };
     return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#f8fafc;">
-      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-        <span style="font-weight:700;color:#1d4ed8;">#${a.orderId}</span>
-        <span style="color:#16a34a;font-weight:600;font-size:11px;">✅ Approved ${formatDateTime(a.timestamp)}</span>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-weight:600;font-size:12px;color:${meta.color};">${meta.label}</span>
+        <span style="color:var(--text-muted);font-size:11px;">${formatDateTime(a.timestamp)}</span>
       </div>
-      <div style="color:#374151;margin-top:3px;">${o.customerName || o.customer || '—'}</div>
-      <div style="color:var(--text-muted);font-size:11px;">${o.productType || '—'} · ${(o.quantity||0).toLocaleString()} pcs · Rep: ${o.accountManager||'—'}</div>
-      ${a.by ? `<div style="font-size:11px;color:var(--text-muted);">Approved by: ${a.by}</div>` : ''}
-      ${pingPongHtml}
+      ${a.by ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">by ${a.by}</div>` : ''}
+      ${a.message ? `<div style="font-size:12px;color:#374151;margin-top:4px;">${a.message}</div>` : ''}
     </div>`;
   }).join('');
 }
