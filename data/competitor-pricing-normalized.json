@@ -2,8 +2,8 @@
     "schema_version": "1.1",
     "product_scope": "multi-product",
     "description": "Normalized competitor comparison data keyed by query spec. Covers roll labels, folding cartons, and stand-up pouches. Each query maps to a set of competitor results. Internal label prices are calculated from LABEL_SALES_TIERS. Internal box/pouch prices are pending model documentation.",
-    "last_updated": "2026-04-18",
-    "last_capture_pass": "2026-04-17-gp-matte-confirmed-unavailable",
+    "last_updated": "2026-04-21",
+    "last_capture_pass": "2026-04-21-pri7-finalized",
     "products_covered": [
         "roll_labels",
         "folding_cartons",
@@ -2683,7 +2683,7 @@
             },
             {
                 "competitor": "quadlabels",
-                "gap": "Target competitor confirmed by Hayk and upstream Print Group context, but no live capture is present in the Pulse dataset yet. Likely requires authenticated retail access before pricing capture can proceed."
+                "gap": "PENDING APPROVAL — Trade account registered as info@pixelpressprint.com on 2026-04-19 at api.quadlabels.com/customer/login. Login returns approval-pending message (messageKey: 'reject' = waiting, not denied). Open endpoints confirmed: config, PAPER/SYNTHETIC/SILVER product catalog. No price endpoints are open (all /open/ pricing routes return 404). Full 13-product catalog intel captured in capture-quadlabels-2026-04-19.json. Capture script ready at scripts/capture-quadlabels-authenticated.js — will auto-run 19-spec benchmark suite (3x3/2x2/2x3/4x4/2x4 × multiple qtys) once account approved."
             }
         ],
         "folding_cartons": [
@@ -2728,7 +2728,7 @@
         "stickermule_roll_labels": "Upload-first confirmed. $47 starting price from JSON-LD. 5k pricing requires manual quote with artwork upload.",
         "packola_boxes": "Packola STE boxes: exact 4\"\u00d72\"\u00d75\" spec captured at 250/500/1000/2000/2500 qty. Dimensions confirmed via L/W/D input fields. Price via DOM extraction from product page calculator.",
         "packola_pouches": "Packola stand-up pouches: Medium (~4\"\u00d76\") is closest to our 4.375\"\u00d76\"\u00d72\" spec. Captured at 250/500/1000/2500/5000 qty. Directional \u2014 exact Packola dimensions not configurable (predefined size tiers).",
-        "quadlabels_roll_labels": "Quadlabels is part of the confirmed target competitor set for the PRI-7 pricing-intelligence pipeline, but no live capture is in the Pulse dataset yet. This vendor likely needs authenticated retail access, and the access/request path should be handled via Delta Nexus email before capture can continue.",
+        "quadlabels_roll_labels": "PENDING APPROVAL. Trade account registered info@pixelpressprint.com on 2026-04-19. API returns approval-pending (messageKey: reject = awaiting admin review, not a permanent denial). Company: Quadriga USA, 28410 Witherspoon Pkwy, Valencia CA. Products: 13 label types incl. SYNTHETIC (White BOPP equiv), CLEAR, GOLD, HOLOGRAPHIC, SECURITY SEAL, THERMAL. Config: min 100 pcs, max 100M, setup fee $5/version under 500 pcs, custom die $140, rush 30%, UPS flat $50, tax 9.75%. Capture script ready to run on approval: scripts/capture-quadlabels-authenticated.js.",
         "pricing_pipeline_context": "This Pulse dataset is the continuation of the original Print Group competitor-pricing pipeline: PRI-7 umbrella, PRI-8 live capture, PRI-9 workaround execution moved into Pulse as PUL-30, PRI-10 normalization, PRI-11 Pulse display. Keep new captures and notes compatible with that downstream normalization/display chain."
     }
 }
