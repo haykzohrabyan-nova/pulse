@@ -100,6 +100,12 @@
       </div>
     </div>
 
+    <!-- QC History for this Order -->
+    <div class="card" id="orderQCHistoryCard" style="display:none;">
+      <h3 class="section-title">📋 Done QC History — This Order</h3>
+      <div id="orderQCHistory"></div>
+    </div>
+
     <!-- Submit -->
     <div class="save-bar">
       <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
@@ -170,6 +176,19 @@ document.getElementById('page-styles').textContent = `
   .log-body { flex: 1; }
   .log-title { font-weight: 600; }
   .log-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .qch-entry { display: flex; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+  .qch-entry:last-child { border-bottom: none; }
+  .qch-badge { font-size: 20px; padding-top: 2px; }
+  .qch-body { flex: 1; }
+  .qch-verdict { font-weight: 700; font-size: 13px; }
+  .qch-verdict.pass { color: var(--green); }
+  .qch-verdict.fail { color: var(--red); }
+  .qch-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .qch-checklist { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .qch-chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); }
+  .qch-chip.pass { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+  .qch-chip.fail { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .qch-chip.na { background: #f9fafb; color: var(--text-muted); }
 `;
 
 const QC_CHECKLIST_ITEMS = [
@@ -291,6 +310,9 @@ async function selectOrder(orderOrId) {
       </div>
     </div>
   `;
+
+  // Load per-order QC history
+  loadOrderQCHistory(selectedOrder.orderId);
 
   // Reset form
   checklistResults = {};
@@ -498,7 +520,41 @@ function clearQCForm() {
   document.getElementById('searchSection').style.display = 'block';
   document.getElementById('qcSearch').value = '';
   document.getElementById('searchResults').innerHTML = '';
+  const histCard = document.getElementById('orderQCHistoryCard');
+  if (histCard) histCard.style.display = 'none';
   resetChecklistUI();
+}
+
+// ── Per-Order QC History ──────────────────────────────────
+async function loadOrderQCHistory(orderId) {
+  const card = document.getElementById('orderQCHistoryCard');
+  const container = document.getElementById('orderQCHistory');
+  if (!card || !container) return;
+
+  const all = await getActivityLog(orderId);
+  const records = all
+    .filter(a => a.type === 'qc-pass' || a.type === 'qc-fail')
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  if (records.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+  container.innerHTML = records.map(log => {
+    const isPass = log.type === 'qc-pass';
+    return `
+      <div class="qch-entry">
+        <div class="qch-badge">${isPass ? '✅' : '❌'}</div>
+        <div class="qch-body">
+          <div class="qch-verdict ${isPass ? 'pass' : 'fail'}">${isPass ? 'PASSED' : 'FAILED'}</div>
+          <div class="qch-meta">${formatDateTime(log.timestamp)} · Inspector: ${log.by}</div>
+          ${log.message ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${log.message}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Recent QC Log ─────────────────────────────────────────
