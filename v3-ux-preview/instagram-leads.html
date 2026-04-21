@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Leads — Pulse</title>
+  <script src="shared.js?v=20260417-v18"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f6fa; color: #1a1a2e; }
+    .page-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    /* ── Stats Bar ── */
+    .stats-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 16px 20px; border: 1px solid #e8eaf0; }
+    .stat-card .label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
+    .stat-card .sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+    .stat-card.red .value { color: #e53e3e; }
+    .stat-card.green .value { color: #38a169; }
+    .stat-card.orange .value { color: #dd6b20; }
+
+    /* ── Layout ── */
+    .main-layout { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
+
+    /* ── Lead List ── */
+    .panel { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; overflow: hidden; }
+    .panel-header { padding: 16px 20px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; justify-content: space-between; }
+    .panel-header h2 { font-size: 15px; font-weight: 700; }
+    .panel-header .controls { display: flex; gap: 8px; align-items: center; }
+
+    .filter-tabs { display: flex; gap: 4px; }
+    .filter-tab { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #e0e0e0; background: #fff; color: #666; transition: all .15s; }
+    .filter-tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+
+    .btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+    .btn-primary { background: #1a1a2e; color: #fff; }
+    .btn-primary:hover { background: #2d2d4e; }
+    .btn-success { background: #38a169; color: #fff; }
+    .btn-success:hover { background: #2f855a; }
+    .btn-danger { background: #e53e3e; color: #fff; }
+    .btn-danger:hover { background: #c53030; }
+    .btn-ghost { background: #f0f0f0; color: #444; }
+    .btn-ghost:hover { background: #e0e0e0; }
+    .btn-slack { background: #4a154b; color: #fff; }
+    .btn-slack:hover { background: #3a1039; }
+    .btn-hubspot { background: #ff7a59; color: #fff; }
+    .btn-hubspot:hover { background: #e86c4a; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    .search-input { padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; width: 200px; outline: none; }
+    .search-input:focus { border-color: #1a1a2e; }
+
+    /* ── Lead Cards ── */
+    .lead-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 280px); overflow-y: auto; }
+    .lead-card { border: 1px solid #e8eaf0; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all .15s; position: relative; }
+    .lead-card:hover { border-color: #1a1a2e; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    .lead-card.selected { border-color: #1a1a2e; background: #f8f9ff; box-shadow: 0 2px 8px rgba(26,26,46,.1); }
+    .lead-card.urgent { border-left: 3px solid #e53e3e; }
+    .lead-card.new { border-left: 3px solid #3182ce; }
+    .lead-card.replied { border-left: 3px solid #38a169; }
+    .lead-card.qualified { border-left: 3px solid #805ad5; }
+    .lead-card.cold { border-left: 3px solid #aaa; opacity: .7; }
+
+    .lead-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+    .lead-handle { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .lead-time { font-size: 11px; color: #aaa; }
+    .lead-preview { font-size: 12px; color: #555; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .lead-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .badge-new { background: #ebf8ff; color: #2b6cb0; }
+    .badge-replied { background: #f0fff4; color: #276749; }
+    .badge-qualified { background: #faf5ff; color: #6b46c1; }
+    .badge-cold { background: #f5f5f5; color: #888; }
+    .badge-urgent { background: #fff5f5; color: #c53030; }
+    .badge-in-hubspot { background: #fff3ee; color: #c05621; }
+    .badge-won { background: #f0fff4; color: #22543d; }
+    .badge-lost { background: #fff5f5; color: #742a2a; }
+
+    .no-leads { text-align: center; padding: 60px 20px; color: #aaa; }
+    .no-leads .icon { font-size: 48px; margin-bottom: 12px; }
+    .no-leads p { font-size: 14px; }
+
+    /* ── Right Panel: Lead Detail ── */
+    .detail-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    .detail-card { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; padding: 18px; }
+    .detail-card h3 { font-size: 13px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+
+    .field-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .field-row:last-child { margin-bottom: 0; }
+    .field-row label { font-size: 11px; font-weight: 600; color: #999; }
+    .field-row input, .field-row select, .field-row textarea { padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; font-family: inherit; outline: none; width: 100%; background: #fafafa; transition: border-color .15s; }
+    .field-row input:focus, .field-row select:focus, .field-row textarea:focus { border-color: #1a1a2e; background: #fff; }
+    .field-row textarea { resize: vertical; min-height: 70px; }
+
+    .conversation-box { background: #f8f9fa; border-radius: 8px; padding: 12px; max-height: 180px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: #444; border: 1px solid #eee; }
+    .conversation-box .msg { margin-bottom: 8px; }
+    .conversation-box .msg.them { color: #1a1a2e; }
+    .conversation-box .msg.us { color: #3182ce; text-align: right; font-style: italic; }
+    .conversation-box .msg .who { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; color: #aaa; }
+
+    .reply-box { position: relative; }
+    .reply-textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 100px; background: #fafafa; transition: border-color .15s; }
+    .reply-textarea:focus { border-color: #1a1a2e; background: #fff; }
+    .reply-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    .empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #ccc; text-align: center; }
+    .empty-detail .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-detail p { font-size: 13px; }
+
+    /* ── Add Lead Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 28px; width: 480px; max-width: 95vw; }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Config Banner ── */
+    .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #856404; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .config-banner a { color: #856404; font-weight: 700; cursor: pointer; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="page-wrap">
+
+    <!-- Config Banner -->
+    <div class="config-banner" id="configBanner">
+      ⏳ Instagram API connected — awaiting Meta App Review approval for live DMs. Leads can be added manually in the meantime. <a onclick="openSettings()">Settings →</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card red">
+        <div class="label">🔴 Needs Reply</div>
+        <div class="value" id="statNew">0</div>
+        <div class="sub">respond within 10 min</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="label">⏳ Awaiting Them</div>
+        <div class="value" id="statReplied">0</div>
+        <div class="sub">waiting on customer</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">🎯 Qualified</div>
+        <div class="value" id="statQualified">0</div>
+        <div class="sub">ready to quote</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">✅ In HubSpot</div>
+        <div class="value" id="statHubspot">0</div>
+        <div class="sub">leads synced</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">🧊 Cold</div>
+        <div class="value" id="statCold">0</div>
+        <div class="sub">no response 3+ days</div>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+
+      <!-- Left: Lead List -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>📸 Instagram DM Leads</h2>
+          <div class="controls">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search leads..." oninput="renderLeads()" />
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add Lead</button>
+          </div>
+        </div>
+        <div style="padding: 10px 12px 0; border-bottom: 1px solid #f0f0f0;">
+          <div class="filter-tabs" id="filterTabs">
+            <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
+            <button class="filter-tab" data-filter="new" onclick="setFilter('new', this)">🔴 New</button>
+            <button class="filter-tab" data-filter="replied" onclick="setFilter('replied', this)">⏳ Replied</button>
+            <button class="filter-tab" data-filter="qualified" onclick="setFilter('qualified', this)">🎯 Qualified</button>
+            <button class="filter-tab" data-filter="in-hubspot" onclick="setFilter('in-hubspot', this)">🟠 HubSpot</button>
+            <button class="filter-tab" data-filter="cold" onclick="setFilter('cold', this)">🧊 Cold</button>
+          </div>
+        </div>
+        <div class="lead-list" id="leadList"></div>
+      </div>
+
+      <!-- Right: Detail Panel -->
+      <div class="detail-panel" id="detailPanel">
+        <div class="panel empty-detail">
+          <div class="icon">📨</div>
+          <p>Select a lead to view details</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Add Lead Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h2>➕ Add Instagram Lead</h2>
+      <div class="field-row">
+        <label>Instagram Handle *</label>
+        <input type="text" id="newHandle" placeholder="@username" />
+      </div>
+      <div class="field-row">
+        <label>Their Message *</label>
+        <textarea id="newMessage" placeholder="Paste their DM here..." rows="3"></textarea>
+      </div>
+      <div class="field-row">
+        <label>Account</label>
+        <select id="newAccount">
+          <option value="bazaar">Bazaar Printing</option>
+          <option value="pixelpress">PixelPress Print</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addLead()">Add Lead</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── Nav ──
+    document.getElementById('nav').innerHTML = renderNav('instagram-leads');
+    injectThemeCSS();
+
+    // ── Config ──
+    const CONFIG = {
+      hubspotToken: localStorage.getItem('ig_hubspot_token') || '',
+      slackWebhook: localStorage.getItem('ig_slack_webhook') || '',
+    };
+
+    function openSettings() {
+      const token = prompt('HubSpot Private App Token:', CONFIG.hubspotToken);
+      if (token !== null) { CONFIG.hubspotToken = token; localStorage.setItem('ig_hubspot_token', token); }
+      const slack = prompt('Slack Webhook URL:', CONFIG.slackWebhook);
+      if (slack !== null) { CONFIG.slackWebhook = slack; localStorage.setItem('ig_slack_webhook', slack); }
+      updateBanner();
+      toast('Settings saved');
+    }
+
+    function updateBanner() {
+      const b = document.getElementById('configBanner');
+      if (CONFIG.hubspotToken && CONFIG.slackWebhook) {
+        b.style.background = '#d4edda'; b.style.borderColor = '#28a745'; b.style.color = '#155724';
+        b.innerHTML = '✅ HubSpot + Slack connected. Ready for automation.';
+      }
+    }
+    updateBanner();
+
+    // ── Data ──
+    const DB_KEY = 'pulse_instagram_leads';
+    let leads = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    let selectedId = null;
+    let currentFilter = 'all';
+
+    function saveLeads() { localStorage.setItem(DB_KEY, JSON.stringify(leads)); }
+
+    function getLead(id) { return leads.find(l => l.id === id); }
+
+    function addLead() {
+      const handle = document.getElementById('newHandle').value.trim();
+      const message = document.getElementById('newMessage').value.trim();
+      const account = document.getElementById('newAccount').value;
+      if (!handle || !message) { toast('Handle and message are required'); return; }
+
+      const lead = {
+        id: 'ig_' + Date.now(),
+        handle: handle.startsWith('@') ? handle : '@' + handle,
+        account,
+        status: 'new',
+        messages: [{ from: 'them', text: message, time: Date.now() }],
+        name: '', company: '', email: '', phone: '', product: '', notes: '',
+        draftReply: '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        hubspotId: '',
+        followUpAt: null,
+      };
+
+      leads.unshift(lead);
+      saveLeads();
+      closeAddModal();
+      renderLeads();
+      selectLead(lead.id);
+      updateStats();
+      toast('Lead added — generating reply draft...');
+
+      // Auto-generate draft reply
+      setTimeout(() => generateDraft(lead.id), 500);
+    }
+
+    // ── Filters ──
+    function setFilter(f, el) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      renderLeads();
+    }
+
+    function getFilteredLeads() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      return leads.filter(l => {
+        const matchFilter = currentFilter === 'all' || l.status === currentFilter;
+        const matchSearch = !q || l.handle.toLowerCase().includes(q) || l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q);
+        return matchFilter && matchSearch;
+      });
+    }
+
+    // ── Render Lead List ──
+    function renderLeads() {
+      const list = document.getElementById('leadList');
+      const filtered = getFilteredLeads();
+      if (!filtered.length) {
+        list.innerHTML = `<div class="no-leads"><div class="icon">📭</div><p>No leads in this filter</p></div>`;
+        return;
+      }
+      list.innerHTML = filtered.map(l => {
+        const lastMsg = l.messages[l.messages.length - 1];
+        const age = timeAgo(l.updatedAt);
+        const isUrgent = l.status === 'new' && (Date.now() - l.createdAt) > 10 * 60 * 1000;
+        return `
+          <div class="lead-card ${l.status} ${isUrgent ? 'urgent' : ''} ${l.id === selectedId ? 'selected' : ''}" onclick="selectLead('${l.id}')">
+            <div class="lead-card-top">
+              <div class="lead-handle">${l.handle} ${l.account === 'pixelpress' ? '<span style="font-size:10px;color:#805ad5;font-weight:600;">PP</span>' : ''}</div>
+              <div class="lead-time">${age}</div>
+            </div>
+            <div class="lead-preview">${escHtml(lastMsg?.text || '')}</div>
+            <div class="lead-meta">
+              <span class="badge badge-${l.status}">${statusLabel(l.status)}</span>
+              ${l.name ? `<span style="font-size:11px;color:#666;">👤 ${l.name}</span>` : ''}
+              ${l.company ? `<span style="font-size:11px;color:#666;">🏢 ${l.company}</span>` : ''}
+              ${l.phone ? `<span style="font-size:11px;color:#666;">📞 ${l.phone}</span>` : ''}
+              ${l.hubspotId ? `<span class="badge badge-in-hubspot">HS</span>` : ''}
+              ${isUrgent ? `<span class="badge badge-urgent">URGENT</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Stats ──
+    function updateStats() {
+      document.getElementById('statNew').textContent = leads.filter(l => l.status === 'new').length;
+      document.getElementById('statReplied').textContent = leads.filter(l => l.status === 'replied').length;
+      document.getElementById('statQualified').textContent = leads.filter(l => l.status === 'qualified').length;
+      document.getElementById('statHubspot').textContent = leads.filter(l => l.hubspotId).length;
+      document.getElementById('statCold').textContent = leads.filter(l => l.status === 'cold').length;
+    }
+
+    // ── Select Lead ──
+    function selectLead(id) {
+      selectedId = id;
+      renderLeads();
+      renderDetail();
+    }
+
+    function renderDetail() {
+      const l = getLead(selectedId);
+      if (!l) { document.getElementById('detailPanel').innerHTML = `<div class="panel empty-detail"><div class="icon">📨</div><p>Select a lead to view details</p></div>`; return; }
+
+      document.getElementById('detailPanel').innerHTML = `
+        <!-- Conversation -->
+        <div class="detail-card">
+          <h3>💬 Conversation — ${l.handle}</h3>
+          <div class="conversation-box" id="convBox">
+            ${l.messages.map(m => `
+              <div class="msg ${m.from === 'them' ? 'them' : 'us'}">
+                <div class="who">${m.from === 'them' ? l.handle : '✦ You'}</div>
+                ${escHtml(m.text)}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Contact Info -->
+        <div class="detail-card">
+          <h3>👤 Contact Info</h3>
+          <div class="field-row"><label>Name</label><input id="fName" value="${escHtml(l.name)}" placeholder="John Smith" oninput="updateField('name', this.value)" /></div>
+          <div class="field-row"><label>Company</label><input id="fCompany" value="${escHtml(l.company)}" placeholder="ABC Dispensary" oninput="updateField('company', this.value)" /></div>
+          <div class="field-row"><label>Email</label><input id="fEmail" value="${escHtml(l.email)}" placeholder="john@company.com" oninput="updateField('email', this.value)" /></div>
+          <div class="field-row"><label>Phone</label><input id="fPhone" value="${escHtml(l.phone)}" placeholder="(310) 555-0123" oninput="updateField('phone', this.value)" /></div>
+          <div class="field-row"><label>Product Interest</label><input id="fProduct" value="${escHtml(l.product)}" placeholder="e.g. mylar bags, labels, boxes" oninput="updateField('product', this.value)" /></div>
+          <div class="field-row"><label>Notes</label><textarea id="fNotes" oninput="updateField('notes', this.value)" placeholder="Any notes...">${escHtml(l.notes)}</textarea></div>
+        </div>
+
+        <!-- Draft Reply -->
+        <div class="detail-card">
+          <h3>✍️ Draft Reply</h3>
+          <div class="reply-box">
+            <textarea class="reply-textarea" id="replyText" placeholder="Draft reply will appear here...">${escHtml(l.draftReply)}</textarea>
+          </div>
+          <div class="reply-actions">
+            <button class="btn btn-ghost btn-sm" onclick="generateDraft('${l.id}')">🤖 Regenerate</button>
+            <button class="btn btn-slack btn-sm" onclick="sendToSlack('${l.id}')">📨 Send to Slack for Approval</button>
+          </div>
+        </div>
+
+        <!-- Status + Actions -->
+        <div class="detail-card">
+          <h3>⚡ Actions</h3>
+          <div class="field-row">
+            <label>Status</label>
+            <select onchange="updateStatus('${l.id}', this.value)">
+              <option value="new" ${l.status==='new'?'selected':''}>🔴 New — Needs Reply</option>
+              <option value="replied" ${l.status==='replied'?'selected':''}>⏳ Replied — Awaiting Them</option>
+              <option value="qualified" ${l.status==='qualified'?'selected':''}>🎯 Qualified</option>
+              <option value="in-hubspot" ${l.status==='in-hubspot'?'selected':''}>🟠 In HubSpot</option>
+              <option value="won" ${l.status==='won'?'selected':''}>✅ Won</option>
+              <option value="cold" ${l.status==='cold'?'selected':''}>🧊 Cold</option>
+              <option value="lost" ${l.status==='lost'?'selected':''}>❌ Lost</option>
+            </select>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-hubspot btn-sm" onclick="pushToHubspot('${l.id}')">🟠 Push to HubSpot</button>
+            <button class="btn btn-ghost btn-sm" onclick="markCold('${l.id}')">🧊 Mark Cold</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')">🗑 Delete</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#aaa;">Created: ${new Date(l.createdAt).toLocaleString()} · Updated: ${new Date(l.updatedAt).toLocaleString()}</div>
+        </div>
+      `;
+
+      // Sync reply text changes
+      document.getElementById('replyText').addEventListener('input', function() {
+        updateField('draftReply', this.value);
+      });
+    }
+
+    // ── Field Updates ──
+    function updateField(field, value) {
+      const l = getLead(selectedId);
+      if (!l) return;
+      l[field] = value;
+      l.updatedAt = Date.now();
+      saveLeads();
+      // Auto-update stats if phone was just added
+      if (field === 'phone' && value) { updateStats(); renderLeads(); }
+    }
+
+    function updateStatus(id, status) {
+      const l = getLead(id);
+      if (!l) return;
+      l.status = status;
+      l.updatedAt = Date.now();
+      saveLeads();
+      renderLeads();
+      updateStats();
+      toast(`Status → ${statusLabel(status)}`);
+    }
+
+    function markCold(id) {
+      updateStatus(id, 'cold');
+    }
+
+    function deleteLead(id) {
+      if (!confirm('Delete this lead?')) return;
+      leads = leads.filter(l => l.id !== id);
+      selectedId = null;
+      saveLeads();
+      renderLeads();
+      updateStats();
+      renderDetail();
+      toast('Lead deleted');
+    }
+
+    // ── Draft Reply Generation ──
+    async function generateDraft(id) {
+      const l = getLead(id);
+      if (!l) return;
+
+      // Generate a smart draft based on their message + Bazaar context
+      const msg = l.messages[0]?.text || '';
+      const draft = buildDraftReply(l, msg);
+      l.draftReply = draft;
+      l.updatedAt = Date.now();
+      saveLeads();
+
+      if (selectedId === id) {
+        const ta = document.getElementById('replyText');
+        if (ta) ta.value = draft;
+      }
+      toast('Draft reply generated');
+    }
+
+    function buildDraftReply(lead, incomingMsg) {
+      const msg = incomingMsg.toLowerCase();
+      const acct = lead.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing';
+
+      // Detect product type from message
+      let productHint = '';
+      if (msg.includes('mylar') || msg.includes('bag') || msg.includes('pouch')) productHint = 'mylar bags / pouches';
+      else if (msg.includes('label') || msg.includes('sticker')) productHint = 'custom labels / stickers';
+      else if (msg.includes('box') || msg.includes('packaging')) productHint = 'custom packaging / boxes';
+      else if (msg.includes('card')) productHint = 'custom cards';
+      else if (msg.includes('price') || msg.includes('quote') || msg.includes('cost')) productHint = 'custom printing';
+
+      const name = lead.name ? `, ${lead.name.split(' ')[0]}` : '';
+
+      if (productHint) {
+        return `Hi${name}! Thanks for reaching out to ${acct} 🙌
+
+We'd love to help with your ${productHint}! To put together an accurate quote, can you share a few details?
+
+1. What quantity are you looking for?
+2. Any specific size or dimensions in mind?
+3. Do you have artwork ready, or do you need design help?
+4. What's your target timeline?
+
+Also, what's the best way to reach you — email or phone? We'll get you a quote fast!`;
+      }
+
+      return `Hi${name}! Thanks for reaching out to ${acct} 🙌
+
+We'd love to help! Could you share a bit more about what you're looking for? We specialize in custom packaging, labels, mylar bags, boxes, and more.
+
+What's your name and company? And what's the best way to follow up — email or phone? We'll get back to you right away!`;
+    }
+
+    // ── Slack Approval ──
+    async function sendToSlack(id) {
+      const l = getLead(id);
+      if (!l) return;
+
+      const replyText = document.getElementById('replyText')?.value || l.draftReply;
+      updateField('draftReply', replyText);
+
+      if (!CONFIG.slackWebhook) {
+        toast('⚠️ Slack webhook not configured — click configure integrations');
+        return;
+      }
+
+      const payload = {
+        text: `📸 *New Instagram Lead — Approval Needed*`,
+        blocks: [
+          { type: 'header', text: { type: 'plain_text', text: '📸 Instagram Lead — Reply Approval' } },
+          { type: 'section', fields: [
+            { type: 'mrkdwn', text: `*Handle:*\n${l.handle}` },
+            { type: 'mrkdwn', text: `*Account:*\n${l.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing'}` },
+            { type: 'mrkdwn', text: `*Name:*\n${l.name || '_unknown_'}` },
+            { type: 'mrkdwn', text: `*Company:*\n${l.company || '_unknown_'}` },
+          ]},
+          { type: 'section', text: { type: 'mrkdwn', text: `*Their Message:*\n> ${l.messages[0]?.text || ''}` } },
+          { type: 'divider' },
+          { type: 'section', text: { type: 'mrkdwn', text: `*📝 Draft Reply:*\n\`\`\`${replyText}\`\`\`` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*→ Review in Pulse:* http://localhost:8877/instagram-leads.html` } },
+        ]
+      };
+
+      try {
+        // Route through local proxy to avoid CORS
+        payload._webhook = CONFIG.slackWebhook;
+        const r = await fetch('http://localhost:8879/proxy/slack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (r.ok) {
+          updateStatus(id, 'replied');
+          toast('✅ Sent to Slack for approval!');
+        } else {
+          toast('⚠️ Slack send failed — check proxy is running');
+        }
+      } catch (e) {
+        toast('⚠️ Proxy not running — start it with: node proxy.js');
+        console.warn('Proxy error:', e);
+      }
+    }
+
+    // ── HubSpot Push ──
+    async function pushToHubspot(id) {
+      const l = getLead(id);
+      if (!l) return;
+
+      if (!CONFIG.hubspotToken) {
+        toast('⚠️ HubSpot token not configured — click configure integrations');
+        return;
+      }
+
+      if (!l.email && !l.phone && !l.name) {
+        toast('⚠️ Add at least a name, email, or phone before pushing to HubSpot');
+        return;
+      }
+
+      toast('Pushing to HubSpot...');
+
+      try {
+        // Route through local proxy to avoid CORS
+        const res = await fetch('http://localhost:8879/proxy/hubspot/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _token: CONFIG.hubspotToken, properties: {
+            firstname: l.name.split(' ')[0] || '',
+            lastname: l.name.split(' ').slice(1).join(' ') || '',
+            company: l.company,
+            email: l.email,
+            phone: l.phone,
+            hs_lead_status: 'NEW',
+            lead_source: 'Instagram DM',
+            message: `Instagram: ${l.handle}\n\nProduct Interest: ${l.product}\n\nOriginal Message: ${l.messages[0]?.text || ''}`,
+          }})
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          l.hubspotId = data.id;
+          l.status = 'in-hubspot';
+          l.updatedAt = Date.now();
+          saveLeads();
+          renderLeads();
+          updateStats();
+          renderDetail();
+          toast('✅ Contact created in HubSpot!');
+        } else {
+          const err = await res.json();
+          toast('HubSpot error: ' + (err.message || 'unknown error'));
+        }
+      } catch (e) {
+        toast('⚠️ HubSpot push failed — may need backend proxy for CORS');
+        console.error('HubSpot error:', e);
+      }
+    }
+
+    // ── Modal ──
+    function openAddModal() {
+      document.getElementById('newHandle').value = '';
+      document.getElementById('newMessage').value = '';
+      document.getElementById('addModal').classList.add('open');
+      setTimeout(() => document.getElementById('newHandle').focus(), 100);
+    }
+    function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+    document.getElementById('addModal').addEventListener('click', e => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
+
+    // ── Helpers ──
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function timeAgo(ts) {
+      const diff = Date.now() - ts;
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+      return Math.floor(diff/86400000) + 'd ago';
+    }
+
+    function statusLabel(s) {
+      return { new: 'New', replied: 'Replied', qualified: 'Qualified', 'in-hubspot': 'In HubSpot', won: 'Won', cold: 'Cold', lost: 'Lost' }[s] || s;
+    }
+
+    // ── Auto-cold detector (runs every 5 min) ──
+    function checkColdLeads() {
+      const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+      leads.forEach(l => {
+        if (l.status === 'replied' && (Date.now() - l.updatedAt) > THREE_DAYS) {
+          l.status = 'cold';
+          l.updatedAt = Date.now();
+        }
+      });
+      saveLeads();
+      renderLeads();
+      updateStats();
+    }
+
+    // ── Init ──
+    renderLeads();
+    updateStats();
+    setInterval(checkColdLeads, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prepress — Bazaar Print</title>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+<div class="prepress-layout">
+  <aside class="prepress-queue">
+    <div class="queue-header">
+      <div>
+        <div class="queue-title">📄 Prepress Queue</div>
+        <div class="queue-subtitle" id="queueCount">Loading…</div>
+      </div>
+    </div>
+    <div class="queue-filters">
+      <input id="queueSearch" type="text" placeholder="Search order or customer..." oninput="renderQueue()">
+      <select id="queueStatusFilter" onchange="renderQueue()">
+        <option value="all">All</option>
+        <option value="prepress">Not Started</option>
+        <option value="prepress-active">Started</option>
+        <option value="prepress-paused">Paused</option>
+        <option value="pending-account-manager">Send Back</option>
+      </select>
+      <select id="queueDateFilter" onchange="renderQueue()">
+        <option value="all">📅 All (Created)</option>
+        <option value="today">Created Today</option>
+        <option value="yesterday">Created Yesterday</option>
+        <option value="last-week">Created Last Week</option>
+        <option value="last-month">Created Last Month</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="date" id="queueCustomDate" onchange="renderQueue()" style="display:none;">
+    </div>
+    <div id="queueList" class="queue-list"></div>
+  </aside>
+
+  <main class="prepress-main">
+    <div id="emptyState" class="empty-state">Select a prepress order to review.</div>
+    <div id="detailWrap" style="display:none;">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" id="detailTitle">Order</div>
+          <div class="detail-subtitle" id="detailSubtitle"></div>
+        </div>
+        <div id="detailStatus"></div>
+      </div>
+      <div class="detail-grid">
+        <section class="detail-card">
+          <h3>Job Details</h3>
+          <div id="detailInfo"></div>
+        </section>
+        <section class="detail-card">
+          <h3>Artwork & Notes</h3>
+          <div id="detailArtwork"></div>
+        </section>
+      </div>
+      <section class="detail-card" style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">Workflow Steps</h3>
+        </div>
+        <div id="detailSteps" class="steps-list" style="margin-top:12px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="prepress-side">
+    <div class="detail-card sticky-card">
+      <h3>Prepress Review</h3>
+      <div class="checklist">
+        <label><input type="checkbox" id="checkDetails" onchange="updateApproveButtonVisibility()"><span>Ticket details verified</span></label>
+        <label><input type="checkbox" id="checkArtwork" onchange="updateApproveButtonVisibility()"><span>Artwork/files checked</span></label>
+        <label><input type="checkbox" id="checkSizing" onchange="updateApproveButtonVisibility()"><span>Size / quantity / imposition checked</span></label>
+        <label><input type="checkbox" id="checkCutting" onchange="updateApproveButtonVisibility()"><span>Die / cut method checked</span></label>
+      </div>
+      <div class="field">
+        <label>Issue Category</label>
+        <select id="issueCategory" onchange="updateApproveButtonVisibility()">
+          <option value="">No issue</option>
+          <option value="artwork">Artwork issue</option>
+          <option value="copy">Ticket/detail mismatch</option>
+          <option value="sizing">Size / quantity / fit issue</option>
+          <option value="finishing">Finishing / die / cut issue</option>
+          <option value="manager-request">Manager Request</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prepress Comment</label>
+        <textarea id="prepressComment" rows="6" placeholder="Explain what prepress found, what needs to be fixed, and any instructions for the account manager."></textarea>
+      </div>
+      <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
+      <div class="action-stack">
+        <button class="btn btn-primary" id="btnStartPause" style="background:#2563eb;" onclick="toggleStartPause()">▶ Start Review</button>
+        <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
+        <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
+      </div>
+      <div id="prepressActionHint" style="font-size:12px;color:#92400e;margin-top:8px;">Start Review before using Send Back to Account Manager.</div>
+    </div>
+
+    <!-- Prepress History Log -->
+    <div class="detail-card" style="margin-top:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;">📋 Prepress History</h3>
+        <button class="btn btn-sm" onclick="toggleHistoryPanel()" id="btnToggleHistory" style="font-size:11px;">▼ Show</button>
+      </div>
+      <div id="historyPanelBody" style="display:none;">
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <select id="historyDateFilter" onchange="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:120px;">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last-week">Last Week</option>
+            <option value="last-month">Last Month</option>
+          </select>
+          <input type="text" id="historySearch" placeholder="Search…" oninput="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:80px;">
+        </div>
+        <div id="historyList" style="max-height:340px;overflow-y:auto;display:grid;gap:8px;font-size:12px;"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('prepress');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Prepress' }]);
+initAuth('prepress');
+
+document.getElementById('page-styles').textContent = `
+  .prepress-layout { display:grid; grid-template-columns:300px minmax(0,1fr) 340px; gap:14px; padding:14px; min-height:calc(100vh - 80px); }
+  .prepress-queue, .detail-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 20px rgba(15,23,42,0.05); }
+  .prepress-queue { display:flex; flex-direction:column; min-height:calc(100vh - 110px); overflow:hidden; }
+  .queue-header { padding:14px; border-bottom:1px solid var(--border); }
+  .queue-title { font-size:16px; font-weight:700; }
+  .queue-subtitle { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .queue-filters { padding:10px 14px; display:grid; gap:8px; border-bottom:1px solid var(--border); }
+  .queue-filters input, .queue-filters select, .field select, .field textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:13px; box-sizing:border-box; }
+  .queue-list { padding:10px; overflow:auto; display:grid; gap:8px; }
+  .queue-item { border:1px solid var(--border); border-radius:12px; padding:10px; cursor:pointer; transition:all .18s ease; }
+  .queue-item:hover, .queue-item.active { border-color:#93c5fd; background:#eff6ff; }
+  .queue-item-title { font-weight:700; font-size:14px; color:#1d4ed8; }
+  .queue-item-meta { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .queue-item-issue { font-size:11px; color:#b91c1c; margin-top:6px; }
+  .prepress-main { min-width:0; }
+  .empty-state { background:#fff; border:1px dashed var(--border); border-radius:14px; padding:40px; color:var(--text-muted); text-align:center; }
+  .detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .detail-title { font-size:22px; font-weight:800; }
+  .detail-subtitle { color:var(--text-muted); font-size:13px; margin-top:4px; }
+  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .detail-card { padding:16px; }
+  .detail-card h3 { margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+  .detail-line { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
+  .detail-line:last-child { border-bottom:none; }
+  .detail-label { color:var(--text-muted); }
+  .art-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .art-thumb, .art-pdf { width:82px; height:82px; border-radius:8px; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f8fafc; }
+  .art-thumb img { width:100%; height:100%; object-fit:cover; cursor:pointer; }
+  .art-pdf { font-size:26px; }
+  .art-name { font-size:10px; color:var(--text-muted); text-align:center; max-width:82px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .steps-list { display:grid; gap:8px; }
+  .step-card { border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; gap:12px; font-size:13px; }
+  .step-card.current { border-color:#93c5fd; background:#eff6ff; }
+  .prepress-side { min-width:0; }
+  .sticky-card { position:sticky; top:14px; }
+  .checklist { display:grid; gap:12px; margin-bottom:14px; font-size:14px; }
+  .checklist label { display:grid !important; grid-template-columns:22px 1fr; align-items:start; justify-content:start; gap:12px; color:#475569; font-weight:600; line-height:1.35; }
+  .checklist input[type="checkbox"] { width:22px; height:22px; margin:1px 0 0; accent-color:#2563eb; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px; }
+  .action-stack { display:grid; gap:8px; }
+  .issue-box { margin:10px 0 14px; padding:10px 12px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; }
+  @media (max-width: 1200px) { .prepress-layout { grid-template-columns:1fr; } .sticky-card { position:static; } .detail-grid { grid-template-columns:1fr; } }
+`;
+
+let allOrders = [];
+let selectedOrderId = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadOrders();
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders') await loadOrders();
+  });
+});
+
+async function loadOrders() {
+  const orders = await getAllOrders();
+  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
+    .sort(compareOrdersByRushDue);
+  // PUL-137 Fix #1: Only clear selection if the previously selected order is gone.
+  // Do NOT auto-select the first order — selection must come from an explicit user click.
+  if (selectedOrderId && !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = null;
+  renderQueue();
+  renderDetail();
+}
+
+function renderQueue() {
+  const q = (document.getElementById('queueSearch').value || '').toLowerCase().trim();
+  const status = document.getElementById('queueStatusFilter').value;
+  const dateFilter = document.getElementById('queueDateFilter').value;
+  const customDate = document.getElementById('queueCustomDate').value;
+  document.getElementById('queueCustomDate').style.display = dateFilter === 'custom' ? '' : 'none';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
+
+  let orders = allOrders.filter(o => status === 'all' ? true : o.status === status);
+
+  if (dateFilter === 'today') {
+    orders = orders.filter(o => { const d = new Date(o.createdAt || o.dueDate || 0); return d >= today && d < new Date(today.getTime()+86400000); });
+  } else if (dateFilter === 'yesterday') {
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= yesterday && d < today; });
+  } else if (dateFilter === 'last-week') {
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= weekStart; });
+  } else if (dateFilter === 'last-month') {
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= monthStart; });
+  } else if (dateFilter === 'custom' && customDate) {
+    const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
+    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= cStart && d <= cEnd; });
+  }
+
+  if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
+  document.getElementById('queueCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+  const list = document.getElementById('queueList');
+  if (!orders.length) {
+    list.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:13px;text-align:center;">No prepress orders match.</div>';
+    return;
+  }
+  list.innerHTML = orders.map(order => `
+    <div class="queue-item ${order.id === selectedOrderId ? 'active' : ''}" onclick="selectOrder(${order.id})">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+        <div class="queue-item-title">#${order.orderId}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${renderRushFlag(order)}${renderStatusBadge(order.status)}</div>
+      </div>
+      <div class="queue-item-meta">${order.customerName || order.customer || '—'}</div>
+      <div class="queue-item-meta">${order.productType || '—'} · ${(order.quantity || 0).toLocaleString()} pcs</div>
+      <div class="queue-item-meta">Rep: ${order.accountManager || '—'}${order.isReprint ? ` · 🔁 from #${order.reprintOfOrderId}` : ''}</div>
+      ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function selectOrder(id) {
+  selectedOrderId = id;
+  renderQueue();
+  renderDetail();
+}
+
+function detailLine(label, value) {
+  return `<div class="detail-line"><span class="detail-label">${label}</span><span>${value || '—'}</span></div>`;
+}
+
+function renderArtwork(files = []) {
+  if (!files.length) return '<div style="font-size:13px;color:var(--text-muted);">No artwork uploaded.</div>';
+  return `<div class="art-grid">${files.map(f => `
+    <div>
+      <div class="${f.type?.startsWith('image/') ? 'art-thumb' : 'art-pdf'}">${f.type?.startsWith('image/') ? `<img src="${f.dataUrl}" alt="${f.name}" onclick="openArtworkLightbox('${f.dataUrl}')">` : '📄'}</div>
+      <div class="art-name" title="${f.name}">${f.name}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderDetail() {
+  const order = allOrders.find(o => o.id === selectedOrderId);
+  const empty = document.getElementById('emptyState');
+  const wrap = document.getElementById('detailWrap');
+  if (!order) {
+    empty.style.display = 'block';
+    wrap.style.display = 'none';
+    document.getElementById('lastIssueBox').style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  wrap.style.display = 'block';
+
+  document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
+  document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
+  document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
+  const lockedNotice = ['pending-review','qc-failed','ready-to-ship','completed','shipped','received'].includes(order.status)
+    ? `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #fed7aa;background:#fff7ed;font-size:12px;color:#9a3412;">Please note you cannot edit already approved or rejected job tickets.</div>`
+    : '';
+  // (Open Job Ticket link removed per David's request)
+
+  document.getElementById('detailInfo').innerHTML = [
+    detailLine('Quantity', `${(order.quantity || 0).toLocaleString()} pcs`),
+    detailLine(order.printType === 'Roll' ? 'Frames' : 'Sheets', order.sheetCount ? order.sheetCount.toLocaleString() : '—'),
+    detailLine('Material', order.material),
+    detailLine('Print Type', order.printType),
+    detailLine('Lamination', order.lamination),
+    detailLine('Foil', order.foilType && order.foilType !== 'None' ? order.foilType : '—'),
+    detailLine('Cut Method', order.cutMethod),
+    detailLine('Die', order.dieName || order.dieStatus || '—'),
+    detailLine('Due Date', order.dueDate ? formatDate(order.dueDate) : '—')
+  ].join('');
+
+  const artworkFiles = [
+    ...(order.artworkFiles || []),
+    ...(order.whiteLayerFile ? [order.whiteLayerFile] : []),
+    ...(order.uvFile ? [order.uvFile] : []),
+    ...(order.foilFile ? [order.foilFile] : [])
+  ];
+  document.getElementById('detailArtwork').innerHTML = `
+    ${lockedNotice}
+    ${order.specialNotes ? `<div style="font-size:13px;margin:0 0 12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
+    ${renderArtwork(artworkFiles)}
+  `;
+
+  const currentStep = order.currentStep || 0;
+  document.getElementById('detailSteps').innerHTML = (order.workflowSteps || []).map((step, i) => `
+    <div class="step-card ${i === currentStep ? 'current' : ''}">
+      <div><strong>Step ${i + 1}</strong> • ${step.machine}<div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${step.operation || '—'}${step.notes ? ` • ${step.notes}` : ''}</div></div>
+      <div>${renderStatusBadge(step.status || 'new')}</div>
+    </div>
+  `).join('') || '<div style="font-size:13px;color:var(--text-muted);">No workflow steps.</div>';
+
+  document.getElementById('checkDetails').checked = !!order.prepressChecklist?.details;
+  document.getElementById('checkArtwork').checked = !!order.prepressChecklist?.artwork;
+  document.getElementById('checkSizing').checked = !!order.prepressChecklist?.sizing;
+  document.getElementById('checkCutting').checked = !!order.prepressChecklist?.cutting;
+  document.getElementById('issueCategory').value = order.prepressIssueCategory || '';
+  document.getElementById('prepressComment').value = order.prepressIssueComment || order.prepressComment || '';
+  updateApproveButtonVisibility();
+
+  const issueBox = document.getElementById('lastIssueBox');
+  if (order.prepressIssueComment) {
+    issueBox.style.display = 'block';
+    issueBox.innerHTML = `<strong>Last prepress issue</strong><br>${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}<br><span style="font-size:11px;">${order.prepressIssueBy || 'Prepress'}${order.prepressIssueAt ? ` • ${formatDateTime(order.prepressIssueAt)}` : ''}${order.prepressResubmittedAt ? ` • Sales updated ${formatDateTime(order.prepressResubmittedAt)}` : ''}</span>`;
+  } else {
+    issueBox.style.display = 'none';
+    issueBox.innerHTML = '';
+  }
+}
+
+function getSelectedOrder() {
+  return allOrders.find(o => o.id === selectedOrderId);
+}
+
+function updateApproveButtonVisibility() {
+  const allChecked = ['checkDetails','checkArtwork','checkSizing','checkCutting'].every(id => document.getElementById(id)?.checked);
+  const hasIssue = (document.getElementById('issueCategory')?.value || '') !== '';
+  const order = getSelectedOrder();
+  const reviewStarted = ['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order?.status);
+  const isPaused = order?.status === 'prepress-paused';
+  const isActive = order?.status === 'prepress-active';
+  const btn = document.getElementById('btnApprove');
+  const sendBackBtn = document.getElementById('btnSendBack');
+  const startPauseBtn = document.getElementById('btnStartPause');
+  const hint = document.getElementById('prepressActionHint');
+  if (btn) btn.style.display = (allChecked && !hasIssue && reviewStarted) ? '' : 'none';
+  // PUL-137 Fix #4: Hide the button entirely when review hasn't started (not just disable it).
+  if (sendBackBtn) sendBackBtn.style.display = reviewStarted ? '' : 'none';
+  if (hint) hint.style.display = reviewStarted ? 'none' : '';
+  if (startPauseBtn) {
+    if (isActive) {
+      startPauseBtn.textContent = '⏸ Pause Review';
+      startPauseBtn.style.background = '#d97706';
+    } else if (isPaused) {
+      startPauseBtn.textContent = '▶ Resume Review';
+      startPauseBtn.style.background = '#2563eb';
+    } else {
+      startPauseBtn.textContent = '▶ Start Review';
+      startPauseBtn.style.background = '#2563eb';
+    }
+  }
+}
+
+async function toggleStartPause() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  if (order.status === 'prepress-active') {
+    await pauseReview();
+  } else {
+    await startReview();
+  }
+}
+
+function collectReviewPatch(order) {
+  return {
+    ...order,
+    prepressChecklist: {
+      details: document.getElementById('checkDetails').checked,
+      artwork: document.getElementById('checkArtwork').checked,
+      sizing: document.getElementById('checkSizing').checked,
+      cutting: document.getElementById('checkCutting').checked,
+    },
+    prepressComment: document.getElementById('prepressComment').value.trim(),
+    prepressIssueCategory: document.getElementById('issueCategory').value,
+    prepressLastUpdatedAt: new Date().toISOString(),
+    prepressLastUpdatedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress'
+  };
+}
+
+async function saveReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-review', message: 'Prepress review notes saved', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function startReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'prepress-active';
+  patch.prepressStartedAt = patch.prepressStartedAt || new Date().toISOString();
+  patch.prepressStartedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-started', message: 'Prepress review started', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function pauseReview() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'prepress-paused';
+  patch.prepressPausedAt = new Date().toISOString();
+  patch.prepressPausedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-paused', message: 'Prepress review paused', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+async function sendBackToAccountManager() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const comment = document.getElementById('prepressComment').value.trim();
+  const category = document.getElementById('issueCategory').value;
+  if (!['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order.status)) {
+    alert('Start Review before sending this job back.');
+    return;
+  }
+  if (!comment) {
+    alert('Add a clear prepress comment before sending this back.');
+    return;
+  }
+  const patch = collectReviewPatch(order);
+  patch.status = 'pending-account-manager';
+  patch.needsAccountManagerAction = true;
+  patch.prepressIssueComment = comment;
+  patch.prepressIssueCategory = category;
+  patch.prepressIssueAt = new Date().toISOString();
+  patch.prepressIssueBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
+  try {
+    await triggerOrderSmsAlert('prepressReturned', { ...order, ...patch }, (smsOrder) => {
+      const repName = smsOrder.accountManager || 'Account Manager';
+      return `Pulse: Job #${smsOrder.orderId} for ${smsOrder.customerName || smsOrder.customer || 'customer'} was returned by prepress to ${repName}. ${category && category !== 'none' ? `${category}. ` : ''}${comment}`;
+    });
+  } catch (e) {
+    console.warn('Prepress return SMS failed:', e);
+  }
+  await loadOrders();
+}
+
+async function approveToProduction() {
+  const order = getSelectedOrder();
+  if (!order) return;
+  const patch = collectReviewPatch(order);
+  patch.status = 'pending-review';
+  patch.needsAccountManagerAction = false;
+  patch.prepressIssueComment = '';
+  patch.prepressIssueCategory = '';
+  patch.prepressIssueAt = null;
+  patch.prepressIssueBy = '';
+  patch.prepressApprovedAt = new Date().toISOString();
+  patch.prepressApprovedBy = patch.prepressLastUpdatedBy;
+  await updateOrder(order.id, patch);
+  await addActivity({ orderId: order.orderId, type: 'prepress-approved', message: 'Prepress approved and sent to production queue', by: patch.prepressLastUpdatedBy });
+  await loadOrders();
+}
+
+function openArtworkLightbox(dataUrl) {
+  if (!dataUrl) return;
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;display:block;margin:auto;">`);
+}
+
+// ── Prepress History Log ────────────────────────────────────
+let _historyOpen = false;
+
+function toggleHistoryPanel() {
+  _historyOpen = !_historyOpen;
+  const body = document.getElementById('historyPanelBody');
+  const btn = document.getElementById('btnToggleHistory');
+  if (body) body.style.display = _historyOpen ? '' : 'none';
+  if (btn) btn.textContent = _historyOpen ? '▲ Hide' : '▼ Show';
+  if (_historyOpen) renderHistory();
+}
+
+async function renderHistory() {
+  const listEl = document.getElementById('historyList');
+  if (!listEl) return;
+  const dateFilter = document.getElementById('historyDateFilter')?.value || 'all';
+  const search = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
+
+  // Load all activity and all orders once
+  let activity = [];
+  let ordersMap = {};
+  try { activity = await getAllActivity(); } catch (e) {}
+  try {
+    const allOrds = await getAllOrders();
+    allOrds.forEach(o => { ordersMap[o.orderId] = o; });
+  } catch (e) {}
+
+  // Filter to prepress-approved events
+  let events = activity.filter(a => a.type === 'prepress-approved');
+
+  // Date filter on event timestamp
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
+  const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate()-7);
+  const monthStart = new Date(todayStart); monthStart.setDate(monthStart.getDate()-30);
+
+  if (dateFilter === 'today') {
+    events = events.filter(a => new Date(a.timestamp) >= todayStart);
+  } else if (dateFilter === 'yesterday') {
+    events = events.filter(a => { const d = new Date(a.timestamp); return d >= yesterdayStart && d < todayStart; });
+  } else if (dateFilter === 'last-week') {
+    events = events.filter(a => new Date(a.timestamp) >= weekStart);
+  } else if (dateFilter === 'last-month') {
+    events = events.filter(a => new Date(a.timestamp) >= monthStart);
+  }
+
+  // Search filter
+  if (search) {
+    events = events.filter(a => {
+      const o = ordersMap[a.orderId] || {};
+      return [a.orderId, o.customerName || o.customer, o.productType, a.by, a.message].join(' ').toLowerCase().includes(search);
+    });
+  }
+
+  // Sort newest first
+  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  if (!events.length) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">No approved tickets found.</div>';
+    return;
+  }
+
+  listEl.innerHTML = events.map(a => {
+    const o = ordersMap[a.orderId] || {};
+    // Gather the ping-pong audit: find all prepress-related activities for this order
+    const pingPong = activity
+      .filter(x => x.orderId === a.orderId && ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'].includes(x.type))
+      .sort((x, y) => new Date(x.timestamp) - new Date(y.timestamp));
+
+    const pingPongHtml = pingPong.length > 1 ? `
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9;">
+        ${pingPong.map(p => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px;">
+          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatDateTime(p.timestamp)}</span>
+          <span style="font-size:11px;color:${p.type==='prepress-returned'?'#b91c1c':p.type==='prepress-approved'?'#16a34a':'#64748b'};">${
+            p.type==='prepress-started'?'▶ Started':p.type==='prepress-paused'?'⏸ Paused':p.type==='prepress-returned'?'↩ Sent back':p.type==='prepress-resubmitted'?'↪ Resubmitted':'✅ Approved'
+          }</span>
+          ${p.by ? `<span style="font-size:10px;color:var(--text-muted);">by ${p.by}</span>` : ''}
+        </div>`).join('')}
+      </div>` : '';
+
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#f8fafc;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <span style="font-weight:700;color:#1d4ed8;">#${a.orderId}</span>
+        <span style="color:#16a34a;font-weight:600;font-size:11px;">✅ Approved ${formatDateTime(a.timestamp)}</span>
+      </div>
+      <div style="color:#374151;margin-top:3px;">${o.customerName || o.customer || '—'}</div>
+      <div style="color:var(--text-muted);font-size:11px;">${o.productType || '—'} · ${(o.quantity||0).toLocaleString()} pcs · Rep: ${o.accountManager||'—'}</div>
+      ${a.by ? `<div style="font-size:11px;color:var(--text-muted);">Approved by: ${a.by}</div>` : ''}
+      ${pingPongHtml}
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

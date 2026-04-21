@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Bazaar Print</title>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="admin-layout">
+  <!-- Tab Bar -->
+  <div class="admin-tabs">
+    <button class="tab-btn active" data-tab="personnel" onclick="switchTab('personnel')">👥 Personnel</button>
+    <button class="tab-btn" data-tab="dies" onclick="switchTab('dies')">🔧 Dies</button>
+    <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">📦 Inventory</button>
+    <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
+    <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
+    <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
+    <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
+    <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
+    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+  </div>
+
+  <div class="admin-content">
+    <div id="adminAlerts" style="display:none;margin-bottom:16px;"></div>
+
+    <!-- ═══════════════════════════════════════════ PERSONNEL ══ -->
+    <div class="tab-pane active" id="tab-personnel">
+      <div class="pane-header">
+        <h2>Personnel</h2>
+        <button class="btn btn-primary" onclick="openPersonnelModal()">+ Add Person</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Name</th><th>Role</th><th>User ID</th><th>Facility</th><th>Phone</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="personnelTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ DIES ══ -->
+    <div class="tab-pane" id="tab-dies">
+      <div class="pane-header">
+        <h2>Die Registry</h2>
+        <button class="btn btn-primary" onclick="openDieModal()">+ Add Die</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="dieSearch" placeholder="Search by number, barcode, or customer..." oninput="renderDies()">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Die #</th><th>Barcode</th><th>Description</th><th>Customer</th><th>Machine</th><th>Status</th><th>Uses</th><th>Last Used</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="dieTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ INVENTORY ══ -->
+    <div class="tab-pane" id="tab-inventory">
+      <div class="pane-header">
+        <h2>Material Inventory</h2>
+        <button class="btn btn-primary" onclick="openInventoryModal()">+ Add Material</button>
+      </div>
+      <div class="inv-filter-row">
+        <select id="invFacilityFilter" onchange="renderInventory()">
+          <option value="all">All Facilities</option>
+          <option value="16th-street">16th Street</option>
+          <option value="boyd-street">Boyd Street</option>
+        </select>
+        <select id="invPeriodFilter" onchange="renderInventory()">
+          <option value="7">7-Day Trend</option>
+          <option value="14">14-Day Trend</option>
+          <option value="30">30-Day Trend</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Material</th><th>Facility</th><th>On Hand</th><th>Unit</th><th>Reorder Point</th><th>Usage (Period)</th><th>Suggested Order</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="inventoryTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ PURCHASE ORDERS ══ -->
+    <div class="tab-pane" id="tab-purchase-orders">
+      <div class="pane-header">
+        <h2>Purchase Orders</h2>
+        <button class="btn btn-primary" onclick="openPOModal()">+ Create PO</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>PO #</th><th>Vendor</th><th>Email</th><th>Items</th><th>Total</th><th>Status</th><th>Created</th><th>Expected</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="poTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ MACHINES ══ -->
+    <div class="tab-pane" id="tab-machines">
+      <div class="pane-header">
+        <h2>Machine Capacity Settings</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Machine</th><th>Facility</th><th>Operations</th><th>Daily Capacity</th><th>Notes</th><th>Edit</th>
+          </tr></thead>
+          <tbody id="machinesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ KNOWLEDGE BASE ══ -->
+    <div class="tab-pane" id="tab-knowledge">
+      <div class="pane-header">
+        <h2>Knowledge Base</h2>
+        <button class="btn btn-primary" onclick="openKBModal()">+ Add Entry</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Title</th><th>Machine</th><th>Severity</th><th>Description</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="kbTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ SETTINGS ══ -->
+    <!-- ═══ QA SIGN-OFF RULES TAB ═════════════════════════════════ -->
+<div class="tab-pane" id="tab-qa-rules">
+  <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h2>✅ QA Sign-off Rules</h2>
+      <p style="color:#6b7280;font-size:13px;margin:4px 0 0;">Configure when a supervisor must sign off at specific production stages.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openQARuleModal()">+ Add Rule</button>
+  </div>
+
+  <div style="background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;">
+    ⚠️ Rules are evaluated when a job ticket is created or updated. If a rule matches, the assigned supervisor must sign off before the job advances past the specified stages.
+  </div>
+
+  <div id="qaRulesList"></div>
+</div>
+
+<!-- ═══ ROLES & PERMISSIONS TAB ═══════════════════════════════ -->
+<div class="tab-pane" id="tab-roles">
+  <div class="pane-header">
+    <h2>🔐 Roles & Permissions</h2>
+    <p style="color:#6b7280;font-size:13px;margin:4px 0 0;">What each role can see and do in Pulse.</p>
+  </div>
+  <table class="data-table" style="font-size:13px;">
+    <thead><tr><th>Role</th><th>Job Ticket Access</th><th>Can Edit Others' Tickets</th><th>Production Pages</th><th>Admin Access</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Admin</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+      <tr><td><strong>David Review</strong></td><td>Selected pages</td><td>❌ No</td><td>Dashboard, Job Ticket, Pricing, Prepress, Production, Operator, QC, Machines</td><td>Personnel, Dies, Machines only</td></tr>
+      <tr><td><strong>Supervisor</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+      <tr><td><strong>Production Manager</strong></td><td>View only</td><td>❌ No</td><td>✅ Yes</td><td>❌ No</td></tr>
+      <tr><td><strong>Account Manager</strong></td><td>Own tickets only</td><td>❌ No (own only)</td><td>❌ No</td><td>❌ No</td></tr>
+      <tr><td><strong>Operator</strong></td><td>None</td><td>❌ No</td><td>Operator Terminal, QC, Application only</td><td>❌ No</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:24px;">
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Current User Assignments</h3>
+    <div id="roleUserList"></div>
+  </div>
+</div>
+
+<div class="tab-pane" id="tab-settings">
+      <div class="pane-header">
+        <h2>System Settings</h2>
+      </div>
+      <div class="settings-grid">
+        <div class="card settings-card">
+          <h3 class="settings-section-title">Application Department Capacity</h3>
+          <div class="field-row">
+            <div class="field">
+              <label>People per Shift</label>
+              <input type="number" id="appDeptPeople" min="1" value="3" onchange="saveSettingDebounced()">
+            </div>
+            <div class="field">
+              <label>Units per Person per Day</label>
+              <input type="number" id="appDeptUnitsPerPerson" min="1" value="2000" onchange="saveSettingDebounced()">
+            </div>
+            <div class="field">
+              <label>Total Capacity</label>
+              <input type="number" id="appDeptTotal" readonly style="background:#f5f6fa;">
+            </div>
+          </div>
+        </div>
+        <div class="card settings-card">
+          <h3 class="settings-section-title">Production Defaults</h3>
+          <div class="field" style="margin-bottom:12px;">
+            <label>Default Facility</label>
+            <select id="defaultFacility" onchange="saveSettingDebounced()">
+              <option value="16th-street">16th Street</option>
+              <option value="boyd-street">Boyd Street</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Default QC Inspector</label>
+            <input type="text" id="defaultQCInspector" placeholder="Name" onchange="saveSettingDebounced()">
+          </div>
+        </div>
+        <div class="card settings-card">
+          <h3 class="settings-section-title">Database</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn" onclick="exportAllData()">📤 Export All Data (JSON)</button>
+            <button class="btn btn-danger" onclick="clearDatabase()">🗑 Clear Database (Danger!)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ MODALS ══ -->
+
+<!-- Personnel Modal -->
+<div class="modal-overlay" id="personnelModal">
+  <div class="modal">
+    <h2 id="personnelModalTitle">Add Person</h2>
+    <input type="hidden" id="personnelId">
+    <div class="modal-form">
+      <div class="field"><label>Name *</label><input type="text" id="pName" required></div>
+      <div class="field"><label>Role</label>
+        <select id="pRole">
+          <option value="operator">Operator</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+          <option value="qc">QC Inspector</option>
+        </select>
+      </div>
+      <div class="field"><label>Facility</label>
+        <select id="pFacility">
+          <option value="16th-street">16th Street</option>
+          <option value="boyd-street">Boyd Street</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>User ID</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="pUserId" placeholder="Auto-generated operator ID" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="generatePersonnelUserId()">Generate</button>
+        </div>
+      </div>
+      <div class="field"><label>Phone</label><input type="text" id="pPhone" placeholder="(555) 555-5555"></div>
+      <div class="field"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="pActive" checked style="width:16px;height:16px;"> Active</label></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('personnelModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePersonnel()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Die Modal -->
+<div class="modal-overlay" id="dieModal">
+  <div class="modal">
+    <h2 id="dieModalTitle">Add Die</h2>
+    <input type="hidden" id="dieDbId">
+    <div class="modal-form">
+      <div class="field"><label>Die Number *</label><input type="text" id="dNumber" placeholder="e.g. 1042" required></div>
+      <div class="field"><label>Description</label><input type="text" id="dDescription" placeholder="e.g. Standard 2oz Bag"></div>
+      <div class="field"><label>Customer</label><input type="text" id="dCustomer" placeholder="Customer name (if die-specific)"></div>
+      <div class="field"><label>Machine</label>
+        <select id="dMachine">
+          <option value="Moll Brothers Cutter">Moll Brothers Cutter</option>
+          <option value="GM Die Cutter w/ JetFX">GM Die Cutter w/ JetFX</option>
+        </select>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="dStatus">
+          <option value="active">Active</option>
+          <option value="damaged">Damaged</option>
+          <option value="retired">Retired</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="dNotes"></div>
+      <div class="field" id="barcodeDisplay" style="display:none;">
+        <label>Barcode</label>
+        <input type="text" id="dBarcode" readonly style="background:#f5f6fa;font-family:monospace;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('dieModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDie()">Save Die</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inventory Modal -->
+<div class="modal-overlay" id="inventoryModal">
+  <div class="modal">
+    <h2 id="invModalTitle">Add Material</h2>
+    <input type="hidden" id="invDbId">
+    <div class="modal-form">
+      <div class="field"><label>Material Name *</label>
+        <select id="invMaterial">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+      <div class="field"><label>Or enter custom material name</label><input type="text" id="invMaterialCustom" placeholder="Custom name"></div>
+      <div class="field"><label>Facility</label>
+        <select id="invFacility">
+          <option value="16th-street">16th Street</option>
+          <option value="boyd-street">Boyd Street</option>
+        </select>
+      </div>
+      <div class="field"><label>Quantity on Hand *</label><input type="number" id="invQty" min="0" value="0"></div>
+      <div class="field"><label>Unit</label>
+        <select id="invUnit">
+          <option value="sheets">Sheets</option>
+          <option value="linear-feet">Linear Feet</option>
+          <option value="sq-ft">Sq Ft</option>
+          <option value="rolls">Rolls</option>
+          <option value="units">Units</option>
+        </select>
+      </div>
+      <div class="field"><label>Reorder Point</label><input type="number" id="invReorderPoint" min="0" value="100"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('inventoryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInventoryItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Purchase Order Modal -->
+<div class="modal-overlay" id="poModal">
+  <div class="modal" style="max-width:680px;max-height:90vh;overflow-y:auto;">
+    <h2>Create Purchase Order</h2>
+    <div class="modal-form">
+      <div class="field"><label>Vendor Name *</label><input type="text" id="poVendor" placeholder="e.g. Consolidated Label"></div>
+      <div class="field"><label>Vendor Email (optional)</label><input type="email" id="poVendorEmail" placeholder="e.g. orders@vendor.com"></div>
+      <div class="field"><label>Expected Delivery</label><input type="date" id="poExpectedDelivery"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong>Line Items</strong>
+        <button class="btn btn-sm" onclick="addPOLineItem()">+ Add Item</button>
+      </div>
+      <div id="poLineItems"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('poModal')">Cancel</button>
+      <button class="btn btn-warning" onclick="savePO('draft')">Save as Draft</button>
+      <button class="btn btn-primary" onclick="savePO('sent')">Save & Mark Sent</button>
+      <button class="btn" style="background:#2563eb;color:#fff;" onclick="savePOAndEmail()">📧 Save & Email PO</button>
+    </div>
+  </div>
+</div>
+
+<!-- Machine Capacity Edit Modal -->
+<div class="modal-overlay" id="machineCapModal">
+  <div class="modal">
+    <h2 id="machCapTitle">Edit Machine Capacity</h2>
+    <input type="hidden" id="machCapKey">
+    <div class="modal-form">
+      <div class="field"><label>Daily Sheets</label><input type="number" id="machCapSheets" min="0" placeholder="Leave blank if not applicable"></div>
+      <div class="field"><label>Daily Linear Feet</label><input type="number" id="machCapFeet" min="0" placeholder="For roll-based machines"></div>
+      <div class="field"><label>Daily Pouches</label><input type="number" id="machCapPouches" min="0" placeholder="For Karlville"></div>
+      <div class="field"><label>Daily Units (Application)</label><input type="number" id="machCapUnits" min="0" placeholder="For Application Dept"></div>
+      <div class="field"><label>Notes</label><input type="text" id="machCapNotes"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('machineCapModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMachineCapacity()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Knowledge Base Modal -->
+<div class="modal-overlay" id="kbModal">
+  <div class="modal" style="max-width:600px;">
+    <h2 id="kbModalTitle">Add Knowledge Entry</h2>
+    <input type="hidden" id="kbDbId">
+    <div class="modal-form">
+      <div class="field"><label>Title *</label><input type="text" id="kbTitle" required></div>
+      <div class="field"><label>Machine</label>
+        <select id="kbMachine">
+          <option value="">Any Machine</option>
+        </select>
+      </div>
+      <div class="field"><label>Material (optional)</label><input type="text" id="kbMaterial" placeholder="e.g. White BOPP"></div>
+      <div class="field"><label>Operator (optional)</label><input type="text" id="kbOperator" placeholder="Exact name or comma-separated names"></div>
+      <div class="field"><label>Operation (optional)</label>
+        <select id="kbOperation">
+          <option value="">Any Operation</option>
+        </select>
+      </div>
+      <div class="field"><label>Severity</label>
+        <select id="kbSeverity">
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="field"><label>Description *</label><textarea id="kbDesc" rows="3" required></textarea></div>
+      <div class="field"><label>Fix / Action</label><textarea id="kbFix" rows="2"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('kbModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveKBEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('admin');
+initAuth('admin');
+
+document.getElementById('page-styles').textContent = `
+  .admin-layout { display: flex; flex-direction: column; height: calc(100vh - 52px); overflow: hidden; }
+  .admin-tabs { display: flex; gap: 2px; padding: 10px 16px 0; background: var(--card); border-bottom: 2px solid var(--border); overflow-x: auto; }
+  .tab-btn { padding: 8px 16px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; transition: all 0.15s; }
+  .tab-btn:hover { background: var(--card-hover); color: var(--text); }
+  .tab-btn.active { background: var(--bg); border-color: var(--border); color: var(--accent); font-weight: 700; margin-bottom: -2px; }
+  .admin-content { flex: 1; overflow-y: auto; }
+  .tab-pane { display: none; padding: 20px 24px; }
+  .tab-pane.active { display: block; }
+  .pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .pane-header h2 { font-size: 20px; font-weight: 700; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+  .search-bar { margin-bottom: 12px; max-width: 400px; }
+  .inv-filter-row { display: flex; gap: 10px; margin-bottom: 12px; max-width: 500px; }
+
+  /* Modal form */
+  .modal-form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; margin-bottom: 8px; }
+  .field { display: flex; flex-direction: column; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* Settings */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .settings-card { }
+  .settings-section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* PO line items */
+  .po-line-item { display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .po-line-item label { display: none; }
+
+  /* Status indicators */
+  .status-active { color: var(--green); font-weight: 600; }
+  .status-inactive { color: var(--text-muted); }
+  .status-damaged { color: var(--red); font-weight: 600; }
+  .status-retired { color: var(--text-muted); }
+  .status-low { color: var(--red); font-weight: 600; }
+  .status-ok { color: var(--green); }
+  .status-warn { color: var(--yellow); font-weight: 600; }
+
+  .kb-severity-critical { color: var(--red); font-weight: 700; }
+  .kb-severity-warning { color: var(--yellow); font-weight: 700; }
+  .kb-severity-info { color: var(--accent); }
+`;
+
+// Populate KB machine options
+const kbMachineEl = document.getElementById('kbMachine');
+Object.keys(MACHINES).forEach(m => kbMachineEl.innerHTML += `<option value="${m}">${m}</option>`);
+const kbOpEl = document.getElementById('kbOperation');
+OPERATIONS.forEach(o => kbOpEl.innerHTML += `<option value="${o}">${o}</option>`);
+
+// Populate inventory material dropdown
+const invMatEl = document.getElementById('invMaterial');
+MATERIALS.forEach(g => {
+  g.items.forEach(i => invMatEl.innerHTML += `<option value="${i}">${i}</option>`);
+});
+
+// ── Active Tab ────────────────────────────────────────────
+let activeTab = 'personnel';
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+  loadTab(tab);
+}
+
+async function loadTab(tab) {
+  await renderAdminAlerts();
+  if (tab === 'personnel') await loadPersonnel();
+  else if (tab === 'dies') await loadDies();
+  else if (tab === 'inventory') await loadInventory();
+  else if (tab === 'purchase-orders') await loadPOs();
+  else if (tab === 'machines') renderMachines();
+  else if (tab === 'knowledge') await loadKnowledge();
+  else if (tab === 'settings') await loadSettings();
+  else if (tab === 'qa-rules') renderQARules();
+  else if (tab === 'roles') renderRoles();
+}
+
+async function renderAdminAlerts() {
+  const el = document.getElementById('adminAlerts');
+  if (!el) return;
+  const orders = (await getAllOrders()).filter(o => o.materialShortage && !['completed','shipped','received','cancelled'].includes(o.status));
+  if (!orders.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  const preview = orders.slice(0, 6).map(o => `#${o.orderId} • ${o.customerName || o.customer || '—'} • ${o.material || 'Material TBD'}`).join('<br>');
+  const extra = orders.length > 6 ? `<div style="margin-top:6px;font-size:12px;color:#9f1239;">+ ${orders.length - 6} more flagged order(s)</div>` : '';
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:#fff1f2;border:1px solid #fda4af;border-radius:12px;padding:14px 16px;">
+      <div style="font-weight:700;color:#9f1239;">📦 Low material stock alerts (${orders.length})</div>
+      <div style="font-size:13px;color:#881337;margin-top:6px;line-height:1.5;">These orders were saved successfully but need inventory/admin review before production continues.</div>
+      <div style="margin-top:8px;font-size:13px;color:#881337;line-height:1.6;">${preview}</div>
+      ${extra}
+    </div>`;
+}
+
+// ────────────────────────────────────────────────────────────────
+// QA Sign-off Rules
+// ────────────────────────────────────────────────────────────────
+
+const QA_RULE_FIELDS = [
+  { value: 'quantity',     label: 'Quantity (pcs)' },
+  { value: 'customer',     label: 'Customer Name (contains)' },
+  { value: 'productType',  label: 'Product Type' },
+  { value: 'material',     label: 'Material' },
+  { value: 'facility',     label: 'Facility' },
+  { value: 'accountManager', label: 'Account Manager / Rep' },
+  { value: 'lamination',   label: 'Lamination' },
+  { value: 'hasUV',        label: 'Has UV Coating' },
+  { value: 'hasFoil',      label: 'Has Foil' },
+];
+
+const QA_OPERATORS = [
+  { value: 'gt',       label: '> greater than' },
+  { value: 'gte',      label: '>= at least' },
+  { value: 'lt',       label: '< less than' },
+  { value: 'lte',      label: '<= at most' },
+  { value: 'eq',       label: '= equals' },
+  { value: 'contains', label: 'contains' },
+  { value: 'is-true',  label: 'is checked / true' },
+];
+
+const QA_STAGES = [
+  { value: 'prepress',            label: 'Prepress sign-off' },
+  { value: 'press-start',         label: 'Press start sign-off' },
+  { value: 'mid-run-check',       label: 'Mid-run check' },
+  { value: 'finishing-start',     label: 'Finishing start sign-off' },
+  { value: 'qc-checkout',         label: 'QC checkout approval' },
+  { value: 'ready-to-ship',       label: 'Ready-to-ship approval' },
+];
+
+function loadQARules() {
+  try { return JSON.parse(localStorage.getItem('pulse_qa_rules') || '[]'); } catch(e) { return []; }
+}
+function saveQARules(rules) { localStorage.setItem('pulse_qa_rules', JSON.stringify(rules)); }
+
+function renderQARules() {
+  const rules = loadQARules();
+  const el = document.getElementById('qaRulesList');
+  if (!el) return;
+  if (rules.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;">
+      No QA rules configured yet.<br>Click <strong>+ Add Rule</strong> to create the first one.
+    </div>`;
+    return;
+  }
+  el.innerHTML = rules.map(r => {
+    const fieldLabel = QA_RULE_FIELDS.find(f => f.value === r.condition.field)?.label || r.condition.field;
+    const opLabel = QA_OPERATORS.find(o => o.value === r.condition.op)?.label || r.condition.op;
+    const stageLabels = (r.stages||[]).map(s => QA_STAGES.find(x => x.value === s)?.label || s).join(', ');
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-weight:700;font-size:14px;color:#1e293b;">${r.name}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${r.active?'#dcfce7':'#f3f4f6'};color:${r.active?'#15803d':'#6b7280'};font-weight:600;">${r.active ? 'Active' : 'Disabled'}</span>
+        </div>
+        <div style="font-size:13px;color:#374151;margin-bottom:4px;">Trigger: <strong>${fieldLabel} ${opLabel} ${r.condition.value||''}</strong></div>
+        <div style="font-size:12px;color:#6b7280;">Requires supervisor sign-off at: ${stageLabels || '(no stages set)'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="toggleQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;">${r.active ? 'Disable' : 'Enable'}</button>
+        <button onclick="editQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
+        <button onclick="deleteQARule('${r.id}')" class="btn btn-sm" style="font-size:11px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _editingRuleId = null;
+
+function openQARuleModal(ruleId) {
+  _editingRuleId = ruleId || null;
+  const rule = ruleId ? loadQARules().find(r => r.id === ruleId) : null;
+
+  const fieldOpts = QA_RULE_FIELDS.map(f => `<option value="${f.value}" ${rule?.condition.field===f.value?'selected':''}>${f.label}</option>`).join('');
+  const opOpts = QA_OPERATORS.map(o => `<option value="${o.value}" ${rule?.condition.op===o.value?'selected':''}>${o.label}</option>`).join('');
+  const stageChecks = QA_STAGES.map(s => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;">
+      <input type="checkbox" value="${s.value}" ${rule?.stages?.includes(s.value)?'checked':''}>
+      ${s.label}
+    </label>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'qaRuleOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:28px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+      <h3 style="margin:0 0 20px;font-size:17px;">${rule ? 'Edit' : 'New'} QA Rule</h3>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Rule Name *</label>
+        <input type="text" id="qa_name" value="${rule?.name||''}" placeholder="e.g. Large Order Supervisor Check" style="padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Trigger Condition</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="field">
+            <label style="font-size:11px;">Field</label>
+            <select id="qa_field" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">${fieldOpts}</select>
+          </div>
+          <div class="field">
+            <label style="font-size:11px;">Condition</label>
+            <select id="qa_op" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">${opOpts}</select>
+          </div>
+          <div class="field">
+            <label style="font-size:11px;">Value</label>
+            <input type="text" id="qa_value" value="${rule?.condition.value||''}" placeholder="e.g. 1000000" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Require supervisor sign-off at these stages:</div>
+        <div id="qa_stages">${stageChecks}</div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+          <input type="checkbox" id="qa_active" ${rule ? (rule.active ? 'checked' : '') : 'checked'}>
+          Rule is active
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn" onclick="document.getElementById('qaRuleOverlay').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveQARule()">Save Rule</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function editQARule(id) { openQARuleModal(id); }
+
+function saveQARule() {
+  const name = document.getElementById('qa_name').value.trim();
+  if (!name) { alert('Enter a rule name.'); return; }
+  const field = document.getElementById('qa_field').value;
+  const op = document.getElementById('qa_op').value;
+  const value = document.getElementById('qa_value').value.trim();
+  const stages = [...document.querySelectorAll('#qa_stages input:checked')].map(c => c.value);
+  const active = document.getElementById('qa_active').checked;
+
+  const rules = loadQARules();
+  const rule = {
+    id: _editingRuleId || ('QAR-' + Date.now()),
+    name, active,
+    condition: { field, op, value },
+    stages,
+    createdAt: _editingRuleId ? rules.find(r=>r.id===_editingRuleId)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (_editingRuleId) {
+    const idx = rules.findIndex(r => r.id === _editingRuleId);
+    if (idx >= 0) rules[idx] = rule; else rules.unshift(rule);
+  } else {
+    rules.unshift(rule);
+  }
+  saveQARules(rules);
+  document.getElementById('qaRuleOverlay').remove();
+  renderQARules();
+}
+
+function toggleQARule(id) {
+  const rules = loadQARules();
+  const idx = rules.findIndex(r => r.id === id);
+  if (idx >= 0) { rules[idx].active = !rules[idx].active; saveQARules(rules); }
+  renderQARules();
+}
+
+function deleteQARule(id) {
+  if (!confirm('Delete this QA rule?')) return;
+  const rules = loadQARules().filter(r => r.id !== id);
+  saveQARules(rules);
+  renderQARules();
+}
+
+// Evaluate rules against a ticket — returns matching rule(s)
+function evaluateQARules(ticket) {
+  const rules = loadQARules().filter(r => r.active);
+  return rules.filter(r => {
+    const { field, op, value } = r.condition;
+    const ticketVal = ticket[field];
+    const numVal = parseFloat(value);
+    if (op === 'gt')       return parseFloat(ticketVal) > numVal;
+    if (op === 'gte')      return parseFloat(ticketVal) >= numVal;
+    if (op === 'lt')       return parseFloat(ticketVal) < numVal;
+    if (op === 'lte')      return parseFloat(ticketVal) <= numVal;
+    if (op === 'eq')       return String(ticketVal) === String(value);
+    if (op === 'contains') return String(ticketVal||'').toLowerCase().includes(value.toLowerCase());
+    if (op === 'is-true')  return !!ticketVal;
+    return false;
+  });
+}
+
+// Roles tab
+function renderRoles() {
+  const el = document.getElementById('roleUserList');
+  if (!el) return;
+  const rows = Object.entries(OPERATOR_PROFILES)
+    .concat((typeof EXTRA_AUTH_USERS !== 'undefined' ? EXTRA_AUTH_USERS.map(u => [u.name, u]) : []))
+    .concat([['Hayk Zohrabyan', { role: 'admin', notes: 'Owner / Admin' }]])
+    .map(([name, p]) => {
+      const cfg = typeof ROLE_CONFIG !== 'undefined' ? (ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' }) : { label: p.role, color: '#6b7280' };
+      return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="font-weight:600;min-width:160px;">${name}</span>
+        <span style="padding:2px 10px;border-radius:10px;background:${cfg.color}22;color:${cfg.color};font-size:11px;font-weight:600;">${cfg.label || p.role}</span>
+        <span style="color:#9ca3af;font-size:11px;">${p.notes || ''}</span>
+      </div>`;
+    }).join('');
+  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows}</div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await seedKnowledge();
+  await loadTab(activeTab);
+  onDBUpdate(async (data) => { await loadTab(activeTab); });
+  // Update app dept total when inputs change
+  ['appDeptPeople', 'appDeptUnitsPerPerson'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateAppDeptTotal);
+  });
+});
+
+function updateAppDeptTotal() {
+  const people = parseInt(document.getElementById('appDeptPeople').value) || 0;
+  const upu = parseInt(document.getElementById('appDeptUnitsPerPerson').value) || 0;
+  document.getElementById('appDeptTotal').value = people * upu;
+}
+
+// ── PERSONNEL ─────────────────────────────────────────────
+function generatePersonnelUserId() {
+  const name = (document.getElementById('pName').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'USR';
+  const seed = String(Date.now()).slice(-4);
+  document.getElementById('pUserId').value = `${name}${seed}`;
+}
+
+async function loadPersonnel() {
+  const people = await getAllPersonnel();
+  const tbody = document.getElementById('personnelTableBody');
+  if (people.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = people.map(p => `
+    <tr>
+      <td style="font-weight:600;">${p.name}</td>
+      <td><span style="text-transform:capitalize;">${p.role || 'operator'}</span></td>
+      <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
+      <td>${FACILITIES[p.facility]?.name || p.facility || '—'}</td>
+      <td>${p.phone || '—'}</td>
+      <td><span class="${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <button class="btn btn-sm" onclick="editPersonnel(${p.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePersonnelConfirm(${p.id}, '${p.name.replace(/'/g,"\\'")}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openPersonnelModal(person) {
+  document.getElementById('personnelModalTitle').textContent = person ? 'Edit Person' : 'Add Person';
+  document.getElementById('personnelId').value = person?.id || '';
+  document.getElementById('pName').value = person?.name || '';
+  document.getElementById('pRole').value = person?.role || 'operator';
+  document.getElementById('pFacility').value = person?.facility || '16th-street';
+  document.getElementById('pUserId').value = person?.userId || '';
+  document.getElementById('pPhone').value = person?.phone || '';
+  document.getElementById('pActive').checked = person?.active !== false;
+  document.getElementById('personnelModal').classList.add('active');
+}
+
+async function editPersonnel(id) {
+  const all = await getAllPersonnel();
+  const p = all.find(x => x.id === id);
+  if (p) openPersonnelModal(p);
+}
+
+async function savePersonnel() {
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const id = parseInt(document.getElementById('personnelId').value) || null;
+  const data = {
+    name,
+    role: document.getElementById('pRole').value,
+    facility: document.getElementById('pFacility').value,
+    userId: document.getElementById('pUserId').value.trim(),
+    phone: document.getElementById('pPhone').value.trim(),
+    active: document.getElementById('pActive').checked
+  };
+  try {
+    if (id) await updatePersonnel(id, data);
+    else await addPersonnel(data);
+    closeModal('personnelModal');
+    await loadPersonnel();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deletePersonnelConfirm(id, name) {
+  if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  await deletePersonnel(id);
+  await loadPersonnel();
+}
+
+// ── DIES ──────────────────────────────────────────────────
+let allDies = [];
+async function loadDies() {
+  allDies = await getAllDies();
+  renderDies();
+}
+
+function renderDies() {
+  const q = document.getElementById('dieSearch')?.value?.toLowerCase() || '';
+  const filtered = q ? allDies.filter(d => [d.dieNumber, d.barcode, d.customer, d.description].join(' ').toLowerCase().includes(q)) : allDies;
+  const tbody = document.getElementById('dieTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No dies found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(d => `
+    <tr>
+      <td style="font-weight:700;font-family:monospace;">${d.dieNumber}</td>
+      <td style="font-family:monospace;font-size:11px;">${d.barcode || '—'}</td>
+      <td>${d.description || '—'}</td>
+      <td>${d.customer || '—'}</td>
+      <td style="font-size:12px;">${d.machine || '—'}</td>
+      <td><span class="status-${d.status || 'active'}">${d.status || 'active'}</span></td>
+      <td>${d.usageCount || 0}</td>
+      <td>${d.lastUsed ? formatDate(d.lastUsed) : '—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm" onclick="editDie(${d.id})">Edit</button>
+        ${d.status === 'active' ? `<button class="btn btn-sm btn-warning" onclick="setDieStatus(${d.id},'damaged')">Mark Damaged</button>` : ''}
+        ${d.status !== 'retired' ? `<button class="btn btn-sm btn-danger" onclick="setDieStatus(${d.id},'retired')">Retire</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openDieModal(die) {
+  document.getElementById('dieModalTitle').textContent = die ? 'Edit Die' : 'Add Die';
+  document.getElementById('dieDbId').value = die?.id || '';
+  document.getElementById('dNumber').value = die?.dieNumber || '';
+  document.getElementById('dDescription').value = die?.description || '';
+  document.getElementById('dCustomer').value = die?.customer || '';
+  document.getElementById('dMachine').value = die?.machine || 'Moll Brothers Cutter';
+  document.getElementById('dStatus').value = die?.status || 'active';
+  document.getElementById('dNotes').value = die?.notes || '';
+  if (die?.barcode) {
+    document.getElementById('dBarcode').value = die.barcode;
+    document.getElementById('barcodeDisplay').style.display = 'block';
+  } else {
+    document.getElementById('barcodeDisplay').style.display = 'none';
+  }
+  document.getElementById('dieModal').classList.add('active');
+}
+
+async function editDie(id) {
+  const die = allDies.find(d => d.id === id);
+  if (die) openDieModal(die);
+}
+
+async function setDieStatus(id, status) {
+  if (!confirm(`Mark die as ${status}?`)) return;
+  await updateDie(id, { status });
+  await loadDies();
+}
+
+async function saveDie() {
+  const dieNumber = document.getElementById('dNumber').value.trim();
+  if (!dieNumber) { alert('Die number is required.'); return; }
+  const id = parseInt(document.getElementById('dieDbId').value) || null;
+  const data = {
+    dieNumber,
+    description: document.getElementById('dDescription').value.trim(),
+    customer: document.getElementById('dCustomer').value.trim(),
+    machine: document.getElementById('dMachine').value,
+    status: document.getElementById('dStatus').value,
+    notes: document.getElementById('dNotes').value.trim(),
+  };
+  try {
+    if (id) {
+      await updateDie(id, data);
+    } else {
+      data.barcode = generateDieBarcode(dieNumber);
+      await addDie(data);
+    }
+    closeModal('dieModal');
+    await loadDies();
+  } catch(e) { alert('Error saving die: ' + e.message); }
+}
+
+// ── INVENTORY ─────────────────────────────────────────────
+let allInventory = [];
+async function loadInventory() {
+  allInventory = await getAllInventory();
+  renderInventory();
+}
+
+async function renderInventory() {
+  const facilityFilter = document.getElementById('invFacilityFilter')?.value || 'all';
+  const period = parseInt(document.getElementById('invPeriodFilter')?.value || '7');
+  const filtered = facilityFilter === 'all' ? allInventory : allInventory.filter(i => i.facility === facilityFilter);
+  const tbody = document.getElementById('inventoryTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No inventory items. Add materials to track stock.</td></tr>';
+    return;
+  }
+  // Render rows with usage trend
+  const rows = await Promise.all(filtered.map(async item => {
+    const trend = await getUsageTrend(item.material, item.facility, period);
+    const isLow = item.quantityOnHand <= item.reorderPoint;
+    const statusLabel = isLow ? `<span class="status-low">⚠️ Reorder</span>` : `<span class="status-ok">OK</span>`;
+    return `
+      <tr>
+        <td style="font-weight:600;">${item.material}</td>
+        <td>${FACILITIES[item.facility]?.name?.split(' —')[0] || item.facility}</td>
+        <td style="font-weight:700;${isLow ? 'color:var(--red)' : ''}">${item.quantityOnHand?.toLocaleString() || 0}</td>
+        <td>${item.unit || 'sheets'}</td>
+        <td>${item.reorderPoint || 0}</td>
+        <td>${trend.periodTotal > 0 ? trend.periodTotal.toLocaleString() : '—'}</td>
+        <td>${trend.suggestedOrder > 0 ? '<strong>' + trend.suggestedOrder.toLocaleString() + '</strong>' : '—'}</td>
+        <td>${statusLabel}</td>
+        <td>
+          <button class="btn btn-sm" onclick="editInventoryItem(${item.id})">Edit</button>
+          <button class="btn btn-sm btn-success" onclick="quickRestock(${item.id})">+ Restock</button>
+        </td>
+      </tr>
+    `;
+  }));
+  tbody.innerHTML = rows.join('');
+}
+
+function openInventoryModal(item) {
+  document.getElementById('invModalTitle').textContent = item ? 'Edit Material' : 'Add Material';
+  document.getElementById('invDbId').value = item?.id || '';
+  document.getElementById('invMaterial').value = item?.material || '';
+  document.getElementById('invMaterialCustom').value = '';
+  document.getElementById('invFacility').value = item?.facility || '16th-street';
+  document.getElementById('invQty').value = item?.quantityOnHand || 0;
+  document.getElementById('invUnit').value = item?.unit || 'sheets';
+  document.getElementById('invReorderPoint').value = item?.reorderPoint || 100;
+  document.getElementById('inventoryModal').classList.add('active');
+}
+
+async function editInventoryItem(id) {
+  const item = allInventory.find(i => i.id === id);
+  if (item) openInventoryModal(item);
+}
+
+async function quickRestock(id) {
+  const qty = parseInt(prompt('Enter quantity to add:', '500') || '0');
+  if (!qty || qty <= 0) return;
+  const item = allInventory.find(i => i.id === id);
+  if (!item) return;
+  await updateInventoryItem(id, {
+    quantityOnHand: (item.quantityOnHand || 0) + qty,
+    lastRestocked: new Date().toISOString()
+  });
+  await loadInventory();
+}
+
+async function saveInventoryItem() {
+  const id = parseInt(document.getElementById('invDbId').value) || null;
+  const materialFromList = document.getElementById('invMaterial').value;
+  const materialCustom = document.getElementById('invMaterialCustom').value.trim();
+  const material = materialCustom || materialFromList;
+  if (!material) { alert('Material name is required.'); return; }
+  const data = {
+    material,
+    facility: document.getElementById('invFacility').value,
+    quantityOnHand: parseInt(document.getElementById('invQty').value) || 0,
+    unit: document.getElementById('invUnit').value,
+    reorderPoint: parseInt(document.getElementById('invReorderPoint').value) || 0
+  };
+  try {
+    if (id) await updateInventoryItem(id, data);
+    else await addInventoryItem(data);
+    closeModal('inventoryModal');
+    await loadInventory();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── PURCHASE ORDERS ───────────────────────────────────────
+let allPOs = [];
+let poLineItemsData = [];
+
+async function loadPOs() {
+  allPOs = await getAllPurchaseOrders();
+  const tbody = document.getElementById('poTableBody');
+  if (allPOs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No purchase orders yet.</td></tr>';
+    return;
+  }
+  allPOs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  tbody.innerHTML = allPOs.map(po => {
+    const total = (po.items || []).reduce((s, i) => s + (i.unitCost || 0) * (i.quantity || 0), 0);
+    const statusColors = { draft: 'var(--text-muted)', sent: 'var(--accent)', confirmed: 'var(--green)', received: 'var(--green)', cancelled: 'var(--red)' };
+    return `
+      <tr>
+        <td style="font-weight:700;font-family:monospace;">${po.poNumber}</td>
+        <td>${po.vendor}</td>
+        <td style="font-size:11px;color:var(--text-muted);">${po.vendorEmail || '<span style="color:#ccc;">—</span>'}</td>
+        <td>${(po.items || []).length} items</td>
+        <td>${total > 0 ? '$' + total.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+        <td><span style="color:${statusColors[po.status] || 'var(--text-muted)'};">${po.status}</span></td>
+        <td>${po.createdAt ? formatDate(po.createdAt) : '—'}</td>
+        <td>${po.expectedDelivery ? formatDate(po.expectedDelivery) : '—'}</td>
+        <td style="white-space:nowrap;">
+          ${po.status !== 'received' && po.status !== 'cancelled' ? `<button class="btn btn-sm btn-success" onclick="markPOReceived(${po.id})">Receive</button>` : ''}
+          ${po.status === 'draft' ? `<button class="btn btn-sm btn-primary" onclick="markPOSent(${po.id})">Mark Sent</button>` : ''}
+          <button class="btn btn-sm" style="background:#2563eb;color:#fff;" onclick="emailExistingPO(${po.id})">📧 Email</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Orders email address — all vendor POs go here
+const ORDERS_EMAIL = 'orders@bazaarprinting.com';
+
+function openPOModal() {
+  document.getElementById('poVendor').value = '';
+  document.getElementById('poVendorEmail').value = '';
+  document.getElementById('poExpectedDelivery').value = '';
+  poLineItemsData = [];
+  addPOLineItem();
+  document.getElementById('poModal').classList.add('active');
+}
+
+function buildPOEmailBody(po) {
+  const total = (po.items || []).reduce((s, i) => s + (i.unitCost || 0) * (i.quantity || 0), 0);
+  const itemLines = (po.items || []).map((item, idx) =>
+    `${idx + 1}. ${item.material} — Qty: ${(item.quantity || 0).toLocaleString()} ${item.unit || 'sheets'}${item.unitCost ? ' @ $' + item.unitCost.toFixed(2) + '/unit' : ''}`
+  ).join('\n');
+  const totalLine = total > 0 ? `\nTotal: $${total.toLocaleString('en-US', {minimumFractionDigits:2})}` : '';
+  const deliveryLine = po.expectedDelivery ? `\nRequested Delivery: ${po.expectedDelivery}` : '';
+  return `Dear ${po.vendor} Team,\n\nPlease process the following Purchase Order from Bazaar Printing:\n\nPO Number: ${po.poNumber}\nDate: ${new Date().toLocaleDateString()}${deliveryLine}\n\nItems:\n${itemLines}${totalLine}\n\nPlease confirm receipt and expected delivery date by replying to this email.\n\nAll order communications should go through: ${ORDERS_EMAIL}\n\nThank you,\nBazaar Printing — Purchasing`;
+}
+
+function buildPOEmailSubject(po) {
+  return `Purchase Order ${po.poNumber} — Bazaar Printing`;
+}
+
+async function savePOAndEmail() {
+  const vendor = document.getElementById('poVendor').value.trim();
+  if (!vendor) { alert('Vendor name is required.'); return; }
+  const items = poLineItemsData.filter(i => i.material);
+  if (items.length === 0) { alert('Add at least one line item.'); return; }
+  const vendorEmail = document.getElementById('poVendorEmail').value.trim();
+  const poNumber = await generatePONumber();
+  const po = {
+    poNumber,
+    vendor,
+    vendorEmail,
+    expectedDelivery: document.getElementById('poExpectedDelivery').value,
+    status: 'sent',
+    items
+  };
+  await addPurchaseOrder(po);
+  closeModal('poModal');
+  await loadPOs();
+  // Open mailto — sends from orders@ via client
+  const to = vendorEmail || '';
+  const subject = encodeURIComponent(buildPOEmailSubject(po));
+  const body = encodeURIComponent(buildPOEmailBody(po));
+  const cc = encodeURIComponent(ORDERS_EMAIL);
+  window.open(`mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`);
+  if (!vendorEmail) {
+    alert(`No vendor email entered.\n\nPO body has been prepared. Copy and send manually to the vendor, CC: ${ORDERS_EMAIL}`);
+  }
+}
+
+async function emailExistingPO(id) {
+  const po = allPOs.find(p => p.id === id);
+  if (!po) return;
+  const vendorEmail = po.vendorEmail || prompt(`Enter ${po.vendor}\'s email address:`) || '';
+  if (vendorEmail && !po.vendorEmail) {
+    await updatePurchaseOrder(id, { vendorEmail });
+  }
+  const subject = encodeURIComponent(buildPOEmailSubject(po));
+  const body = encodeURIComponent(buildPOEmailBody(po));
+  const cc = encodeURIComponent(ORDERS_EMAIL);
+  window.open(`mailto:${vendorEmail}?cc=${cc}&subject=${subject}&body=${body}`);
+}
+
+function addPOLineItem() {
+  poLineItemsData.push({ material: '', quantity: 0, unit: 'sheets', unitCost: 0 });
+  renderPOLineItems();
+}
+
+function renderPOLineItems() {
+  const container = document.getElementById('poLineItems');
+  container.innerHTML = poLineItemsData.map((item, idx) => `
+    <div class="po-line-item">
+      <select onchange="poLineItemsData[${idx}].material = this.value">
+        <option value="">— Material —</option>
+        ${MATERIALS.map(g => g.items.map(i => `<option value="${i}" ${item.material===i?'selected':''}>${i}</option>`).join('')).join('')}
+      </select>
+      <input type="number" value="${item.quantity}" min="0" placeholder="Qty" oninput="poLineItemsData[${idx}].quantity=parseInt(this.value)||0">
+      <input type="number" value="${item.unitCost||''}" min="0" step="0.01" placeholder="Unit $" oninput="poLineItemsData[${idx}].unitCost=parseFloat(this.value)||0">
+      <button class="btn btn-sm btn-danger" onclick="removePOLineItem(${idx})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removePOLineItem(idx) {
+  poLineItemsData.splice(idx, 1);
+  renderPOLineItems();
+}
+
+async function savePO(status) {
+  const vendor = document.getElementById('poVendor').value.trim();
+  if (!vendor) { alert('Vendor name is required.'); return; }
+  const items = poLineItemsData.filter(i => i.material);
+  if (items.length === 0) { alert('Add at least one line item.'); return; }
+  const vendorEmail = document.getElementById('poVendorEmail').value.trim();
+  const poNumber = await generatePONumber();
+  await addPurchaseOrder({
+    poNumber,
+    vendor,
+    vendorEmail,
+    expectedDelivery: document.getElementById('poExpectedDelivery').value,
+    status,
+    items
+  });
+  closeModal('poModal');
+  await loadPOs();
+}
+
+async function markPOSent(id) {
+  await updatePurchaseOrder(id, { status: 'sent' });
+  await loadPOs();
+}
+
+async function markPOReceived(id) {
+  const name = prompt('Your name (receiving this PO):');
+  if (!name) return;
+  await receivePO(id, name);
+  await loadPOs();
+  await loadInventory();
+  alert('✅ PO received! Inventory updated.');
+}
+
+// ── MACHINES ──────────────────────────────────────────────
+let machineCapOverrides = {};
+
+async function renderMachines() {
+  // Load config overrides
+  const capConfig = await getConfig('machineCapacity');
+  machineCapOverrides = capConfig?.value || {};
+  const tbody = document.getElementById('machinesTableBody');
+  tbody.innerHTML = Object.entries(MACHINES).map(([name, info]) => {
+    const cap = { ...MACHINE_CAPACITY[name], ...(machineCapOverrides[name] || {}) };
+    const capStr = cap.dailySheets ? `${cap.dailySheets.toLocaleString()} sheets/day`
+      : cap.dailyLinearFeet ? `${cap.dailyLinearFeet.toLocaleString()} ft/day`
+      : cap.dailyPouches ? `${cap.dailyPouches.toLocaleString()} pouches/day`
+      : cap.dailyUnits ? `${cap.dailyUnits.toLocaleString()} units/day`
+      : cap.dailySqFt ? `${cap.dailySqFt.toLocaleString()} sq-ft/day`
+      : '—';
+    return `
+      <tr>
+        <td style="font-weight:600;">${name}</td>
+        <td>${FACILITIES[info.facility]?.name?.split(' —')[0] || info.facility || '—'}</td>
+        <td style="font-size:12px;">${(info.operations || []).join(', ')}</td>
+        <td>${capStr}</td>
+        <td style="font-size:12px;color:var(--text-muted);">${cap.notes || ''}</td>
+        <td><button class="btn btn-sm" onclick="openMachineCapModal('${name.replace(/'/g,"\\'")}')">Edit</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function openMachineCapModal(machineName) {
+  const cap = { ...MACHINE_CAPACITY[machineName], ...(machineCapOverrides[machineName] || {}) };
+  document.getElementById('machCapTitle').textContent = 'Edit: ' + machineName;
+  document.getElementById('machCapKey').value = machineName;
+  document.getElementById('machCapSheets').value = cap.dailySheets || '';
+  document.getElementById('machCapFeet').value = cap.dailyLinearFeet || '';
+  document.getElementById('machCapPouches').value = cap.dailyPouches || '';
+  document.getElementById('machCapUnits').value = cap.dailyUnits || '';
+  document.getElementById('machCapNotes').value = cap.notes || '';
+  document.getElementById('machineCapModal').classList.add('active');
+}
+
+async function saveMachineCapacity() {
+  const key = document.getElementById('machCapKey').value;
+  machineCapOverrides[key] = {
+    dailySheets: parseInt(document.getElementById('machCapSheets').value) || null,
+    dailyLinearFeet: parseInt(document.getElementById('machCapFeet').value) || null,
+    dailyPouches: parseInt(document.getElementById('machCapPouches').value) || null,
+    dailyUnits: parseInt(document.getElementById('machCapUnits').value) || null,
+    notes: document.getElementById('machCapNotes').value
+  };
+  await setConfig('machineCapacity', machineCapOverrides);
+  closeModal('machineCapModal');
+  await renderMachines();
+}
+
+// ── KNOWLEDGE BASE ────────────────────────────────────────
+let allKB = [];
+async function loadKnowledge() {
+  allKB = await getAllKnowledge();
+  const tbody = document.getElementById('kbTableBody');
+  if (allKB.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No entries. Seeding defaults...</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allKB.map(e => `
+    <tr>
+      <td style="font-weight:600;">${e.title}</td>
+      <td style="font-size:12px;">${e.machine || '—'}</td>
+      <td><span class="kb-severity-${e.severity}">${e.severity || 'info'}</span></td>
+      <td style="font-size:12px;max-width:300px;">${e.description?.substring(0, 120) || ''}${e.description?.length > 120 ? '...' : ''}</td>
+      <td><span class="${e.active ? 'status-active' : 'status-inactive'}">${e.active ? 'Active' : 'Inactive'}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm" onclick="editKBEntry(${e.id})">Edit</button>
+        <button class="btn btn-sm ${e.active ? 'btn-warning' : 'btn-success'}" onclick="toggleKBEntry(${e.id}, ${!e.active})">${e.active ? 'Disable' : 'Enable'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openKBModal(entry) {
+  document.getElementById('kbModalTitle').textContent = entry ? 'Edit Entry' : 'Add Entry';
+  document.getElementById('kbDbId').value = entry?.id || '';
+  document.getElementById('kbTitle').value = entry?.title || '';
+  document.getElementById('kbMachine').value = entry?.machine || '';
+  document.getElementById('kbMaterial').value = entry?.material || '';
+  document.getElementById('kbOperator').value = entry?.operator || '';
+  document.getElementById('kbOperation').value = entry?.operation || '';
+  document.getElementById('kbSeverity').value = entry?.severity || 'warning';
+  document.getElementById('kbDesc').value = entry?.description || '';
+  document.getElementById('kbFix').value = entry?.fix || '';
+  document.getElementById('kbModal').classList.add('active');
+}
+
+async function editKBEntry(id) {
+  const e = allKB.find(x => x.id === id);
+  if (e) openKBModal(e);
+}
+
+async function toggleKBEntry(id, active) {
+  await updateKnowledge(id, { active });
+  await loadKnowledge();
+}
+
+async function saveKBEntry() {
+  const title = document.getElementById('kbTitle').value.trim();
+  const desc = document.getElementById('kbDesc').value.trim();
+  if (!title || !desc) { alert('Title and description are required.'); return; }
+  const id = parseInt(document.getElementById('kbDbId').value) || null;
+  const data = {
+    title,
+    machine: document.getElementById('kbMachine').value,
+    material: document.getElementById('kbMaterial').value.trim(),
+    operator: document.getElementById('kbOperator').value.trim(),
+    operation: document.getElementById('kbOperation').value,
+    severity: document.getElementById('kbSeverity').value,
+    description: desc,
+    fix: document.getElementById('kbFix').value.trim(),
+    active: true
+  };
+  try {
+    if (id) await updateKnowledge(id, data);
+    else await addKnowledgeEntry(data);
+    closeModal('kbModal');
+    await loadKnowledge();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── SETTINGS ──────────────────────────────────────────────
+async function loadSettings() {
+  const appDeptConfig = await getConfig('appDeptCapacity');
+  if (appDeptConfig?.value) {
+    document.getElementById('appDeptPeople').value = appDeptConfig.value.people || 3;
+    document.getElementById('appDeptUnitsPerPerson').value = appDeptConfig.value.unitsPerPerson || 2000;
+  }
+  const defFacility = await getConfig('defaultFacility');
+  if (defFacility?.value) document.getElementById('defaultFacility').value = defFacility.value;
+  const defQC = await getConfig('defaultQCInspector');
+  if (defQC?.value) document.getElementById('defaultQCInspector').value = defQC.value;
+  updateAppDeptTotal();
+}
+
+let saveSettingTimer = null;
+function saveSettingDebounced() {
+  clearTimeout(saveSettingTimer);
+  saveSettingTimer = setTimeout(doSaveSettings, 600);
+}
+
+async function doSaveSettings() {
+  await setConfig('appDeptCapacity', {
+    people: parseInt(document.getElementById('appDeptPeople').value) || 3,
+    unitsPerPerson: parseInt(document.getElementById('appDeptUnitsPerPerson').value) || 2000
+  });
+  await setConfig('defaultFacility', document.getElementById('defaultFacility').value);
+  await setConfig('defaultQCInspector', document.getElementById('defaultQCInspector').value.trim());
+  updateAppDeptTotal();
+}
+
+async function exportAllData() {
+  const data = {
+    orders: await getAllOrders(),
+    personnel: await getAllPersonnel(),
+    dies: await getAllDies(),
+    inventory: await getAllInventory(),
+    purchaseOrders: await getAllPurchaseOrders(),
+    knowledge: await getAllKnowledge(),
+    reprints: await getAllReprints(),
+    activity: await getAllActivity(),
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function clearDatabase() {
+  if (!confirm('⚠️ This will permanently delete ALL production data including orders, personnel, dies, and inventory. Are you absolutely sure?')) return;
+  if (!confirm('FINAL WARNING: All data will be lost. Type OK to confirm.')) return;
+  // Clear all object stores
+  const db = await openDB();
+  const stores = ['orders', 'personnel', 'devices', 'activity_log', 'config', 'knowledge_base', 'reprints', 'dies', 'inventory', 'purchase_orders'];
+  for (const store of stores) {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).clear();
+      req.onsuccess = resolve;
+      req.onerror = reject;
+    });
+  }
+  alert('Database cleared.');
+  await loadTab(activeTab);
+}
+
+// ── Modal helpers ─────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Dashboard — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<!-- Header: Filters + Stats -->
+<div class="dash-header">
+  <div class="filter-row">
+    <div class="dash-facility-toggle">
+      <button class="tab active" data-filter="all" onclick="setFilter('all')">All</button>
+      <button class="tab tab-6k" data-filter="6k" onclick="setFilter('6k')">6K Line</button>
+      <button class="tab tab-15k" data-filter="15k" onclick="setFilter('15k')">15K Line</button>
+      <button class="tab tab-boyd" data-filter="boyd" onclick="setFilter('boyd')">Boyd St</button>
+    </div>
+    <div class="view-toggle">
+      <button class="vbtn active" data-view="board" onclick="setView('board')" title="Board View">▦ Board</button>
+      <button class="vbtn" data-view="table" onclick="setView('table')" title="Table View">☰ Table</button>
+    </div>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+</div>
+
+<!-- Board View (Kanban) -->
+<div class="board-container" id="boardContainer"></div>
+
+<!-- Table View -->
+<div class="table-container" id="tableContainer" style="display:none;">
+  <table class="data-table" id="ordersTable">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- Upcoming Queue -->
+<div class="upcoming-section" id="upcomingSection">
+  <div class="section-header" onclick="toggleUpcoming()">
+    <h3>📋 Upcoming Jobs (Not Yet in Production)</h3>
+    <span id="upcomingToggle">▼</span>
+  </div>
+  <div class="upcoming-body" id="upcomingBody"></div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:700px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 id="modalTitle">Order Details</h2>
+      <button class="btn btn-sm" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+  injectThemeCSS();
+  document.getElementById('nav').innerHTML = renderNav('dashboard');
+
+  document.getElementById('page-styles').textContent = `
+    /* ── Header ── */
+    .dash-header { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+    .filter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .dash-facility-toggle { display: flex; gap: 4px; }
+    .view-toggle { display: flex; gap: 4px; }
+    .vbtn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; font-size: 13px; color: var(--text-muted); }
+    .vbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .tab.tab-6k.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .tab.tab-15k.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .tab.tab-boyd.active { background: #d97706; color: #fff; border-color: #d97706; }
+    .stats-bar { display: flex; gap: 20px; flex-wrap: wrap; }
+    .stat-item { text-align: center; cursor: pointer; padding: 6px 12px; border-radius: var(--radius); transition: all 0.15s; user-select: none; }
+    .stat-item:hover { background: var(--card-hover); }
+    .stat-item.stat-active { background: var(--accent); }
+    .stat-item.stat-active .stat-value, .stat-item.stat-active .stat-label { color: #fff !important; }
+    .stat-value { font-size: 22px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ── Board (Kanban) ── */
+    .board-container { padding: 16px 12px; overflow-x: auto; height: calc(100vh - 220px); }
+    .line-section { margin-bottom: 24px; }
+    .line-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 12px; border-radius: var(--radius); font-weight: 700; font-size: 14px; }
+    .line-header .line-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .line-header .job-count { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: auto; }
+    .stages-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; min-height: 120px; }
+    .stage-col { min-width: 180px; max-width: 220px; flex-shrink: 0; }
+    .stage-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 4px 8px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .stage-header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .stage-header .stage-count { background: var(--border); border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+    .stage-load-bar { height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; width: 100%; }
+    .stage-load-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .stage-load-label { font-size: 9px; color: var(--text-muted); font-weight: 500; }
+    .stage-cards { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Job Card ── */
+    .job-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .job-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .job-card.line-6k { border-left: 3px solid #2563eb; }
+    .job-card.line-15k { border-left: 3px solid #7c3aed; }
+    /* Queue visualization */
+    .job-card.card-active { background: #fffdf0; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+    .job-card.card-hold { background: #fff5f5; border-color: var(--red); }
+    .job-card.card-pending { background: #fafafa; border-color: #d1d5db; opacity: 0.85; }
+    .card-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .job-card.line-boyd { border-left: 3px solid #d97706; }
+    .job-card.overdue { border-left-color: var(--red) !important; background: #fff5f5; }
+    .job-card .card-order { font-weight: 700; font-size: 13px; color: var(--accent); }
+    .job-card .card-customer { font-size: 11px; color: var(--text); margin-top: 2px; }
+    .job-card .card-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .job-card .card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 10px; }
+    .job-card .card-qty { color: var(--text-muted); }
+    .job-card .card-due { padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+    .job-card .card-due.due-ok { background: #e0edff; color: #1d4ed8; }
+    .job-card .card-due.due-soon { background: #fef3cd; color: #92600a; }
+    .job-card .card-due.due-overdue { background: #fde8e8; color: #b91c1c; }
+    .job-card .card-est { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+    .job-card .card-est strong { color: var(--text); }
+    .job-card .card-die { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; padding: 1px 5px; border-radius: 6px; background: rgba(22,163,74,0.1); color: #16a34a; }
+    .job-card .card-die.no-die { background: rgba(220,38,38,0.1); color: #dc2626; }
+    .job-card .card-line-tag { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 6px; }
+    .job-card .card-line-tag.tag-6k { background: rgba(37,99,235,0.12); color: #2563eb; }
+    .job-card .card-line-tag.tag-15k { background: rgba(124,58,237,0.12); color: #7c3aed; }
+    .job-card .card-line-tag.tag-boyd { background: rgba(217,119,6,0.12); color: #d97706; }
+
+    /* ── Application capacity bar ── */
+    .app-capacity { margin: 8px 0; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+    .app-capacity-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .app-capacity-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .app-capacity-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .app-capacity-text { font-size: 11px; margin-top: 2px; color: var(--text); }
+
+    /* ── Upcoming section ── */
+    .upcoming-section { border-top: 2px solid var(--border); background: #fafbfc; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; cursor: pointer; user-select: none; }
+    .section-header h3 { font-size: 14px; color: var(--text-muted); }
+    .upcoming-body { padding: 0 20px 16px; display: none; }
+    .upcoming-body.open { display: block; }
+    .upcoming-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+
+    /* ── Table view ── */
+    .table-container { padding: 0; overflow: auto; height: calc(100vh - 220px); }
+    .data-table td { white-space: nowrap; font-size: 12px; }
+    .line-dot-sm { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .current-stage { font-weight: 600; }
+  `;
+
+  let currentFilter = 'all';
+  let currentView = 'board';
+  let upcomingOpen = false;
+  let statusFilter = null; // null = all, or 'in-production', 'on-hold', 'overdue', 'ready-to-ship', 'application'
+
+  function setFilter(f) {
+    currentFilter = f;
+    statusFilter = null; // reset status filter when switching lines
+    document.querySelectorAll('.dash-facility-toggle .tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+    refresh();
+  }
+
+  function setStatusFilter(sf) {
+    statusFilter = statusFilter === sf ? null : sf; // toggle
+    refresh();
+  }
+
+  function setView(v) {
+    currentView = v;
+    document.querySelectorAll('.vbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    document.getElementById('boardContainer').style.display = v === 'board' ? '' : 'none';
+    document.getElementById('tableContainer').style.display = v === 'table' ? '' : 'none';
+    refresh();
+  }
+
+  function toggleUpcoming() {
+    upcomingOpen = !upcomingOpen;
+    document.getElementById('upcomingBody').classList.toggle('open', upcomingOpen);
+    document.getElementById('upcomingToggle').textContent = upcomingOpen ? '▲' : '▼';
+  }
+
+  function dueClass(dueDate) {
+    if (!dueDate) return 'due-ok';
+    const diff = new Date(dueDate) - new Date();
+    if (diff < 0) return 'due-overdue';
+    if (diff < 2 * 24 * 60 * 60 * 1000) return 'due-soon';
+    return 'due-ok';
+  }
+
+  function dueLabel(dueDate) {
+    if (!dueDate) return '—';
+    const diff = new Date(dueDate) - new Date();
+    if (diff < 0) return 'OVERDUE';
+    const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    return days + 'd';
+  }
+
+  function fmtHours(totalHours) {
+    if (!totalHours || totalHours <= 0) return '';
+    const h = Math.floor(totalHours);
+    const m = Math.round((totalHours - h) * 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
+  function renderJobCard(order, line) {
+    const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
+    // Production estimate — hours format
+    const steps = order.workflowSteps || [];
+    const currentIdx = order.currentStep || 0;
+    let totalRemainingHours = 0;
+    for (let i = currentIdx; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.status === 'completed') continue;
+      const mt = calculateMachineTime(s.machine, order);
+      totalRemainingHours += mt ? mt.totalHours : 1;
+    }
+    const estLabel = totalRemainingHours > 0 ? `~${fmtHours(totalRemainingHours)} remaining` : '';
+    // Die info for cutting jobs
+    let dieHTML = '';
+    const hasDieCut = steps.some(s => s.machine && (s.machine.includes('Moll') && s.operation?.includes('Cut') || s.machine.includes('GM Die')));
+    if (hasDieCut) {
+      if (order.dieStatus === 'existing' && order.dieName) {
+        dieHTML = `<span class="card-die">🎯 ${order.dieName}</span>`;
+      } else if (order.dieStatus === 'new-ordered') {
+        dieHTML = `<span class="card-die no-die">⏳ Die ordered</span>`;
+      } else if (!order.dieStatus || order.dieStatus === 'none') {
+        dieHTML = `<span class="card-die no-die">⚠️ No die</span>`;
+      }
+    }
+    // On hold indicator
+    const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
+    // Overtime badge
+    const otHTML = (order.capacityOverride || ['pending-confirmation','pending-overtime-approval'].includes(order.status))
+      ? `<span style="background:#ea580c;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;">OT</span>`
+      : '';
+
+    // Queue visualization classes
+    let queueClass = '';
+    let statusDot = '';
+    if (order.status === 'in-production') {
+      queueClass = 'card-active';
+      statusDot = '<span class="card-status-dot" style="background:#f59e0b;"></span>';
+    } else if (order.status === 'on-hold') {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (['pending-review','new','waiting-approval'].includes(order.status)) {
+      queueClass = 'card-pending';
+      statusDot = '<span class="card-status-dot" style="background:#9ca3af;"></span>';
+    } else if (order.status === 'qc-checkout') {
+      statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
+    } else if (order.status === 'ready-to-ship') {
+      statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
+    }
+
+    return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="card-order">${statusDot}#${order.orderId}${otHTML}</span>
+        <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+      </div>
+      <div class="card-customer">${order.customer || '—'}</div>
+      <div class="card-desc">${order.jobDescription || order.productType || '—'}</div>
+      ${holdHTML}
+      <div class="card-meta">
+        <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
+        <span class="card-due ${dueClass(order.dueDate)}">${dueLabel(order.dueDate)}</span>
+      </div>
+      ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
+      ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
+    </div>`;
+  }
+
+  async function refresh() {
+    const allOrders = await getAllOrders();
+
+    // Classify orders by production line
+    const classified = allOrders.map(o => ({ ...o, _line: getProductionLine(o) }));
+
+    // Filter
+    const filtered = classified.filter(o => {
+      if (currentFilter === 'all') return true;
+      return o._line === currentFilter;
+    });
+
+    // Split: active (in production pipeline) vs upcoming (new/waiting)
+    const pipelineStatuses = ['pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
+    const upcomingOrders = filtered.filter(o => ['new', 'waiting-approval', 'pending-confirmation'].includes(o.status))
+      .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
+    const completedRecent = filtered.filter(o => ['shipped', 'waiting-pickup', 'received', 'completed'].includes(o.status))
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
+
+    // ── Stats ──
+    const inProd = activeOrders.filter(o => o.status === 'in-production').length;
+    const onHold = activeOrders.filter(o => o.status === 'on-hold').length;
+    const overdueCount = activeOrders.filter(o => isOverdue(o.dueDate) && o.status !== 'ready-to-ship').length;
+    const readyToShip = activeOrders.filter(o => o.status === 'ready-to-ship').length;
+    // Application dept count
+    const inApplication = activeOrders.filter(o => {
+      const steps = o.workflowSteps || [];
+      const currentStepIdx = o.currentStep || 0;
+      const currentStep = steps[currentStepIdx];
+      return currentStep && currentStep.machine && currentStep.machine.includes('Application');
+    }).length;
+
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item ${statusFilter === 'in-production' ? 'stat-active' : ''}" onclick="setStatusFilter('in-production')"><div class="stat-value" style="color:var(--accent);">${inProd}</div><div class="stat-label">In Production</div></div>
+      <div class="stat-item ${statusFilter === 'on-hold' ? 'stat-active' : ''}" onclick="setStatusFilter('on-hold')"><div class="stat-value" style="color:var(--yellow);">${onHold}</div><div class="stat-label">On Hold</div></div>
+      <div class="stat-item ${statusFilter === 'overdue' ? 'stat-active' : ''}" onclick="setStatusFilter('overdue')"><div class="stat-value" style="color:var(--red);">${overdueCount}</div><div class="stat-label">Overdue</div></div>
+      <div class="stat-item ${statusFilter === 'ready-to-ship' ? 'stat-active' : ''}" onclick="setStatusFilter('ready-to-ship')"><div class="stat-value" style="color:var(--green);">${readyToShip}</div><div class="stat-label">Ready to Ship</div></div>
+      <div class="stat-item ${statusFilter === 'application' ? 'stat-active' : ''}" onclick="setStatusFilter('application')"><div class="stat-value" style="color:var(--purple);">${inApplication}</div><div class="stat-label">In Application</div></div>
+      <div class="stat-item"><div class="stat-value">${upcomingOrders.length}</div><div class="stat-label">Upcoming</div></div>
+    `;
+
+    // Apply status filter
+    let displayOrders = activeOrders;
+    if (statusFilter) {
+      displayOrders = activeOrders.filter(o => {
+        if (statusFilter === 'in-production') return o.status === 'in-production';
+        if (statusFilter === 'on-hold') return o.status === 'on-hold';
+        if (statusFilter === 'overdue') return isOverdue(o.dueDate) && !['completed','ready-to-ship'].includes(o.status);
+        if (statusFilter === 'ready-to-ship') return o.status === 'ready-to-ship';
+        if (statusFilter === 'application') {
+          const steps = o.workflowSteps || [];
+          const cs = steps[o.currentStep || 0];
+          return cs && cs.machine && cs.machine.includes('Application');
+        }
+        return true;
+      });
+    }
+
+    // ── Board View ──
+    if (currentView === 'board') {
+      renderBoard(displayOrders, completedRecent);
+    }
+
+    // ── Table View ──
+    if (currentView === 'table') {
+      renderTable(displayOrders);
+    }
+
+    // ── Upcoming Queue ──
+    renderUpcoming(upcomingOrders);
+  }
+
+  function renderBoard(activeOrders, completedRecent) {
+    const linesToShow = currentFilter === 'all' ? ['6k', '15k', 'boyd'] : [currentFilter];
+    let html = '';
+
+    linesToShow.forEach(lineKey => {
+      const lineConfig = PRODUCTION_LINES[lineKey];
+      const lineOrders = activeOrders.filter(o => o._line === lineKey);
+
+      // Build stage buckets
+      const stageBuckets = {};
+      lineConfig.stages.forEach(s => { stageBuckets[s] = []; });
+
+      lineOrders.forEach(order => {
+        const steps = order.workflowSteps || [];
+        const currentStepIdx = order.currentStep || 0;
+        const currentStep = steps[currentStepIdx];
+
+        if (order.status === 'ready-to-ship') {
+          stageBuckets['Ready to Ship'] = stageBuckets['Ready to Ship'] || [];
+          stageBuckets['Ready to Ship'].push(order);
+        } else if (order.status === 'qc-checkout' || order.status === 'qc-failed') {
+          stageBuckets['QC'] = stageBuckets['QC'] || [];
+          stageBuckets['QC'].push(order);
+        } else if (currentStep) {
+          const stage = getStageForStep(currentStep, lineKey);
+          // Find matching stage or put in closest match
+          let placed = false;
+          for (const s of lineConfig.stages) {
+            if (stage === s || stage.includes(s) || s.includes(stage)) {
+              stageBuckets[s].push(order);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            // Put in first stage as fallback
+            if (!stageBuckets[stage]) stageBuckets[stage] = [];
+            stageBuckets[stage].push(order);
+          }
+        } else {
+          // No current step — put in Prepress
+          stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
+          stageBuckets['Prepress'].push(order);
+        }
+      });
+
+      // Add Application capacity bar if this line has application jobs
+      let appCapacityHTML = '';
+      if (stageBuckets['Application'] && stageBuckets['Application'].length > 0) {
+        const appJobs = stageBuckets['Application'];
+        const totalUnits = appJobs.reduce((s, o) => s + (o.quantity || 0), 0);
+        // TODO: get real capacity from config — placeholder 6000/day
+        const dailyCapacity = 6000;
+        const pct = Math.min(100, Math.round((totalUnits / dailyCapacity) * 100));
+        const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--yellow)' : 'var(--green)';
+        appCapacityHTML = `<div class="app-capacity">
+          <div class="app-capacity-label">Application Dept Capacity Today</div>
+          <div class="app-capacity-bar"><div class="app-capacity-fill" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="app-capacity-text">${totalUnits.toLocaleString()} / ${dailyCapacity.toLocaleString()} units (${pct}%)</div>
+        </div>`;
+      }
+
+      // Only show stages that have jobs or are key stages
+      const activeStages = Object.keys(stageBuckets).filter(s => lineConfig.stages.includes(s) || stageBuckets[s]?.length > 0);
+
+      // Pre-compute machine load pct per stage
+      function getStageMachineLoad(stageName) {
+        // Map stage name to primary machine name
+        const stageToMachine = {
+          'Press 6K': 'HP Indigo 6K',
+          'Press 15K': 'HP Indigo 15K',
+          'GM Die/Laser Cut': 'GM Die Cutter w/ JetFX',
+          'Lamination': 'Laminator (Nobelus)',
+          'Pouching': 'Karlville Poucher',
+          'Scodix': 'Scodix',
+          'Die Cut (Moll)': 'Moll Brothers Cutter',
+          'Flatbed Cut (Duplo)': 'Duplo',
+          'Flatbed Cut (Boyd)': 'Graphtec Flatbed (Large) x2',
+          'Guillotine': 'Guillotine Cutter',
+          'Fold & Glue': 'Moll Brothers Folder-Gluer',
+          'Application': 'Application Dept',
+          'UV Coat': 'UV Coater',
+          'Printing': 'Canon Colorado',
+          'Cutting': 'Graphtec Flatbed (Large) x2',
+        };
+        const machine = stageToMachine[stageName];
+        if (!machine) return null;
+        const cap = MACHINE_CAPACITY[machine];
+        if (!cap) return null;
+        const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || 1;
+        // Sum sheets/units across all active orders hitting this machine today
+        let totalLoad = 0;
+        (stageBuckets[stageName] || []).forEach(o => {
+          const sheets = o.sheetCount || Math.ceil((o.quantity || 0) / (o.piecesPerSheet || 1));
+          totalLoad += sheets;
+        });
+        const pct = Math.min(150, Math.round((totalLoad / dailyCap) * 100));
+        return { pct, totalLoad, dailyCap, machine };
+      }
+
+      html += `<div class="line-section">
+        <div class="line-header" style="background:${lineConfig.bgColor};border:1px solid ${lineConfig.borderColor};">
+          <span class="line-dot" style="background:${lineConfig.color};"></span>
+          ${lineConfig.name}
+          <span class="job-count">${lineOrders.length} jobs</span>
+        </div>
+        ${appCapacityHTML}
+        <div class="stages-row">
+          ${lineConfig.stages.map(stage => {
+            const jobs = stageBuckets[stage] || [];
+            const load = getStageMachineLoad(stage);
+            let loadBarHTML = '';
+            if (load && (jobs.length > 0 || stage === 'Application')) {
+              const barColor = load.pct >= 100 ? 'var(--red)' : load.pct >= 75 ? '#d97706' : 'var(--green)';
+              const displayPct = Math.min(100, load.pct);
+              loadBarHTML = `
+                <div class="stage-load-bar" title="${load.machine}: ${load.totalLoad.toLocaleString()} / ${load.dailyCap.toLocaleString()} today (~${load.pct}%)">
+                  <div class="stage-load-fill" style="width:${displayPct}%;background:${barColor};"></div>
+                </div>
+                <div class="stage-load-label">${load.pct}% capacity</div>
+              `;
+            }
+            // Job card highlight: active = bright border, hold = red tint, pending = default
+            return `<div class="stage-col">
+              <div class="stage-header">
+                <div class="stage-header-top">${stage} <span class="stage-count">${jobs.length}</span></div>
+                ${loadBarHTML}
+              </div>
+              <div class="stage-cards">
+                ${jobs.map(o => renderJobCard(o, lineKey)).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('boardContainer').innerHTML = html;
+  }
+
+  function renderTable(activeOrders) {
+    const sorted = [...activeOrders].sort((a, b) => {
+      const statusWeight = { 'in-production': 0, 'pending-review': 1, 'on-hold': 2, 'qc-checkout': 3, 'ready-to-ship': 4 };
+      const wa = statusWeight[a.status] ?? 5;
+      const wb = statusWeight[b.status] ?? 5;
+      if (wa !== wb) return wa - wb;
+      return new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01');
+    });
+
+    document.getElementById('tableHead').innerHTML = `<tr>
+      <th>Line</th><th>Order</th><th>Customer</th><th>Product</th><th>Qty</th><th>Status</th><th>Current Stage</th><th>Due</th><th>In Prod</th>
+    </tr>`;
+
+    document.getElementById('tableBody').innerHTML = sorted.map(o => {
+      const line = o._line;
+      const lineColor = PRODUCTION_LINES[line]?.color || '#666';
+      const steps = o.workflowSteps || [];
+      const cs = steps[o.currentStep || 0];
+      const stageName = cs ? getStageForStep(cs, line) : '—';
+      const overdue = isOverdue(o.dueDate) && !['completed','ready-to-ship'].includes(o.status);
+      const prodStart = steps.find(s => s.startTime)?.startTime;
+      let inProdTime = 0;
+      if (prodStart) {
+        const activeStep = steps.find(s => s.status === 'active');
+        const endPoint = activeStep ? Date.now() : (steps.filter(s => s.endTime).map(s => new Date(s.endTime).getTime()).sort((a,b)=>b-a)[0] || Date.now());
+        inProdTime = endPoint - new Date(prodStart).getTime();
+      }
+
+      return `<tr class="${overdue ? 'overdue-row' : ''}" style="cursor:pointer;" onclick="showDetail(${o.id})">
+        <td><span class="line-dot-sm" style="background:${lineColor};"></span>${line.toUpperCase()}</td>
+        <td><strong style="color:var(--accent);">#${o.orderId}</strong></td>
+        <td>${o.customer || '—'}</td>
+        <td>${o.productType || o.jobDescription || '—'}</td>
+        <td>${(o.quantity || 0).toLocaleString()}</td>
+        <td>${renderStatusBadge(o.status)}</td>
+        <td class="current-stage" style="color:${lineColor};">${o.status === 'ready-to-ship' ? '✅ Ready' : stageName}</td>
+        <td><span class="card-due ${dueClass(o.dueDate)}" style="font-size:11px;">${dueLabel(o.dueDate)}</span></td>
+        <td>${inProdTime > 0 ? formatDuration(inProdTime) : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderUpcoming(upcomingOrders) {
+    if (upcomingOrders.length === 0) {
+      document.getElementById('upcomingBody').innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0;">No upcoming jobs.</p>';
+      return;
+    }
+    document.getElementById('upcomingBody').innerHTML = `<div class="upcoming-grid">
+      ${upcomingOrders.map(o => {
+        const line = o._line;
+        return `<div class="job-card line-${line}" onclick="showDetail(${o.id})" style="border:1px dashed var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="card-order">#${o.orderId}</span>
+            <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+          </div>
+          <div class="card-customer">${o.customer || '—'}</div>
+          <div class="card-desc">${o.jobDescription || o.productType || '—'}</div>
+          <div class="card-meta">
+            <span class="card-qty">${(o.quantity || 0).toLocaleString()} pcs</span>
+            <span class="card-due ${dueClass(o.dueDate)}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span>
+          </div>
+          <div style="margin-top:4px;">${renderStatusBadge(o.status)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // ── Detail Modal (same as before, enhanced) ──
+  async function showDetail(id) {
+    const o = await getOrder(id);
+    if (!o) return;
+    const line = getProductionLine(o);
+    const lineConfig = PRODUCTION_LINES[line];
+    document.getElementById('modalTitle').textContent = `Order #${o.orderId} — ${o.customer}`;
+    const steps = o.workflowSteps || [];
+
+    const finishParts = [];
+    if (o.spotUV) finishParts.push('Spot UV');
+    if (o.foilType && o.foilType !== 'None') finishParts.push(`Foil (${o.foilColor || o.foilType})`);
+    const finishStr = finishParts.length > 0 ? finishParts.join(' + ') : '—';
+
+    let cutStr = o.cutMethod || o.cutting || '—';
+    if (o.cutMethod && o.cutMethod !== 'None') {
+      if (o.dieName) cutStr += ` — Die: ${o.dieName}`;
+      if (o.dieStatus === 'new-ordered') cutStr += ' (NEW — ordered)';
+    }
+
+    document.getElementById('modalContent').innerHTML = `
+      <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+        <span class="card-line-tag tag-${line}" style="font-size:12px;padding:3px 10px;">${lineConfig.name}</span>
+        <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
+        ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
+        ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+        <div><strong>Product:</strong> ${o.productType || '—'}</div>
+        <div><strong>Job:</strong> ${o.jobDescription || '—'}</div>
+        <div><strong>Quantity:</strong> ${(o.quantity || 0).toLocaleString()}</div>
+        <div><strong>Material:</strong> ${o.material || '—'}</div>
+        <div><strong>Print:</strong> ${o.printType || '—'}${o.rollDirection ? ` (Dir ${o.rollDirection})` : ''}</div>
+        <div><strong>Lamination:</strong> ${o.lamination || '—'}</div>
+        <div><strong>Finishing:</strong> ${finishStr}</div>
+        <div><strong>Cutting:</strong> ${cutStr}</div>
+        <div><strong>Facility:</strong> ${FACILITIES[o.facility]?.name || o.facility}</div>
+        <div><strong>Due:</strong> <span class="card-due ${dueClass(o.dueDate)}">${formatDate(o.dueDate)}</span></div>
+        ${o.specialNotes ? `<div style="grid-column:span 2;"><strong>Notes:</strong> ${o.specialNotes}</div>` : ''}
+      </div>
+      ${steps.length > 0 ? `
+        <h3 style="margin-top:16px;font-size:12px;color:var(--text-muted);text-transform:uppercase;">Workflow Steps</h3>
+        <table class="data-table" style="margin-top:8px;">
+          <thead><tr><th>#</th><th>Machine</th><th>Operation</th><th>Status</th><th>Time</th><th>Loss</th></tr></thead>
+          <tbody>
+            ${steps.map((s, i) => {
+              let dur = 0;
+              if (s.startTime && s.endTime) dur = new Date(s.endTime).getTime() - new Date(s.startTime).getTime() - (s.pausedDuration||0);
+              else if (s.startTime && s.status === 'active') dur = Date.now() - new Date(s.startTime).getTime() - (s.pausedDuration||0);
+              const isCurrent = i === (o.currentStep || 0) && o.status === 'in-production';
+              return `<tr style="${isCurrent ? 'background:rgba(210,153,34,0.1);font-weight:600;' : ''}">
+                <td>${i+1}</td><td>${s.machine}</td><td>${s.operation}</td>
+                <td><span class="badge badge-${s.status === 'completed' ? 'completed' : s.status === 'active' ? 'in-production' : 'new'}">${s.status}</span></td>
+                <td>${dur > 0 ? formatDuration(dur) : '—'}</td><td class="${s.lossCount ? 'loss-cell' : ''}">${s.lossCount || '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : ''}
+    `;
+    document.getElementById('detailModal').classList.add('active');
+  }
+
+  async function resumeOrder(id) {
+    await updateOrder(id, { status: 'in-production', holdReason: '' });
+    closeDetail(); refresh();
+  }
+  async function holdOrder(id) {
+    const reason = prompt('Hold reason:');
+    if (reason === null) return;
+    await updateOrder(id, { status: 'on-hold', holdReason: reason });
+    closeDetail(); refresh();
+  }
+  function closeDetail() { document.getElementById('detailModal').classList.remove('active'); }
+  document.getElementById('detailModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDetail(); });
+
+  onDBUpdate(() => refresh());
+
+  async function init() {
+    await openDB();
+    refresh();
+    setInterval(refresh, 5000);
+  }
+  init();
+</script>
+<script src="seed-data.js"></script>
+</body>
+</html>

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing Calculator — Pulse</title>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="page-header standalone-header">
+    <div>
+      <h2>Pricing Calculator</h2>
+      <p>Clean sales quote page</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="main-column">
+      <div class="form-section">
+        <h3 class="section-title">🧾 Estimate Setup</h3>
+        <div class="form-grid two-up">
+          <div class="field">
+            <label>Facility</label>
+            <select id="facility" onchange="handleFacilityChange()">
+              <option value="16th-street">16th Street</option>
+              <option value="boyd-street">Boyd Street</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Product Type</label>
+            <select id="productType" onchange="handleProductTypeChange()"></select>
+          </div>
+          <div class="field">
+            <label>Material</label>
+            <select id="material" onchange="calculateEstimate()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="section-title">🎨 Print Specs & Finishing</h3>
+        <div class="form-grid two-up">
+          <div class="field">
+            <label>Color Mode</label>
+            <select id="colorMode" onchange="calculateEstimate()">
+              <option value="CMYK">CMYK</option>
+              <option value="CMYK+White">CMYK + White</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Lamination</label>
+            <select id="lamination" onchange="calculateEstimate()">
+              <option value="None">None</option>
+              <option value="Gloss">Gloss</option>
+              <option value="Matte">Matte</option>
+              <option value="Soft Touch">Soft Touch</option>
+              <option value="Holo">Holo</option>
+              <option value="Coating">Coating</option>
+            </select>
+          </div>
+          <div class="field checkbox-field">
+            <label class="checkbox-label"><input type="checkbox" id="hasUV" onchange="calculateEstimate()"> Spot UV / UV Coating</label>
+          </div>
+          <div class="field checkbox-field">
+            <label class="checkbox-label"><input type="checkbox" id="hasFoil" onchange="calculateEstimate()"> Foil</label>
+          </div>
+          <div class="field checkbox-field" id="doubleSidedRow" style="display:none;">
+            <label class="checkbox-label"><input type="checkbox" id="doubleSided" onchange="calculateEstimate()"> Double-sided printing</label>
+          </div>
+          <div class="field" id="pouchFoilPassesRow" style="display:none;">
+            <label>Foil Passes (pouches)</label>
+            <select id="pouchFoilPasses" onchange="calculateEstimate()">
+              <option value="1">1 pass</option>
+              <option value="2">2 passes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="manualPricingSection" style="display:none;">
+        <input type="hidden" id="rate_setup" value="0">
+        <input type="hidden" id="rate_print" value="0">
+        <input type="hidden" id="rate_cut" value="0">
+        <input type="hidden" id="rate_lamination" value="0">
+        <input type="hidden" id="rate_uv" value="0">
+        <input type="hidden" id="rate_foil" value="0">
+        <input type="hidden" id="rate_pouching" value="0">
+        <textarea id="estimatorNotes" style="display:none;"></textarea>
+        <div id="salesInputNote" style="display:none;"></div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="section-title">📐 Size & Imposition</h3>
+        <div class="form-grid two-up" id="dimensionFields"></div>
+
+        <div class="form-grid two-up" style="margin-top:14px;">
+          <div class="field" id="labelDirectionRow" style="display:none;">
+            <label id="directionLabel">Label Direction</label>
+            <select id="labelDirection" onchange="calculateEstimate()">
+              <option value="width-on-web">Width goes on web, height goes on length</option>
+              <option value="height-on-web">Height goes on web, width goes on length</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Quantity</label>
+            <div class="quantity-picker-wrap">
+              <input type="number" id="quantity" min="0" placeholder="e.g. 10000" onfocus="showQuantitySuggestions()" onclick="showQuantitySuggestions()" oninput="calculateEstimate();showQuantitySuggestions()">
+              <div id="quantitySuggestions" class="quantity-suggestions" style="display:none;"></div>
+            </div>
+            <div id="quantityDropdownHint" class="field-hint" style="display:none;">Click quantity to pick a ready-made value break with the live price.</div>
+          </div>
+        </div>
+
+        <div class="calc-settings" id="calcSettings">
+          <div class="field small-field" id="bleedRow">
+            <label>Total Bleed Added Per Piece</label>
+            <input type="number" id="bleedTotal" step="0.01" value="0.24" oninput="calculateEstimate()">
+          </div>
+          <div class="field small-field" id="manualFitsRow">
+            <label>Manual Fits per Sheet/Frame</label>
+            <input type="number" id="manualFits" min="0" placeholder="Required for boxes/manual jobs" oninput="calculateEstimate()">
+          </div>
+          <div class="field checkbox-field" id="tightFitRow">
+            <label class="checkbox-label"><input type="checkbox" id="tightFitMode" onchange="calculateEstimate()"> Squeeze mode for 6K labels (12.2" usable width)</label>
+          </div>
+          <div class="field checkbox-field" id="allowRotationRow">
+            <label class="checkbox-label"><input type="checkbox" id="allowRotation" checked onchange="calculateEstimate()"> Allow rotation for flat sheet products</label>
+          </div>
+        </div>
+
+        <div id="fitExplanation" class="callout callout-amber" style="display:none;"></div>
+      </div>
+
+    </div>
+
+    <div class="sidebar-column">
+      <div class="summary-card sticky-card sales-clean-card">
+        <div class="summary-header">
+          <div>
+            <div class="eyebrow">Live Summary</div>
+            <h3 id="summaryTitle">Pricing ready</h3>
+          </div>
+          <span id="calcModeBadge" class="mode-badge">Auto</span>
+        </div>
+
+        <div class="summary-block">
+          <div class="summary-subtitle">Selection</div>
+          <div id="selectionBrief" class="selection-brief">Base material only</div>
+        </div>
+
+        <div class="summary-block">
+          <div class="summary-total"><span>Total Price</span><strong id="priceTotal">$0.00</strong></div>
+          <div class="summary-row compact-price-row"><span id="pricePerPieceLabel">Price per piece</span><strong id="pricePerPiece">—</strong></div>
+        </div>
+
+        <div id="summaryWarnings" class="callout callout-amber" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MATERIALS = [
+  { category: 'BOPP', items: ['Clear BOPP', 'White BOPP', 'Silver BOPP', 'Holo BOPP'] },
+  { category: 'Cosmetic Web', items: ['Clear Cosmetic Web', 'White Cosmetic Web', 'Silver Cosmetic Web'] },
+  { category: 'Label Sheets', items: ['Gloss Label Sheet', 'Matte Label Sheet', 'Semi Gloss'] },
+  { category: 'Cardstock', items: ['14pt C1S', '14pt C2S', '16pt C1S', '16pt C2S', '18pt C1S', '18pt C2S', '18pt Silver', '24pt C1S', '24pt C2S'] },
+  { category: 'Cover/Text Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover', '80lb Text', '100lb Text'] },
+  { category: 'Cover Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover'] }
+];
+
+const PRODUCT_TYPES = {
+  'Labels (Roll)': { materials: ['BOPP', 'Label Sheets'], facilities: ['16th-street', 'boyd-street'] },
+  'Labels (Sheet)': { materials: ['Label Sheets'], facilities: ['16th-street', 'boyd-street'] },
+  'Pouches': { materials: ['Cosmetic Web'], facilities: ['16th-street'] },
+  'Folding Cartons / Boxes': { materials: ['Cardstock'], facilities: ['16th-street', 'boyd-street'] },
+  'Business Cards': { materials: ['Cardstock', 'Cover Stock'], facilities: ['16th-street'] },
+  'Flyers / Postcards': { materials: ['Cover/Text Stock', 'Cardstock'], facilities: ['16th-street'] },
+  'Booklets': { materials: ['Cover/Text Stock'], facilities: ['16th-street'] },
+  'Diecut Stickers': { materials: ['BOPP', 'Label Sheets'], facilities: ['16th-street', 'boyd-street'] }
+};
+
+function getMaterialsForProduct(productType) {
+  const pt = PRODUCT_TYPES[productType];
+  if (!pt) return MATERIALS;
+  const allowedCategories = pt.materials;
+  return MATERIALS.filter(group => allowedCategories.includes(group.category));
+}
+
+function renderFilteredMaterialOptions(productType) {
+  const filtered = getMaterialsForProduct(productType);
+  return filtered.map(group => `<optgroup label="${group.category}">${group.items.map(item => `<option value="${item}">${item}</option>`).join('')}</optgroup>`).join('');
+}
+
+document.getElementById('page-styles').textContent = `
+:root {
+  --text:#0f172a;
+  --text-muted:#64748b;
+  --border:#dbe3ee;
+  --accent:#2563eb;
+}
+body { margin:0; background:#f8fafc; color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .page-wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+  .standalone-header p { margin:6px 0 0; color: var(--text-muted); font-size:14px; }
+  .selection-brief { font-size:15px; font-weight:600; color:var(--text); line-height:1.7; }
+  .detail-row { display:none; }
+  .page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+  .page-header h2 { margin:0; font-size:24px; }
+  .page-header p { margin:6px 0 0; color: var(--text-muted); max-width: 820px; }
+  .layout { display:grid; grid-template-columns:minmax(0, 1.45fr) minmax(320px, 0.85fr); gap:18px; align-items:start; }
+  .main-column, .sidebar-column { min-width:0; }
+  .form-section, .summary-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(15,23,42,0.04); margin-bottom:16px; }
+  .section-title { font-size:14px; font-weight:700; color:var(--text); padding-bottom:10px; border-bottom:1px solid var(--border); margin:0 0 14px; }
+  .section-head-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+  .section-head-row .section-title { border:none; padding:0; }
+  .form-grid { display:grid; gap:14px; }
+  .two-up { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .rates-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:12px; font-weight:600; color:var(--text-muted); }
+  .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; background:#fff; color:var(--text); }
+  .field textarea { resize:vertical; min-height:84px; }
+  .field-hint { font-size:11px; color:var(--text-muted); margin-top:4px; }
+  .checkbox-field { justify-content:flex-end; }
+  .checkbox-label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:var(--text); min-height:42px; }
+  .checkbox-label input { width:16px; height:16px; accent-color:var(--accent); }
+  .calc-settings { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:12px; }
+  .quantity-picker-wrap { position:relative; }
+  .quantity-suggestions { position:absolute; top:calc(100% + 8px); left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 40px rgba(15,23,42,0.12); z-index:30; max-height:320px; overflow:auto; }
+  .quantity-suggestions-header { display:grid; grid-template-columns:1fr auto auto; gap:10px; padding:10px 12px; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); background:#f8fafc; position:sticky; top:0; }
+  .quantity-option { width:100%; border:none; border-bottom:1px solid var(--border); background:#fff; display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; padding:12px; text-align:left; cursor:pointer; }
+  .quantity-option:last-child { border-bottom:none; }
+  .quantity-option:hover { background:#f8fafc; }
+  .quantity-option.current { background:#eff6ff; }
+  .quantity-option-qty strong { display:block; font-size:14px; color:var(--text); }
+  .quantity-option-qty small { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .quantity-option-badge { justify-self:start; border-radius:999px; padding:5px 8px; font-size:11px; font-weight:700; background:#ede9fe; color:#6d28d9; white-space:nowrap; }
+  .quantity-option-price { text-align:right; }
+  .quantity-option-price strong { display:block; font-size:14px; color:var(--text); }
+  .quantity-option-price small { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .quantity-suggestions-empty { padding:12px; font-size:12px; color:var(--text-muted); }
+  .small-field input { max-width:220px; }
+  .callout { border-radius:12px; padding:12px 14px; font-size:13px; margin-bottom:16px; line-height:1.5; }
+  .callout-blue { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
+  .callout-amber { background:#fff7ed; border:1px solid #fdba74; color:#9a3412; }
+  .summary-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:4px; }
+  .summary-header h3 { margin:0; font-size:20px; }
+  .mode-badge { border-radius:999px; padding:6px 10px; font-size:12px; font-weight:700; background:#e0f2fe; color:#0369a1; }
+  .summary-block { border-top:1px solid var(--border); padding-top:14px; margin-top:14px; }
+  .summary-row, .summary-total { display:flex; justify-content:space-between; gap:12px; align-items:center; font-size:14px; padding:6px 0; }
+  .summary-row span { color:var(--text-muted); }
+  .summary-total { margin-top:10px; padding-top:12px; border-top:1px solid var(--border); font-size:16px; font-weight:700; }
+  .summary-total strong { color:var(--accent); }
+  .sales-clean-card .summary-total { font-size:18px; }
+  .sales-clean-card .summary-total strong { font-size:44px; line-height:1; }
+  .compact-price-row { padding-top:10px; }
+  .summary-subtitle { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px; }
+  .assumption-list { margin:0; padding-left:18px; color:var(--text-muted); font-size:13px; line-height:1.6; }
+  .sticky-card { position:sticky; top:14px; }
+  .btn-sm { padding:8px 10px; font-size:12px; }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns:1fr; }
+    .sticky-card { position:static; }
+  }
+  @media (max-width: 720px) {
+    .two-up, .rates-grid, .calc-settings { grid-template-columns:1fr; }
+    .small-field input { max-width:none; }
+  }
+`;
+
+const RATE_STORAGE_KEY = 'pulse_pricing_rates_v1';
+const PRODUCT_PRIORITY = [
+  'Labels (Roll)',
+  'Labels (Sheet)',
+  'Pouches',
+  'Folding Cartons / Boxes',
+  'Business Cards',
+  'Flyers / Postcards',
+  'Booklets',
+  'Diecut Stickers',
+  'Sheet Products (Boyd)',
+  'Other'
+];
+
+const PRESS_PROFILES = {
+  '6k-label': {
+    label: 'HP Indigo 6K',
+    unitLabel: 'frame',
+    cleanWidthIn: 12,
+    cleanHeightIn: 39,
+    squeezeWidthIn: 12.2,
+    fullSizeLabel: '13" × 39" frame, 12" × 39" clean art'
+  },
+  '6k-pouch': {
+    label: 'HP Indigo 6K + Karlville',
+    unitLabel: 'frame',
+    cleanWidthIn: 12,
+    usableWidthIn: 12.24,
+    cleanHeightIn: 39,
+    fullSizeLabel: '13" × 39" frame, pouch web allows up to 12.24" with one bleed'
+  },
+  '15k-flat': {
+    label: 'HP Indigo 15K',
+    unitLabel: 'sheet',
+    cleanWidthMm: 530,
+    cleanHeightMm: 730,
+    fullSizeLabel: '550mm × 750mm sheet, 530mm × 730mm clean art'
+  },
+  '15k-booklet': {
+    label: 'HP Indigo 15K',
+    unitLabel: 'sheet',
+    cleanWidthMm: 530,
+    cleanHeightMm: 730,
+    fullSizeLabel: '550mm × 750mm sheet, 530mm × 730mm clean art'
+  },
+  '15k-box-manual': {
+    label: 'HP Indigo 15K',
+    unitLabel: 'sheet',
+    cleanWidthMm: 530,
+    cleanHeightMm: 730,
+    fullSizeLabel: 'Manual fit on 15K sheet'
+  },
+  'boyd-manual': {
+    label: 'Boyd Sheet / Roland / Canon',
+    unitLabel: 'sheet',
+    cleanWidthIn: 34,
+    cleanHeightIn: 54,
+    fullSizeLabel: 'Current scaffold uses 34" × 54" clean area'
+  },
+  'boyd-box-manual': {
+    label: 'Boyd Street Boxes',
+    unitLabel: 'sheet',
+    cleanWidthIn: 34,
+    cleanHeightIn: 54,
+    fullSizeLabel: 'Boyd box pricing uses Boyd frame-tier table with manual fit'
+  },
+  'manual': {
+    label: 'Manual',
+    unitLabel: 'sheet',
+    fullSizeLabel: 'Enter manual fit'
+  }
+};
+
+const LABEL_SALES_TIERS = [
+  { minFrames: 500, standard: 3.40, uv: 4.40 },
+  { minFrames: 238, standard: 4.20, uv: 5.20 },
+  { minFrames: 120, standard: 5.00, uv: 6.00 },
+  { minFrames: 60, standard: 5.80, uv: 7.30 },
+  { minFrames: 25, standard: 8.50, uv: 12.50 },
+  { minFrames: 13, standard: 12.60, uv: 17.10 },
+  { minFrames: 6, standard: 20.00, uv: 40.00 }
+];
+
+const POUCH_SALES_TIERS = [
+  { minFrames: 1100, framePrice: 3.20 },
+  { minFrames: 550, framePrice: 4.00 },
+  { minFrames: 275, framePrice: 6.80 },
+  { minFrames: 110, framePrice: 9.00 },
+  { minFrames: 55, framePrice: 13.50 }
+];
+
+const BOX_15K_TIERS = [
+  { maxFrames: 25, boxFramePrice: 14.00, flatFramePrice: 12.00, uvExtra: 4.00, foilExtra: 4.00 },
+  { maxFrames: 62.5, boxFramePrice: 10.00, flatFramePrice: 8.00, uvExtra: 3.00, foilExtra: 3.00 },
+  { maxFrames: 125, boxFramePrice: 8.00, flatFramePrice: 5.00, uvExtra: 2.00, foilExtra: 2.00 },
+  { maxFrames: 250, boxFramePrice: 4.80, flatFramePrice: 3.80, uvExtra: 1.50, foilExtra: 1.50 },
+  { maxFrames: 500, boxFramePrice: 4.00, flatFramePrice: 3.00, uvExtra: 1.25, foilExtra: 1.25 },
+  { maxFrames: 1000, boxFramePrice: 3.60, flatFramePrice: 2.60, uvExtra: 1.00, foilExtra: 1.00 },
+  { maxFrames: 2000, boxFramePrice: 3.40, flatFramePrice: 2.40, uvExtra: 1.00, foilExtra: 1.00 },
+  { maxFrames: 3000, boxFramePrice: 3.20, flatFramePrice: 2.20, uvExtra: 1.00, foilExtra: 1.00 },
+  { maxFrames: 4000, boxFramePrice: 3.00, flatFramePrice: 2.00, uvExtra: 1.00, foilExtra: 1.00 },
+  { maxFrames: 5000, boxFramePrice: 2.80, flatFramePrice: 1.80, uvExtra: 1.00, foilExtra: 1.00 }
+];
+
+const BOX_BOYD_TIERS = [
+  { maxFrames: 10, framePrice: 30.00 },
+  { maxFrames: 25, framePrice: 28.00 },
+  { maxFrames: 62.5, framePrice: 25.00 },
+  { maxFrames: 125, framePrice: 23.00 },
+  { maxFrames: 250, framePrice: 22.00 }
+];
+
+window.addEventListener('DOMContentLoaded', () => {
+  populateRepDropdown();
+  populateProductDropdown();
+  loadSavedRates();
+  document.getElementById('facility').value = '16th-street';
+  document.getElementById('productType').value = 'Labels (Roll)';
+  handleProductTypeChange();
+});
+
+document.addEventListener('click', event => {
+  const wrap = $('quantitySuggestions')?.parentElement;
+  if (!wrap) return;
+  if (wrap.contains(event.target)) return;
+  hideQuantitySuggestions();
+});
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function formatMoney(value) {
+  const num = Number(value || 0);
+  return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toNumber(id) {
+  return parseFloat($(id)?.value) || 0;
+}
+
+function mmToIn(mm) {
+  return mm / 25.4;
+}
+
+function populateRepDropdown() {
+  const sel = $('accountManager');
+  if (!sel || typeof OPERATOR_PROFILES === 'undefined') return;
+  Object.entries(OPERATOR_PROFILES)
+    .filter(([, profile]) => ['account-manager', 'supervisor'].includes(profile.role))
+    .forEach(([name]) => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      sel.appendChild(option);
+    });
+}
+
+function populateProductDropdown() {
+  const sel = $('productType');
+  const currentValue = sel.value;
+  const facility = $('facility')?.value;
+  const list = (typeof PRODUCT_TYPES !== 'undefined' ? Object.keys(PRODUCT_TYPES) : PRODUCT_PRIORITY)
+    .filter(product => {
+      if (typeof PRODUCT_TYPES === 'undefined') return true;
+      const facilities = PRODUCT_TYPES[product]?.facilities;
+      return !facility || !Array.isArray(facilities) || facilities.includes(facility);
+    })
+    .sort((a, b) => {
+      const ai = PRODUCT_PRIORITY.indexOf(a);
+      const bi = PRODUCT_PRIORITY.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  sel.innerHTML = list.map(item => `<option value="${item}">${item}</option>`).join('');
+  sel.value = list.includes(currentValue) ? currentValue : (list[0] || '');
+}
+
+function populateMaterialDropdown() {
+  const productType = $('productType').value;
+  const materialSel = $('material');
+  if (typeof renderFilteredMaterialOptions === 'function') {
+    materialSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType);
+  } else {
+    materialSel.innerHTML = '<option value="">— Select Material —</option>';
+  }
+}
+
+function handleProductTypeChange() {
+  populateMaterialDropdown();
+  handleModeChange();
+}
+
+function handleFacilityChange() {
+  populateProductDropdown();
+  populateMaterialDropdown();
+  handleModeChange();
+}
+
+function handleModeChange() {
+  renderDimensionFields();
+  togglePouchPricingOptions();
+  toggleDirectionalInputs();
+  toggleDoubleSidedOptions();
+  toggleManualPricingInputs();
+  calculateEstimate();
+}
+
+function togglePouchPricingOptions() {
+  const isPouch = getMode() === '6k-pouch';
+  $('pouchFoilPassesRow').style.display = isPouch && $('hasFoil').checked ? '' : 'none';
+  if (!isPouch || !$('hasFoil').checked) $('pouchFoilPasses').value = '1';
+}
+
+function togglePouchGusset() {
+  const checked = $('hasPouchGusset')?.checked;
+  const wrap = $('pouchGussetInputWrap');
+  const input = $('pouchGusset');
+  if (!wrap || !input) return;
+  wrap.style.display = checked ? '' : 'none';
+  input.value = checked ? (parseFloat(input.value) >= 1.75 ? input.value : '1.75') : '0';
+  calculateEstimate();
+}
+
+function clampPouchGusset() {
+  const input = $('pouchGusset');
+  if (!input) return;
+  let value = parseFloat(input.value);
+  if (Number.isNaN(value)) return;
+  if (value < 1.75) value = 1.75;
+  if (value > 2) value = 2;
+  input.value = value.toFixed(2);
+}
+
+function toggleDirectionalInputs() {
+  const mode = getMode();
+  const isDirectional = ['6k-label', '6k-pouch'].includes(mode);
+  const row = $('labelDirectionRow');
+  const label = $('directionLabel');
+  const select = $('labelDirection');
+
+  row.style.display = isDirectional ? '' : 'none';
+  if (!isDirectional) {
+    select.value = 'width-on-web';
+    return;
+  }
+
+  if (mode === '6k-pouch') {
+    label.textContent = 'Pouch Direction';
+    select.options[0].textContent = 'Width goes on web, length goes on length';
+    select.options[1].textContent = 'Length goes on web, width goes on length';
+  } else {
+    label.textContent = 'Label Direction';
+    select.options[0].textContent = 'Width goes on web, height goes on length';
+    select.options[1].textContent = 'Height goes on web, width goes on length';
+  }
+}
+
+function getDoubleSidedPercent(mode = getMode()) {
+  const facility = $('facility').value;
+  const productType = $('productType').value;
+
+  if (facility === 'boyd-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Diecut Stickers'].includes(productType)) return 0;
+  if (mode === '6k-label') return 0.20;
+  if (mode === '6k-pouch') return 0.20;
+  if (['15k-box-manual', 'boyd-box-manual'].includes(mode)) return 0.20;
+  if (mode === '15k-flat' && ['Business Cards', 'Flyers / Postcards'].includes(productType)) return 0.10;
+  if (mode === '15k-booklet') return 0.10;
+  return 0;
+}
+
+function toggleDoubleSidedOptions() {
+  const row = $('doubleSidedRow');
+  const input = $('doubleSided');
+  if (!row || !input) return;
+  const supported = getDoubleSidedPercent() > 0;
+  row.style.display = supported ? '' : 'none';
+  if (!supported) input.checked = false;
+}
+
+function toggleManualPricingInputs() {
+  const mode = getMode();
+  const isAutoTiered = ['6k-label', '6k-pouch'].includes(mode);
+  const section = $('manualPricingSection');
+  const manualFitsRow = $('manualFitsRow');
+  if (section) section.style.display = isAutoTiered ? 'none' : '';
+  if (manualFitsRow) manualFitsRow.style.display = ['15k-box-manual', 'boyd-box-manual'].includes(mode) ? 'none' : '';
+
+  const rateIds = ['rate_setup','rate_print','rate_cut','rate_lamination','rate_uv','rate_foil','rate_pouching'];
+  rateIds.forEach(id => {
+    const el = $(id);
+    if (el) el.disabled = isAutoTiered;
+  });
+
+  const note = $('salesInputNote');
+  if (note) {
+    note.textContent = 'Use these manual pricing inputs for boxes and other products that do not have fixed tier tables yet.';
+  }
+}
+
+function getMode() {
+  const facility = $('facility').value;
+  const productType = $('productType').value;
+
+  if (facility === '16th-street' && productType === 'Pouches') return '6k-pouch';
+  if (facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Diecut Stickers'].includes(productType)) return '6k-label';
+  if (facility === '16th-street' && productType === 'Folding Cartons / Boxes') return '15k-box-manual';
+  if (facility === '16th-street' && productType === 'Booklets') return '15k-booklet';
+  if (facility === '16th-street' && ['Business Cards', 'Flyers / Postcards'].includes(productType)) return '15k-flat';
+  if (facility === 'boyd-street' && productType === 'Folding Cartons / Boxes') return 'boyd-box-manual';
+  if (facility === 'boyd-street') return 'boyd-manual';
+  return 'manual';
+}
+
+function renderDimensionFields() {
+  const mode = getMode();
+  const productType = $('productType').value;
+  const boxMode = ['15k-box-manual', 'boyd-box-manual'].includes(mode);
+  const pouchMode = mode === '6k-pouch';
+  const bookletMode = mode === '15k-booklet';
+  const container = $('dimensionFields');
+  const manualFitsRow = $('manualFitsRow');
+  const bleedRow = $('bleedRow');
+  const tightFitRow = $('tightFitRow');
+  const allowRotationRow = $('allowRotationRow');
+  const calcSettings = $('calcSettings');
+
+  if (manualFitsRow) manualFitsRow.style.display = boxMode ? 'none' : '';
+  if (bleedRow) bleedRow.style.display = boxMode ? 'none' : '';
+  if (tightFitRow) tightFitRow.style.display = mode === '6k-label' ? '' : 'none';
+  if (allowRotationRow) allowRotationRow.style.display = ['15k-flat', '15k-booklet'].includes(mode) ? '' : 'none';
+  if (calcSettings) calcSettings.style.display = boxMode ? 'none' : '';
+
+  if (boxMode) {
+    container.innerHTML = `
+      <div class="field">
+        <label>Fits per Sheet</label>
+        <input type="number" id="boxFitsPerSheet" min="0" placeholder="Required" oninput="syncManualFits(this.value)">
+      </div>
+    `;
+    $('manualFits').placeholder = 'Required for boxes';
+    $('tightFitMode').disabled = true;
+    $('allowRotation').disabled = true;
+    $('tightFitMode').checked = false;
+    $('allowRotation').checked = false;
+    return;
+  }
+
+  if (pouchMode) {
+    container.innerHTML = `
+      <div class="field">
+        <label>Bag Width</label>
+        <input type="number" id="itemWidth" step="0.01" placeholder="e.g. 4" oninput="calculateEstimate()">
+      </div>
+      <div class="field">
+        <label>Bag Length</label>
+        <input type="number" id="itemHeight" step="0.01" placeholder="e.g. 6" oninput="calculateEstimate()">
+      </div>
+      <div class="field">
+        <label class="checkbox-label"><input type="checkbox" id="hasPouchGusset" onchange="togglePouchGusset()"> Gusset</label>
+        <div id="pouchGussetInputWrap" style="display:none;margin-top:8px;">
+          <input type="number" id="pouchGusset" min="1.75" max="2" step="0.01" value="0" placeholder="1.75 to 2.00" oninput="clampPouchGusset();calculateEstimate()">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Allowed range: 1.75&quot; to 2.00&quot;</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Flat Width Formula</label>
+        <input type="text" value="front + back + gusset" disabled>
+      </div>
+    `;
+    $('manualFits').placeholder = 'Optional override';
+    $('tightFitMode').disabled = true;
+    $('allowRotation').disabled = true;
+    $('tightFitMode').checked = false;
+    $('allowRotation').checked = false;
+    return;
+  }
+
+  if (bookletMode) {
+    container.innerHTML = `
+      <div class="field">
+        <label>Page Width</label>
+        <input type="number" id="itemWidth" step="0.01" placeholder="e.g. 5.5" oninput="calculateEstimate()">
+      </div>
+      <div class="field">
+        <label>Page Height</label>
+        <input type="number" id="itemHeight" step="0.01" placeholder="e.g. 8.5" oninput="calculateEstimate()">
+      </div>
+      <div class="field">
+        <label>Total Pages per Booklet</label>
+        <input type="number" id="bookletPages" min="1" step="1" placeholder="e.g. 6" oninput="calculateEstimate()">
+      </div>
+    `;
+    $('manualFits').placeholder = 'Auto-calculated from page size and booklet pages';
+    $('tightFitMode').disabled = true;
+    $('allowRotation').disabled = false;
+    $('tightFitMode').checked = false;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="field">
+      <label>${productType === 'Other' ? 'Width' : 'Width'}</label>
+      <input type="number" id="itemWidth" step="0.01" placeholder="e.g. 2" oninput="calculateEstimate()">
+    </div>
+    <div class="field">
+      <label>${mode === '15k-flat' ? 'Length / Height' : 'Height / Length'}</label>
+      <input type="number" id="itemHeight" step="0.01" placeholder="e.g. 5" oninput="calculateEstimate()">
+    </div>
+  `;
+
+  $('manualFits').placeholder = mode === 'boyd-manual' ? 'Use for Boyd jobs for now' : 'Optional override';
+  $('tightFitMode').disabled = mode !== '6k-label';
+  $('allowRotation').disabled = mode !== '15k-flat';
+  if (mode !== '6k-label') $('tightFitMode').checked = false;
+  if (mode !== '15k-flat') $('allowRotation').checked = false;
+}
+
+function syncManualFits(value) {
+  $('manualFits').value = value || '';
+  calculateEstimate();
+}
+
+function calculateGridFit(sheetWidth, sheetHeight, itemWidth, itemHeight, allowRotate) {
+  const normalAcross = Math.floor(sheetWidth / itemWidth);
+  const normalDown = Math.floor(sheetHeight / itemHeight);
+  const normalFit = Math.max(0, normalAcross) * Math.max(0, normalDown);
+
+  if (!allowRotate) {
+    return { across: Math.max(0, normalAcross), down: Math.max(0, normalDown), fit: normalFit, rotated: false };
+  }
+
+  const rotatedAcross = Math.floor(sheetWidth / itemHeight);
+  const rotatedDown = Math.floor(sheetHeight / itemWidth);
+  const rotatedFit = Math.max(0, rotatedAcross) * Math.max(0, rotatedDown);
+
+  if (rotatedFit > normalFit) {
+    return { across: Math.max(0, rotatedAcross), down: Math.max(0, rotatedDown), fit: rotatedFit, rotated: true };
+  }
+
+  return { across: Math.max(0, normalAcross), down: Math.max(0, normalDown), fit: normalFit, rotated: false };
+}
+
+function calculateEstimate() {
+  togglePouchPricingOptions();
+  toggleDirectionalInputs();
+  toggleManualPricingInputs();
+  const mode = getMode();
+  const profile = PRESS_PROFILES[mode] || PRESS_PROFILES.manual;
+  const quantity = toNumber('quantity');
+  const bleed = toNumber('bleedTotal');
+  const width = toNumber('itemWidth');
+  const height = toNumber('itemHeight');
+  const gusset = toNumber('pouchGusset');
+  const manualFits = toNumber('manualFits');
+  const material = $('material').value || '—';
+  const warnings = [];
+
+  let footprint = '—';
+  let fitsPerUnit = 0;
+  let neededUnits = 0;
+  let modeLabel = 'Auto';
+  let explanation = '';
+
+  if (!quantity) warnings.push('Enter quantity to calculate unit count.');
+
+  if (mode === '6k-label') {
+    if (!width || !height) warnings.push('Enter width and height for label calculation.');
+    const usableWidth = $('tightFitMode').checked ? profile.squeezeWidthIn : profile.cleanWidthIn;
+    const pieceWidth = width + bleed;
+    const pieceHeight = height + bleed;
+    const direction = $('labelDirection').value || 'width-on-web';
+    const widthOnWeb = direction === 'width-on-web' ? pieceWidth : pieceHeight;
+    const lengthOnWeb = direction === 'width-on-web' ? pieceHeight : pieceWidth;
+    const fit = (width > 0 && height > 0)
+      ? calculateGridFit(usableWidth, profile.cleanHeightIn, widthOnWeb, lengthOnWeb, false)
+      : { across: 0, down: 0, fit: 0, rotated: false };
+    fitsPerUnit = fit.fit;
+    neededUnits = fitsPerUnit > 0 ? Math.ceil(quantity / fitsPerUnit) : 0;
+    footprint = width && height ? `${(width + bleed).toFixed(2)}" × ${(height + bleed).toFixed(2)}"` : '—';
+    explanation = width && height
+      ? `${fitsPerUnit} Per Frame = ${fit.across} across × ${fit.down} down on Direction: ${direction === 'width-on-web' ? `${pieceWidth.toFixed(2)}" on width and ${pieceHeight.toFixed(2)}" on length` : `${pieceHeight.toFixed(2)}" on width and ${pieceWidth.toFixed(2)}" on length`} (${usableWidth.toFixed(2)}" × ${profile.cleanHeightIn}" clean area and ${bleed}" bleed)`
+      : '';
+  } else if (mode === '6k-pouch') {
+    if (!width || !height) warnings.push('Enter bag width and length for pouch calculation.');
+    const direction = $('labelDirection').value || 'width-on-web';
+    const widthFlat = width * 2 + gusset + bleed;
+    const lengthFlat = height * 2 + gusset + bleed;
+    const widthSingle = width + bleed;
+    const lengthSingle = height + bleed;
+    const pouchWidthOnWeb = direction === 'width-on-web' ? widthFlat : lengthFlat;
+    const pouchLengthOnWeb = direction === 'width-on-web' ? lengthSingle : widthSingle;
+    const usablePouchWidth = profile.usableWidthIn || profile.cleanWidthIn;
+    let fit = { across: 0, down: 0, fit: 0, rotated: false };
+
+    if (width > 0 && height > 0) {
+      if (pouchWidthOnWeb > usablePouchWidth) {
+        warnings.push(`Blocked: imposed pouch width ${pouchWidthOnWeb.toFixed(2)}" does not fit the ${usablePouchWidth.toFixed(2)}" pouch web width.`);
+      } else {
+        fit = calculateGridFit(usablePouchWidth, profile.cleanHeightIn, pouchWidthOnWeb, pouchLengthOnWeb, false);
+      }
+    }
+
+    fitsPerUnit = fit.fit;
+    neededUnits = fitsPerUnit > 0 ? Math.ceil(quantity / fitsPerUnit) : 0;
+    footprint = width && height ? `${pouchWidthOnWeb.toFixed(2)}" × ${pouchLengthOnWeb.toFixed(2)}"` : '—';
+    explanation = width && height
+      ? fit.fit > 0
+        ? `${fitsPerUnit} Per Frame = ${fit.across} across × ${fit.down} down on Direction: ${pouchWidthOnWeb.toFixed(2)}" on width and ${pouchLengthOnWeb.toFixed(2)}" on length (${usablePouchWidth.toFixed(2)}" × ${profile.cleanHeightIn}" usable area and ${bleed}" bleed)`
+        : `Blocked: Direction would place ${pouchWidthOnWeb.toFixed(2)}" on width and ${pouchLengthOnWeb.toFixed(2)}" on length, but the imposed pouch width does not fit the ${usablePouchWidth.toFixed(2)}" pouch web width.`
+      : '';
+  } else if (mode === '15k-flat') {
+    if (!width || !height) warnings.push('Enter flat width and height for 15K sheet calculation.');
+    const pieceWidth = width + bleed;
+    const pieceHeight = height + bleed;
+    const fit = (width > 0 && height > 0)
+      ? calculateGridFit(mmToIn(profile.cleanWidthMm), mmToIn(profile.cleanHeightMm), pieceWidth, pieceHeight, $('allowRotation').checked)
+      : { across: 0, down: 0, fit: 0, rotated: false };
+    const widthOnSheet = fit.rotated ? pieceHeight : pieceWidth;
+    const lengthOnSheet = fit.rotated ? pieceWidth : pieceHeight;
+    fitsPerUnit = fit.fit;
+    neededUnits = fitsPerUnit > 0 ? Math.ceil(quantity / fitsPerUnit) : 0;
+    footprint = width && height ? `${pieceWidth.toFixed(2)}" × ${pieceHeight.toFixed(2)}"` : '—';
+    explanation = width && height
+      ? `${fitsPerUnit} Per Sheet = ${fit.across} across × ${fit.down} down on Direction: ${widthOnSheet.toFixed(2)}" on width and ${lengthOnSheet.toFixed(2)}" on length (${mmToIn(profile.cleanWidthMm).toFixed(2)}" × ${mmToIn(profile.cleanHeightMm).toFixed(2)}" clean area and ${bleed}" bleed${fit.rotated ? ', rotated for better yield' : ''})`
+      : '';
+  } else if (mode === '15k-booklet') {
+    const bookletPages = parseInt($('bookletPages')?.value, 10) || 0;
+    if (!width || !height) warnings.push('Enter booklet page width and height for 15K sheet calculation.');
+    if (!bookletPages) warnings.push('Enter total pages per booklet.');
+    const pieceWidth = width + bleed;
+    const pieceHeight = height + bleed;
+    const fit = (width > 0 && height > 0)
+      ? calculateGridFit(mmToIn(profile.cleanWidthMm), mmToIn(profile.cleanHeightMm), pieceWidth, pieceHeight, $('allowRotation').checked)
+      : { across: 0, down: 0, fit: 0, rotated: false };
+    const widthOnSheet = fit.rotated ? pieceHeight : pieceWidth;
+    const lengthOnSheet = fit.rotated ? pieceWidth : pieceHeight;
+    const totalBookletPages = quantity > 0 && bookletPages > 0 ? quantity * bookletPages : 0;
+    const sheetsPerBooklet = fit.fit > 0 && bookletPages > 0 ? bookletPages / fit.fit : 0;
+    fitsPerUnit = fit.fit;
+    neededUnits = fit.fit > 0 && totalBookletPages > 0 ? Math.ceil(totalBookletPages / fit.fit) : 0;
+    footprint = width && height ? `${pieceWidth.toFixed(2)}" × ${pieceHeight.toFixed(2)}"` : '—';
+    explanation = width && height
+      ? `${fitsPerUnit} Per Sheet = ${fit.across} across × ${fit.down} down on Direction: ${widthOnSheet.toFixed(2)}" on width and ${lengthOnSheet.toFixed(2)}" on length (${mmToIn(profile.cleanWidthMm).toFixed(2)}" × ${mmToIn(profile.cleanHeightMm).toFixed(2)}" clean area and ${bleed}" bleed${fit.rotated ? ', rotated for better yield' : ''})${bookletPages ? ` • ${bookletPages} pages/booklet × ${quantity || 0} booklets = ${totalBookletPages.toLocaleString()} total pages = ${neededUnits.toLocaleString()} sheets` : ''}`
+      : '';
+  } else {
+    modeLabel = 'Manual';
+    fitsPerUnit = manualFits;
+    neededUnits = manualFits > 0 ? Math.ceil(quantity / manualFits) : 0;
+    if (!manualFits) warnings.push(['15k-box-manual', 'boyd-box-manual'].includes(mode) ? 'Enter fits per sheet for the box layout.' : 'Enter manual fits per sheet/frame for this job.');
+    if (['15k-box-manual', 'boyd-box-manual'].includes(mode)) {
+      footprint = 'Manual fit job';
+      explanation = `Boxes use manual fit for nesting, but pricing now follows the ${mode === 'boyd-box-manual' ? 'Boyd box' : '15K Indigo box'} frame-tier table once fits per sheet are entered.`;
+    } else if (mode === 'boyd-manual') {
+      footprint = width && height ? `${(width + bleed).toFixed(2)}" × ${(height + bleed).toFixed(2)}"` : 'Boyd manual fit job';
+      explanation = 'Boyd jobs are currently using manual fit until we map that line together in more detail.';
+    } else {
+      footprint = width && height ? `${(width + bleed).toFixed(2)}" × ${(height + bleed).toFixed(2)}"` : 'Manual fit job';
+      explanation = 'Manual mode lets the rep enter the real fit count when the layout is too custom for safe automation.';
+    }
+  }
+
+  const pricing = calculatePricing(mode, fitsPerUnit, neededUnits);
+  const manualRatesTotal = ['rate_setup','rate_print','rate_cut','rate_lamination','rate_uv','rate_foil','rate_pouching']
+    .reduce((sum, id) => sum + toNumber(id), 0);
+  if (!['6k-label', '6k-pouch', '15k-box-manual', '15k-flat', '15k-booklet', 'boyd-box-manual'].includes(mode) && quantity > 0 && neededUnits > 0 && manualRatesTotal === 0) {
+    warnings.push('Pricing table is not wired for this product yet, so the calculator cannot produce a real price.');
+  }
+
+  renderSummary({
+    mode,
+    profile,
+    material,
+    footprint,
+    fitsPerUnit,
+    neededUnits,
+    modeLabel,
+    explanation,
+    warnings,
+    pricing
+  });
+
+  renderQuantitySuggestions(mode, fitsPerUnit);
+}
+
+function roundPerPiecePrice(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function getSalesFriendlyQtyStep(quantity) {
+  if (quantity >= 10000) return 1000;
+  if (quantity >= 1000) return 500;
+  if (quantity >= 100) return 10;
+  return 1;
+}
+
+function roundUpToSalesFriendlyQty(quantity) {
+  const safeQty = Math.max(1, Math.ceil(quantity || 0));
+  const step = getSalesFriendlyQtyStep(safeQty);
+  return Math.ceil(safeQty / step) * step;
+}
+
+function buildProtectedTierCatalog(tiers, fitsPerUnit, getFramePrice) {
+  if (!fitsPerUnit) return [];
+
+  return tiers.map((tier, index) => {
+    const perPiecePrice = roundPerPiecePrice(getFramePrice(tier) / fitsPerUnit);
+    const rawMinQty = tier.minFrames * fitsPerUnit;
+    let effectiveMinQty = rawMinQty;
+    let minimumChargeQty = 0;
+    let minimumChargeTotal = 0;
+    let gapStartQty = 0;
+    let gapEndQty = 0;
+    let previousPerPiecePrice = 0;
+
+    if (index < tiers.length - 1) {
+      const previousTier = tiers[index + 1];
+      previousPerPiecePrice = roundPerPiecePrice(getFramePrice(previousTier) / fitsPerUnit);
+      const previousRawMaxQty = Math.max(1, (tier.minFrames - 1) * fitsPerUnit);
+      minimumChargeQty = roundUpToSalesFriendlyQty(previousRawMaxQty);
+      minimumChargeTotal = minimumChargeQty * previousPerPiecePrice;
+      const protectedMinQty = Math.ceil(minimumChargeTotal / perPiecePrice);
+      effectiveMinQty = Math.max(rawMinQty, roundUpToSalesFriendlyQty(protectedMinQty));
+      gapStartQty = minimumChargeQty + 1;
+      gapEndQty = effectiveMinQty - 1;
+    }
+
+    return {
+      ...tier,
+      perPiecePrice,
+      rawMinQty,
+      effectiveMinQty,
+      minimumChargeQty,
+      minimumChargeTotal,
+      previousPerPiecePrice,
+      gapStartQty,
+      gapEndQty
+    };
+  });
+
+}
+
+function getProtectedTierPricing(tiers, quantity, fitsPerUnit, getFramePrice) {
+  if (!quantity || !fitsPerUnit) return null;
+
+  const enriched = buildProtectedTierCatalog(tiers, fitsPerUnit, getFramePrice);
+
+  for (const tier of enriched) {
+    if (tier.gapStartQty && quantity >= tier.gapStartQty && quantity <= tier.gapEndQty) {
+      return { ...tier, inMinimumChargeZone: true };
+    }
+    if (quantity >= tier.effectiveMinQty) {
+      return { ...tier, inMinimumChargeZone: false };
+    }
+  }
+
+  return { ...enriched[enriched.length - 1], inMinimumChargeZone: false };
+}
+
+function getAutoTierConfig(mode) {
+  if (mode === '6k-label') {
+    return {
+      kind: 'protected-tier',
+      pieceLabel: 'label',
+      tiers: LABEL_SALES_TIERS,
+      getFramePrice: tier => $('hasUV').checked ? tier.uv : tier.standard
+    };
+  }
+
+  if (mode === '6k-pouch') {
+    return {
+      kind: 'protected-tier',
+      pieceLabel: 'pouch',
+      tiers: POUCH_SALES_TIERS,
+      getFramePrice: tier => tier.framePrice
+    };
+  }
+
+  if (mode === '15k-box-manual') {
+    return {
+      kind: 'frame-table',
+      pieceLabel: 'box',
+      tiers: BOX_15K_TIERS,
+      framePriceKey: 'boxFramePrice'
+    };
+  }
+
+  if (mode === '15k-flat') {
+    return {
+      kind: 'frame-table',
+      pieceLabel: 'piece',
+      tiers: BOX_15K_TIERS,
+      framePriceKey: 'flatFramePrice'
+    };
+  }
+
+  if (mode === '15k-booklet') {
+    return {
+      kind: 'frame-table',
+      pieceLabel: 'booklet',
+      tiers: BOX_15K_TIERS,
+      framePriceKey: 'flatFramePrice'
+    };
+  }
+
+  if (mode === 'boyd-box-manual') {
+    return {
+      kind: 'frame-table',
+      pieceLabel: 'box',
+      tiers: BOX_BOYD_TIERS,
+      framePriceKey: 'framePrice'
+    };
+  }
+
+  return null;
+}
+
+function getQuantitySuggestionPoints(mode, fitsPerUnit, quantity) {
+  const config = getAutoTierConfig(mode);
+  if (!config || !fitsPerUnit) return [];
+  const points = new Set();
+
+  if (quantity > 0) points.add(Math.ceil(quantity));
+
+  if (config.kind === 'frame-table') {
+    config.tiers.forEach(tier => {
+      points.add(Math.ceil(tier.maxFrames * fitsPerUnit));
+    });
+  } else {
+    const catalog = buildProtectedTierCatalog(config.tiers, fitsPerUnit, config.getFramePrice);
+    catalog.forEach(tier => {
+      if (tier.minimumChargeQty) points.add(tier.minimumChargeQty);
+      if (tier.effectiveMinQty) points.add(tier.effectiveMinQty);
+    });
+  }
+
+  return [...points].filter(Boolean).sort((a, b) => a - b);
+}
+
+function showQuantitySuggestions() {
+  const panel = $('quantitySuggestions');
+  if (!panel || !panel.innerHTML.trim()) return;
+  panel.style.display = '';
+}
+
+function hideQuantitySuggestions() {
+  const panel = $('quantitySuggestions');
+  if (panel) panel.style.display = 'none';
+}
+
+function selectQuantitySuggestion(quantity) {
+  $('quantity').value = quantity;
+  calculateEstimate();
+  hideQuantitySuggestions();
+}
+
+function renderQuantitySuggestions(mode, fitsPerUnit) {
+  const panel = $('quantitySuggestions');
+  const hint = $('quantityDropdownHint');
+  const quantity = toNumber('quantity');
+  const config = getAutoTierConfig(mode);
+
+  if (!panel || !hint || !config || !fitsPerUnit) {
+    if (panel) {
+      panel.innerHTML = '';
+      panel.style.display = 'none';
+    }
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+
+  const suggestionPoints = getQuantitySuggestionPoints(mode, fitsPerUnit, quantity);
+  const catalog = config.kind === 'frame-table'
+    ? config.tiers
+    : buildProtectedTierCatalog(config.tiers, fitsPerUnit, config.getFramePrice);
+
+  if (!suggestionPoints.length) {
+    panel.innerHTML = '';
+    panel.style.display = 'none';
+    hint.style.display = 'none';
+    return;
+  }
+
+  const rows = suggestionPoints.map(qty => {
+    const neededUnits = Math.ceil(qty / fitsPerUnit);
+    const pricing = calculatePricing(mode, fitsPerUnit, neededUnits, qty);
+    const tier = config.kind === 'frame-table'
+      ? getFrameTier(config.tiers, neededUnits)
+      : getProtectedTierPricing(config.tiers, qty, fitsPerUnit, config.getFramePrice);
+    const matchingTier = config.kind === 'frame-table'
+      ? catalog.find(item => Math.ceil(item.maxFrames * fitsPerUnit) === qty)
+      : catalog.find(item => item.effectiveMinQty === qty || item.minimumChargeQty === qty);
+    let badge = config.kind === 'frame-table' ? 'Tier max' : 'Value break';
+
+    if (quantity && qty === Math.ceil(quantity)) {
+      badge = 'Current';
+    } else if (config.kind !== 'frame-table' && matchingTier?.minimumChargeQty === qty) {
+      badge = 'Min charge';
+    } else if (config.kind !== 'frame-table' && matchingTier?.effectiveMinQty === qty) {
+      badge = 'Next tier';
+    }
+
+    return {
+      qty,
+      total: pricing.total,
+      perPiece: qty > 0 ? pricing.total / qty : 0,
+      badge,
+      isCurrent: quantity && qty === Math.ceil(quantity),
+      tier
+    };
+  });
+
+  panel.innerHTML = `
+    <div class="quantity-suggestions-header">
+      <span>Qty</span>
+      <span>Type</span>
+      <span>Price</span>
+    </div>
+    ${rows.map(row => `
+      <button type="button" class="quantity-option${row.isCurrent ? ' current' : ''}" onclick="selectQuantitySuggestion(${row.qty})">
+        <span class="quantity-option-qty">
+          <strong>${row.qty.toLocaleString()} pcs</strong>
+          <small>${config.kind === 'frame-table'
+            ? row.tier?.[config.framePriceKey] ? `$${row.tier[config.framePriceKey].toFixed(2)} / frame` : ''
+            : row.tier?.inMinimumChargeZone ? 'Held in minimum-charge zone' : row.tier?.perPiecePrice ? `$${row.tier.perPiecePrice.toFixed(2)} / ${config.pieceLabel}` : ''}</small>
+        </span>
+        <span class="quantity-option-badge">${row.badge}</span>
+        <span class="quantity-option-price">
+          <strong>${formatMoney(row.total)}</strong>
+          <small>${formatMoney(row.perPiece)} / ${config.pieceLabel}</small>
+        </span>
+      </button>
+    `).join('')}
+  `;
+
+  hint.style.display = '';
+}
+
+function getFrameTier(tiers, neededUnits) {
+  if (!neededUnits) return null;
+  for (const tier of tiers) {
+    if (neededUnits <= tier.maxFrames) {
+      return { ...tier, assumedBeyondTable: false };
+    }
+  }
+  const lastTier = tiers[tiers.length - 1];
+  return lastTier ? { ...lastTier, assumedBeyondTable: true } : null;
+}
+
+function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = null) {
+  const rates = {
+    setup: toNumber('rate_setup'),
+    print: toNumber('rate_print'),
+    cut: toNumber('rate_cut'),
+    lamination: toNumber('rate_lamination'),
+    uv: toNumber('rate_uv'),
+    foil: toNumber('rate_foil'),
+    pouching: toNumber('rate_pouching')
+  };
+
+  const quantity = quantityOverride ?? toNumber('quantity');
+  const labelTier = mode === '6k-label' ? getProtectedTierPricing(LABEL_SALES_TIERS, quantity, fitsPerUnit, tier => $('hasUV').checked ? tier.uv : tier.standard) : null;
+  const pouchTier = mode === '6k-pouch' ? getProtectedTierPricing(POUCH_SALES_TIERS, quantity, fitsPerUnit, tier => tier.framePrice) : null;
+  const indigoBoxTier = mode === '15k-box-manual' ? getFrameTier(BOX_15K_TIERS, neededUnits) : null;
+  const indigoFlatTier = ['15k-flat', '15k-booklet'].includes(mode) ? getFrameTier(BOX_15K_TIERS, neededUnits) : null;
+  const boydBoxTier = mode === 'boyd-box-manual' ? getFrameTier(BOX_BOYD_TIERS, neededUnits) : null;
+  const labelPricePerFrame = labelTier ? ($('hasUV').checked ? labelTier.uv : labelTier.standard) : 0;
+  const pouchFoilPasses = mode === '6k-pouch' && $('hasFoil').checked ? Math.max(1, parseInt($('pouchFoilPasses').value, 10) || 1) : 1;
+  const pricingWarnings = [];
+  const manualRatesTotal = Object.values(rates).reduce((sum, value) => sum + value, 0);
+  let awaitingPricingTable = false;
+
+  let printCharge = neededUnits * rates.print;
+  let tierLabel = 'Manual / input based';
+  let billableUnits = neededUnits;
+
+  let materialCharge = 0;
+  let laminationCharge = $('lamination').value !== 'None' ? neededUnits * rates.lamination : 0;
+  let uvCharge = $('hasUV').checked ? neededUnits * rates.uv : 0;
+  let foilCharge = $('hasFoil').checked ? neededUnits * rates.foil : 0;
+  let pouchCharge = getMode() === '6k-pouch' ? neededUnits * rates.pouching : 0;
+  let doubleSidedCharge = 0;
+
+  if (!labelTier && !pouchTier && !indigoBoxTier && !indigoFlatTier && !boydBoxTier && neededUnits > 0 && manualRatesTotal === 0) {
+    tierLabel = 'Pricing table not wired yet';
+    pricingWarnings.push('This product does not have a fixed pricing table wired yet.');
+    awaitingPricingTable = true;
+  }
+
+  if (labelTier) {
+    printCharge = labelTier.inMinimumChargeZone ? labelTier.minimumChargeTotal : quantity * labelTier.perPiecePrice;
+    uvCharge = 0;
+    billableUnits = neededUnits;
+    tierLabel = labelTier.inMinimumChargeZone
+      ? `Minimum-charge zone, held at ${labelTier.minimumChargeQty.toLocaleString()} pcs × $${labelTier.previousPerPiecePrice.toFixed(2)}/label. Next value break: ${labelTier.effectiveMinQty.toLocaleString()} pcs at $${labelTier.perPiecePrice.toFixed(2)}/label.`
+      : `${labelTier.minFrames} frame tier, $${labelPricePerFrame.toFixed(2)}/frame ($${labelTier.perPiecePrice.toFixed(2)}/${mode === '6k-label' ? 'label' : 'piece'})`;
+    if (labelTier.inMinimumChargeZone) {
+      pricingWarnings.push(`Custom-quote zone: ${labelTier.gapStartQty.toLocaleString()} to ${labelTier.gapEndQty.toLocaleString()} pcs stays at the ${labelTier.minimumChargeQty.toLocaleString()}-piece minimum charge. Reps should push the next value break at ${labelTier.effectiveMinQty.toLocaleString()} pcs.`);
+    }
+  } else if (pouchTier) {
+    const baseRate = pouchTier.framePrice;
+    printCharge = pouchTier.inMinimumChargeZone ? pouchTier.minimumChargeTotal : quantity * pouchTier.perPiecePrice;
+    uvCharge = $('hasUV').checked ? printCharge * 0.20 : 0;
+    foilCharge = $('hasFoil').checked ? printCharge * 0.20 * pouchFoilPasses : 0;
+    pouchCharge = 0;
+    tierLabel = pouchTier.inMinimumChargeZone
+      ? `Minimum-charge zone, held at ${pouchTier.minimumChargeQty.toLocaleString()} pcs × $${pouchTier.previousPerPiecePrice.toFixed(2)}/pouch. Next value break: ${pouchTier.effectiveMinQty.toLocaleString()} pcs at $${pouchTier.perPiecePrice.toFixed(2)}/pouch${$('hasUV').checked ? ' +20% UV' : ''}${$('hasFoil').checked ? ` +${20 * pouchFoilPasses}% foil` : ''}`
+      : `${pouchTier.minFrames} frame tier, $${baseRate.toFixed(2)}/frame ($${pouchTier.perPiecePrice.toFixed(2)}/pouch)${$('hasUV').checked ? ' +20% UV' : ''}${$('hasFoil').checked ? ` +${20 * pouchFoilPasses}% foil` : ''}`;
+    if (pouchTier.inMinimumChargeZone) {
+      pricingWarnings.push(`Custom-quote zone: ${pouchTier.gapStartQty.toLocaleString()} to ${pouchTier.gapEndQty.toLocaleString()} pcs stays at the ${pouchTier.minimumChargeQty.toLocaleString()}-piece minimum charge. Reps should push the next value break at ${pouchTier.effectiveMinQty.toLocaleString()} pcs.`);
+    }
+  } else if (indigoBoxTier) {
+    printCharge = neededUnits * indigoBoxTier.boxFramePrice;
+    uvCharge = $('hasUV').checked ? neededUnits * indigoBoxTier.uvExtra : 0;
+    foilCharge = $('hasFoil').checked ? neededUnits * indigoBoxTier.foilExtra : 0;
+    tierLabel = `15K box tier up to ${indigoBoxTier.maxFrames.toLocaleString()} frames, $${indigoBoxTier.boxFramePrice.toFixed(2)}/frame${$('hasUV').checked ? ` + $${indigoBoxTier.uvExtra.toFixed(2)}/frame UV` : ''}${$('hasFoil').checked ? ` + $${indigoBoxTier.foilExtra.toFixed(2)}/frame foil` : ''}`;
+    if (indigoBoxTier.assumedBeyondTable) {
+      pricingWarnings.push(`Needed frames exceed the wired 15K box table, so the calculator is assuming the last available tier rate continues above ${BOX_15K_TIERS[BOX_15K_TIERS.length - 1].maxFrames.toLocaleString()} frames.`);
+    }
+  } else if (indigoFlatTier) {
+    printCharge = neededUnits * indigoFlatTier.flatFramePrice;
+    uvCharge = $('hasUV').checked ? neededUnits * indigoFlatTier.uvExtra : 0;
+    foilCharge = $('hasFoil').checked ? neededUnits * indigoFlatTier.foilExtra : 0;
+    tierLabel = `15K flat tier up to ${indigoFlatTier.maxFrames.toLocaleString()} frames, $${indigoFlatTier.flatFramePrice.toFixed(2)}/frame${$('hasUV').checked ? ` + $${indigoFlatTier.uvExtra.toFixed(2)}/frame UV` : ''}${$('hasFoil').checked ? ` + $${indigoFlatTier.foilExtra.toFixed(2)}/frame foil` : ''}`;
+    if (indigoFlatTier.assumedBeyondTable) {
+      pricingWarnings.push(`Needed frames exceed the wired 15K flat table, so the calculator is assuming the last available tier rate continues above ${BOX_15K_TIERS[BOX_15K_TIERS.length - 1].maxFrames.toLocaleString()} frames.`);
+    }
+  } else if (boydBoxTier) {
+    printCharge = neededUnits * boydBoxTier.framePrice;
+    tierLabel = `Boyd box tier up to ${boydBoxTier.maxFrames.toLocaleString()} frames, $${boydBoxTier.framePrice.toFixed(2)}/frame`;
+    if ($('hasUV').checked || $('hasFoil').checked) {
+      pricingWarnings.push('Boyd box table currently only includes base frame pricing. No separate Boyd UV or foil adders were provided yet, so those extras are not being charged here.');
+    }
+    if (boydBoxTier.assumedBeyondTable) {
+      pricingWarnings.push(`Needed frames exceed the wired Boyd box table, so the calculator is assuming the last available tier rate continues above ${BOX_BOYD_TIERS[BOX_BOYD_TIERS.length - 1].maxFrames.toLocaleString()} frames.`);
+    }
+  }
+
+  const material = $('material').value || '';
+  if (material === 'Holo BOPP') {
+    materialCharge = printCharge * 0.30;
+  }
+
+  const lamination = $('lamination').value;
+  if (lamination === 'Soft Touch') {
+    laminationCharge = printCharge * 0.10;
+  } else if (lamination === 'Holo') {
+    laminationCharge = 20;
+  } else if (['Gloss', 'Matte', 'None', 'Coating', ''].includes(lamination)) {
+    laminationCharge = 0;
+  }
+
+  const doubleSidedPercent = $('doubleSided')?.checked ? getDoubleSidedPercent(mode) : 0;
+  doubleSidedCharge = printCharge * doubleSidedPercent;
+
+  const total = rates.setup + printCharge + materialCharge + (neededUnits * rates.cut) + laminationCharge + uvCharge + foilCharge + pouchCharge + doubleSidedCharge;
+
+  return {
+    setup: rates.setup,
+    print: printCharge,
+    material: materialCharge,
+    cut: neededUnits * rates.cut,
+    lamination: laminationCharge,
+    uv: uvCharge,
+    foil: foilCharge,
+    pouching: pouchCharge,
+    doubleSided: doubleSidedCharge,
+    billableUnits,
+    tierLabel,
+    total,
+    warnings: pricingWarnings,
+    awaitingPricingTable
+  };
+}
+
+function renderSummary({ mode, profile, material, footprint, fitsPerUnit, neededUnits, modeLabel, explanation, warnings, pricing }) {
+  $('summaryTitle').textContent = $('productType').value || 'Pricing ready';
+  $('calcModeBadge').textContent = modeLabel;
+  const finishSelections = [];
+  if (material && material !== '—') finishSelections.push(material);
+  const lamination = $('lamination')?.value;
+  if (lamination && lamination !== 'None') finishSelections.push(lamination + ' lamination');
+  if ($('hasUV')?.checked) finishSelections.push('UV');
+  if ($('hasFoil')?.checked) finishSelections.push(mode === '6k-pouch' && $('pouchFoilPasses')?.value === '2' ? 'Foil (2 pass)' : 'Foil');
+  if ($('doubleSided')?.checked && getDoubleSidedPercent(mode) > 0) finishSelections.push('Double-sided print');
+  $('selectionBrief').textContent = finishSelections.length ? finishSelections.join(' • ') : 'Base material only';
+
+  $('priceTotal').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.total);
+  const qty = toNumber('quantity');
+  $('pricePerPieceLabel').textContent = mode === '6k-label' ? 'Price per label' : mode === '6k-pouch' ? 'Price per pouch' : mode === '15k-booklet' ? 'Price per booklet' : 'Price per piece';
+  $('pricePerPiece').textContent = pricing.awaitingPricingTable ? '—' : qty > 0 ? formatMoney(pricing.total / qty) : '—';
+
+  const fitExplanation = $('fitExplanation');
+  fitExplanation.style.display = explanation ? '' : 'none';
+  fitExplanation.textContent = explanation;
+
+  const summaryWarnings = $('summaryWarnings');
+  const estimatorNotes = $('estimatorNotes')?.value?.trim() || '';
+  const allWarnings = [...warnings, ...(pricing.warnings || [])];
+  if (estimatorNotes) allWarnings.push(`Estimator notes: ${estimatorNotes}`);
+  summaryWarnings.style.display = allWarnings.length ? '' : 'none';
+  summaryWarnings.innerHTML = allWarnings.map(item => `• ${item}`).join('<br>');
+}
+
+function persistRatesAndRecalc() {
+  const rateIds = ['rate_setup','rate_print','rate_cut','rate_lamination','rate_uv','rate_foil','rate_pouching'];
+  const payload = {};
+  rateIds.forEach(id => {
+    const el = $(id);
+    if (el) payload[id] = el.value;
+  });
+  localStorage.setItem(RATE_STORAGE_KEY, JSON.stringify(payload));
+  calculateEstimate();
+}
+
+function loadSavedRates() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RATE_STORAGE_KEY) || '{}');
+    Object.entries(saved).forEach(([id, value]) => {
+      const el = $(id);
+      if (el) el.value = value;
+    });
+  } catch (error) {
+    console.warn('Could not load saved pricing rates', error);
+  }
+}
+
+function resetRateInputs() {
+  ['rate_setup','rate_print','rate_cut','rate_lamination','rate_uv','rate_foil','rate_pouching'].forEach(id => {
+    const el = $(id);
+    if (el) el.value = '0';
+  });
+  localStorage.removeItem(RATE_STORAGE_KEY);
+  calculateEstimate();
+}
+</script>
+</body>
+</html>

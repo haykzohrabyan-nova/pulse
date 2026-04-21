@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QC Checkout — Bazaar Print</title>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="qc-container">
+  <div class="qc-header">
+    <h2>🔍 Quality Control Checkout</h2>
+  </div>
+
+  <!-- Order Search -->
+  <div class="card qc-search-section" id="searchSection">
+    <h3 style="margin-bottom:14px;font-size:15px;font-weight:700;">Find Order for QC</h3>
+    <div style="display:grid;gap:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="ci-btn ci-na selected" id="qcFilterQueue" onclick="setQcSearchFilter('queue')">QC Queue</button>
+        <button type="button" class="ci-btn" id="qcFilterFailed" onclick="setQcSearchFilter('failed')">QC Failed</button>
+        <button type="button" class="ci-btn" id="qcFilterDone" onclick="setQcSearchFilter('done')">Done</button>
+        <button type="button" class="ci-btn" id="qcFilterAll" onclick="setQcSearchFilter('all')">All Open</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="field" style="flex:1;">
+          <label>Search by Order ID or Customer Name</label>
+          <input type="text" id="qcSearch" placeholder="e.g. 17919_1 or Green Leaf..." oninput="searchOrders()">
+        </div>
+      </div>
+    </div>
+    <div id="searchResults" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- QC Form (shown after selecting an order) -->
+  <div id="qcFormSection" style="display:none;">
+    <!-- Order Info Banner -->
+    <div class="card qc-order-banner" id="orderBanner"></div>
+
+    <!-- Checklist -->
+    <div class="card qc-checklist-card">
+      <h3 class="section-title">✅ QC Checklist</h3>
+      <div class="checklist" id="checklist">
+        <!-- Items rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Observations & Verdict -->
+    <div class="card">
+      <h3 class="section-title">📋 QC Assessment</h3>
+      <div class="form-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field">
+          <label>QC Verdict *</label>
+          <div class="verdict-buttons">
+            <button class="verdict-btn verdict-pass" id="verdictPass" onclick="setVerdict('pass')">✅ PASS</button>
+            <button class="verdict-btn verdict-fail" id="verdictFail" onclick="setVerdict('fail')">❌ FAIL</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>QC Inspector Name *</label>
+          <input type="text" id="qcInspector" placeholder="Your name">
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>QC Notes</label>
+        <textarea id="qcNotes" rows="3" placeholder="Any observations, issues, or comments..."></textarea>
+      </div>
+
+      <!-- Fail Options -->
+      <div id="failOptions" style="display:none;margin-top:16px;padding:16px;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;">
+        <h4 style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:12px;">❌ QC Failed — Required Actions</h4>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Failure Reason(s)</label>
+          <div class="fail-reasons">
+            <label class="cb-row"><input type="checkbox" value="version-wrong"> Wrong version / incorrect artwork</label>
+            <label class="cb-row"><input type="checkbox" value="print-quality"> Print quality issue (banding, smear, color off)</label>
+            <label class="cb-row"><input type="checkbox" value="color-accuracy"> Color accuracy fail (out of spec)</label>
+            <label class="cb-row"><input type="checkbox" value="quantity-short"> Quantity short</label>
+            <label class="cb-row"><input type="checkbox" value="finishing-issue"> Finishing defect (lamination, UV, foil)</label>
+            <label class="cb-row"><input type="checkbox" value="cutting-off"> Cutting/die accuracy off</label>
+            <label class="cb-row"><input type="checkbox" value="damage"> Physical damage</label>
+            <label class="cb-row"><input type="checkbox" value="other-fail"> Other</label>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Create Reprint / Shortage Ticket?</label>
+          <label class="cb-row"><input type="checkbox" id="createReprintCheck" onchange="toggleReprintQty()"> Yes — create reprint ticket</label>
+        </div>
+        <div id="reprintQtySection" style="display:none;">
+          <div class="field">
+            <label>Reprint Quantity</label>
+            <input type="number" id="reprintQtyInput" min="1" placeholder="e.g. 500">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="save-bar">
+      <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
+      <button class="btn btn-primary" id="submitQCBtn" onclick="submitQC()">Submit QC Result</button>
+    </div>
+  </div>
+
+  <!-- Recent QC Log -->
+  <div class="card" style="margin-top:24px;">
+    <h3 class="section-title">📜 Recent QC Activity</h3>
+    <div id="recentQCLog"></div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('qc-checkout');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'QC Checkout' }]);
+initAuth('qc-checkout');
+
+document.getElementById('page-styles').textContent = `
+  .qc-container { max-width: 900px; margin: 0 auto; padding: 24px; }
+  .qc-header { margin-bottom: 20px; }
+  .qc-header h2 { font-size: 22px; font-weight: 700; }
+  .qc-search-section { margin-bottom: 16px; }
+  .section-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .qc-order-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #e0edff; border-color: #bfdbfe; }
+  .banner-info { flex: 1; }
+  .banner-id { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .banner-customer { font-size: 16px; font-weight: 700; }
+  .banner-details { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  .search-result-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; cursor: pointer; transition: all 0.15s; background: var(--card); }
+  .search-result-item:hover { background: #e0edff; border-color: var(--accent); }
+  .sri-id { font-weight: 700; color: var(--accent); min-width: 70px; }
+  .sri-customer { font-size: 14px; font-weight: 600; flex: 1; }
+  .sri-product { font-size: 12px; color: var(--text-muted); flex: 1; }
+
+  .qc-checklist-card { margin-bottom: 16px; }
+  .checklist { display: flex; flex-direction: column; gap: 0; }
+  .checklist-item { display: flex; align-items: flex-start; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .checklist-item:last-child { border-bottom: none; }
+  .ci-left { flex: 1; }
+  .ci-label { font-weight: 600; font-size: 14px; }
+  .ci-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .ci-verdict { display: flex; gap: 8px; }
+  .ci-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; background: var(--card); transition: all 0.15s; }
+  .ci-btn:hover { opacity: 0.9; }
+  .ci-btn.ci-pass.selected { background: var(--green); color: white; border-color: var(--green); }
+  .ci-btn.ci-fail.selected { background: var(--red); color: white; border-color: var(--red); }
+  .ci-btn.ci-na.selected { background: var(--text-muted); color: white; border-color: var(--text-muted); }
+  .ci-notes { margin-top: 6px; }
+  .ci-notes input { font-size: 12px; padding: 4px 8px; }
+
+  .verdict-buttons { display: flex; gap: 10px; margin-top: 8px; }
+  .verdict-btn { flex: 1; padding: 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 18px; font-weight: 800; cursor: pointer; transition: all 0.15s; background: var(--card); }
+  .verdict-pass.selected { background: var(--green); color: white; border-color: var(--green); }
+  .verdict-fail.selected { background: var(--red); color: white; border-color: var(--red); }
+  .fail-reasons { display: flex; flex-direction: column; gap: 6px; }
+  .cb-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .cb-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
+  .save-bar { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--border); }
+  .field { display: flex; flex-direction: column; }
+
+  .log-entry { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-icon { font-size: 16px; }
+  .log-body { flex: 1; }
+  .log-title { font-weight: 600; }
+  .log-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+`;
+
+const QC_CHECKLIST_ITEMS = [
+  { id: 'version', label: 'Version / Artwork Correct', desc: 'The correct artwork file was printed — no wrong version, old file, or missing design elements.' },
+  { id: 'print-quality', label: 'Print Quality', desc: 'No banding, ink smear, streaks, or missing colors. Sharp registration.' },
+  { id: 'color-accuracy', label: 'Color Accuracy', desc: 'Colors match the approved proof or reference. Pantone/CMYK values within tolerance.' },
+  { id: 'quantity', label: 'Quantity Count', desc: 'Final count matches the ordered quantity (within acceptable overrun/underrun).' },
+  { id: 'finishing', label: 'Finishing Quality', desc: 'Lamination uniform, no bubbles or peeling. UV/foil applied correctly. No delamination.' },
+  { id: 'cutting', label: 'Cutting / Die Accuracy', desc: 'Cut lines accurate, die aligned correctly. No overcut or undercut. Clean edges.' },
+];
+
+let selectedOrderDbId = null;
+let selectedOrder = null;
+let currentVerdict = null;
+let checklistResults = {}; // { itemId: 'pass'|'fail'|'na' }
+let qcSearchFilter = 'queue';
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  renderChecklist();
+  await loadRecentQCLog();
+
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order');
+  if (orderId) {
+    const order = await getOrderByOrderId(orderId);
+    if (order) selectOrder(order);
+  }
+
+  onDBUpdate(async (data) => {
+    if (data.store === 'activity_log') loadRecentQCLog();
+  });
+});
+
+// ── Search ────────────────────────────────────────────────
+function setQcSearchFilter(filter) {
+  qcSearchFilter = filter;
+  ['queue','failed','done','all'].forEach(key => {
+    const el = document.getElementById(`qcFilter${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+    if (el) el.classList.toggle('selected', key === filter);
+  });
+  searchOrders();
+}
+
+async function searchOrders() {
+  const q = document.getElementById('qcSearch').value.trim().toLowerCase();
+  const results = document.getElementById('searchResults');
+
+  const allOrders = await getAllOrders();
+  let filtered = allOrders.filter(o => {
+    if (qcSearchFilter === 'queue') return o.status === 'qc-checkout';
+    if (qcSearchFilter === 'failed') return o.status === 'qc-failed';
+    if (qcSearchFilter === 'done') return ['ready-to-ship','completed','shipped','received'].includes(o.status);
+    return !['shipped', 'received', 'completed'].includes(o.status);
+  });
+
+  if (q) {
+    filtered = filtered.filter(o => {
+      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }
+
+  filtered = filtered.slice(0, 8);
+
+  if (filtered.length === 0) {
+    results.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No orders found.</div>';
+    return;
+  }
+
+  results.innerHTML = filtered.map(o => `
+    <div class="search-result-item" onclick="selectOrder(${JSON.stringify(o).replace(/"/g, '&quot;')})">
+      <span class="sri-id">#${o.orderId}</span>
+      ${renderStatusBadge(o.status)}
+      <span class="sri-customer">${o.customer || o.customerName}</span>
+      <span class="sri-product">${o.productType || ''}</span>
+      <span style="font-size:12px;color:var(--text-muted);">${o.dueDate ? formatDate(o.dueDate) : ''}</span>
+    </div>
+  `).join('');
+}
+
+async function selectOrder(orderOrId) {
+  if (typeof orderOrId === 'number') {
+    const all = await getAllOrders();
+    selectedOrder = all.find(o => o.id === orderOrId);
+  } else {
+    selectedOrder = orderOrId;
+  }
+  if (!selectedOrder) return;
+  selectedOrderDbId = selectedOrder.id;
+
+  document.getElementById('searchSection').style.display = 'none';
+  document.getElementById('qcFormSection').style.display = 'block';
+
+  // Render banner
+  const dueClass = selectedOrder.dueDate && new Date(selectedOrder.dueDate) < new Date() ? 'color:var(--red)' : '';
+  const priorFailBanner = selectedOrder.status === 'qc-failed'
+    ? `<div style="background:#fde8e8;border:1.5px solid #dc2626;border-radius:8px;padding:10px 12px;margin-top:10px;">
+        <strong style="color:#7f1d1d;">⚠️ Previously Failed QC</strong>
+        <div style="font-size:12px;color:#7f1d1d;margin-top:3px;">
+          This order failed QC${selectedOrder.qcFailedAt ? ` on ${formatDate(selectedOrder.qcFailedAt)}` : ''}.
+          Only submit PASS if defects have been physically corrected and re-inspected.
+        </div>
+      </div>`
+    : '';
+  document.getElementById('orderBanner').innerHTML = `
+    <div class="banner-info">
+      <div class="banner-id">#${selectedOrder.orderId}</div>
+      <div class="banner-customer">${selectedOrder.customerName}</div>
+      <div class="banner-details">${selectedOrder.productType || ''} · ${selectedOrder.material || ''} · Qty: ${(selectedOrder.quantity || 0).toLocaleString()} units</div>
+      ${selectedOrder.dueDate ? `<div style="font-size:12px;${dueClass}">Due: ${formatDate(selectedOrder.dueDate)}</div>` : ''}
+      ${selectedOrder.specialNotes ? `<div style="font-size:12px;color:var(--text);margin-top:4px;">Notes: ${selectedOrder.specialNotes}</div>` : ''}
+      ${priorFailBanner}
+    </div>
+    <div>
+      ${renderStatusBadge(selectedOrder.status)}
+      <div style="margin-top:8px;">
+        <button class="btn btn-sm" onclick="clearQCForm()">Change Order</button>
+      </div>
+    </div>
+  `;
+
+  // Reset form
+  checklistResults = {};
+  currentVerdict = null;
+  document.getElementById('verdictPass').classList.remove('selected');
+  document.getElementById('verdictFail').classList.remove('selected');
+  document.getElementById('qcNotes').value = '';
+  document.getElementById('qcInspector').value = '';
+  document.getElementById('failOptions').style.display = 'none';
+  document.getElementById('createReprintCheck').checked = false;
+  document.getElementById('reprintQtySection').style.display = 'none';
+  document.querySelectorAll('.fail-reasons input[type=checkbox]').forEach(cb => cb.checked = false);
+  resetChecklistUI();
+}
+
+// ── Checklist ─────────────────────────────────────────────
+function renderChecklist() {
+  const container = document.getElementById('checklist');
+  container.innerHTML = QC_CHECKLIST_ITEMS.map(item => `
+    <div class="checklist-item" id="ci-${item.id}">
+      <div class="ci-left">
+        <div class="ci-label">${item.label}</div>
+        <div class="ci-desc">${item.desc}</div>
+        <div class="ci-notes" style="margin-top:6px;display:none;" id="ci-notes-${item.id}">
+          <input type="text" placeholder="Notes for this item..." id="ci-note-${item.id}">
+        </div>
+      </div>
+      <div class="ci-verdict">
+        <button class="ci-btn ci-pass" id="ci-pass-${item.id}" onclick="setCheckItem('${item.id}','pass')">✅ Pass</button>
+        <button class="ci-btn ci-fail" id="ci-fail-${item.id}" onclick="setCheckItem('${item.id}','fail')">❌ Fail</button>
+        <button class="ci-btn ci-na" id="ci-na-${item.id}" onclick="setCheckItem('${item.id}','na')">N/A</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function resetChecklistUI() {
+  QC_CHECKLIST_ITEMS.forEach(item => {
+    ['pass', 'fail', 'na'].forEach(v => document.getElementById(`ci-${v}-${item.id}`)?.classList.remove('selected'));
+    document.getElementById(`ci-notes-${item.id}`).style.display = 'none';
+  });
+}
+
+function setCheckItem(itemId, verdict) {
+  checklistResults[itemId] = verdict;
+  ['pass', 'fail', 'na'].forEach(v => {
+    const btn = document.getElementById(`ci-${v}-${itemId}`);
+    if (btn) btn.classList.toggle('selected', v === verdict);
+  });
+  const notesRow = document.getElementById(`ci-notes-${itemId}`);
+  if (notesRow) notesRow.style.display = verdict === 'fail' ? 'block' : 'none';
+
+  // Auto-set verdict based on any fail
+  const hasAnyFail = Object.values(checklistResults).some(v => v === 'fail');
+  const allChecked = QC_CHECKLIST_ITEMS.every(item => checklistResults[item.id]);
+  if (hasAnyFail) setVerdict('fail');
+  else if (allChecked) setVerdict('pass');
+}
+
+function setVerdict(v) {
+  currentVerdict = v;
+  document.getElementById('verdictPass').classList.toggle('selected', v === 'pass');
+  document.getElementById('verdictFail').classList.toggle('selected', v === 'fail');
+  document.getElementById('failOptions').style.display = v === 'fail' ? 'block' : 'none';
+}
+
+function toggleReprintQty() {
+  const checked = document.getElementById('createReprintCheck').checked;
+  document.getElementById('reprintQtySection').style.display = checked ? 'block' : 'none';
+}
+
+// ── Submit QC ─────────────────────────────────────────────
+async function submitQC() {
+  if (!selectedOrder) { alert('Please select an order first.'); return; }
+  if (!currentVerdict) { alert('Please set a QC verdict (Pass or Fail).'); return; }
+  const inspector = document.getElementById('qcInspector').value.trim();
+  if (!inspector) { alert('Please enter your name as QC Inspector.'); return; }
+
+  const btn = document.getElementById('submitQCBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const notes = document.getElementById('qcNotes').value.trim();
+
+    // Collect checklist results
+    const checklistData = QC_CHECKLIST_ITEMS.map(item => ({
+      id: item.id,
+      label: item.label,
+      verdict: checklistResults[item.id] || 'not-checked',
+      notes: document.getElementById(`ci-note-${item.id}`)?.value || ''
+    }));
+
+    // Collect fail reasons
+    const failReasons = currentVerdict === 'fail'
+      ? Array.from(document.querySelectorAll('.fail-reasons input[type=checkbox]:checked')).map(cb => cb.value)
+      : [];
+
+    // Build QC record
+    const qcRecord = {
+      orderId: selectedOrder.orderId,
+      verdict: currentVerdict,
+      inspector,
+      notes,
+      checklist: checklistData,
+      failReasons,
+      timestamp: new Date().toISOString()
+    };
+
+    // Guard: if order previously failed QC, require explicit confirmation before passing
+    if (currentVerdict === 'pass' && selectedOrder.status === 'qc-failed') {
+      const confirmed = confirm(
+        `⚠️ This order previously FAILED QC.\n\n` +
+        `Only mark PASS if all defects have been physically corrected and re-inspected.\n\n` +
+        `Confirm: defects have been resolved and the product is ready to ship?`
+      );
+      if (!confirmed) {
+        btn.disabled = false;
+        btn.textContent = 'Submit QC Result';
+        return;
+      }
+    }
+
+    if (currentVerdict === 'pass') {
+      await updateOrder(selectedOrderDbId, {
+        status: 'ready-to-ship',
+        qcStatus: 'passed',
+        qcRecord,
+        qcPassedAt: new Date().toISOString(),
+        qcInspector: inspector
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'qc-pass',
+        message: `QC PASSED by ${inspector}. Order moved to Ready to Ship.`,
+        by: inspector
+      });
+      showPageToast(`✅ QC Passed — Order #${selectedOrder.orderId} is now Ready to Ship`, 'success', 6000);
+    } else {
+      // Fail path
+      await updateOrder(selectedOrderDbId, {
+        status: 'qc-failed',
+        qcRecord,
+        qcFailedAt: new Date().toISOString(),
+        qcInspector: inspector,
+        qcFailReasons: failReasons
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'qc-fail',
+        message: `QC FAILED by ${inspector}. Reasons: ${failReasons.join(', ') || 'See notes'}. ${notes}`,
+        by: inspector
+      });
+
+      // Create reprint if requested
+      if (document.getElementById('createReprintCheck').checked) {
+        const reprintQty = parseInt(document.getElementById('reprintQtyInput').value) || 0;
+        if (reprintQty > 0) {
+          const reason = failReasons[0] || 'qc-fail';
+          const reprintNotes = `QC Failed - ${failReasons.join(', ')}. ${notes}`;
+          const recreatedOrder = await createReprintOrderFromSource(selectedOrder, {
+            quantity: reprintQty,
+            reasonLabel: reason,
+            notes: reprintNotes,
+            requestedBy: inspector,
+          });
+          await addReprint({
+            parentOrderId: selectedOrder.orderId,
+            linkedOrderId: recreatedOrder.orderId,
+            reason,
+            quantity: reprintQty,
+            notes: reprintNotes,
+            status: 'queued-in-dashboard',
+            requestedBy: inspector
+          });
+          await addActivity({
+            orderId: recreatedOrder.orderId,
+            type: 'create',
+            message: `Recreated from #${selectedOrder.orderId} after QC fail`,
+            by: inspector
+          });
+        }
+      }
+
+      showPageToast(`❌ QC Failed — Order #${selectedOrder.orderId} returned to production queue`, 'error', 6000);
+    }
+
+    await loadRecentQCLog();
+    clearQCForm();
+  } catch (err) {
+    console.error(err);
+    alert('Error submitting QC: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit QC Result';
+  }
+}
+
+function clearQCForm() {
+  selectedOrderDbId = null;
+  selectedOrder = null;
+  currentVerdict = null;
+  checklistResults = {};
+  document.getElementById('qcFormSection').style.display = 'none';
+  document.getElementById('searchSection').style.display = 'block';
+  document.getElementById('qcSearch').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+  resetChecklistUI();
+}
+
+// ── Recent QC Log ─────────────────────────────────────────
+async function loadRecentQCLog() {
+  const all = await getAllActivity();
+  const qcLogs = all
+    .filter(a => a.type === 'qc-pass' || a.type === 'qc-fail')
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 20);
+
+  const container = document.getElementById('recentQCLog');
+  if (qcLogs.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No QC records yet.</div>';
+    return;
+  }
+
+  container.innerHTML = qcLogs.map(log => `
+    <div class="log-entry">
+      <div class="log-icon">${log.type === 'qc-pass' ? '✅' : '❌'}</div>
+      <div class="log-body">
+        <div class="log-title">Order #${log.orderId} — ${log.type === 'qc-pass' ? 'PASSED' : 'FAILED'}</div>
+        <div style="font-size:13px;color:var(--text-muted);">${log.message}</div>
+        <div class="log-meta">${formatDateTime(log.timestamp)} · by ${log.by}</div>
+      </div>
+      <div>
+        <a href="production-manager.html?order=${log.orderId}" class="btn btn-sm">View Order</a>
+      </div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>

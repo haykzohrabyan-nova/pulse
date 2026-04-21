@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Dashboard — Bazaar Print</title>
+  <script src="shared.js?v=20260417-v18"></script>
+  <script src="auth.js?v=20260417-v18"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Header: Filters + Stats -->
+<div class="dash-header">
+  <div class="filter-row">
+    <div class="dash-facility-toggle">
+      <button class="tab active" data-filter="all" onclick="setFilter('all')">All</button>
+      <button class="tab tab-6k" data-filter="6k" onclick="setFilter('6k')">6K Line</button>
+      <button class="tab tab-15k" data-filter="15k" onclick="setFilter('15k')">15K Line</button>
+      <button class="tab tab-boyd" data-filter="boyd" onclick="setFilter('boyd')">Boyd St</button>
+    </div>
+    <div class="view-toggle">
+      <button class="vbtn active" data-view="board" onclick="setView('board')" title="Board View">▦ Board</button>
+      <button class="vbtn" data-view="table" onclick="setView('table')" title="Table View">☰ Table</button>
+      <button class="vbtn" data-view="orders" onclick="setView('orders')" title="Orders View">📋 Orders</button>
+    </div>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+</div>
+
+<!-- Board View (Kanban) -->
+<div class="board-container" id="boardContainer"></div>
+
+<!-- Orders View -->
+<div id="ordersContainer" style="display:none;padding:16px 24px;"></div>
+
+<!-- Table View -->
+<div class="table-container" id="tableContainer" style="display:none;">
+  <div style="padding:10px 0 10px 0;display:flex;gap:10px;align-items:center;">
+    <input id="tableSearch" type="text" placeholder="🔍 Search order # or customer..." oninput="onTableSearch()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:280px;outline:none;">
+    <span id="tableSearchCount" style="font-size:12px;color:#6b7280;"></span>
+    <button onclick="clearTableSearch()" id="tableSearchClear" style="display:none;font-size:12px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;">✕ Clear</button>
+  </div>
+  <table class="data-table" id="ordersTable">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- Upcoming Queue -->
+<div class="upcoming-section" id="upcomingSection">
+  <div class="section-header" onclick="toggleUpcoming()">
+    <h3>📋 Upcoming Jobs (Not Yet in Production)</h3>
+    <span id="upcomingToggle">▼</span>
+  </div>
+  <div class="upcoming-body" id="upcomingBody"></div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:700px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 id="modalTitle">Order Details</h2>
+      <button class="btn btn-sm" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+  injectThemeCSS();
+  document.getElementById('nav').innerHTML = renderNav('dashboard');
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Dashboard' }]);
+  initAuth('dashboard');
+
+  document.getElementById('page-styles').textContent = `
+    /* ── Header ── */
+    .dash-header { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+    .filter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .dash-facility-toggle { display: flex; gap: 4px; }
+    .view-toggle { display: flex; gap: 4px; }
+    .vbtn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; font-size: 13px; color: var(--text-muted); }
+    .vbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .tab.tab-6k.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .tab.tab-15k.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .tab.tab-boyd.active { background: #d97706; color: #fff; border-color: #d97706; }
+    .stats-bar { display: flex; gap: 20px; flex-wrap: wrap; }
+    .stat-item { text-align: center; cursor: pointer; padding: 6px 12px; border-radius: var(--radius); transition: all 0.15s; user-select: none; }
+    .stat-item:hover { background: var(--card-hover); }
+    .stat-item.stat-active { background: var(--accent); }
+    .stat-item.stat-active .stat-value, .stat-item.stat-active .stat-label { color: #fff !important; }
+    .stat-value { font-size: 22px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ── Board (Kanban) ── */
+    .board-container { padding: 16px 12px; overflow-x: auto; height: calc(100vh - 220px); }
+    .line-section { margin-bottom: 24px; }
+    .line-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 12px; border-radius: var(--radius); font-weight: 700; font-size: 14px; }
+    .line-header .line-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .line-header .job-count { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: auto; }
+    .stages-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; min-height: 120px; }
+    .stage-col { min-width: 180px; max-width: 220px; flex-shrink: 0; }
+    .stage-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 4px 8px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .stage-header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .stage-header .stage-count { background: var(--border); border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+    .stage-load-bar { height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; width: 100%; }
+    .stage-load-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .stage-load-label { font-size: 9px; color: var(--text-muted); font-weight: 500; }
+    .stage-cards { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Job Card ── */
+    .job-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .job-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .job-card.line-6k { border-left: 3px solid #2563eb; }
+    .job-card.line-15k { border-left: 3px solid #7c3aed; }
+    /* Queue visualization */
+    .job-card.card-active { background: #f0fdf4; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.20); }
+    .job-card.card-hold { background: #fff5f5; border-color: var(--red); }
+    .job-card.card-pending { background: #fffbeb; border-color: #f59e0b; opacity: 0.90; }
+    .card-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .job-card.line-boyd { border-left: 3px solid #d97706; }
+    .job-card.overdue { border-left-color: var(--red) !important; background: #fff5f5; }
+    .job-card .card-order { font-weight: 700; font-size: 13px; color: var(--accent); }
+    .job-card .card-customer { font-size: 11px; color: var(--text); margin-top: 2px; }
+    .job-card .card-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .job-card .card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 10px; }
+    .job-card .card-qty { color: var(--text-muted); }
+    .job-card .card-due { padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+    .job-card .card-due.due-ok { background: #e0edff; color: #1d4ed8; }
+    .job-card .card-due.due-soon { background: #fef3cd; color: #92600a; }
+    .job-card .card-due.due-overdue { background: #fde8e8; color: #b91c1c; }
+    .job-card .card-est { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+    .job-card .card-est strong { color: var(--text); }
+    .job-card .card-die { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; padding: 1px 5px; border-radius: 6px; background: rgba(22,163,74,0.1); color: #16a34a; }
+    .job-card .card-die.no-die { background: rgba(220,38,38,0.1); color: #dc2626; }
+    .job-card .card-line-tag { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 6px; }
+    .job-card .card-line-tag.tag-6k { background: rgba(37,99,235,0.12); color: #2563eb; }
+    .job-card .card-line-tag.tag-15k { background: rgba(124,58,237,0.12); color: #7c3aed; }
+    .job-card .card-line-tag.tag-boyd { background: rgba(217,119,6,0.12); color: #d97706; }
+
+    /* ── Application capacity bar ── */
+    .app-capacity { margin: 8px 0; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+    .app-capacity-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .app-capacity-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .app-capacity-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .app-capacity-text { font-size: 11px; margin-top: 2px; color: var(--text); }
+
+    /* ── Upcoming section ── */
+    .upcoming-section { border-top: 2px solid var(--border); background: #fafbfc; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; cursor: pointer; user-select: none; }
+    .section-header h3 { font-size: 14px; color: var(--text-muted); }
+    .upcoming-body { padding: 0 20px 16px; display: none; }
+    .upcoming-body.open { display: block; }
+    .upcoming-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+
+    /* ── Table view ── */
+    .table-container { padding: 0; overflow: auto; height: calc(100vh - 220px); }
+    .data-table td { white-space: nowrap; font-size: 12px; }
+    .line-dot-sm { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .current-stage { font-weight: 600; }
+  `;
+
+  let currentFilter = 'all';
+  let currentView = 'board';
+  let upcomingOpen = false;
+  let statusFilter = null; // null = all, or 'in-production', 'on-hold', 'overdue', 'ready-to-ship', 'application'
+
+  function setFilter(f) {
+    currentFilter = f;
+    statusFilter = null; // reset status filter when switching lines
+    document.querySelectorAll('.dash-facility-toggle .tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+    refresh();
+  }
+
+  function setStatusFilter(sf) {
+    statusFilter = statusFilter === sf ? null : sf; // toggle
+    refresh();
+  }
+
+  function setView(v) {
+    currentView = v;
+    document.querySelectorAll('.vbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    document.getElementById('boardContainer').style.display = v === 'board' ? '' : 'none';
+    document.getElementById('tableContainer').style.display = v === 'table' ? '' : 'none';
+    document.getElementById('ordersContainer').style.display = v === 'orders' ? '' : 'none';
+    refresh();
+  }
+
+  function toggleUpcoming() {
+    upcomingOpen = !upcomingOpen;
+    document.getElementById('upcomingBody').classList.toggle('open', upcomingOpen);
+    document.getElementById('upcomingToggle').textContent = upcomingOpen ? '▲' : '▼';
+  }
+
+  function dueClass(dueDate) {
+    if (!dueDate) return 'due-ok';
+    const diff = new Date(dueDate) - new Date();
+    if (diff < 0) return 'due-overdue';
+    if (diff < 2 * 24 * 60 * 60 * 1000) return 'due-soon';
+    return 'due-ok';
+  }
+
+  function dueLabel(dueDate) {
+    if (!dueDate) return '—';
+    const diff = new Date(dueDate) - new Date();
+    if (diff < 0) return 'OVERDUE';
+    const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    return days + 'd';
+  }
+
+  function getTrackedStepMs(step) {
+    if (!step) return 0;
+    if (typeof step.elapsedMs === 'number' && step.elapsedMs > 0) return step.elapsedMs;
+    const startedAt = step.startedAt || step.startTime;
+    if (!startedAt) return 0;
+    const pausedMs = step.totalPausedMs || step.pausedDuration || 0;
+    const endAt = step.endTime || step.completedAt || ((step.status === 'paused' && step.pausedAt) ? step.pausedAt : null);
+    const endMs = endAt ? new Date(endAt).getTime() : Date.now();
+    return Math.max(0, endMs - new Date(startedAt).getTime() - pausedMs);
+  }
+
+  function getOrderCurrentTimer(order) {
+    if (!order) return null;
+    if (order.status === 'prepress-active' && order.prepressStartedAt) {
+      return { machine: 'Prepress', ms: Math.max(0, Date.now() - new Date(order.prepressStartedAt).getTime()) };
+    }
+    const step = order.workflowSteps?.[order.currentStep || 0];
+    if (step && step.startedAt && ['in-production','qc-checkout','ready-to-ship'].includes(order.status)) {
+      return { machine: step.machine || 'Current Step', ms: getTrackedStepMs(step) };
+    }
+    return null;
+  }
+
+  function getOrderTotalTrackedMs(order) {
+    return (order?.workflowSteps || []).reduce((sum, step) => sum + getTrackedStepMs(step), 0);
+  }
+
+  function fmtHours(totalHours) {
+    if (!totalHours || totalHours <= 0) return '';
+    const h = Math.floor(totalHours);
+    const m = Math.round((totalHours - h) * 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
+  function renderJobCard(order, line, subProgress) {
+    const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
+    // Production estimate — hours format
+    const steps = order.workflowSteps || [];
+    const currentIdx = order.currentStep || 0;
+    let totalRemainingHours = 0;
+    for (let i = currentIdx; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.status === 'completed') continue;
+      const mt = calculateMachineTime(s.machine, order);
+      totalRemainingHours += mt ? mt.totalHours : 1;
+    }
+    const estLabel = totalRemainingHours > 0 ? `~${fmtHours(totalRemainingHours)} remaining` : '';
+    // Die info for cutting jobs
+    let dieHTML = '';
+    const hasDieCut = steps.some(s => s.machine && (s.machine.includes('Moll') && s.operation?.includes('Cut') || s.machine.includes('GM Die')));
+    if (hasDieCut) {
+      if (order.dieStatus === 'existing' && order.dieName) {
+        dieHTML = `<span class="card-die">🎯 ${order.dieName}</span>`;
+      } else if (order.dieStatus === 'new-ordered') {
+        dieHTML = `<span class="card-die no-die">⏳ Die ordered</span>`;
+      } else if (!order.dieStatus || order.dieStatus === 'none') {
+        dieHTML = `<span class="card-die no-die">⚠️ No die</span>`;
+      }
+    }
+    // On hold / shortage indicators
+    const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
+    const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
+    const reprintHTML = order.isReprint ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🔁 Recreated from #${order.reprintOfOrderId || '—'}${order.reprintReason ? ` • ${order.reprintReason}` : ''}</div>` : '';
+    const accountManagerIssueHTML = order.status === 'pending-account-manager' ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">⚠ Waiting on ${order.accountManager || 'account manager'}${order.prepressIssueComment ? ` • ${order.prepressIssueComment}` : ''}</div>` : '';
+    const overtimeHTML = order.needsConfirmation || order.status === 'pending-confirmation'
+      ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🕒 ${order.confirmationReason || 'Pending overtime approval'}</div>`
+      : '';
+    const prepressHTML = order.status === 'prepress-active'
+      ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
+      : order.status === 'prepress-paused'
+      ? `<div style="font-size:10px;color:#b45309;margin-top:2px;">⏸ Prepress paused</div>`
+      : order.status === 'pending-account-manager'
+      ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">↩ Sent back to account manager</div>`
+      : order.status === 'prepress'
+      ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
+      : '';
+
+    // Queue visualization classes
+    let queueClass = '';
+    let statusDot = '';
+    if (order.materialShortage) {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (order.status === 'prepress-active' || order.status === 'in-production') {
+      queueClass = 'card-active';
+      statusDot = '<span class="card-status-dot" style="background:#16a34a;"></span>';
+    } else if (order.status === 'on-hold') {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
+    } else if (order.status === 'pending-account-manager') {
+      queueClass = 'card-hold';
+      statusDot = '<span class="card-status-dot" style="background:#dc2626;"></span>';
+    } else if (order.status === 'prepress-paused') {
+      queueClass = 'card-pending';
+      statusDot = '<span class="card-status-dot" style="background:#d97706;"></span>';
+    } else if (['prepress','pending-review','new','waiting-approval'].includes(order.status)) {
+      queueClass = 'card-pending';
+      statusDot = '<span class="card-status-dot" style="background:#2563eb;"></span>';
+    } else if (order.status === 'qc-checkout') {
+      statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
+    } else if (order.status === 'ready-to-ship') {
+      statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
+    }
+
+    const currentTimer = getOrderCurrentTimer(order);
+    const totalTrackedMs = getOrderTotalTrackedMs(order);
+    const timingHTML = (currentTimer || totalTrackedMs > 0)
+      ? `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:${currentTimer ? '#eff6ff' : '#f8fafc'};border:1px solid ${currentTimer ? '#bfdbfe' : '#e2e8f0'};">
+          ${currentTimer ? `<div style="font-size:10px;font-weight:700;color:#1d4ed8;">🟢 On ${currentTimer.machine}: ${formatDuration(currentTimer.ms)}</div>` : ''}
+          <div style="font-size:10px;color:#475569;${currentTimer ? 'margin-top:2px;' : ''}">⏱ Total worked: ${formatDuration(totalTrackedMs || 0)}</div>
+        </div>`
+      : '';
+
+    // Sub-ticket progress bar (for parent orders)
+    let subProgressHTML = '';
+    if (subProgress && subProgress.total > 0) {
+      const pct = Math.round(subProgress.done / subProgress.total * 100);
+      subProgressHTML = `<div style="margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:2px;">
+          <span>🗂 Sub-tickets</span><span>${subProgress.done}/${subProgress.total} done</span>
+        </div>
+        <div style="background:#e5e7eb;height:5px;border-radius:3px;overflow:hidden;">
+          <div style="background:${pct===100?'#16a34a':'#2563eb'};height:5px;border-radius:3px;width:${pct}%;transition:width 0.3s;"></div>
+        </div>
+      </div>`;
+    }
+    // Parent link + batch hint (for sub-tickets)
+    let parentLinkHTML = '';
+    if (order.parentOrderId) {
+      const prog = _subProgressMap[order.parentOrderId];
+      const progText = prog ? ` · ${prog.done}/${prog.total} done` : '';
+      const siblings = (_subProgressMap._siblingMap || {})[order.orderId] || [];
+      const batchText = siblings.length > 0
+        ? `<span style="color:#d97706;"> · 🔄 Batch w/ ${siblings.map(s=>'#'+s.orderId).join(', ')}</span>`
+        : '';
+      parentLinkHTML = `<div style="font-size:10px;color:#2563eb;margin-top:3px;">📎 Order <strong>#${order.parentOrderId}</strong>${progText}${batchText}</div>`;
+    }
+
+    return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="card-order">${statusDot}#${order.orderId}</span>
+        <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+      </div>
+      <div class="card-customer">${order.customerName || order.customer || '—'}</div>
+      <div class="card-desc">${order.productType || order.jobDescription || '—'}</div>
+      ${parentLinkHTML}
+      ${holdHTML}
+      ${shortageHTML}
+      ${reprintHTML}
+      ${accountManagerIssueHTML}
+      ${overtimeHTML}
+      ${prepressHTML}
+      ${timingHTML}
+      <div class="card-meta">
+        <span class="card-qty">${(order.quantity || 0).toLocaleString()} pcs</span>
+        <span class="card-due ${dueClass(order.dueDate)}">${dueLabel(order.dueDate)}</span>
+      </div>
+      ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
+      ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
+      ${subProgressHTML}
+      ${order.status === 'prepress' ? `<button onclick="event.stopPropagation();startPrepressOrder(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Start Prepress</button>` : ''}
+      ${order.status === 'prepress-active' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();pausePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">⏸ Pause</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
+      ${order.status === 'prepress-paused' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();resumePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Resume</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
+    </div>`;
+  }
+
+  // Sub-ticket progress map (orderId -> { total, done }) built during refresh
+  let _subProgressMap = {};
+
+  async function refresh() {
+    const allOrders = await getAllOrders();
+
+    // Build sub-ticket progress map + batch hints
+    _subProgressMap = {};
+    // First pass: group subs by parent
+    const _siblingMap = {}; // orderId -> [sibling orders same parent]
+    allOrders.forEach(o => {
+      if (o.parentOrderId) {
+        if (!_subProgressMap[o.parentOrderId]) _subProgressMap[o.parentOrderId] = { total: 0, done: 0, subs: [] };
+        _subProgressMap[o.parentOrderId].total++;
+        if (['completed','shipped','received','ready-to-ship'].includes(o.status)) _subProgressMap[o.parentOrderId].done++;
+        _subProgressMap[o.parentOrderId].subs.push(o);
+      }
+    });
+    // Second pass: for each sub-ticket, find siblings with same material
+    allOrders.forEach(o => {
+      if (o.parentOrderId && _subProgressMap[o.parentOrderId]) {
+        const siblings = _subProgressMap[o.parentOrderId].subs.filter(s =>
+          s.orderId !== o.orderId && s.material && s.material === o.material &&
+          !['completed','shipped','received','ready-to-ship'].includes(s.status)
+        );
+        if (siblings.length > 0) {
+          _siblingMap[o.orderId] = siblings;
+        }
+      }
+    });
+    // Attach sibling map to sub-progress for card rendering
+    _subProgressMap._siblingMap = _siblingMap;
+
+    // Classify orders by production line
+    const classified = allOrders.map(o => ({ ...o, _line: getProductionLine(o) }));
+
+    // Filter
+    const filtered = classified.filter(o => {
+      if (currentFilter === 'all') return true;
+      return o._line === currentFilter;
+    });
+
+    // Split: active (in production pipeline) vs upcoming (new/waiting)
+    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
+    const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
+      .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
+    const completedRecent = filtered.filter(o => ['shipped', 'waiting-pickup', 'received', 'completed'].includes(o.status))
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
+
+    // ── Stats ──
+    const inProd = activeOrders.filter(o => o.status === 'in-production').length;
+    const onHold = activeOrders.filter(o => o.status === 'on-hold').length;
+    const overdueCount = activeOrders.filter(o => isOverdue(o.dueDate) && o.status !== 'ready-to-ship').length;
+    const readyToShip = activeOrders.filter(o => o.status === 'ready-to-ship').length;
+    // Application dept count
+    const inApplication = activeOrders.filter(o => {
+      const steps = o.workflowSteps || [];
+      const currentStepIdx = o.currentStep || 0;
+      const currentStep = steps[currentStepIdx];
+      return currentStep && currentStep.machine && currentStep.machine.includes('Application');
+    }).length;
+
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item ${statusFilter === 'in-production' ? 'stat-active' : ''}" onclick="setStatusFilter('in-production')"><div class="stat-value" style="color:var(--accent);">${inProd}</div><div class="stat-label">In Production</div></div>
+      <div class="stat-item ${statusFilter === 'on-hold' ? 'stat-active' : ''}" onclick="setStatusFilter('on-hold')"><div class="stat-value" style="color:var(--yellow);">${onHold}</div><div class="stat-label">On Hold</div></div>
+      <div class="stat-item ${statusFilter === 'overdue' ? 'stat-active' : ''}" onclick="setStatusFilter('overdue')"><div class="stat-value" style="color:var(--red);">${overdueCount}</div><div class="stat-label">Overdue</div></div>
+      <div class="stat-item ${statusFilter === 'ready-to-ship' ? 'stat-active' : ''}" onclick="setStatusFilter('ready-to-ship')"><div class="stat-value" style="color:var(--green);">${readyToShip}</div><div class="stat-label">Ready to Ship</div></div>
+      <div class="stat-item ${statusFilter === 'application' ? 'stat-active' : ''}" onclick="setStatusFilter('application')"><div class="stat-value" style="color:var(--purple);">${inApplication}</div><div class="stat-label">In Application</div></div>
+      <div class="stat-item"><div class="stat-value">${upcomingOrders.length}</div><div class="stat-label">Upcoming</div></div>
+    `;
+
+    // Apply status filter
+    let displayOrders = activeOrders;
+    if (statusFilter) {
+      displayOrders = activeOrders.filter(o => {
+        if (statusFilter === 'in-production') return o.status === 'in-production';
+        if (statusFilter === 'on-hold') return o.status === 'on-hold';
+        if (statusFilter === 'overdue') return isOverdue(o.dueDate) && !['completed','ready-to-ship'].includes(o.status);
+        if (statusFilter === 'ready-to-ship') return o.status === 'ready-to-ship';
+        if (statusFilter === 'application') {
+          const steps = o.workflowSteps || [];
+          const cs = steps[o.currentStep || 0];
+          return cs && cs.machine && cs.machine.includes('Application');
+        }
+        return true;
+      });
+    }
+
+    // ── Board View ──
+    if (currentView === 'board') {
+      renderBoard(displayOrders, completedRecent);
+    }
+
+    // ── Table View ──
+    if (currentView === 'table') {
+      renderTable(displayOrders);
+    }
+
+    // ── Orders View ──
+    if (currentView === 'orders') {
+      renderOrders(allOrders);
+    }
+
+    // ── Upcoming Queue ──
+    renderUpcoming(upcomingOrders);
+  }
+
+  function renderBoard(activeOrders, completedRecent) {
+    const linesToShow = currentFilter === 'all' ? ['6k', '15k', 'boyd'] : [currentFilter];
+    let html = '';
+
+    linesToShow.forEach(lineKey => {
+      const lineConfig = PRODUCTION_LINES[lineKey];
+      const lineOrders = activeOrders.filter(o => o._line === lineKey);
+
+      // Build stage buckets
+      const stageBuckets = {};
+      lineConfig.stages.forEach(s => { stageBuckets[s] = []; });
+
+      lineOrders.forEach(order => {
+        const steps = order.workflowSteps || [];
+        const currentStepIdx = order.currentStep || 0;
+        const currentStep = steps[currentStepIdx];
+
+        if (isPrepressStatus(order.status)) {
+          // Prepress queue stays in the Prepress column until Hrach completes it
+          stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
+          stageBuckets['Prepress'].push(order);
+        } else if (order.status === 'ready-to-ship') {
+          stageBuckets['Ready to Ship'] = stageBuckets['Ready to Ship'] || [];
+          stageBuckets['Ready to Ship'].push(order);
+        } else if (order.status === 'qc-checkout' || order.status === 'qc-failed') {
+          stageBuckets['QC'] = stageBuckets['QC'] || [];
+          stageBuckets['QC'].push(order);
+        } else if (currentStep) {
+          const stage = getStageForStep(currentStep, lineKey);
+          // Find matching stage or put in closest match
+          let placed = false;
+          for (const s of lineConfig.stages) {
+            if (stage === s || stage.includes(s) || s.includes(stage)) {
+              stageBuckets[s].push(order);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            // Put in first stage as fallback
+            if (!stageBuckets[stage]) stageBuckets[stage] = [];
+            stageBuckets[stage].push(order);
+          }
+        } else if (order.status === 'pending-review') {
+          // Approved by prepress but no workflow steps yet — place in first production stage
+          const firstProdStage = lineConfig.stages.find(s => s !== 'Prepress') || lineConfig.stages[0];
+          stageBuckets[firstProdStage] = stageBuckets[firstProdStage] || [];
+          stageBuckets[firstProdStage].push(order);
+        } else {
+          // No current step — put in Prepress
+          stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
+          stageBuckets['Prepress'].push(order);
+        }
+      });
+
+      // Add Application capacity bar if this line has application jobs
+      let appCapacityHTML = '';
+      if (stageBuckets['Application'] && stageBuckets['Application'].length > 0) {
+        const appJobs = stageBuckets['Application'];
+        const totalUnits = appJobs.reduce((s, o) => s + (o.quantity || 0), 0);
+        // TODO: get real capacity from config — placeholder 6000/day
+        const dailyCapacity = 6000;
+        const pct = Math.min(100, Math.round((totalUnits / dailyCapacity) * 100));
+        const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--yellow)' : 'var(--green)';
+        appCapacityHTML = `<div class="app-capacity">
+          <div class="app-capacity-label">Application Dept Capacity Today</div>
+          <div class="app-capacity-bar"><div class="app-capacity-fill" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="app-capacity-text">${totalUnits.toLocaleString()} / ${dailyCapacity.toLocaleString()} units (${pct}%)</div>
+        </div>`;
+      }
+
+      // Only show stages that have jobs or are key stages
+      const activeStages = Object.keys(stageBuckets).filter(s => lineConfig.stages.includes(s) || stageBuckets[s]?.length > 0);
+
+      // Pre-compute machine load pct per stage
+      function getStageMachineLoad(stageName) {
+        // Map stage name to primary machine name
+        const stageToMachine = {
+          'Press 6K': 'HP Indigo 6K',
+          'Press 15K': 'HP Indigo 15K',
+          'GM Die/Laser Cut': 'GM Die Cutter w/ JetFX',
+          'Lamination': 'Laminator (Nobelus)',
+          'Pouching': 'Karlville Poucher',
+          'Scodix': 'Scodix',
+          'Die Cut (Moll)': 'Moll Brothers Cutter',
+          'Flatbed Cut (Duplo)': 'Duplo',
+          'Flatbed Cut (Boyd)': 'Graphtec Flatbed (Large) x2',
+          'Guillotine': 'Guillotine Cutter',
+          'Fold & Glue': 'Moll Brothers Folder-Gluer',
+          'Application': 'Application Dept',
+          'UV Coat': 'UV Coater',
+          'Printing': 'Canon Colorado',
+          'Cutting': 'Graphtec Flatbed (Large) x2',
+        };
+        const machine = stageToMachine[stageName];
+        if (!machine) return null;
+        const cap = MACHINE_CAPACITY[machine];
+        if (!cap) return null;
+        const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || 1;
+        // Sum sheets/units across all active orders hitting this machine today
+        let totalLoad = 0;
+        (stageBuckets[stageName] || []).forEach(o => {
+          const sheets = o.sheetCount || Math.ceil((o.quantity || 0) / (o.piecesPerSheet || 1));
+          totalLoad += sheets;
+        });
+        const pct = Math.min(150, Math.round((totalLoad / dailyCap) * 100));
+        return { pct, totalLoad, dailyCap, machine };
+      }
+
+      html += `<div class="line-section">
+        <div class="line-header" style="background:${lineConfig.bgColor};border:1px solid ${lineConfig.borderColor};">
+          <span class="line-dot" style="background:${lineConfig.color};"></span>
+          ${lineConfig.name}
+          <span class="job-count">${lineOrders.length} jobs</span>
+        </div>
+        ${appCapacityHTML}
+        <div class="stages-row">
+          ${lineConfig.stages.map(stage => {
+            const jobs = stageBuckets[stage] || [];
+            const load = getStageMachineLoad(stage);
+            let loadBarHTML = '';
+            if (load && (jobs.length > 0 || stage === 'Application')) {
+              const barColor = load.pct >= 100 ? 'var(--red)' : load.pct >= 75 ? '#d97706' : 'var(--green)';
+              const displayPct = Math.min(100, load.pct);
+              loadBarHTML = `
+                <div class="stage-load-bar" title="${load.machine}: ${load.totalLoad.toLocaleString()} / ${load.dailyCap.toLocaleString()} today (~${load.pct}%)">
+                  <div class="stage-load-fill" style="width:${displayPct}%;background:${barColor};"></div>
+                </div>
+                <div class="stage-load-label">${load.pct}% capacity</div>
+              `;
+            }
+            // Job card highlight: active = bright border, hold = red tint, pending = default
+            return `<div class="stage-col">
+              <div class="stage-header">
+                <div class="stage-header-top">${stage} <span class="stage-count">${jobs.length}</span></div>
+                ${loadBarHTML}
+              </div>
+              <div class="stage-cards">
+                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId])).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('boardContainer').innerHTML = html;
+  }
+
+  // ─── Orders View ───────────────────────────────────────────────────────────
+  function renderOrders(allOrders) {
+    const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
+    const activeStatuses = ['new','prepress','prepress-active','prepress-paused','pending-account-manager','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
+
+    // Group: parents + their sub-tickets; standalone orders treated as own group
+    const parents = {}; // parentOrderId -> { parent, subs[] }
+    const standalones = [];
+
+    allOrders.forEach(o => {
+      if (o.parentOrderId) {
+        if (!parents[o.parentOrderId]) parents[o.parentOrderId] = { parent: null, subs: [] };
+        parents[o.parentOrderId].subs.push(o);
+      } else {
+        // Could be a parent — check if anything references it
+        if (!parents[o.orderId]) parents[o.orderId] = { parent: null, subs: [] };
+        parents[o.orderId].parent = o;
+      }
+    });
+
+    // Separate groups that have sub-tickets from standalones
+    const groups = [];
+    Object.values(parents).forEach(g => {
+      if (g.subs.length > 0) groups.push(g);
+      else if (g.parent) standalones.push(g.parent);
+    });
+
+    // Sort groups by earliest due date
+    groups.sort((a, b) => {
+      const allTickets = [a.parent, ...a.subs].filter(Boolean);
+      const earliest = t => allTickets.reduce((m, o) => o.dueDate && o.dueDate < m ? o.dueDate : m, '2099-01-01');
+      return earliest(a) < earliest(b) ? -1 : 1;
+    });
+
+    // Build batching map: for each group, find sub-tickets that share material
+    function getBatchGroups(tickets) {
+      const byMaterial = {};
+      tickets.forEach(t => {
+        const mat = t.material || 'unknown';
+        if (!byMaterial[mat]) byMaterial[mat] = [];
+        byMaterial[mat].push(t);
+      });
+      return Object.entries(byMaterial).filter(([, ts]) => ts.length > 1);
+    }
+
+    function orderStatusColor(tickets) {
+      const allDone = tickets.every(t => doneStatuses.includes(t.status));
+      if (allDone) return '#16a34a';
+      const anyOverdue = tickets.some(t => isOverdue(t.dueDate) && !doneStatuses.includes(t.status));
+      if (anyOverdue) return 'var(--red)';
+      return '#d97706';
+    }
+
+    function renderOrderGroup(g) {
+      const allTickets = [g.parent, ...g.subs].filter(Boolean);
+      const customer = g.parent?.customerName || g.parent?.customer || g.subs[0]?.customerName || g.subs[0]?.customer || '—';
+      const rep = g.parent?.accountManager || g.subs[0]?.accountManager || '—';
+      const doneCount = allTickets.filter(t => doneStatuses.includes(t.status)).length;
+      const total = allTickets.length;
+      const pct = Math.round(doneCount / total * 100);
+      const statusColor = orderStatusColor(allTickets);
+      const allDone = doneCount === total;
+      const parentId = g.parent?.orderId || g.subs[0]?.parentOrderId;
+      const earliestDue = allTickets.reduce((m, t) => t.dueDate && (!m || t.dueDate < m) ? t.dueDate : m, null);
+      const batchGroups = getBatchGroups(allTickets.filter(t => !doneStatuses.includes(t.status)));
+
+      const batchHint = batchGroups.length > 0
+        ? `<div style="margin-top:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;font-size:11px;color:#1d4ed8;">
+            🔄 <strong>Batch opportunity:</strong> ${batchGroups.map(([mat, ts]) =>
+              `${ts.length}x tickets on <strong>${mat}</strong> — print together (${ts.map(t => '#'+t.orderId).join(', ')})`
+            ).join(' &nbsp;|&nbsp; ')}
+          </div>` : '';
+
+      const ticketRows = allTickets.map(t => {
+        const line = getProductionLine(t);
+        const lineColor = PRODUCTION_LINES[line]?.color || '#666';
+        const steps = t.workflowSteps || [];
+        const cs = steps[t.currentStep || 0];
+        const stage = cs?.machine || (doneStatuses.includes(t.status) ? '✅ Done' : 'Prepress');
+        const isDone = doneStatuses.includes(t.status);
+        return `<tr style="font-size:12px;${isDone ? 'opacity:0.6;' : ''}">
+          <td><a href="job-ticket.html?order=${t.orderId}" style="color:#2563eb;font-weight:600;">#${t.orderId}</a></td>
+          <td>${t.productType || '—'}</td>
+          <td>${t.material || '—'}</td>
+          <td>${(t.quantity||0).toLocaleString()}</td>
+          <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${lineColor};margin-right:4px;"></span>${line.toUpperCase()}</td>
+          <td>${stage}</td>
+          <td><span class="card-due ${dueClass(t.dueDate)}" style="font-size:10px;">${dueLabel(t.dueDate)}</span></td>
+          <td>${renderStatusBadge(t.status)}</td>
+        </tr>`;
+      }).join('');
+
+      return `<div style="background:#fff;border:1px solid ${statusColor};border-radius:10px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="background:${allDone ? '#f0fdf4' : '#fffbeb'};padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div>
+              <span style="font-weight:700;font-size:15px;">${customer}</span>
+              <span style="color:#6b7280;font-size:12px;margin-left:10px;">Order base: <strong>#${parentId}</strong> &nbsp;·&nbsp; Rep: ${rep}</span>
+              ${earliestDue ? `<span style="color:#6b7280;font-size:12px;margin-left:10px;">Due: <strong>${formatDate(earliestDue)}</strong></span>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:12px;color:${statusColor};font-weight:600;">${doneCount}/${total} tickets done</span>
+              <a href="job-ticket.html?parent=${parentId}" class="btn btn-sm" style="font-size:11px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;padding:4px 10px;">➕ Add Sub-Ticket</a>
+            </div>
+          </div>
+          <div style="margin-top:8px;background:#e5e7eb;height:6px;border-radius:4px;overflow:hidden;">
+            <div style="background:${statusColor};height:6px;border-radius:4px;width:${pct}%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:#f9fafb;font-size:11px;color:#6b7280;text-transform:uppercase;">
+              <th style="padding:6px 12px;text-align:left;">Ticket</th>
+              <th style="padding:6px 12px;text-align:left;">Product</th>
+              <th style="padding:6px 12px;text-align:left;">Material</th>
+              <th style="padding:6px 12px;text-align:left;">Qty</th>
+              <th style="padding:6px 12px;text-align:left;">Line</th>
+              <th style="padding:6px 12px;text-align:left;">Current Stage</th>
+              <th style="padding:6px 12px;text-align:left;">Due</th>
+              <th style="padding:6px 12px;text-align:left;">Status</th>
+            </tr></thead>
+            <tbody>${ticketRows}</tbody>
+          </table>
+        </div>
+        ${batchHint}
+      </div>`;
+    }
+
+    // Standalone orders (no sub-tickets)
+    const standaloneHTML = standalones.length > 0 ? `
+      <div style="margin-bottom:8px;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Single-ticket orders (${standalones.length})</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-bottom:20px;">
+        ${standalones.map(o => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <a href="job-ticket.html?order=${o.orderId}" style="color:#2563eb;font-weight:700;">#${o.orderId}</a>
+            <span style="color:#374151;margin-left:8px;">${o.customerName||o.customer||'—'}</span>
+            <div style="color:#6b7280;margin-top:2px;">${o.productType||'—'} &middot; ${(o.quantity||0).toLocaleString()} pcs</div>
+          </div>
+          <div>
+            <span class="card-due ${dueClass(o.dueDate)}" style="font-size:11px;">${dueLabel(o.dueDate)}</span>
+            ${renderStatusBadge(o.status)}
+          </div>
+        </div>`).join('')}
+      </div>` : '';
+
+    document.getElementById('ordersContainer').innerHTML = `
+      <div style="max-width:1100px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2 style="font-size:16px;font-weight:700;margin:0;">Order Management</h2>
+          <div style="font-size:12px;color:#6b7280;">${groups.length} multi-ticket orders &nbsp;·&nbsp; ${standalones.length} single-ticket orders</div>
+        </div>
+        ${groups.length === 0 && standalones.length === 0 ? '<p style="color:#6b7280;">No orders yet.</p>' : ''}
+        ${groups.map(g => renderOrderGroup(g)).join('')}
+        ${standaloneHTML}
+      </div>`;
+  }
+
+  // ── Table sort + search state
+  let _tableSortCol = 'status';
+  let _tableSortDir = 'asc';
+  let _tableSearchQuery = '';
+  let _tableAllOrders = [];
+
+  function onTableSearch() {
+    _tableSearchQuery = document.getElementById('tableSearch').value.trim().toLowerCase();
+    document.getElementById('tableSearchClear').style.display = _tableSearchQuery ? '' : 'none';
+    renderTable(_tableAllOrders);
+  }
+  function clearTableSearch() {
+    document.getElementById('tableSearch').value = '';
+    _tableSearchQuery = '';
+    document.getElementById('tableSearchClear').style.display = 'none';
+    renderTable(_tableAllOrders);
+  }
+  function tableSort(col) {
+    if (_tableSortCol === col) _tableSortDir = _tableSortDir === 'asc' ? 'desc' : 'asc';
+    else { _tableSortCol = col; _tableSortDir = 'asc'; }
+    renderTable(_tableAllOrders);
+  }
+
+  function renderTable(activeOrders) {
+    _tableAllOrders = activeOrders;
+
+    // Search filter
+    const q = _tableSearchQuery;
+    let filtered = q
+      ? activeOrders.filter(o =>
+          (o.orderId || '').toLowerCase().includes(q) ||
+          (o.customer || '').toLowerCase().includes(q) ||
+          (o.customerName || '').toLowerCase().includes(q) ||
+          (o.parentOrderId || '').toLowerCase().includes(q)
+        )
+      : activeOrders;
+
+    // When searching by order#, also include siblings (same parent)
+    if (q) {
+      const matchedParentIds = new Set(filtered.map(o => o.parentOrderId || o.orderId));
+      const extras = activeOrders.filter(o => {
+        const pid = o.parentOrderId || o.orderId;
+        return matchedParentIds.has(pid) && !filtered.find(f => f.id === o.id);
+      });
+      filtered = [...filtered, ...extras];
+    }
+
+    // Sort
+    const dir = _tableSortDir === 'asc' ? 1 : -1;
+    const statusWeight = { 'prepress-active': 0, 'in-production': 1, 'prepress-paused': 2, 'prepress': 3, 'pending-account-manager': 4, 'pending-review': 5, 'on-hold': 6, 'qc-checkout': 7, 'ready-to-ship': 8 };
+    let sorted = [...filtered].sort((a, b) => {
+      if (_tableSortCol === 'order') return dir * ((parseInt(a.orderId)||0) - (parseInt(b.orderId)||0));
+      if (_tableSortCol === 'customer') return dir * (a.customer||'').localeCompare(b.customer||'');
+      if (_tableSortCol === 'due') return dir * (new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01'));
+      if (_tableSortCol === 'qty') return dir * ((a.quantity||0) - (b.quantity||0));
+      if (_tableSortCol === 'status') {
+        const wa = statusWeight[a.status] ?? 5, wb = statusWeight[b.status] ?? 5;
+        if (wa !== wb) return dir * (wa - wb);
+        return new Date(a.dueDate||'2099-01-01') - new Date(b.dueDate||'2099-01-01');
+      }
+      return 0;
+    });
+
+    // Group sub-tickets under their parent (insert subs after parent row)
+    const grouped = [];
+    const seen = new Set();
+    sorted.forEach(o => {
+      if (seen.has(o.id)) return;
+      if (!o.parentOrderId) {
+        // Parent or standalone
+        grouped.push({ order: o, isParent: _subProgressMap[o.orderId]?.total > 0, subs: [] });
+        seen.add(o.id);
+        // Find its subs in sorted list
+        const subs = sorted.filter(s => s.parentOrderId === o.orderId);
+        subs.forEach(s => { if (!seen.has(s.id)) { grouped[grouped.length-1].subs.push(s); seen.add(s.id); } });
+      } else if (!seen.has(o.id)) {
+        // Orphaned sub (parent not in filtered set) — show standalone
+        grouped.push({ order: o, isParent: false, subs: [] });
+        seen.add(o.id);
+      }
+    });
+
+    const sortIcon = col => _tableSortCol === col ? (_tableSortDir === 'asc' ? ' ▲' : ' ▼') : ' ▴▾';
+    const thStyle = col => `cursor:pointer;user-select:none;white-space:nowrap;` + (_tableSortCol === col ? 'color:var(--accent);' : '');
+
+    document.getElementById('tableHead').innerHTML = `<tr>
+      <th>Line</th>
+      <th onclick="tableSort('order')" style="${thStyle('order')}">Order${sortIcon('order')}</th>
+      <th onclick="tableSort('customer')" style="${thStyle('customer')}">Customer${sortIcon('customer')}</th>
+      <th>Product</th>
+      <th onclick="tableSort('qty')" style="${thStyle('qty')}">Qty${sortIcon('qty')}</th>
+      <th onclick="tableSort('status')" style="${thStyle('status')}">Status${sortIcon('status')}</th>
+      <th>Current Stage</th>
+      <th onclick="tableSort('due')" style="${thStyle('due')}">Due${sortIcon('due')}</th>
+      <th>In Prod</th>
+    </tr>`;
+
+    function renderRow(o, isSubRow) {
+      const line = o._line || getProductionLine(o);
+      const lineColor = PRODUCTION_LINES[line]?.color || '#666';
+      const steps = o.workflowSteps || [];
+      const cs = steps[o.currentStep || 0];
+      const stageName = cs ? getStageForStep(cs, line) : '—';
+      const overdue = isOverdue(o.dueDate) && !['completed','ready-to-ship'].includes(o.status);
+      const inProdTime = getOrderTotalTrackedMs(o);
+      const indent = isSubRow ? 'padding-left:28px;' : '';
+      const subTag = isSubRow ? `<span style="font-size:10px;color:#6b7280;margin-left:4px;">└ sub</span>` : '';
+      const reprintTag = o.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
+      const rowBg = isSubRow ? 'background:#f8faff;' : '';
+      return `<tr class="${overdue ? 'overdue-row' : ''}" style="cursor:pointer;${rowBg}" onclick="showDetail(${o.id})">
+        <td><span class="line-dot-sm" style="background:${lineColor};"></span>${line.toUpperCase()}</td>
+        <td style="${indent}"><strong style="color:var(--accent);">#${o.orderId}</strong>${subTag}${reprintTag}</td>
+        <td>${o.customer || o.customerName || '—'}</td>
+        <td>${o.productType || o.jobDescription || '—'}</td>
+        <td>${(o.quantity || 0).toLocaleString()}</td>
+        <td>${renderStatusBadge(o.status)}</td>
+        <td class="current-stage" style="color:${lineColor};">${o.status === 'ready-to-ship' ? '✅ Ready' : stageName}</td>
+        <td><span class="card-due ${dueClass(o.dueDate)}" style="font-size:11px;">${dueLabel(o.dueDate)}</span></td>
+        <td>${inProdTime > 0 ? formatDuration(inProdTime) : '—'}</td>
+      </tr>`;
+    }
+
+    const rows = grouped.map(g => {
+      let html = renderRow(g.order, false);
+      if (g.subs.length > 0) {
+        // Parent row: show progress in order column
+        const prog = _subProgressMap[g.order.orderId];
+        const progText = prog ? ` <span style="font-size:10px;color:#6b7280;font-weight:400;">(${prog.done}/${prog.total})</span>` : '';
+        html = html.replace(`<strong style="color:var(--accent);">#${g.order.orderId}</strong>`,
+          `<strong style="color:var(--accent);">#${g.order.orderId}</strong>${progText}`);
+        html += g.subs.map(s => renderRow(s, true)).join('');
+        // Separator row
+        html += `<tr style="height:4px;background:#f1f5f9;"><td colspan="9"></td></tr>`;
+      }
+      return html;
+    }).join('');
+
+    const total = filtered.length;
+    document.getElementById('tableSearchCount').textContent = q ? `${total} result${total!==1?'s':''} found` : '';
+    document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:24px;">No orders match.</td></tr>';
+  }
+
+  async function startPrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-active', prepressStartedAt: new Date().toISOString(), prepressStartedBy: by });
+    await addActivity({ orderId, type: 'prepress-started', message: 'Prepress started', by });
+    await refresh();
+  }
+
+  async function pausePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-paused', prepressPausedAt: new Date().toISOString(), prepressPausedBy: by });
+    await addActivity({ orderId, type: 'prepress-paused', message: 'Prepress paused', by });
+    await refresh();
+  }
+
+  async function resumePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'prepress-active', prepressResumedAt: new Date().toISOString(), prepressResumedBy: by });
+    await addActivity({ orderId, type: 'prepress-resumed', message: 'Prepress resumed', by });
+    await refresh();
+  }
+
+  async function completePrepressOrder(dbId, orderId) {
+    const order = await getOrder(dbId);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
+    await updateOrder(dbId, { ...order, status: 'pending-review', prepressCompletedAt: new Date().toISOString(), prepressCompletedBy: by });
+    await addActivity({ orderId, type: 'prepress-completed', message: 'Prepress completed — queued for production', by });
+    await refresh();
+  }
+
+  function renderUpcoming(upcomingOrders) {
+    if (upcomingOrders.length === 0) {
+      document.getElementById('upcomingBody').innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0;">No upcoming jobs.</p>';
+      // Collapse when empty
+      document.getElementById('upcomingBody').classList.remove('open');
+      document.getElementById('upcomingToggle').textContent = '\u25bc';
+      upcomingOpen = false;
+      return;
+    }
+    // Auto-open when there are upcoming orders
+    upcomingOpen = true;
+    document.getElementById('upcomingBody').classList.add('open');
+    document.getElementById('upcomingToggle').textContent = '\u25b2';
+    document.getElementById('upcomingBody').innerHTML = `<div class="upcoming-grid">
+      ${upcomingOrders.map(o => {
+        const line = o._line;
+        return `<div class="job-card line-${line}" onclick="showDetail(${o.id})" style="border:1px dashed var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="card-order">#${o.orderId}</span>
+            <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+          </div>
+          <div class="card-customer">${o.customerName || o.customer || '—'}</div>
+          <div class="card-desc">${o.productType || o.jobDescription || '—'}</div>
+          <div class="card-meta">
+            <span class="card-qty">${(o.quantity || 0).toLocaleString()} pcs</span>
+            <span class="card-due ${dueClass(o.dueDate)}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span>
+          </div>
+          <div style="margin-top:4px;">${renderStatusBadge(o.status)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // ── Detail Modal (same as before, enhanced) ──
+  async function showDetail(id) {
+    const o = await getOrder(id);
+    if (!o) return;
+    const line = getProductionLine(o);
+    const lineConfig = PRODUCTION_LINES[line];
+    document.getElementById('modalTitle').textContent = `Order #${o.orderId} — ${o.customer}`;
+    const steps = o.workflowSteps || [];
+
+    const finishParts = [];
+    if (o.spotUV) finishParts.push('Spot UV');
+    if (o.foilType && o.foilType !== 'None') finishParts.push(`Foil (${o.foilColor || o.foilType})`);
+    const finishStr = finishParts.length > 0 ? finishParts.join(' + ') : '—';
+
+    let cutStr = o.cutMethod || o.cutting || '—';
+    if (o.cutMethod && o.cutMethod !== 'None') {
+      if (o.dieName) cutStr += ` — Die: ${o.dieName}`;
+      if (o.dieStatus === 'new-ordered') cutStr += ' (NEW — ordered)';
+    }
+
+    document.getElementById('modalContent').innerHTML = `
+      <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+        <span class="card-line-tag tag-${line}" style="font-size:12px;padding:3px 10px;">${lineConfig.name}</span>
+        <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
+        <a href="job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
+        ${o.parentOrderId ? `<a href="job-ticket.html?order=${o.parentOrderId}" class="btn btn-sm" style="text-decoration:none;font-size:11px;">📎 Parent #${o.parentOrderId}</a>` : ''}
+        ${o.status === 'prepress' ? `<button class="btn btn-primary btn-sm" onclick="startPrepressOrder(${o.id},'${o.orderId}')">▶️ Start Prepress</button>` : ''}
+        ${o.status === 'prepress-active' ? `<button class="btn btn-warning btn-sm" onclick="pausePrepressOrder(${o.id},'${o.orderId}')">⏸️ Pause Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'prepress-paused' ? `<button class="btn btn-primary btn-sm" onclick="resumePrepressOrder(${o.id},'${o.orderId}')">▶️ Resume Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'pending-confirmation' ? `<button class="btn btn-success btn-sm" onclick="approveConfirmationDetail(${o.id})">✅ Approve OT / Confirm</button><button class="btn btn-danger btn-sm" onclick="rejectConfirmationDetail(${o.id})">❌ Reject — Hold</button>` : ''}
+        ${o.status === 'pending-account-manager' ? `<button class="btn btn-primary btn-sm" onclick="returnToPrepressDetail(${o.id})">↩ Issue Resolved — Return to Prepress</button>` : ''}
+        ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
+        ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
+        ${o.status === 'shipped' || o.status === 'waiting-pickup' ? `<button class="btn btn-success btn-sm" onclick="markReceivedDetail(${o.id})">📬 Mark Received</button>` : ''}
+        ${o.status === 'received' ? `<button class="btn btn-success btn-sm" onclick="markCompletedDetail(${o.id})">✅ Mark Completed</button>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+        <div><strong>Product:</strong> ${o.productType || '—'}</div>
+        <div><strong>Job:</strong> ${o.jobDescription || '—'}</div>
+        <div><strong>Quantity:</strong> ${(o.quantity || 0).toLocaleString()}</div>
+        <div><strong>Material:</strong> ${o.material || '—'}</div>
+        <div><strong>Print:</strong> ${o.printType || '—'}${o.rollDirection ? ` (Dir ${o.rollDirection})` : ''}</div>
+        <div><strong>Lamination:</strong> ${o.lamination || '—'}</div>
+        <div><strong>Finishing:</strong> ${finishStr}</div>
+        <div><strong>Cutting:</strong> ${cutStr}</div>
+        <div><strong>Facility:</strong> ${FACILITIES[o.facility]?.name || o.facility}</div>
+        <div><strong>Due:</strong> <span class="card-due ${dueClass(o.dueDate)}">${formatDate(o.dueDate)}</span></div>
+        ${o.specialNotes ? `<div style="grid-column:span 2;"><strong>Notes:</strong> ${o.specialNotes}</div>` : ''}
+      </div>
+      ${steps.length > 0 ? `
+        <h3 style="margin-top:16px;font-size:12px;color:var(--text-muted);text-transform:uppercase;">Workflow Steps</h3>
+        <table class="data-table" style="margin-top:8px;">
+          <thead><tr><th>#</th><th>Machine</th><th>Operation</th><th>Status</th><th>Time</th><th>Loss</th></tr></thead>
+          <tbody>
+            ${steps.map((s, i) => {
+              const dur = getTrackedStepMs(s);
+              const isCurrent = i === (o.currentStep || 0) && o.status === 'in-production';
+              return `<tr style="${isCurrent ? 'background:rgba(210,153,34,0.1);font-weight:600;' : ''}">
+                <td>${i+1}</td><td>${s.machine}</td><td>${s.operation}</td>
+                <td><span class="badge badge-${s.status === 'completed' ? 'completed' : s.status === 'active' ? 'in-production' : 'new'}">${s.status}</span></td>
+                <td>${dur > 0 ? formatDuration(dur) : '—'}</td><td class="${s.lossCount ? 'loss-cell' : ''}">${s.lossCount || '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : ''}
+    `;
+    document.getElementById('detailModal').classList.add('active');
+  }
+
+  async function resumeOrder(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const resumeStatus = order.holdPreviousStatus || 'in-production';
+    await updateOrder(id, { status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor' });
+    closeDetail(); refresh();
+  }
+  async function approveConfirmationDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'prepress', needsConfirmation: false, confirmationApprovedBy: by, confirmationApprovedAt: new Date().toISOString() });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override approved — order moved to Prepress`, by });
+    closeDetail(); refresh();
+  }
+  async function rejectConfirmationDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    const reason = prompt('Reason for rejecting overtime/capacity override:') || 'OT approval rejected';
+    await updateOrder(id, { status: 'on-hold', holdReason: reason, holdPreviousStatus: 'pending-confirmation', holdRequestedBy: by, holdRequestedAt: new Date().toISOString(), needsConfirmation: false });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override rejected — ${reason}`, by });
+    closeDetail(); refresh();
+  }
+  async function returnToPrepressDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'prepress', prepressIssueComment: '', accountManagerResolvedAt: new Date().toISOString(), accountManagerResolvedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Account manager issue resolved — returned to Prepress`, by });
+    closeDetail(); refresh();
+  }
+  async function markReceivedDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'received', receivedAt: new Date().toISOString(), receivedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Order marked as received`, by });
+    closeDetail(); refresh();
+  }
+  async function markCompletedDetail(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Supervisor';
+    await updateOrder(id, { status: 'completed', completedAt: new Date().toISOString(), completedBy: by });
+    await addActivity({ orderId: order.orderId, type: 'status-change', message: `Order marked as completed`, by });
+    closeDetail(); refresh();
+  }
+  async function holdOrder(id) {
+    const order = await getOrder(id);
+    if (!order) return;
+    const patch = await buildHoldPatch(order);
+    if (!patch) return;
+    await updateOrder(id, { ...order, ...patch });
+    await addActivity({ orderId: order.orderId, type: 'hold', message: `Order put on hold${patch.holdReason ? ` — ${patch.holdReason}` : ''}`, by: patch.holdRequestedBy || 'Supervisor' });
+    closeDetail(); refresh();
+  }
+  function closeDetail() { document.getElementById('detailModal').classList.remove('active'); }
+  document.getElementById('detailModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDetail(); });
+
+  onDBUpdate(() => refresh());
+
+  async function init() {
+    await openDB();
+    refresh();
+    setInterval(refresh, 5000);
+  }
+  init();
+</script>
+<script src="seed-data.js?v=20260413-1513"></script>
+</body>
+</html>

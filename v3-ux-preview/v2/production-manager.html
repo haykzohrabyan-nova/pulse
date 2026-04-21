@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Manager — Bazaar Print</title>
+  <script src="shared.js"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="pm-layout">
+  <!-- Sidebar: Filters + Stats -->
+  <div class="pm-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by Status</div>
+      <button class="filter-btn active" data-status="all" onclick="setStatusFilter('all')">All Orders</button>
+      <button class="filter-btn" data-status="new" onclick="setStatusFilter('new')">New</button>
+      <button class="filter-btn" data-status="pending-review" onclick="setStatusFilter('pending-review')">Pending Review</button>
+      <button class="filter-btn" data-status="in-production" onclick="setStatusFilter('in-production')">In Production</button>
+      <button class="filter-btn" data-status="on-hold" onclick="setStatusFilter('on-hold')">On Hold</button>
+      <button class="filter-btn" data-status="qc-checkout" onclick="setStatusFilter('qc-checkout')">QC Checkout</button>
+      <button class="filter-btn" data-status="qc-failed" onclick="setStatusFilter('qc-failed')">QC Failed</button>
+      <button class="filter-btn" data-status="reprint" onclick="setStatusFilter('reprint')">🔄 Reprint</button>
+      <button class="filter-btn" data-status="ready-to-ship" onclick="setStatusFilter('ready-to-ship')">Ready to Ship</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by Facility</div>
+      <button class="filter-btn active" data-facility="all" onclick="setFacilityFilter('all')">All Facilities</button>
+      <button class="filter-btn" data-facility="16th-street" onclick="setFacilityFilter('16th-street')">16th Street</button>
+      <button class="filter-btn" data-facility="boyd-street" onclick="setFacilityFilter('boyd-street')">Boyd Street</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Search</div>
+      <input type="text" id="searchInput" placeholder="Order ID, customer..." oninput="renderList()">
+    </div>
+    <div class="sidebar-section">
+      <a href="job-ticket.html" class="btn btn-primary" style="width:100%;text-align:center;justify-content:center;">+ New Job</a>
+    </div>
+    <div class="sidebar-stats" id="sidebarStats"></div>
+  </div>
+
+  <!-- Main: Order List -->
+  <div class="pm-main">
+    <div class="pm-main-header">
+      <h2 id="listTitle">All Orders</h2>
+      <span id="orderCount" style="color:var(--text-muted);font-size:13px;"></span>
+    </div>
+    <!-- Column headers -->
+    <div class="order-list-header">
+      <span class="olh-col olh-id">Job #</span>
+      <span class="olh-col olh-status">Status</span>
+      <span class="olh-col olh-customer">Customer</span>
+      <span class="olh-col olh-product">Product · Material</span>
+      <span class="olh-col olh-machine">Current Stage</span>
+      <span class="olh-col olh-qty">Quantity</span>
+      <span class="olh-col olh-due">Due Date</span>
+      <span class="olh-col olh-expand"></span>
+    </div>
+    <div id="orderList"></div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<!-- Packing Slip Editor Modal -->
+<div class="modal-overlay" id="packingSlipModal">
+  <div class="modal" style="max-width:800px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2>📋 Packing Slip Editor</h2>
+      <button class="btn btn-sm" onclick="closePackingSlipModal()">✕ Close</button>
+    </div>
+    <div id="psOrderInfo" style="padding:10px;background:#f8f9fb;border-radius:var(--radius);margin-bottom:12px;font-size:14px;"></div>
+
+    <div id="psShipments"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+      <button class="btn" onclick="addShipment()">+ Add Shipment (Different Address)</button>
+      <div style="font-size:14px;">
+        Total shipped: <strong id="psTotalShipped">0</strong> units
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>General Packing Notes</label>
+      <textarea rows="2" placeholder="General notes for all shipments..." onchange="packingSlipData.notes=this.value"></textarea>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="closePackingSlipModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="printPackingSlips()">🖨️ Generate & Print Packing Slips</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Step Confirmation Modal -->
+<div class="modal-overlay" id="removeStepModal">
+  <div class="modal" style="max-width:400px;">
+    <div id="removeStepInfo"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRemoveStepModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmRemoveStep()">🗑️ Remove Step</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+  <div class="modal order-detail-modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="detailTitle">Order Details</h2>
+        <span id="detailOrderId" style="color:var(--text-muted);font-size:13px;"></span>
+      </div>
+      <button class="btn btn-sm" onclick="closeDetail()">✕ Close</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- Reprint Modal -->
+<div class="modal-overlay" id="reprintModal">
+  <div class="modal">
+    <h2>Create Reprint / Shortage Ticket</h2>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Reason</label>
+        <select id="reprintReason">
+          <option value="shortage">Shortage (not enough units)</option>
+          <option value="quality">Quality Issue</option>
+          <option value="damaged">Damaged in Production</option>
+          <option value="customer-request">Customer Request</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Quantity to Reprint</label>
+        <input type="number" id="reprintQty" min="1" placeholder="100">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Notes</label>
+        <textarea id="reprintNotes" rows="3" placeholder="Describe the issue..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeReprintModal()">Cancel</button>
+      <button class="btn btn-warning" onclick="submitReprint()">Create Reprint Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Operator Modal -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <h2>Assign Operator to Step</h2>
+    <div style="margin-top:12px;">
+      <div class="field">
+        <label>Select Operator</label>
+        <select id="assignSelect">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAssign()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Step Modal -->
+<div class="modal-overlay" id="addStepModal">
+  <div class="modal">
+    <h2>Add Workflow Step</h2>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Machine / Station</label>
+        <select id="newStepMachine">
+          <option value="">— Select Machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Operation</label>
+        <select id="newStepOperation">
+          <option value="">— Select Operation —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="newStepNotes" placeholder="Any notes for this step">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddStepModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddStep()">Add Step</button>
+    </div>
+  </div>
+</div>
+
+<!-- Redirect / Reassign Machine Modal -->
+<div class="modal-overlay" id="redirectModal">
+  <div class="modal" style="max-width:520px;">
+    <h2>🔀 Redirect / Reassign Step</h2>
+    <div id="redirectInfo" style="margin:12px 0;padding:10px;background:#f8f9fb;border-radius:var(--radius);font-size:13px;"></div>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Redirect To Machine</label>
+        <select id="redirectMachine" onchange="onRedirectMachineChange()">
+          <option value="">— Select Machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Operation</label>
+        <select id="redirectOperation">
+          <option value="">— Auto from machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Redirect Amount</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="radio" name="redirectType" value="full" checked onchange="toggleRedirectQty()"> Full Job
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="radio" name="redirectType" value="partial" onchange="toggleRedirectQty()"> Partial
+          </label>
+        </div>
+      </div>
+      <div class="field" id="redirectQtyRow" style="display:none;margin-bottom:12px;">
+        <label>Quantity to Redirect (units or sheets)</label>
+        <input type="number" id="redirectQty" min="1" placeholder="e.g. 5000">
+        <span id="redirectQtyHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;"></span>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Manager Code (optional)</label>
+        <input type="password" id="redirectCode" placeholder="Enter manager code to confirm" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Reason / Notes</label>
+        <input type="text" id="redirectNotes" placeholder="e.g. Sending to Boyd for faster turnaround">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRedirectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRedirect()">🔀 Confirm Redirect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('production-manager');
+
+document.getElementById('page-styles').textContent = `
+  .pm-layout { display: flex; height: calc(100vh - 52px); overflow: hidden; }
+  .pm-sidebar { width: 220px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 8px; }
+  .sidebar-section { margin-bottom: 16px; }
+  .sidebar-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 4px 8px 6px; }
+  .filter-btn { display: block; width: 100%; text-align: left; padding: 7px 12px; border: none; border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; font-size: 13px; margin-bottom: 2px; }
+  .filter-btn:hover { background: var(--card-hover); }
+  .filter-btn.active { background: #e0edff; color: var(--accent); font-weight: 600; }
+  .sidebar-stats { font-size: 12px; color: var(--text-muted); padding: 8px; }
+  .pm-main { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .pm-main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .pm-main-header h2 { font-size: 18px; font-weight: 700; }
+
+  /* Order Row */
+  .order-row { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; box-shadow: var(--shadow); overflow: hidden; transition: box-shadow 0.2s; }
+  .order-row:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.1); }
+  .order-list-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f8f9fb; border-bottom: 2px solid var(--border); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); position: sticky; top: 0; z-index: 2; }
+  .olh-id { min-width: 70px; }
+  .olh-status { min-width: 100px; }
+  .olh-customer { flex: 1; }
+  .olh-product { flex: 1; }
+  .olh-machine { min-width: 140px; }
+  .olh-qty { min-width: 80px; text-align: right; }
+  .olh-due { min-width: 90px; text-align: right; }
+  .olh-expand { width: 24px; }
+  .order-row-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+  .order-row-header .order-id { font-weight: 700; font-size: 14px; color: var(--accent); min-width: 70px; }
+  .order-row-header .order-status { min-width: 100px; }
+  .order-row-header .order-customer { font-size: 14px; font-weight: 600; flex: 1; }
+  .order-row-header .order-product { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .order-row-header .order-machine { font-size: 12px; color: var(--text-muted); min-width: 140px; }
+  .order-row-header .order-qty { font-size: 12px; color: var(--text-muted); min-width: 80px; text-align: right; }
+  .order-row-header .order-due { font-size: 12px; min-width: 90px; text-align: right; }
+  .order-row-header .expand-icon { color: var(--text-muted); font-size: 12px; transition: transform 0.2s; width: 24px; text-align: center; }
+  .order-row.expanded .expand-icon { transform: rotate(180deg); }
+  .order-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .order-row.expanded .order-body { display: block; }
+
+  /* Detail sections */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .detail-section { }
+  .detail-section h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .detail-item { display: flex; gap: 8px; margin-bottom: 4px; font-size: 13px; }
+  .detail-item .di-label { color: var(--text-muted); min-width: 100px; }
+  .detail-item .di-val { font-weight: 500; }
+
+  /* Workflow Steps */
+  .workflow-steps-section { margin-top: 16px; }
+  .workflow-steps-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .step-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #f8f9fb; }
+  .step-row.step-current { background: #e0edff; border-color: var(--accent); }
+  .step-row.step-completed { background: #f0fff4; border-color: #bbf7d0; opacity: 0.8; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .step-num.num-current { background: var(--accent); color: #fff; }
+  .step-num.num-completed { background: var(--green); color: #fff; }
+  .step-machine { font-size: 13px; font-weight: 600; flex: 1; }
+  .step-assigned { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .step-status { font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .step-status.pending { color: var(--text-muted); }
+  .step-status.in-progress { color: #2563eb; }
+  .step-status.completed { color: var(--green); }
+
+  /* Action bar */
+  .action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* Order detail modal */
+  .order-detail-modal { max-width: 820px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+
+  .overdue { color: var(--red); }
+  .due-soon { color: var(--yellow); }
+
+  .artwork-preview-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .art-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
+  .art-thumb-pdf { width: 80px; height: 80px; background: #f0f0f5; border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+`;
+
+// State
+let allOrders = [];
+let currentStatusFilter = 'all';
+let currentFacilityFilter = 'all';
+let activeOrderId = null; // the DB id currently expanded
+let reprintTargetOrderId = null;
+let assignTargetOrderDbId = null;
+let assignTargetStepId = null;
+let addStepTargetOrderDbId = null;
+
+// Populate machine selectors
+const machineSelect = document.getElementById('newStepMachine');
+Object.keys(MACHINES).forEach(m => {
+  machineSelect.innerHTML += `<option value="${m}">${m}</option>`;
+});
+machineSelect.onchange = function() {
+  const ops = MACHINES[this.value]?.operations || OPERATIONS;
+  const opSel = document.getElementById('newStepOperation');
+  opSel.innerHTML = '<option value="">— Select Operation —</option>';
+  ops.forEach(o => opSel.innerHTML += `<option value="${o}">${o}</option>`);
+};
+OPERATIONS.forEach(o => {
+  document.getElementById('newStepOperation').innerHTML += `<option value="${o}">${o}</option>`;
+});
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadOrders();
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order');
+  if (orderId) {
+    const order = allOrders.find(o => o.orderId === orderId);
+    if (order) openDetail(order.id);
+  }
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders' || data.store === 'reprints' || data.store === 'personnel') {
+      await loadOrders();
+    }
+  });
+});
+
+async function loadOrders() {
+  allOrders = await getAllOrders();
+  allOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  renderSidebarStats();
+  renderList();
+}
+
+function setStatusFilter(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  renderList();
+}
+
+function setFacilityFilter(facility) {
+  currentFacilityFilter = facility;
+  document.querySelectorAll('[data-facility]').forEach(b => b.classList.toggle('active', b.dataset.facility === facility));
+  renderList();
+}
+
+function renderSidebarStats() {
+  const stats = {};
+  allOrders.forEach(o => { stats[o.status] = (stats[o.status] || 0) + 1; });
+  document.getElementById('sidebarStats').innerHTML = `
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Order Stats</div>
+    <div style="font-size:12px;">Total: <strong>${allOrders.length}</strong></div>
+    ${Object.entries(stats).map(([s, c]) => `<div style="font-size:12px;">${STATUS_LABELS[s] || s}: <strong>${c}</strong></div>`).join('')}
+  `;
+}
+
+function renderList() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  let filtered = allOrders.filter(o => {
+    if (currentStatusFilter !== 'all' && o.status !== currentStatusFilter) return false;
+    if (currentFacilityFilter !== 'all' && o.facility !== currentFacilityFilter) return false;
+    if (search) {
+      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('listTitle').textContent = currentStatusFilter === 'all' ? 'All Orders' : (STATUS_LABELS[currentStatusFilter] || currentStatusFilter);
+  document.getElementById('orderCount').textContent = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
+
+  const container = document.getElementById('orderList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;">No orders found.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(order => renderOrderRow(order)).join('');
+}
+
+function renderOrderRow(order) {
+  const dueClass = getDueClass(order.dueDate);
+  const isExpanded = order.id === activeOrderId;
+  const line = getProductionLine(order);
+  const lineInfo = PRODUCTION_LINES[line];
+  const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
+
+  return `
+    <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
+      <div class="order-row-header" onclick="toggleOrderRow(${order.id})">
+        <span class="order-id">#${order.orderId}</span>
+        <span class="order-status">${renderStatusBadge(order.status)}</span>
+        <span class="order-customer">${order.customer || order.customerName}</span>
+        <span class="order-product">${order.productType || ''}${order.material ? ' · ' + order.material : ''}</span>
+        <span class="order-machine">@${currentStepName}</span>
+        <span class="order-qty">${(order.quantity || 0).toLocaleString()}</span>
+        <span class="order-due ${dueClass}">${order.dueDate ? formatDate(order.dueDate) : '—'}</span>
+        <span class="expand-icon">${isExpanded ? '▲' : '▼'}</span>
+      </div>
+      <div class="order-body" id="order-body-${order.id}">
+        ${renderOrderBody(order)}
+      </div>
+    </div>
+  `;
+}
+
+function renderOrderBody(order) {
+  const steps = order.workflowSteps || [];
+  const currentStep = order.currentStep || 0;
+
+  const stepsHtml = steps.length > 0 ? steps.map((step, i) => {
+    const isCurrent = i === currentStep && order.status === 'in-production';
+    const isCompleted = step.status === 'completed';
+    return `
+      <div class="step-row ${isCurrent ? 'step-current' : ''} ${isCompleted ? 'step-completed' : ''}">
+        <div class="step-num ${isCurrent ? 'num-current' : ''} ${isCompleted ? 'num-completed' : ''}">${i + 1}</div>
+        <div class="step-machine">
+          ${step.machine}
+          ${step.redirectedFrom ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">↩ was ${step.redirectedFrom}</span>` : ''}
+          ${step.isSplit ? `<span style="font-size:10px;color:var(--purple);margin-left:4px;">✂️ SPLIT: ${(step.splitQuantity||0).toLocaleString()} units</span>` : ''}
+          ${step.partialRedirect ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">→ ${(step.partialRedirectQty||0).toLocaleString()} sent to ${step.partialRedirectTo}</span>` : ''}
+        </div>
+        <div class="step-assigned">${step.assignedTo ? '👤 ' + step.assignedTo : 'Unassigned'}</div>
+        ${step.startedAt ? `<div style="font-size:11px;color:var(--text-muted);">Started ${formatDateTime(step.startedAt)}</div>` : ''}
+        ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
+        <div class="step-status ${step.status}">${step.status}</div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Redirect</button>
+          <button class="btn btn-sm" onclick="openAssignModal(${order.id},'${step.id || i}')">👤 Assign</button>
+          <button class="btn btn-sm btn-danger" onclick="removeStepByIndex(${order.id},${i})">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('') : '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No workflow steps defined.</div>';
+
+  return `
+    <div class="detail-grid">
+      <div class="detail-section">
+        <h4>Job Details</h4>
+        ${di('Product', order.productType)}
+        ${di('Material', order.material)}
+        ${di('Quantity', order.quantity?.toLocaleString() + ' units')}
+        ${di('Sheet Count', order.sheetCount || '—')}
+        ${di('Print Type', order.printType)}
+        ${di('Sides', order.sides + '-sided')}
+        ${di('Colors', order.colors)}
+        ${di('Lamination', order.lamination)}
+        ${di('Foil', order.foilType !== 'None' ? order.foilType : '—')}
+        ${di('Due Date', order.dueDate ? formatDate(order.dueDate) : '—')}
+      </div>
+      <div class="detail-section">
+        <h4>Cutting & Die</h4>
+        ${di('Cut Method', order.cutMethod || '—')}
+        ${di('Die Status', order.dieStatus || '—')}
+        ${di('Die Name', order.dieName || '—')}
+        <h4 style="margin-top:12px;">Notes</h4>
+        <div style="font-size:13px;color:var(--text);">${order.specialNotes || '—'}</div>
+        ${order.artworkFiles?.length ? `
+          <h4 style="margin-top:12px;">Artwork Files</h4>
+          <div class="artwork-preview-row">
+            ${order.artworkFiles.map(f => f.type?.startsWith('image/') ? `<img class="art-thumb" src="${f.dataUrl}" alt="${f.name}" onclick="openArtworkLightbox('${f.dataUrl}')">` : `<div class="art-thumb-pdf" title="${f.name}">📄</div>`).join('')}
+          </div>` : ''}
+      </div>
+    </div>
+
+    <div class="workflow-steps-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Workflow Steps</h4>
+        <button class="btn btn-sm" onclick="openAddStepModal(${order.id})">+ Add Step</button>
+      </div>
+      <div class="workflow-steps-list">${stepsHtml}</div>
+    </div>
+
+    <div class="action-bar">
+      ${getActionButtons(order)}
+    </div>
+  `;
+}
+
+function di(label, val) {
+  return `<div class="detail-item"><span class="di-label">${label}</span><span class="di-val">${val || '—'}</span></div>`;
+}
+
+function getActionButtons(order) {
+  const btns = [];
+  btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
+
+  if (order.status === 'new' || order.status === 'pending-review') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">▶ Start Production</button>`);
+  }
+  if (order.status === 'in-production') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="advanceStep(${order.id})">⏭ Next Step</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'qc-checkout')">🔍 Send to QC</button>`);
+  }
+  if (order.status === 'on-hold') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'in-production')">▶ Resume Production</button>`);
+  }
+  if (order.status === 'qc-checkout') {
+    btns.push(`<a href="qc-checkout.html?order=${order.orderId}" class="btn btn-sm btn-primary">🔍 Go to QC</a>`);
+  }
+  if (order.status === 'qc-failed') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">↩ Return to Production</button>`);
+  }
+  if (order.status === 'ready-to-ship') {
+    btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'shipped')">📦 Mark Shipped</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'waiting-pickup')">🏪 Waiting Pickup</button>`);
+  }
+  if (['shipped', 'waiting-pickup', 'received', 'completed'].includes(order.status)) {
+    btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
+  }
+  if (!['ready-to-ship', 'shipped', 'received', 'completed'].includes(order.status)) {
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="openReprintModal(${order.id})">🖨 Reprint/Shortage</button>`);
+  }
+
+  return btns.join('');
+}
+
+function toggleOrderRow(dbId) {
+  const wasExpanded = activeOrderId === dbId;
+  // Collapse all
+  document.querySelectorAll('.order-row.expanded').forEach(el => el.classList.remove('expanded'));
+  activeOrderId = null;
+  if (!wasExpanded) {
+    const row = document.getElementById(`order-row-${dbId}`);
+    if (row) row.classList.add('expanded');
+    activeOrderId = dbId;
+  }
+}
+
+function getDueClass(dueDate) {
+  if (!dueDate) return '';
+  const d = new Date(dueDate);
+  const now = new Date();
+  if (d < now) return 'overdue';
+  const diff = (d - now) / (1000 * 60 * 60 * 24);
+  if (diff <= 3) return 'due-soon';
+  return '';
+}
+
+// ── Status Changes ────────────────────────────────────────
+async function changeStatus(dbId, newStatus) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  await updateOrder(dbId, { status: newStatus });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by: 'Manager' });
+  await loadOrders();
+}
+
+async function advanceStep(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps || [];
+  const currentStep = order.currentStep || 0;
+
+  if (currentStep < steps.length) {
+    steps[currentStep].status = 'completed';
+    steps[currentStep].completedAt = new Date().toISOString();
+  }
+
+  const nextStep = currentStep + 1;
+  let newStatus = 'in-production';
+  if (nextStep >= steps.length) {
+    newStatus = 'qc-checkout';
+  }
+
+  await updateOrder(dbId, {
+    workflowSteps: steps,
+    currentStep: nextStep,
+    status: newStatus
+  });
+  await addActivity({ orderId: order.orderId, type: 'step-advance', message: `Advanced to step ${nextStep + 1}: ${steps[nextStep]?.machine || 'QC'}`, by: 'Manager' });
+  await loadOrders();
+}
+
+// ── Reprint Modal ─────────────────────────────────────────
+function openReprintModal(dbId) {
+  reprintTargetOrderId = dbId;
+  const order = allOrders.find(o => o.id === dbId);
+  const maxQty = order?.quantity || 0;
+  const qtyInput = document.getElementById('reprintQty');
+  qtyInput.max = maxQty;
+  qtyInput.value = '';
+  qtyInput.placeholder = `Max: ${maxQty.toLocaleString()}`;
+  document.getElementById('reprintNotes').value = '';
+  document.getElementById('reprintModal').classList.add('active');
+}
+function closeReprintModal() {
+  document.getElementById('reprintModal').classList.remove('active');
+}
+
+async function submitReprint() {
+  const order = allOrders.find(o => o.id === reprintTargetOrderId);
+  if (!order) return;
+  const qty = parseInt(document.getElementById('reprintQty').value) || 0;
+  if (!qty) { alert('Please enter a quantity.'); return; }
+  if (qty > (order.quantity || 0)) {
+    alert(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`);
+    return;
+  }
+  await addReprint({
+    parentOrderId: order.orderId,
+    reason: document.getElementById('reprintReason').value,
+    quantity: qty,
+    notes: document.getElementById('reprintNotes').value,
+    status: 'new',
+    requestedBy: 'Manager'
+  });
+  await addActivity({ orderId: order.orderId, type: 'reprint', message: `Reprint ticket created: ${qty} units - ${document.getElementById('reprintReason').value}`, by: 'Manager' });
+  closeReprintModal();
+  alert(`✅ Reprint ticket created for ${qty} units.`);
+}
+
+// ── Assign Modal ──────────────────────────────────────────
+async function openAssignModal(dbId, stepId) {
+  assignTargetOrderDbId = dbId;
+  assignTargetStepId = stepId;
+  const personnel = await getAllPersonnel();
+  const sel = document.getElementById('assignSelect');
+  sel.innerHTML = '<option value="">— Select —</option>';
+  personnel.filter(p => p.active).forEach(p => {
+    sel.innerHTML += `<option value="${p.name}">${p.name} (${p.role || 'operator'})</option>`;
+  });
+  document.getElementById('assignModal').classList.add('active');
+}
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('active');
+}
+
+async function confirmAssign() {
+  const name = document.getElementById('assignSelect').value;
+  if (!name) { alert('Please select an operator.'); return; }
+  const order = allOrders.find(o => o.id === assignTargetOrderDbId);
+  if (!order) return;
+  const steps = order.workflowSteps.map(s => s.id === assignTargetStepId ? { ...s, assignedTo: name } : s);
+  await updateOrder(assignTargetOrderDbId, { workflowSteps: steps });
+  await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
+  closeAssignModal();
+  await loadOrders();
+}
+
+// ── Add Step Modal ────────────────────────────────────────
+function openAddStepModal(dbId) {
+  addStepTargetOrderDbId = dbId;
+  document.getElementById('addStepModal').classList.add('active');
+}
+function closeAddStepModal() {
+  document.getElementById('addStepModal').classList.remove('active');
+}
+
+async function confirmAddStep() {
+  const machine = document.getElementById('newStepMachine').value;
+  const operation = document.getElementById('newStepOperation').value;
+  if (!machine) { alert('Please select a machine.'); return; }
+  const order = allOrders.find(o => o.id === addStepTargetOrderDbId);
+  if (!order) return;
+  const newStep = {
+    id: generateStepId(),
+    machine,
+    operation: operation || (MACHINES[machine]?.operations?.[0] || 'Processing'),
+    status: 'pending',
+    assignedTo: null,
+    startedAt: null,
+    completedAt: null,
+    unitsLost: 0,
+    notes: document.getElementById('newStepNotes').value,
+    stepIndex: (order.workflowSteps || []).length
+  };
+  const steps = [...(order.workflowSteps || []), newStep];
+  await updateOrder(addStepTargetOrderDbId, { workflowSteps: steps });
+  closeAddStepModal();
+  await loadOrders();
+}
+
+async function removeStep(dbId, stepId) {
+  if (!confirm('Remove this workflow step?')) return;
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps.filter(s => s.id !== stepId);
+  await updateOrder(dbId, { workflowSteps: steps });
+  await loadOrders();
+}
+
+let removeStepTarget = null;
+
+async function removeStepByIndex(dbId, stepIndex) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const step = order.workflowSteps[stepIndex];
+  const stepName = step ? step.machine : `Step ${stepIndex + 1}`;
+  const stepOp = step?.operation || '';
+
+  removeStepTarget = { dbId, stepIndex, stepName };
+
+  document.getElementById('removeStepInfo').innerHTML = `
+    <div style="text-align:center;margin:12px 0;">
+      <div style="font-size:32px;margin-bottom:8px;">🗑️</div>
+      <div style="font-size:16px;font-weight:700;">Remove this step?</div>
+      <div style="margin-top:8px;padding:10px;background:#f4f6f9;border-radius:8px;">
+        <strong>Step ${stepIndex + 1}:</strong> ${stepName}<br>
+        <span style="color:var(--text-muted);">${stepOp}</span>
+      </div>
+      <div style="margin-top:8px;color:var(--red);font-size:13px;">This action cannot be undone.</div>
+    </div>
+  `;
+  document.getElementById('removeStepModal').classList.add('active');
+}
+
+async function confirmRemoveStep() {
+  if (!removeStepTarget) return;
+  const { dbId, stepIndex, stepName } = removeStepTarget;
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+
+  const steps = [...order.workflowSteps];
+  steps.splice(stepIndex, 1);
+  steps.forEach((s, i) => { s.stepIndex = i; });
+  await updateOrder(dbId, { workflowSteps: steps });
+  await addActivity({ orderId: order.orderId, type: 'step-remove', message: `Removed step: ${stepName}`, by: 'Manager' });
+
+  document.getElementById('removeStepModal').classList.remove('active');
+  removeStepTarget = null;
+  await loadOrders();
+}
+
+function closeRemoveStepModal() {
+  document.getElementById('removeStepModal').classList.remove('active');
+  removeStepTarget = null;
+}
+
+// ── Redirect / Reassign Machine Modal ─────────────────────
+let redirectTargetOrderDbId = null;
+let redirectTargetStepId = null;
+let redirectTargetStepIndex = null;
+
+function openRedirectModal(dbId, stepId, stepIndex) {
+  redirectTargetOrderDbId = dbId;
+  redirectTargetStepId = stepId;
+  redirectTargetStepIndex = stepIndex;
+
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const step = order.workflowSteps.find(s => s.id === stepId);
+  if (!step) return;
+
+  // Show info
+  document.getElementById('redirectInfo').innerHTML = `
+    <strong>Order #${order.orderId}</strong> — ${order.customer || order.customerName}<br>
+    <strong>Current:</strong> Step ${stepIndex + 1} → <strong>${step.machine}</strong> (${step.operation})<br>
+    <strong>Quantity:</strong> ${(order.quantity || 0).toLocaleString()} units | ${order.sheetCount || '—'} sheets
+  `;
+
+  // Populate machine dropdown — show compatible alternatives
+  const machineSel = document.getElementById('redirectMachine');
+  machineSel.innerHTML = '<option value="">— Select Machine —</option>';
+  const currentMachine = step.machine;
+
+  // Get all machines, group by facility
+  for (const [facKey, fac] of Object.entries(FACILITIES)) {
+    const facMachines = fac.machines.filter(m => m !== currentMachine);
+    if (facMachines.length > 0) {
+      machineSel.innerHTML += `<optgroup label="${fac.name}">`;
+      facMachines.forEach(m => {
+        machineSel.innerHTML += `<option value="${m}">${m}</option>`;
+      });
+      machineSel.innerHTML += `</optgroup>`;
+    }
+  }
+
+  // Reset form
+  document.getElementById('redirectQty').value = '';
+  document.getElementById('redirectNotes').value = '';
+  document.getElementById('redirectCode').value = '';
+  document.querySelector('input[name="redirectType"][value="full"]').checked = true;
+  document.getElementById('redirectQtyRow').style.display = 'none';
+  document.getElementById('redirectQtyHint').textContent = '';
+
+  document.getElementById('redirectModal').classList.add('active');
+}
+
+function closeRedirectModal() {
+  document.getElementById('redirectModal').classList.remove('active');
+}
+
+function onRedirectMachineChange() {
+  const machine = document.getElementById('redirectMachine').value;
+  const opSel = document.getElementById('redirectOperation');
+  opSel.innerHTML = '<option value="">— Auto from machine —</option>';
+  if (machine && MACHINES[machine]) {
+    MACHINES[machine].operations.forEach(op => {
+      opSel.innerHTML += `<option value="${op}">${op}</option>`;
+    });
+  }
+}
+
+function toggleRedirectQty() {
+  const isPartial = document.querySelector('input[name="redirectType"]:checked').value === 'partial';
+  document.getElementById('redirectQtyRow').style.display = isPartial ? 'block' : 'none';
+  if (isPartial) {
+    const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
+    if (order) {
+      document.getElementById('redirectQtyHint').textContent = `Total: ${(order.quantity || 0).toLocaleString()} units / ${order.sheetCount || '?'} sheets`;
+    }
+  }
+}
+
+async function confirmRedirect() {
+  const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
+  if (!order) return;
+  const newMachine = document.getElementById('redirectMachine').value;
+  if (!newMachine) { alert('Please select a machine to redirect to.'); return; }
+
+  const newOp = document.getElementById('redirectOperation').value || (MACHINES[newMachine]?.operations?.[0]) || 'Processing';
+  const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
+  const notes = document.getElementById('redirectNotes').value;
+
+  if (redirectType === 'full') {
+    // Full redirect: just change the machine on the existing step
+    const steps = order.workflowSteps.map(s => {
+      if (s.id === redirectTargetStepId) {
+        return { ...s, machine: newMachine, operation: newOp, redirectedFrom: s.machine, redirectNotes: notes };
+      }
+      return s;
+    });
+    await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await addActivity({
+      orderId: order.orderId,
+      type: 'redirect',
+      message: `Step ${redirectTargetStepIndex + 1} redirected: ${order.workflowSteps[redirectTargetStepIndex].machine} → ${newMachine} (FULL). ${notes}`,
+      by: 'Manager'
+    });
+    closeRedirectModal();
+    await loadOrders();
+    alert(`✅ Step redirected to ${newMachine} (full job).`);
+  } else {
+    // Partial redirect: split the step — keep original with reduced qty, add new step for the partial
+    const partialQty = parseInt(document.getElementById('redirectQty').value) || 0;
+    if (!partialQty || partialQty <= 0) { alert('Please enter the quantity to redirect.'); return; }
+    if (partialQty >= (order.quantity || 0)) { alert('Partial quantity must be less than the total. Use "Full Job" for full redirect.'); return; }
+
+    // Mark the partial redirect on the existing step
+    const steps = [...order.workflowSteps];
+    const stepIdx = steps.findIndex(s => s.id === redirectTargetStepId);
+    if (stepIdx === -1) return;
+
+    // Add a new split step right after the current one
+    const splitStep = {
+      id: generateStepId(),
+      machine: newMachine,
+      operation: newOp,
+      status: 'pending',
+      assignedTo: null,
+      startedAt: null,
+      completedAt: null,
+      unitsLost: 0,
+      notes: `SPLIT: ${partialQty} units redirected from ${steps[stepIdx].machine}. ${notes}`,
+      stepIndex: stepIdx + 1,
+      isSplit: true,
+      splitQuantity: partialQty,
+      splitFromStepId: redirectTargetStepId,
+    };
+
+    // Mark the original step as partially redirected
+    steps[stepIdx] = {
+      ...steps[stepIdx],
+      partialRedirect: true,
+      partialRedirectQty: partialQty,
+      partialRedirectTo: newMachine,
+      originalQtyRemaining: (order.quantity || 0) - partialQty,
+    };
+
+    // Insert split step after the current step
+    steps.splice(stepIdx + 1, 0, splitStep);
+
+    // Reindex
+    steps.forEach((s, i) => { s.stepIndex = i; });
+
+    await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await addActivity({
+      orderId: order.orderId,
+      type: 'redirect-split',
+      message: `Step ${stepIdx + 1} SPLIT: ${partialQty} units → ${newMachine}, remaining on ${steps[stepIdx].machine}. ${notes}`,
+      by: 'Manager'
+    });
+    closeRedirectModal();
+    await loadOrders();
+    alert(`✅ Split: ${partialQty} units redirected to ${newMachine}. Original step continues with remaining.`);
+  }
+}
+
+// ── Packing Slip Editor ───────────────────────────────────
+let packingSlipOrderId = null;
+let packingSlipData = null;
+
+function generatePackingSlip(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  packingSlipOrderId = dbId;
+
+  // Initialize packing slip data
+  packingSlipData = {
+    shipments: [{
+      address: '',
+      carrier: '',
+      trackingNumber: '',
+      pickupInfo: '',
+      shippingMethod: 'shipping', // shipping | pickup | uber | other
+      boxes: [{
+        boxNumber: 1,
+        contents: order.jobDescription || order.productType || 'Order items',
+        quantity: order.quantity || 0,
+        notes: ''
+      }]
+    }],
+    totalShipped: order.quantity || 0,
+    notes: ''
+  };
+
+  renderPackingSlipEditor(order);
+}
+
+function renderPackingSlipEditor(order) {
+  const customerName = order.customer || order.customerName || '—';
+  const totalLoss = (order.workflowSteps || []).reduce((s, st) => s + (st.unitsLost || 0), 0);
+  const piecesPerFrame = order.piecesPerSheet || 1;
+  const availableQty = Math.max(0, (order.quantity || 0) - (totalLoss * piecesPerFrame) + ((order.actualOversPrinted || 0) * piecesPerFrame));
+
+  const modal = document.getElementById('packingSlipModal');
+  document.getElementById('psOrderInfo').innerHTML = `
+    <strong>#${order.orderId}</strong> — ${customerName} | ${order.productType || ''} | ${order.material || ''}
+    <br><span style="font-size:12px;color:var(--text-muted);">Ordered: ${(order.quantity || 0).toLocaleString()} | Available: ~${availableQty.toLocaleString()} (after losses)</span>
+  `;
+
+  renderShipments();
+  modal.classList.add('active');
+}
+
+function renderShipments() {
+  const container = document.getElementById('psShipments');
+  container.innerHTML = packingSlipData.shipments.map((shipment, si) => `
+    <div class="ps-shipment" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:14px;">📦 Shipment ${si + 1}</strong>
+        ${packingSlipData.shipments.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="removeShipment(${si})">Remove</button>` : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="field">
+          <label>Shipping Method</label>
+          <select onchange="packingSlipData.shipments[${si}].shippingMethod=this.value;renderShipments()">
+            <option value="shipping" ${shipment.shippingMethod === 'shipping' ? 'selected' : ''}>📫 Shipping (Carrier)</option>
+            <option value="pickup" ${shipment.shippingMethod === 'pickup' ? 'selected' : ''}>🏪 Customer Pickup</option>
+            <option value="uber" ${shipment.shippingMethod === 'uber' ? 'selected' : ''}>🚗 Uber / Delivery Service</option>
+            <option value="other" ${shipment.shippingMethod === 'other' ? 'selected' : ''}>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ship To Address</label>
+          <input type="text" value="${shipment.address}" placeholder="Delivery address" onchange="packingSlipData.shipments[${si}].address=this.value">
+        </div>
+      </div>
+
+      ${shipment.shippingMethod === 'shipping' ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="field">
+            <label>Carrier</label>
+            <select onchange="packingSlipData.shipments[${si}].carrier=this.value">
+              <option value="">— Select —</option>
+              <option value="UPS" ${shipment.carrier === 'UPS' ? 'selected' : ''}>UPS</option>
+              <option value="FedEx" ${shipment.carrier === 'FedEx' ? 'selected' : ''}>FedEx</option>
+              <option value="USPS" ${shipment.carrier === 'USPS' ? 'selected' : ''}>USPS</option>
+              <option value="DHL" ${shipment.carrier === 'DHL' ? 'selected' : ''}>DHL</option>
+              <option value="Freight" ${shipment.carrier === 'Freight' ? 'selected' : ''}>Freight / LTL</option>
+              <option value="Other" ${shipment.carrier === 'Other' ? 'selected' : ''}>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tracking Number</label>
+            <input type="text" value="${shipment.trackingNumber}" placeholder="Tracking #" onchange="packingSlipData.shipments[${si}].trackingNumber=this.value">
+          </div>
+        </div>
+      ` : shipment.shippingMethod === 'uber' ? `
+        <div class="field" style="margin-bottom:10px;">
+          <label>Driver / Service Info</label>
+          <input type="text" value="${shipment.pickupInfo}" placeholder="Driver name, plate #, Uber order #" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
+        </div>
+      ` : shipment.shippingMethod === 'pickup' ? `
+        <div class="field" style="margin-bottom:10px;">
+          <label>Pickup Details</label>
+          <input type="text" value="${shipment.pickupInfo}" placeholder="Who is picking up, vehicle info" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
+        </div>
+      ` : `
+        <div class="field" style="margin-bottom:10px;">
+          <label>Details</label>
+          <input type="text" value="${shipment.pickupInfo}" placeholder="Delivery details" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
+        </div>
+      `}
+
+      <div style="margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <strong style="font-size:12px;text-transform:uppercase;color:var(--text-muted);">Boxes / Packages</strong>
+          <button class="btn btn-sm" onclick="addBox(${si})">+ Add Box</button>
+        </div>
+        ${shipment.boxes.map((box, bi) => `
+          <div style="display:grid;grid-template-columns:60px 1fr 100px 1fr 40px;gap:8px;align-items:end;margin-bottom:6px;">
+            <div class="field">
+              <label>Box #</label>
+              <input type="text" value="${box.boxNumber}" style="text-align:center;font-weight:700;" onchange="packingSlipData.shipments[${si}].boxes[${bi}].boxNumber=this.value">
+            </div>
+            <div class="field">
+              <label>Contents / SKU / Version</label>
+              <input type="text" value="${box.contents}" placeholder="e.g. Version A - Strawberry" onchange="packingSlipData.shipments[${si}].boxes[${bi}].contents=this.value">
+            </div>
+            <div class="field">
+              <label>Qty</label>
+              <input type="number" value="${box.quantity}" min="0" style="text-align:center;" onchange="packingSlipData.shipments[${si}].boxes[${bi}].quantity=parseInt(this.value)||0;updatePSTotals()">
+            </div>
+            <div class="field">
+              <label>Notes</label>
+              <input type="text" value="${box.notes}" placeholder="Notes" onchange="packingSlipData.shipments[${si}].boxes[${bi}].notes=this.value">
+            </div>
+            <div>${shipment.boxes.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="removeBox(${si},${bi})" style="padding:6px 8px;">✕</button>` : ''}</div>
+          </div>
+        `).join('')}
+        <div style="text-align:right;font-size:13px;color:var(--text-muted);margin-top:4px;">
+          Shipment total: <strong>${shipment.boxes.reduce((s, b) => s + (b.quantity || 0), 0).toLocaleString()}</strong> units in <strong>${shipment.boxes.length}</strong> box${shipment.boxes.length > 1 ? 'es' : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  updatePSTotals();
+}
+
+function addShipment() {
+  packingSlipData.shipments.push({
+    address: '', carrier: '', trackingNumber: '', pickupInfo: '',
+    shippingMethod: 'shipping',
+    boxes: [{ boxNumber: packingSlipData.shipments.length + 1, contents: '', quantity: 0, notes: '' }]
+  });
+  renderShipments();
+}
+
+function removeShipment(si) {
+  if (!confirm('Remove this shipment?')) return;
+  packingSlipData.shipments.splice(si, 1);
+  renderShipments();
+}
+
+function addBox(si) {
+  const boxes = packingSlipData.shipments[si].boxes;
+  boxes.push({ boxNumber: boxes.length + 1, contents: '', quantity: 0, notes: '' });
+  renderShipments();
+}
+
+function removeBox(si, bi) {
+  packingSlipData.shipments[si].boxes.splice(bi, 1);
+  renderShipments();
+}
+
+function updatePSTotals() {
+  const total = packingSlipData.shipments.reduce((s, sh) => s + sh.boxes.reduce((s2, b) => s2 + (b.quantity || 0), 0), 0);
+  packingSlipData.totalShipped = total;
+  const el = document.getElementById('psTotalShipped');
+  if (el) el.textContent = total.toLocaleString();
+}
+
+function printPackingSlips() {
+  const order = allOrders.find(o => o.id === packingSlipOrderId);
+  if (!order) return;
+  const customerName = order.customer || order.customerName || '—';
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Generate one page per shipment
+  const slipPages = packingSlipData.shipments.map((shipment, si) => {
+    const shipTotal = shipment.boxes.reduce((s, b) => s + (b.quantity || 0), 0);
+    const methodLabel = { shipping: '📫 Shipped via ' + (shipment.carrier || 'Carrier'), pickup: '🏪 Customer Pickup', uber: '🚗 Uber/Delivery', other: 'Other' }[shipment.shippingMethod] || '';
+    const trackingLine = shipment.trackingNumber ? `<tr><td style="padding:4px 8px;font-weight:600;">Tracking #</td><td style="padding:4px 8px;font-family:monospace;font-size:15px;">${shipment.trackingNumber}</td></tr>` : '';
+    const pickupLine = shipment.pickupInfo ? `<tr><td style="padding:4px 8px;font-weight:600;">${shipment.shippingMethod === 'pickup' ? 'Picked up by' : shipment.shippingMethod === 'uber' ? 'Driver/Service' : 'Details'}</td><td style="padding:4px 8px;">${shipment.pickupInfo}</td></tr>` : '';
+
+    return `
+    <div class="slip" style="page-break-after:always;">
+      <div class="slip-header">
+        <h1>PACKING SLIP</h1>
+        <div class="slip-id">#${order.orderId}${packingSlipData.shipments.length > 1 ? ` (${si + 1}/${packingSlipData.shipments.length})` : ''}</div>
+      </div>
+      <div class="slip-body">
+        <div class="slip-row">
+          <div class="slip-col">
+            <div class="slip-label">Customer</div>
+            <div class="slip-val" style="font-size:18px;font-weight:700;">${customerName}</div>
+          </div>
+          <div class="slip-col" style="text-align:right;">
+            <div class="slip-label">Date</div>
+            <div class="slip-val">${today}</div>
+          </div>
+        </div>
+        ${shipment.address ? `<div class="slip-row"><div class="slip-col"><div class="slip-label">Ship To</div><div class="slip-val">${shipment.address}</div></div></div>` : ''}
+        <div class="slip-row">
+          <div class="slip-col"><div class="slip-label">Method</div><div class="slip-val">${methodLabel}</div></div>
+          <div class="slip-col"><div class="slip-label">Order #</div><div class="slip-val">${order.orderId}</div></div>
+          <div class="slip-col" style="text-align:right;"><div class="slip-label">Due Date</div><div class="slip-val">${order.dueDate ? formatDate(order.dueDate) : '—'}</div></div>
+        </div>
+
+        <table class="slip-table">
+          <thead><tr><th>Box</th><th>Contents / SKU</th><th style="text-align:right;">Quantity</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${shipment.boxes.map(box => `<tr>
+              <td style="text-align:center;font-weight:700;">${box.boxNumber}</td>
+              <td>${box.contents || '—'}</td>
+              <td style="text-align:right;font-weight:700;font-size:15px;">${(box.quantity || 0).toLocaleString()}</td>
+              <td style="font-size:12px;color:#666;">${box.notes || ''}</td>
+            </tr>`).join('')}
+            <tr style="border-top:2px solid #1a2233;">
+              <td colspan="2" style="text-align:right;font-weight:700;">TOTAL THIS SHIPMENT:</td>
+              <td style="text-align:right;font-weight:800;font-size:16px;">${shipTotal.toLocaleString()}</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="slip-table" style="margin-top:12px;">
+          <tbody>
+            <tr><td style="padding:4px 8px;font-weight:600;">Product</td><td style="padding:4px 8px;">${order.productType || ''} · ${order.material || ''}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:600;">Description</td><td style="padding:4px 8px;">${order.jobDescription || '—'}</td></tr>
+            ${trackingLine}
+            ${pickupLine}
+            ${order.specialNotes ? `<tr><td style="padding:4px 8px;font-weight:600;">Notes</td><td style="padding:4px 8px;">${order.specialNotes}</td></tr>` : ''}
+          </tbody>
+        </table>
+
+        <div style="display:flex;justify-content:space-between;margin-top:32px;">
+          <div><div class="sig-line">Packed by (Name / Date)</div></div>
+          <div><div class="sig-line">Received by (Signature)</div></div>
+        </div>
+      </div>
+      <div class="slip-footer">
+        <span>Bazaar Printing · ${FACILITIES[order.facility]?.name || ''}</span>
+        <span>#${order.orderId} · ${today}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write(`<!DOCTYPE html><html><head><title>Packing Slip — #${order.orderId}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:32px;color:#1a2233;font-size:14px;}
+    .slip{max-width:700px;margin:0 auto 24px;border:2px solid #1a2233;}
+    .slip-header{background:#1a2233;color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;}
+    .slip-header h1{font-size:20px;font-weight:700;}.slip-header .slip-id{font-size:16px;font-weight:600;}
+    .slip-body{padding:24px;}.slip-row{display:flex;justify-content:space-between;margin-bottom:12px;}.slip-col{flex:1;}
+    .slip-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:600;margin-bottom:2px;}
+    .slip-val{font-size:14px;font-weight:500;}
+    .slip-table{width:100%;border-collapse:collapse;margin-top:12px;}
+    .slip-table th{background:#f4f6f9;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:2px solid #d8dee6;}
+    .slip-table td{padding:8px 12px;border-bottom:1px solid #eee;}
+    .sig-line{border-top:1px solid #999;width:200px;margin-top:40px;padding-top:4px;font-size:11px;color:#666;}
+    .slip-footer{border-top:1px solid #d8dee6;padding:12px 24px;display:flex;justify-content:space-between;font-size:12px;color:#666;}
+    .no-print{text-align:center;margin-bottom:16px;}
+    @media print{body{padding:0;}.no-print{display:none;}}
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;font-weight:600;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨️ Print</button>
+    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;margin-left:8px;background:#eee;border:1px solid #ccc;border-radius:6px;cursor:pointer;">Close</button>
+  </div>
+  ${slipPages}
+  </body></html>`);
+  win.document.close();
+}
+
+function closePackingSlipModal() {
+  document.getElementById('packingSlipModal').classList.remove('active');
+  packingSlipOrderId = null;
+  packingSlipData = null;
+}
+
+// Legacy — keep for reference, not called
+function _packingSlipLegacy(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const customerName = order.customer || order.customerName || '—';
+  const steps = order.workflowSteps || [];
+  const totalLoss = steps.reduce((s, st) => s + (st.unitsLost || 0), 0);
+  const piecesPerFrame = order.piecesPerSheet || 1;
+  const finalQty = Math.max(0, (order.quantity || 0) - (totalLoss * piecesPerFrame));
+  const overs = order.actualOversPrinted || order.extraFrames || 0;
+  const oversUnits = overs * piecesPerFrame;
+
+  // Custom batching info
+  let batchingInfo = '';
+  if (order.unitsPerRoll) batchingInfo += `<tr><td style="padding:4px 8px;font-weight:600;">Units per Roll:</td><td style="padding:4px 8px;">${order.unitsPerRoll}</td></tr>`;
+  if (order.packagingInstructions) batchingInfo += `<tr><td style="padding:4px 8px;font-weight:600;">Packaging:</td><td style="padding:4px 8px;">${order.packagingInstructions}</td></tr>`;
+
+  const slipHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Packing Slip — #${order.orderId}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #1a2233; font-size: 14px; }
+    .slip { max-width: 700px; margin: 0 auto; border: 2px solid #1a2233; }
+    .slip-header { background: #1a2233; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .slip-header h1 { font-size: 20px; font-weight: 700; }
+    .slip-header .slip-id { font-size: 16px; font-weight: 600; }
+    .slip-body { padding: 24px; }
+    .slip-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .slip-col { flex: 1; }
+    .slip-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; font-weight: 600; margin-bottom: 2px; }
+    .slip-val { font-size: 14px; font-weight: 500; }
+    .slip-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .slip-table th { background: #f4f6f9; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #d8dee6; }
+    .slip-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .qty-box { border: 2px solid #1a2233; padding: 12px 20px; text-align: center; margin-top: 16px; }
+    .qty-box .qty-num { font-size: 32px; font-weight: 800; }
+    .qty-box .qty-label { font-size: 11px; text-transform: uppercase; color: #666; }
+    .slip-footer { border-top: 1px solid #d8dee6; padding: 16px 24px; display: flex; justify-content: space-between; font-size: 12px; color: #666; }
+    .sig-line { border-top: 1px solid #999; width: 200px; margin-top: 40px; padding-top: 4px; font-size: 11px; color: #666; }
+    @media print { body { padding: 0; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:center;margin-bottom:16px;">
+    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;font-weight:600;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨️ Print Packing Slip</button>
+    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;margin-left:8px;background:#eee;border:1px solid #ccc;border-radius:6px;cursor:pointer;">Close</button>
+  </div>
+  <div class="slip">
+    <div class="slip-header">
+      <h1>PACKING SLIP</h1>
+      <div class="slip-id">#${order.orderId}</div>
+    </div>
+    <div class="slip-body">
+      <div class="slip-row">
+        <div class="slip-col">
+          <div class="slip-label">Customer</div>
+          <div class="slip-val" style="font-size:18px;font-weight:700;">${customerName}</div>
+        </div>
+        <div class="slip-col" style="text-align:right;">
+          <div class="slip-label">Date</div>
+          <div class="slip-val">${today}</div>
+        </div>
+      </div>
+      <div class="slip-row">
+        <div class="slip-col">
+          <div class="slip-label">Order Date</div>
+          <div class="slip-val">${order.entryDate ? formatDate(order.entryDate) : '—'}</div>
+        </div>
+        <div class="slip-col">
+          <div class="slip-label">Due Date</div>
+          <div class="slip-val">${order.dueDate ? formatDate(order.dueDate) : '—'}</div>
+        </div>
+        <div class="slip-col" style="text-align:right;">
+          <div class="slip-label">Facility</div>
+          <div class="slip-val">${FACILITIES[order.facility]?.name || order.facility || '—'}</div>
+        </div>
+      </div>
+
+      <table class="slip-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="font-weight:600;">Product Type</td><td>${order.productType || '—'}</td></tr>
+          <tr><td style="font-weight:600;">Job Description</td><td>${order.jobDescription || '—'}</td></tr>
+          <tr><td style="font-weight:600;">Material</td><td>${order.material || '—'}</td></tr>
+          <tr><td style="font-weight:600;">Colors</td><td>${order.colorMode || order.colors || 'CMYK'}${order.hasWhiteLayer ? ' + White' : ''}</td></tr>
+          ${order.lamination && order.lamination !== 'None' ? `<tr><td style="font-weight:600;">Lamination</td><td>${order.lamination}</td></tr>` : ''}
+          ${order.hasUV ? '<tr><td style="font-weight:600;">UV Coating</td><td>Yes</td></tr>' : ''}
+          ${order.foilType && order.foilType !== 'None' ? `<tr><td style="font-weight:600;">Foil</td><td>${order.foilType}${order.foilColor ? ' — ' + order.foilColor : ''}</td></tr>` : ''}
+          ${order.cutMethod && order.cutMethod !== 'none' ? `<tr><td style="font-weight:600;">Cut Method</td><td>${order.cutMethod}${order.dieName ? ' — Die: ' + order.dieName : ''}</td></tr>` : ''}
+          ${order.labelWidth ? `<tr><td style="font-weight:600;">Label Size</td><td>${order.labelWidth}" × ${order.labelHeight}"</td></tr>` : ''}
+          ${order.rollDirection ? `<tr><td style="font-weight:600;">Roll Direction</td><td>Direction ${order.rollDirection}</td></tr>` : ''}
+          ${batchingInfo}
+          ${order.specialNotes ? `<tr><td style="font-weight:600;">Special Notes</td><td>${order.specialNotes}</td></tr>` : ''}
+        </tbody>
+      </table>
+
+      <div style="display:flex;gap:16px;margin-top:16px;">
+        <div class="qty-box" style="flex:1;">
+          <div class="qty-label">Ordered</div>
+          <div class="qty-num">${(order.quantity || 0).toLocaleString()}</div>
+        </div>
+        <div class="qty-box" style="flex:1;">
+          <div class="qty-label">Shipped</div>
+          <div class="qty-num">${finalQty.toLocaleString()}</div>
+        </div>
+        ${totalLoss > 0 ? `
+        <div class="qty-box" style="flex:1;border-color:#dc2626;">
+          <div class="qty-label" style="color:#dc2626;">Production Loss</div>
+          <div class="qty-num" style="color:#dc2626;">${(totalLoss * piecesPerFrame).toLocaleString()}</div>
+        </div>` : ''}
+        ${oversUnits > 0 ? `
+        <div class="qty-box" style="flex:1;border-color:#16a34a;">
+          <div class="qty-label" style="color:#16a34a;">Overs Included</div>
+          <div class="qty-num" style="color:#16a34a;">${oversUnits.toLocaleString()}</div>
+        </div>` : ''}
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:32px;">
+        <div>
+          <div class="sig-line">Packed by (Name / Date)</div>
+        </div>
+        <div>
+          <div class="sig-line">Received by (Customer Signature)</div>
+        </div>
+      </div>
+    </div>
+    <div class="slip-footer">
+      <span>Bazaar Printing • ${FACILITIES[order.facility]?.name || ''}</span>
+      <span>Order #${order.orderId} • ${today}</span>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write(slipHTML);
+  win.document.close();
+}
+
+// ── Detail Modal ──────────────────────────────────────────
+function openDetail(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  document.getElementById('detailTitle').textContent = `${order.customer || order.customerName} — #${order.orderId}`;
+  document.getElementById('detailOrderId').textContent = `${order.productType || ''} · ${order.facility || ''}`;
+  document.getElementById('detailContent').innerHTML = renderOrderBody(order);
+  document.getElementById('detailModal').classList.add('active');
+}
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('active');
+}
+
+function openArtworkLightbox(dataUrl) {
+  // Simple lightbox via new window
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;">`);
+}
+</script>
+</body>
+</html>
