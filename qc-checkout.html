@@ -107,11 +107,12 @@
           </div>
         </div>
 
-        <!-- Submit bar -->
-        <div class="save-bar">
-          <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
-          <button class="btn btn-primary" id="submitQCBtn" onclick="submitQC()">Submit QC Result</button>
-        </div>
+      </div>
+
+      <!-- Submit bar (pinned at bottom of form section, always visible) -->
+      <div class="save-bar">
+        <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
+        <button class="btn btn-primary" id="submitQCBtn" onclick="submitQC()">Submit QC Result</button>
       </div>
     </div>
   </div>
@@ -141,13 +142,16 @@ document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'QC
 initAuth('qc-checkout');
 
 document.getElementById('page-styles').textContent = `
-  body { overflow: hidden; }
+  html, body { height: 100%; }
+  body { overflow: hidden; display: flex; flex-direction: column; }
 
   /* ── Three-panel grid ── */
   .qc-layout {
     display: grid;
     grid-template-columns: 280px 1fr 280px;
-    height: calc(100vh - 100px);
+    grid-template-rows: minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
     gap: 0;
     overflow: hidden;
   }
@@ -157,6 +161,7 @@ document.getElementById('page-styles').textContent = `
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     margin: 12px 6px;
@@ -218,6 +223,7 @@ document.getElementById('page-styles').textContent = `
 
   #qcFormSection {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -229,14 +235,16 @@ document.getElementById('page-styles').textContent = `
     padding-bottom: 8px;
   }
   .qc-verdict-footer {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    overflow-y: auto;
     border-top: 1px solid var(--border);
     padding-top: 8px;
     background: var(--bg);
   }
+  .save-bar { flex-shrink: 0; }
 
   .section-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-  .qc-order-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #e0edff; border-color: #bfdbfe; }
+  .qc-order-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #e0edff; border-color: #bfdbfe; flex-shrink: 0; }
   .banner-id { font-size: 18px; font-weight: 800; color: var(--accent); }
   .banner-customer { font-size: 16px; font-weight: 700; }
   .banner-details { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
