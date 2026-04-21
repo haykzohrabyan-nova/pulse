@@ -291,10 +291,11 @@
       ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
       : '';
 
-    // Sales-view lock indicator — shown when status prevents direct sales editing
-    const _editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager'];
-    const lockHTML = !_editableStatuses.includes(order.status)
-      ? '<span title="Sales cannot edit this ticket" style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 5px;border-radius:999px;margin-left:4px;vertical-align:middle;">🔒</span>'
+    // Sales-view lock indicator — PUL-65: only 'new' (INTAKE) tickets are editable by sales
+    const _editableStatuses = ['new'];
+    const _isLocked = !_editableStatuses.includes(order.status);
+    const lockHTML = _isLocked
+      ? '<span aria-label="Locked — read-only for sales" data-locked="true" title="Sales cannot edit this ticket" style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 5px;border-radius:999px;margin-left:4px;vertical-align:middle;">🔒</span>'
       : '';
 
     // Queue visualization classes
