@@ -3161,14 +3161,15 @@ async function renderQueuePane() {
     const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
     const editableStatuses = ['prepress','on-hold','new','pending-account-manager','prepress-active'];
-    const salesLock = editableStatuses.includes(o.status) ? '' : '<span title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>';
+    const isLocked = !editableStatuses.includes(o.status);
+    const salesLock = isLocked ? '<span aria-label="Locked — read-only for sales" title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>' : '';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
       : o.facility === '16th-street'
       ? '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;margin-left:4px;">16th</span>' : '';
     // PUL-137 Fix #3: Highlight the active (currently editing) order card.
     const isActive = editingOrderId && String(o.orderId) === String(editingOrderId);
-    return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
+    return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '"' + (isLocked ? ' data-locked="true"' : '') + ' onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
       + '<div class="qp-card-info">'
       + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
