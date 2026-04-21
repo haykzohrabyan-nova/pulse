@@ -453,38 +453,31 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- P2-D: Note Type field (INFO / CRITICAL / INSTRUCTIONS) -->
     <div class="form-section">
-      <h3 class="section-title">📝 Special Notes</h3>
-      <div class="form-row">
-        <div class="field" style="margin-bottom:8px;">
-          <label>Note Type</label>
-          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+      <h3 class="section-title">📝 Notes</h3>
+      <!-- Unified Notes Log (PUL-138) — chronological, timestamped, attributed -->
+      <div id="notesLogDisplay" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:#f8fafc;padding:8px 10px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
               <input type="radio" name="noteType" id="noteTypeInfo" value="INFO" checked onchange="updateNoteTypeStyle()">
-              <span style="padding:2px 10px;border-radius:8px;background:#e0edff;color:#1d4ed8;font-weight:700;font-size:11px;">ℹ️ Info</span>
+              <span style="padding:2px 8px;border-radius:8px;background:#e0edff;color:#1d4ed8;font-weight:700;font-size:11px;">ℹ️ Info</span>
             </label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
               <input type="radio" name="noteType" id="noteTypeCritical" value="CRITICAL" onchange="updateNoteTypeStyle()">
-              <span style="padding:2px 10px;border-radius:8px;background:#fde8e8;color:#b91c1c;font-weight:700;font-size:11px;">🚨 Critical</span>
+              <span style="padding:2px 8px;border-radius:8px;background:#fde8e8;color:#b91c1c;font-weight:700;font-size:11px;">🚨 Critical</span>
             </label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;">
               <input type="radio" name="noteType" id="noteTypeInstructions" value="INSTRUCTIONS" onchange="updateNoteTypeStyle()">
-              <span style="padding:2px 10px;border-radius:8px;background:#fef3cd;color:#92600a;font-weight:700;font-size:11px;">📋 Instructions</span>
+              <span style="padding:2px 8px;border-radius:8px;background:#fef3cd;color:#92600a;font-weight:700;font-size:11px;">📋 Instructions</span>
             </label>
           </div>
+          <input type="text" id="newNoteInput" placeholder="Add a note..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();appendNoteEntry();}">
         </div>
-        <div class="field">
-          <textarea id="specialNotes" rows="2" placeholder="Special instructions, customer notes, handling requirements..." oninput="autoExpandNotes(this)" style="resize:none;overflow:hidden;transition:height 0.15s;"></textarea>
-        </div>
+        <button type="button" class="btn" onclick="appendNoteEntry()" style="white-space:nowrap;margin-top:auto;">+ Add Note</button>
       </div>
-      <!-- Timestamped Notes Log -->
-      <div style="margin-top:12px;">
-        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">📋 Notes Log</label>
-        <div id="notesLogDisplay" style="margin-top:6px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:#f8fafc;padding:8px 10px;"></div>
-        <div style="display:flex;gap:6px;margin-top:6px;">
-          <input type="text" id="newNoteInput" placeholder="Add a timestamped note..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();appendNoteEntry();}">
-          <button type="button" class="btn" onclick="appendNoteEntry()" style="white-space:nowrap;">+ Add Note</button>
-        </div>
-      </div>
+      <!-- Hidden legacy specialNotes field for backward-compat save -->
+      <textarea id="specialNotes" style="display:none;" rows="1"></textarea>
     </div>
 
     <div style="display:none;">
@@ -858,7 +851,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const navParentId = order.parentOrderId || orderId;
       await renderOrderNavigator(navParentId, orderId);
       // Apply edit restriction: lock form unless status allows direct editing
-      const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager'];
+      const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-active'];
       if (!editableStatuses.includes(order.status)) {
         applyEditLock(order);
       }
@@ -1114,25 +1107,95 @@ function autoExpandNotes(el) {
   el.style.height = Math.min(el.scrollHeight, 200) + 'px';
 }
 
-// ── Timestamped Notes Log ───────────────────────────────────
-let _notesLog = []; // { text, author, timestamp }
+// ── Timestamped Notes Log (PUL-138: unified, timestamped, attributed) ──
+let _notesLog = []; // { text, author, timestamp, source, type }
+let _legacyNote = '';
+let _legacyNoteType = 'INFO';
+
+function buildConversationHistory(order) {
+  const history = [];
+  const seen = new Set();
+  const pushUnique = (entry) => {
+    if (!entry?.text) return;
+    const normalized = {
+      text: entry.text,
+      author: entry.author || 'Unknown',
+      timestamp: entry.timestamp || order?.updatedAt || order?.createdAt || new Date().toISOString(),
+      source: entry.source || 'account-manager',
+      category: entry.category || ''
+    };
+    const key = [normalized.source, normalized.author, normalized.timestamp, normalized.text].join('||');
+    if (seen.has(key)) return;
+    seen.add(key);
+    history.push(normalized);
+  };
+  if (Array.isArray(order?.conversationHistory)) order.conversationHistory.forEach(pushUnique);
+  if (order?.prepressIssueComment) {
+    pushUnique({
+      text: order.prepressIssueComment,
+      author: order.prepressIssueBy || 'Prepress',
+      timestamp: order.prepressIssueAt || order.updatedAt || order.createdAt || new Date().toISOString(),
+      source: 'prepress',
+      category: order.prepressIssueCategory || ''
+    });
+  }
+  if (Array.isArray(order?.notesLog)) order.notesLog.forEach(entry => pushUnique({ ...entry, source: entry.source || 'account-manager' }));
+  history.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+  return history;
+}
+
+function normalizeNotesLog(history) {
+  return (history || [])
+    .filter(entry => entry && entry.text && (entry.source || 'account-manager') !== 'prepress')
+    .map(entry => ({
+      text: entry.text,
+      author: entry.author,
+      timestamp: entry.timestamp,
+      source: entry.source || 'account-manager',
+      type: entry.type || 'INFO'
+    }));
+}
 
 function renderNotesLog() {
   const el = document.getElementById('notesLogDisplay');
   if (!el) return;
-  if (!_notesLog.length) {
+
+  // Determine entries to show: log entries or legacy fallback
+  let entries = _notesLog;
+  let isLegacyFallback = false;
+  if (!entries.length && _legacyNote.trim()) {
+    entries = [{ text: _legacyNote, author: '', timestamp: '', source: 'account-manager', type: _legacyNoteType }];
+    isLegacyFallback = true;
+  }
+
+  if (!entries.length) {
     el.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No notes yet.</span>';
     return;
   }
-  el.innerHTML = _notesLog.map(entry => {
-    const d = new Date(entry.timestamp);
-    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `<div style="padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:12px;">
-      <span style="color:var(--text-muted);font-size:11px;">${dateStr} · <strong>${entry.author || 'Unknown'}</strong></span>
+
+  el.innerHTML = entries.map(entry => {
+    const d = entry.timestamp ? new Date(entry.timestamp) : null;
+    const dateStr = d && !isNaN(d.getTime())
+      ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const source = entry.source === 'prepress' ? 'Prepress' : 'Account Manager';
+    const chipBg = entry.source === 'prepress' ? '#fee2e2' : '#e0edff';
+    const chipColor = entry.source === 'prepress' ? '#b91c1c' : '#1d4ed8';
+    const nt = (entry.type || 'INFO').toUpperCase();
+    const isCritical = nt === 'CRITICAL';
+    const rowBg = isCritical ? 'background:#fef3c7;border-left:3px solid #d97706;padding-left:7px;' : '';
+    const authorLabel = entry.author || 'Unknown';
+    const metaLine = [
+      dateStr,
+      authorLabel !== 'Unknown' || !isLegacyFallback ? `<strong>${authorLabel}</strong>` : '',
+      isCritical ? '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:#fde8e8;color:#b91c1c;font-size:10px;font-weight:700;">🚨 CRITICAL</span>' : `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:${chipBg};color:${chipColor};font-size:10px;font-weight:700;">${source}</span>`
+    ].filter(Boolean).join(' · ');
+    return `<div style="padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:12px;${rowBg}">
+      <span style="color:var(--text-muted);font-size:11px;">${metaLine}</span>
       <div style="margin-top:2px;color:var(--text);">${entry.text.replace(/</g,'&lt;')}</div>
     </div>`;
   }).join('');
-  el.scrollTop = el.scrollHeight;
+  if (!isLegacyFallback) el.scrollTop = el.scrollHeight;
 }
 
 function appendNoteEntry() {
@@ -1141,7 +1204,8 @@ function appendNoteEntry() {
   const text = input.value.trim();
   if (!text) return;
   const author = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Staff';
-  _notesLog.push({ text, author, timestamp: new Date().toISOString() });
+  const type = document.querySelector('input[name="noteType"]:checked')?.value || 'INFO';
+  _notesLog.push({ text, author, timestamp: new Date().toISOString(), source: 'account-manager', type });
   input.value = '';
   renderNotesLog();
   _formDirty = true;
@@ -2457,7 +2521,8 @@ async function saveTicket(suppressRedirect = false) {
       paymentTerms: document.getElementById('paymentTerms').value,
       invoiceNumber: document.getElementById('invoiceNumber').value.trim(),
       invoiceStatus: document.getElementById('invoiceStatus').value || 'not-invoiced',
-      notesLog: _notesLog,
+      conversationHistory: _notesLog,
+      notesLog: normalizeNotesLog(_notesLog),
     };
 
     if (editingDbId) {
@@ -2470,14 +2535,26 @@ async function saveTicket(suppressRedirect = false) {
       if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
       if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
       if (previousOrder?.status === 'pending-account-manager') {
+        const resubmittedAt = new Date().toISOString();
+        const mergedConversation = buildConversationHistory(previousOrder);
+        const latestSalesComment = normalizeNotesLog(_notesLog).slice(-1)[0];
+        if (latestSalesComment) {
+          const alreadyPresent = mergedConversation.some(entry =>
+            entry.source !== 'prepress' &&
+            entry.text === latestSalesComment.text &&
+            entry.author === latestSalesComment.author &&
+            entry.timestamp === latestSalesComment.timestamp
+          );
+          if (!alreadyPresent) mergedConversation.push({ ...latestSalesComment, source: latestSalesComment.source || 'account-manager' });
+        }
+        mergedConversation.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
         order.status = 'prepress';
         order.needsAccountManagerAction = false;
-        order.prepressIssueComment = '';
-        order.prepressIssueCategory = '';
-        order.prepressIssueBy = '';
-        order.prepressIssueAt = null;
-        order.prepressResubmittedAt = new Date().toISOString();
+        order.prepressResubmittedAt = resubmittedAt;
         order.prepressResubmittedBy = order.accountManager || 'Account Manager';
+        order.prepressComment = '';
+        order.conversationHistory = mergedConversation;
+        order.notesLog = normalizeNotesLog(mergedConversation);
       }
       await updateOrder(editingDbId, order);
       _formDirty = false; // clear dirty flag after successful save
@@ -2678,13 +2755,16 @@ async function loadOrderIntoForm(order) {
 
   // Due date / notes
   document.getElementById('dueDate').value = order.dueDate || '';
-  document.getElementById('specialNotes').value = order.specialNotes || '';
+  const specialNotesEl = document.getElementById('specialNotes');
+  if (specialNotesEl) specialNotesEl.value = order.specialNotes || '';
   // P2-D: Note type
   const noteTypeVal = order.noteType || 'INFO';
   const noteTypeEl = document.querySelector(`input[name="noteType"][value="${noteTypeVal}"]`);
   if (noteTypeEl) { noteTypeEl.checked = true; updateNoteTypeStyle(); }
-  // Timestamped notes log
-  _notesLog = Array.isArray(order.notesLog) ? [...order.notesLog] : [];
+  // Unified Notes Log (PUL-138): set legacy fallback, then load log
+  _legacyNote = order.specialNotes || '';
+  _legacyNoteType = order.noteType || 'INFO';
+  _notesLog = buildConversationHistory(order);
   renderNotesLog();
 
   // Artwork
@@ -3080,7 +3160,7 @@ async function renderQueuePane() {
     const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
     const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
-    const editableStatuses = ['prepress','on-hold','new'];
+    const editableStatuses = ['prepress','on-hold','new','pending-account-manager','prepress-active'];
     const salesLock = editableStatuses.includes(o.status) ? '' : '<span title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'

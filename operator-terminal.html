@@ -268,6 +268,16 @@
     .special-notes-card .note-label { font-size: 11px; font-weight: 700; color: #92600a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .special-notes-card .note-text { font-size: 13px; color: #78350f; line-height: 1.5; }
 
+    /* Notes Log */
+    .notes-log-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .nl-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+    .nl-entry { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; background: #f8fafc; }
+    .nl-entry:last-child { margin-bottom: 0; }
+    .nl-entry.critical { background: #fef3c7; border-color: #d97706; }
+    .nl-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .nl-meta.critical { color: #92600a; font-weight: 700; }
+    .nl-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+
     /* Knowledge Base Alerts */
     .kb-alert {
       border-radius: 8px; padding: 11px 13px; border-left: 4px solid;
@@ -1561,20 +1571,36 @@ async function renderJobDetail(order) {
   });
   html += `</div>`;
 
-  // ── SPECIAL NOTES (P2-D: note type badge) ──
-  const noteText = order.specialNotes || order.notes || '';
-  if (noteText.trim()) {
-    const nt = order.noteType || 'INFO';
-    const ntStyles = {
-      CRITICAL:     { card: 'background:#fde8e8;border-color:#dc2626;', label: 'color:#7f1d1d;' },
-      INSTRUCTIONS: { card: 'background:#fffbeb;border-color:#d97706;', label: 'color:#78350f;' },
-      INFO:         { card: '', label: '' },
-    };
-    const s = ntStyles[nt] || ntStyles.INFO;
-    const ntIcons = { CRITICAL: '🚨', INSTRUCTIONS: '📋', INFO: '📝' };
-    html += `<div class="special-notes-card" style="${s.card}">
-      <div class="note-label" style="${s.label}">${ntIcons[nt] || '📝'} Special Notes <span class="note-type-badge ${nt}">${nt}</span></div>
-      <div class="note-text" style="${s.label}">${escHtml(noteText)}</div>
+  // ── NOTES LOG (PUL-138: unified timestamped/attributed notes, immediately visible) ──
+  const notesHistory = buildNotesHistory(order);
+  const legacyNoteText = order.specialNotes || order.notes || '';
+  if (notesHistory.length) {
+    html += `<div class="notes-log-card">
+      <div class="nl-title">📋 Notes Log</div>`;
+    notesHistory.forEach(entry => {
+      const d = new Date(entry.timestamp);
+      const dateStr = isNaN(d.getTime()) ? '' : (d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      const isCritical = (entry.type || '').toUpperCase() === 'CRITICAL' || (entry.noteType || '').toUpperCase() === 'CRITICAL';
+      const entryCls = isCritical ? ' critical' : '';
+      const metaCls = isCritical ? ' critical' : '';
+      html += `<div class="nl-entry${entryCls}">
+        <div class="nl-meta${metaCls}">${dateStr}${entry.author ? ` · ${escHtml(entry.author)}` : ''}${isCritical ? ' · <strong>CRITICAL</strong>' : ''}</div>
+        <div class="nl-text">${escHtml(entry.text)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  } else if (legacyNoteText.trim()) {
+    // Legacy fallback: show specialNotes as a Notes Log entry
+    const nt = (order.noteType || 'INFO').toUpperCase();
+    const isCritical = nt === 'CRITICAL';
+    const entryCls = isCritical ? ' critical' : '';
+    const metaCls = isCritical ? ' critical' : '';
+    html += `<div class="notes-log-card">
+      <div class="nl-title">📋 Notes Log</div>
+      <div class="nl-entry${entryCls}">
+        <div class="nl-meta${metaCls}">${isCritical ? '🚨 CRITICAL' : 'Note'}</div>
+        <div class="nl-text">${escHtml(legacyNoteText)}</div>
+      </div>
     </div>`;
   }
 
@@ -2392,6 +2418,29 @@ async function confirmClockout() {
   document.getElementById('op-preview').style.display = 'none';
   document.getElementById('btn-clock-in').disabled    = true;
   document.getElementById('already-in-msg').style.display = 'none';
+}
+
+// ── NOTES HISTORY BUILDER (PUL-138) ──────────────────────────────────
+function buildNotesHistory(order) {
+  const seen = new Set();
+  const result = [];
+  const push = (entry) => {
+    if (!entry?.text) return;
+    const key = [entry.author, entry.timestamp, entry.text].join('||');
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(entry);
+  };
+  if (Array.isArray(order?.conversationHistory)) order.conversationHistory.forEach(push);
+  if (order?.prepressIssueComment) push({
+    text: order.prepressIssueComment,
+    author: order.prepressIssueBy || 'Prepress',
+    timestamp: order.prepressIssueAt || order.updatedAt,
+    type: 'INFO'
+  });
+  if (Array.isArray(order?.notesLog)) order.notesLog.forEach(e => push({ ...e, type: e.type || e.noteType || 'INFO' }));
+  result.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+  return result;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────
