@@ -70,7 +70,7 @@
     </div>
   </main>
 
-  <aside class="prepress-side">
+  <aside class="prepress-side" id="prepressSide" style="display:none;">
     <div class="detail-card sticky-card">
       <h3>Prepress Review</h3>
       <div class="checklist">
@@ -134,7 +134,8 @@ document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Pr
 initAuth('prepress');
 
 document.getElementById('page-styles').textContent = `
-  .prepress-layout { display:grid; grid-template-columns:300px minmax(0,1fr) 340px; gap:14px; padding:14px; min-height:calc(100vh - 80px); }
+  .prepress-layout { display:grid; grid-template-columns:300px minmax(0,1fr); gap:14px; padding:14px; min-height:calc(100vh - 80px); }
+  .prepress-layout.has-selection { grid-template-columns:300px minmax(0,1fr) 340px; }
   .prepress-queue, .detail-card { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 20px rgba(15,23,42,0.05); }
   .prepress-queue { display:flex; flex-direction:column; min-height:calc(100vh - 110px); overflow:hidden; }
   .queue-header { padding:14px; border-bottom:1px solid var(--border); }
@@ -193,7 +194,9 @@ async function loadOrders() {
   const orders = await getAllOrders();
   allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
     .sort(compareOrdersByRushDue);
-  if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
+  // PUL-137 Fix #1: Only clear selection if the previously-selected order is gone.
+  // Do NOT auto-select the first order — selection must come from an explicit user click.
+  if (selectedOrderId && !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = null;
   renderQueue();
   renderDetail();
 }
@@ -244,6 +247,14 @@ function renderQueue() {
       ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}</div>` : ''}
     </div>
   `).join('');
+  // PUL-137 Req 12: clicking empty space in the queue list deselects the current ticket
+  list.onclick = function(e) {
+    if (e.target === list && selectedOrderId) {
+      selectedOrderId = null;
+      renderQueue();
+      renderDetail();
+    }
+  };
 }
 
 function selectOrder(id) {
@@ -270,14 +281,22 @@ function renderDetail() {
   const order = allOrders.find(o => o.id === selectedOrderId);
   const empty = document.getElementById('emptyState');
   const wrap = document.getElementById('detailWrap');
+  const side = document.getElementById('prepressSide');
+  const layout = document.querySelector('.prepress-layout');
+  // PUL-137 Req 10: show right panel only when a ticket is selected
   if (!order) {
     empty.style.display = 'block';
     wrap.style.display = 'none';
     document.getElementById('lastIssueBox').style.display = 'none';
+    if (side) side.style.display = 'none';
+    if (layout) layout.classList.remove('has-selection');
     return;
   }
   empty.style.display = 'none';
   wrap.style.display = 'block';
+  // PUL-137 Req 10: reveal right panel and expand to 3-column grid
+  if (side) side.style.display = '';
+  if (layout) layout.classList.add('has-selection');
 
   document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
   document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
@@ -353,7 +372,8 @@ function updateApproveButtonVisibility() {
   const startPauseBtn = document.getElementById('btnStartPause');
   const hint = document.getElementById('prepressActionHint');
   if (btn) btn.style.display = (allChecked && !hasIssue && reviewStarted) ? '' : 'none';
-  if (sendBackBtn) sendBackBtn.disabled = !reviewStarted;
+  // PUL-137 Fix #4: Hide the button entirely when review hasn't started (not just disable it).
+  if (sendBackBtn) sendBackBtn.style.display = reviewStarted ? '' : 'none';
   if (hint) hint.style.display = reviewStarted ? 'none' : '';
   if (startPauseBtn) {
     if (isActive) {

@@ -26,6 +26,8 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;">
+      <!-- PUL-137 Req 9: New Ticket button — clears selection and resets to blank without page reload when already on a new form; navigates to fresh form when editing -->
+      <button type="button" class="btn" id="newTicketBtn" onclick="resetToNewTicket()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;">✏️ New Ticket</button>
       <a id="addSubTicketBtn" href="#" class="btn" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;">➕ Add Sub-Ticket</a>
       <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
     </div>
@@ -608,6 +610,8 @@ document.getElementById('page-styles').textContent = `
   .qp-list { flex: 1; overflow-y: auto; padding: 8px; }
   .qp-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
   .qp-card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
+  /* PUL-137 Fix #3: Highlight the currently-editing order card */
+  .qp-card-active { border-color: #2563eb !important; background: #eff6ff !important; box-shadow: 0 0 0 2px rgba(37,99,235,0.25) !important; }
   .qp-card-info { flex: 1; min-width: 0; }
   .qp-card-id { font-weight: 700; font-size: 13px; color: var(--accent); }
   .qp-card-customer { font-size: 11px; color: #374151; margin-top: 1px; }
@@ -1651,6 +1655,13 @@ function applyEditLock(order) {
   });
   document.getElementById('saveBtn').disabled = true;
 
+  // PUL-137 Req 6: Hide all save actions when viewing a ticket in read-only (locked) mode.
+  // Top header save button
+  const topSaveBtn = document.getElementById('saveBtn');
+  if (topSaveBtn) topSaveBtn.style.display = 'none';
+  // Bottom save bar: Cancel, Save Job Ticket, Save & Add Next Item
+  document.querySelectorAll('.save-bar button').forEach(btn => { btn.style.display = 'none'; });
+
   // Show a lock banner with an "Request Edit (Admin Code)" button
   const banner = document.createElement('div');
   banner.id = 'editLockBanner';
@@ -1687,6 +1698,10 @@ function verifyAdminCode() {
     document.getElementById('saveBtn').disabled = false;
     const banner = document.getElementById('editLockBanner');
     if (banner) { banner.style.background = '#d4edda'; banner.style.borderColor = 'var(--green)'; banner.innerHTML = '<div style="font-size:13px;font-weight:700;color:#166534;">✅ Manager edit unlocked.</div>'; }
+    // PUL-137 Req 6: Restore save buttons when manager unlocks editing
+    const topSaveBtn = document.getElementById('saveBtn');
+    if (topSaveBtn) topSaveBtn.style.display = '';
+    document.querySelectorAll('.save-bar button').forEach(btn => { btn.style.display = ''; });
     closeAdminCodeModal();
   } else {
     result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
@@ -2460,7 +2475,8 @@ async function saveTicket(suppressRedirect = false) {
           console.warn('Rush SMS failed:', e);
         }
       }
-      window.location.href = `production-manager.html?order=${editingOrderId}`;
+      // PUL-137 Fix #2: Stay on job-ticket.html after editing — do not redirect to production-manager.
+      window.location.href = `job-ticket.html?saved=${encodeURIComponent(editingOrderId)}`;
     } else {
       const allOrders = await getAllOrders();
       const userTypedId = document.getElementById('jobTicketNumber').value.trim();
@@ -3047,7 +3063,9 @@ async function renderQueuePane() {
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
       : o.facility === '16th-street'
       ? '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;margin-left:4px;">16th</span>' : '';
-    return '<div class="qp-card" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
+    // PUL-137 Fix #3: Highlight the active (currently editing) order card.
+    const isActive = editingOrderId && String(o.orderId) === String(editingOrderId);
+    return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
       + '<div class="qp-card-info">'
       + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
@@ -3061,6 +3079,13 @@ async function renderQueuePane() {
       + '<div style="font-size:9px;color:#9ca3af;text-align:center;margin-top:2px;">scan</div>'
       + '</div></div>';
   }).join('');
+
+  // PUL-137 Fix #3: Clicking empty space in the queue list exits the current editing view.
+  list.onclick = function(e) {
+    if (e.target === list && editingOrderId) {
+      window.location.href = 'job-ticket.html';
+    }
+  };
 }
 
 
@@ -3075,6 +3100,45 @@ window.addEventListener('DOMContentLoaded', () => {
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
   // Stay on job-ticket.html — navigate to a fresh form and show a success toast
   window.location.href = `job-ticket.html?saved=${encodeURIComponent(savedOrderId)}`;
+}
+
+// PUL-137 Req 9: Reset the page to a fresh blank ticket without a full browser reload.
+function resetToNewTicket() {
+  // If currently editing an existing order, navigate to a clean URL
+  if (editingOrderId) {
+    window.location.href = 'job-ticket.html';
+    return;
+  }
+  // Already on a blank form — just clear state and re-render
+  editingOrderId = null;
+  editingDbId = null;
+  _parentOrderId = null;
+  artworkDataList = [];
+  singleFileData = { white: null, uv: null, foil: null };
+  skuList = [];
+  rushApproved = false;
+
+  // Reset form fields
+  const form = document.getElementById('ticketForm');
+  if (form) form.reset();
+
+  // Reset UI state
+  document.getElementById('pageTitle').textContent = 'New Job Ticket';
+  document.getElementById('orderIdDisplay').textContent = '';
+  const subBtn = document.getElementById('addSubTicketBtn');
+  if (subBtn) subBtn.style.display = 'none';
+  const lockBanner = document.getElementById('editLockBanner');
+  if (lockBanner) lockBanner.remove();
+  // Restore save buttons in case they were hidden by a lock
+  const topSaveBtn = document.getElementById('saveBtn');
+  if (topSaveBtn) { topSaveBtn.style.display = ''; topSaveBtn.disabled = false; }
+  document.querySelectorAll('.save-bar button').forEach(btn => { btn.style.display = ''; btn.disabled = false; });
+
+  // Re-render queue pane to clear active highlight
+  renderQueuePane();
+
+  // Clean URL
+  window.history.replaceState({}, '', 'job-ticket.html');
 }
 
 // Show success toast when arriving from a just-saved ticket
