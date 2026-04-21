@@ -534,21 +534,26 @@ function renderList() {
     return;
   }
 
-  container.innerHTML = filtered.map(order => renderOrderRow(order)).join('');
+  // PUL-137 Fix #5: Pass 1-based queue position to each row for display.
+  container.innerHTML = filtered.map((order, idx) => renderOrderRow(order, idx + 1)).join('');
 }
 
-function renderOrderRow(order) {
+function renderOrderRow(order, position) {
   const dueClass = getDueClass(order.dueDate);
   const isExpanded = order.id === activeOrderId;
   const line = getProductionLine(order);
   const lineInfo = PRODUCTION_LINES[line];
   const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
   const reprintTag = order.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
+  // PUL-137 Fix #5: Show queue position as a small badge next to the order ID.
+  const posTag = position != null
+    ? `<span style="font-size:10px;background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:999px;margin-left:6px;font-weight:600;">#${position}</span>`
+    : '';
 
   return `
     <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
       <div class="order-row-header" onclick="toggleOrderRow(${order.id})">
-        <span class="order-id">#${order.orderId}${reprintTag} ${renderRushFlag(order)}</span>
+        <span class="order-id">#${order.orderId}${posTag}${reprintTag} ${renderRushFlag(order)}</span>
         <span class="order-status">${renderStatusBadge(order.status)}</span>
         <span class="order-customer">${order.customer || order.customerName}</span>
         <span class="order-product">${order.productType || ''}${order.material ? ' · ' + order.material : ''}</span>

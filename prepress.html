@@ -193,7 +193,9 @@ async function loadOrders() {
   const orders = await getAllOrders();
   allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
     .sort(compareOrdersByRushDue);
-  if (!selectedOrderId || !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = allOrders[0]?.id || null;
+  // PUL-137 Fix #1: Only clear selection if the previously selected order is gone.
+  // Do NOT auto-select the first order — selection must come from an explicit user click.
+  if (selectedOrderId && !allOrders.some(o => o.id === selectedOrderId)) selectedOrderId = null;
   renderQueue();
   renderDetail();
 }
@@ -353,7 +355,8 @@ function updateApproveButtonVisibility() {
   const startPauseBtn = document.getElementById('btnStartPause');
   const hint = document.getElementById('prepressActionHint');
   if (btn) btn.style.display = (allChecked && !hasIssue && reviewStarted) ? '' : 'none';
-  if (sendBackBtn) sendBackBtn.disabled = !reviewStarted;
+  // PUL-137 Fix #4: Hide the button entirely when review hasn't started (not just disable it).
+  if (sendBackBtn) sendBackBtn.style.display = reviewStarted ? '' : 'none';
   if (hint) hint.style.display = reviewStarted ? 'none' : '';
   if (startPauseBtn) {
     if (isActive) {
