@@ -84,7 +84,24 @@
             <div class="field"><label>Add-ons</label>
               <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_design"> Design job included</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_application"> Label application (jars/tubes/bags)</label>
+                <div id="appAddonSection">
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_application" onchange="toggleApplicationPanel()"> Label application service</label>
+                  <div id="appAddonPanel" style="display:none;margin-top:8px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                      <div class="field">
+                        <label style="font-size:11px;">Container Type *</label>
+                        <select id="q_appContainerType" onchange="calcAppFee()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
+                          <option value="">— Select container —</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label style="font-size:11px;">Application Qty</label>
+                        <input type="number" id="q_appQty" oninput="calcAppFee()" placeholder="e.g. 500" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
+                      </div>
+                    </div>
+                    <div id="q_appFeeInline" style="margin-top:8px;font-size:12px;color:#059669;font-weight:600;"></div>
+                  </div>
+                </div>
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_scodix"> Scodix embellishment</label>
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_rush"> Rush order</label>
               </div>
@@ -104,6 +121,9 @@
           <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
               <span>Subtotal</span><span id="q_subtotal">$0.00</span>
+            </div>
+            <div id="q_appFeeRow" style="display:none;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#059669;">
+              <span id="q_appFeeLabel">Label Application</span><span id="q_appFeeAmount">$0.00</span>
             </div>
             <div class="field" style="margin-bottom:8px;">
               <label style="font-size:11px;">Discount ($)</label>
@@ -158,10 +178,72 @@ let _lineItemCount = 0;
 const PRODUCT_TYPES_SIMPLE = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets','Vinyl Banners','Canvas Prints','Other'];
 const MATERIALS_SIMPLE = ['White BOPP','Silver BOPP','Clear BOPP','Kraft Paper','White Matte','Gloss Paper','Cardstock','Vinyl','Other'];
 
+const PACKAGING_CONTAINERS = [
+  { id: 'jar',      label: 'Jar',             rate: 0.10 },
+  { id: 'tube',     label: 'Tube',            rate: 0.10 },
+  { id: 'bag_7g',   label: '7g–1lb Bag',      rate: 0.15 },
+  { id: 'bag_exit', label: 'Exit Bag',         rate: 0.25 },
+  { id: 'bag_lb',   label: 'Large Bag (1lb+)', rate: 0.50 },
+];
+
+function populateContainerDropdown() {
+  const sel = document.getElementById('q_appContainerType');
+  if (!sel) return;
+  PACKAGING_CONTAINERS.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.label} — $${c.rate.toFixed(2)}/unit`;
+    sel.appendChild(opt);
+  });
+}
+
+function toggleApplicationPanel() {
+  const checked = document.getElementById('q_addon_application').checked;
+  document.getElementById('appAddonPanel').style.display = checked ? '' : 'none';
+  if (!checked) {
+    document.getElementById('q_appContainerType').value = '';
+    document.getElementById('q_appQty').value = '';
+    document.getElementById('q_appFeeInline').textContent = '';
+  } else {
+    // Pre-fill qty from largest line item if field is empty
+    if (!document.getElementById('q_appQty').value) {
+      const items = getLineItems();
+      const maxQty = items.reduce((m, li) => Math.max(m, li.qty || 0), 0);
+      if (maxQty > 0) document.getElementById('q_appQty').value = maxQty;
+    }
+  }
+  calcTotal();
+}
+
+function calcAppFee() {
+  const containerId = document.getElementById('q_appContainerType')?.value;
+  const qty = parseFloat(document.getElementById('q_appQty')?.value) || 0;
+  const container = PACKAGING_CONTAINERS.find(c => c.id === containerId);
+  const inlineEl = document.getElementById('q_appFeeInline');
+  if (container && qty > 0) {
+    const fee = qty * container.rate;
+    if (inlineEl) inlineEl.textContent = `${container.label} × ${qty.toLocaleString()} @ $${container.rate.toFixed(2)} = $${fee.toLocaleString(undefined,{minimumFractionDigits:2})}`;
+  } else {
+    if (inlineEl) inlineEl.textContent = containerId && !container ? '' : (containerId ? 'Enter qty to calculate fee' : '');
+  }
+  calcTotal();
+}
+
+function getApplicationFee() {
+  if (!document.getElementById('q_addon_application')?.checked) return null;
+  const containerId = document.getElementById('q_appContainerType')?.value;
+  const container = PACKAGING_CONTAINERS.find(c => c.id === containerId);
+  if (!container) return null;
+  const qty = parseFloat(document.getElementById('q_appQty')?.value) || 0;
+  if (qty <= 0) return null;
+  return { fee: qty * container.rate, qty, rate: container.rate, label: container.label, containerId };
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   loadQuotes();
   renderQuoteList();
   populateRepDropdown();
+  populateContainerDropdown();
   addLineItem(); // start with one line item
 });
 
@@ -230,6 +312,10 @@ function showNewQuoteForm() {
   document.getElementById('q_status').value = 'draft';
   document.getElementById('q_addon_design').checked = false;
   document.getElementById('q_addon_application').checked = false;
+  document.getElementById('appAddonPanel').style.display = 'none';
+  document.getElementById('q_appContainerType').value = '';
+  document.getElementById('q_appQty').value = '';
+  document.getElementById('q_appFeeInline').textContent = '';
   document.getElementById('q_addon_scodix').checked = false;
   document.getElementById('q_addon_rush').checked = false;
   document.getElementById('convertBtn').style.display = 'none';
@@ -257,7 +343,12 @@ function editQuote(quoteId) {
   document.getElementById('q_discount').value = qt.discount || 0;
   document.getElementById('q_status').value = qt.status || 'draft';
   document.getElementById('q_addon_design').checked = qt.addons?.design || false;
-  document.getElementById('q_addon_application').checked = qt.addons?.application || false;
+  const appChecked = !!(qt.addons?.application || qt.applicationContainerType);
+  document.getElementById('q_addon_application').checked = appChecked;
+  document.getElementById('appAddonPanel').style.display = appChecked ? '' : 'none';
+  document.getElementById('q_appContainerType').value = qt.applicationContainerType || '';
+  document.getElementById('q_appQty').value = qt.applicationQty || '';
+  document.getElementById('q_appFeeInline').textContent = '';
   document.getElementById('q_addon_scodix').checked = qt.addons?.scodix || false;
   document.getElementById('q_addon_rush').checked = qt.addons?.rush || false;
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
@@ -337,9 +428,22 @@ function getLineItems() {
 function calcTotal() {
   const items = getLineItems();
   const subtotal = items.reduce((s, li) => s + li.subtotal, 0);
+  const appData = getApplicationFee();
+  const appFee = appData ? appData.fee : 0;
   const discount = parseFloat(document.getElementById('q_discount')?.value) || 0;
-  const total = Math.max(0, subtotal - discount);
+  const total = Math.max(0, subtotal + appFee - discount);
+
   document.getElementById('q_subtotal').textContent = '$' + subtotal.toLocaleString(undefined,{minimumFractionDigits:2});
+
+  const appFeeRow = document.getElementById('q_appFeeRow');
+  if (appData && appFee > 0) {
+    document.getElementById('q_appFeeLabel').textContent = `Label Application — ${appData.label}`;
+    document.getElementById('q_appFeeAmount').textContent = '$' + appFee.toLocaleString(undefined,{minimumFractionDigits:2});
+    appFeeRow.style.display = 'flex';
+  } else {
+    appFeeRow.style.display = 'none';
+  }
+
   document.getElementById('q_total').textContent = '$' + total.toLocaleString(undefined,{minimumFractionDigits:2});
 
   // Market benchmark — use first line item's product + qty for lookup
@@ -353,7 +457,17 @@ function calcTotal() {
 
 function saveQuote(status) {
   loadQuotes();
+  const lineItems = getLineItems();
+  // Auto-fill qty from largest line item if application panel open and qty is empty
+  if (document.getElementById('q_addon_application').checked && !document.getElementById('q_appQty').value) {
+    const maxQty = lineItems.reduce((m, li) => Math.max(m, li.qty || 0), 0);
+    if (maxQty > 0) {
+      document.getElementById('q_appQty').value = maxQty;
+      calcAppFee();
+    }
+  }
   const total = calcTotal();
+  const appData = getApplicationFee();
   const quoteId = _editingQuoteId || ('Q' + Date.now().toString().slice(-6));
   const qt = {
     quoteId,
@@ -373,7 +487,10 @@ function saveQuote(status) {
       scodix: document.getElementById('q_addon_scodix').checked,
       rush: document.getElementById('q_addon_rush').checked,
     },
-    lineItems: getLineItems(),
+    applicationContainerType: appData?.containerId || null,
+    applicationQty: appData?.qty || null,
+    applicationFee: appData?.fee || null,
+    lineItems,
     total,
     createdAt: _editingQuoteId ? (_quotes.find(x=>x.quoteId===_editingQuoteId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -413,6 +530,9 @@ async function convertToJobTicket() {
     qty: li.qty || '',
     fromQuote: qt.quoteId,
   });
+  if (qt.applicationContainerType) params.set('applicationContainerType', qt.applicationContainerType);
+  if (qt.applicationQty) params.set('applicationQty', qt.applicationQty);
+  if (qt.applicationFee) params.set('applicationFee', qt.applicationFee);
   window.location.href = `job-ticket.html?${params.toString()}`;
 }
 </script>
