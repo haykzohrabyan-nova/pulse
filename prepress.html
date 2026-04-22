@@ -104,7 +104,7 @@
       <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
       <div class="action-stack">
         <button class="btn btn-primary" id="btnStartPause" style="background:#2563eb;" onclick="toggleStartPause()">▶ Start Review</button>
-        <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
+        <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()" style="display:none;">↩ Send Back to Account Manager</button>
         <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
       </div>
       <div id="prepressActionHint" style="font-size:12px;color:#92400e;margin-top:8px;">Start Review before using Send Back to Account Manager.</div>
@@ -283,6 +283,7 @@ async function renderDetail() {
     empty.style.display = 'block';
     wrap.style.display = 'none';
     document.getElementById('lastIssueBox').style.display = 'none';
+    updateApproveButtonVisibility();
     return;
   }
   empty.style.display = 'none';
