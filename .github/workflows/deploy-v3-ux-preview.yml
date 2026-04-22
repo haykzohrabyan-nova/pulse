@@ -1,0 +1,32 @@
+name: Deploy v3-ux-preview to GitHub Pages
+
+on:
+  push:
+    branches:
+      - v3-ux-preview
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v3-ux-preview
+        uses: actions/checkout@v4
+        with:
+          ref: v3-ux-preview
+
+      - name: Add .nojekyll
+        run: touch .nojekyll
+
+      - name: Deploy to GitHub Pages (v3-ux-preview subfolder)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: .
+          destination_dir: v3-ux-preview
+          keep_files: true
+          commit_message: "Deploy v3-ux-preview to gh-pages [skip ci]"
