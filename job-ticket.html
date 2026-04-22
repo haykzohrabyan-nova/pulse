@@ -319,7 +319,13 @@
 
       <!-- Size fields (always visible) + 6K auto-calc hint -->
       <div class="label-size-box">
-        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">📐 Size</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;">📐 Size</div>
+          <div class="jt-unit-toggle">
+            <button id="jt_unitBtn_in" onclick="setJTSizeUnit('in')">in</button>
+            <button id="jt_unitBtn_mm" onclick="setJTSizeUnit('mm')">mm</button>
+          </div>
+        </div>
         <div class="form-row-3">
           <div class="field">
             <label id="widthLabel">Width (inches)</label>
@@ -335,7 +341,7 @@
           </div>
           <!-- Pouch gusset field (shown only for Pouches) -->
           <div class="field" id="gussetField" style="display:none;">
-            <label>Gusset (inches)</label>
+            <label id="gussetLabel">Gusset (inches)</label>
             <input type="number" id="pouchGusset" step="0.01" min="0" placeholder='e.g. 2' oninput="calcLabelFit()">
           </div>
           <div class="field" style="justify-content:flex-end;">
@@ -691,6 +697,12 @@ document.getElementById('page-styles').textContent = `
   .sku-file-thumb img { width: 32px; height: 32px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); }
   .sku-file-thumb span { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
 
+  /* Unit toggle */
+  .jt-unit-toggle { display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:11px; }
+  .jt-unit-toggle button { padding:3px 10px;border:none;cursor:pointer;font-weight:600;transition:background 0.15s,color 0.15s; }
+  .jt-unit-toggle button.active { background:var(--accent);color:#fff; }
+  .jt-unit-toggle button:not(.active) { background:#f9fafb;color:#6b7280; }
+
   /* Frame calc */
   .label-size-box { background: #f0f4ff; border: 1px solid #c7d7f7; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
   .warn-box { background: #fff7e0; border: 1px solid #f0b429; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #92600a; }
@@ -724,6 +736,56 @@ let skuList = [];
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
 let _formDirty = false; // tracks unsaved changes for beforeunload guard
+let _jt_sizeUnit = localStorage.getItem('pulse_size_unit') || 'in';
+
+// Convert field value to inches for storage
+function jtToInches(v) {
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return '';
+  return _jt_sizeUnit === 'mm' ? String(+(n / 25.4).toFixed(5)) : String(n);
+}
+// Convert stored inches to current display unit
+function jtFromInches(v) {
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return '';
+  return _jt_sizeUnit === 'mm' ? String(+(n * 25.4).toFixed(1)) : String(n);
+}
+
+function setJTSizeUnit(unit) {
+  if (unit === _jt_sizeUnit) return;
+  const factor = unit === 'mm' ? 25.4 : (1 / 25.4);
+  ['labelWidth','labelHeight','boxDepth','pouchGusset'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = parseFloat(el.value);
+    if (!isNaN(v) && v > 0) {
+      el.value = unit === 'mm' ? +(v * factor).toFixed(1) : +(v * factor).toFixed(4);
+    }
+    el.step = unit === 'mm' ? '1' : '0.01';
+  });
+  _jt_sizeUnit = unit;
+  localStorage.setItem('pulse_size_unit', unit);
+  updateJTUnitToggle();
+  calcLabelFit();
+}
+
+function updateJTUnitToggle() {
+  const u = _jt_sizeUnit;
+  const inBtn = document.getElementById('jt_unitBtn_in');
+  const mmBtn = document.getElementById('jt_unitBtn_mm');
+  if (inBtn) inBtn.classList.toggle('active', u === 'in');
+  if (mmBtn) mmBtn.classList.toggle('active', u === 'mm');
+  const suffix = u === 'mm' ? 'mm' : 'inches';
+  const el = id => document.getElementById(id);
+  if (el('widthLabel')) el('widthLabel').textContent = `Width (${suffix})`;
+  if (el('heightLabel')) el('heightLabel').textContent = `Height / Length (${suffix})`;
+  if (el('boxDepthLabel')) el('boxDepthLabel').textContent = `Box Height (${suffix})`;
+  if (el('gussetLabel')) el('gussetLabel').textContent = `Gusset (${suffix})`;
+  ['labelWidth','labelHeight','boxDepth','pouchGusset'].forEach(id => {
+    const f = document.getElementById(id);
+    if (f) f.step = u === 'mm' ? '1' : '0.01';
+  });
+}
 
 // ─── Parent Order Linking ───────────────────────────────────
 async function linkParentOrder() {
@@ -791,6 +853,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   populateAccountManagers();
   populateApplicationContainerDropdown();
   stampCreationDate();
+  updateJTUnitToggle();
   renderNotesLog(); // initialize empty notes log display
 
   const params = new URLSearchParams(window.location.search);
@@ -1365,9 +1428,11 @@ function updateLabelSizeSection() {
 }
 
 function calcLabelFit() {
-  const w = parseFloat(document.getElementById('labelWidth').value) || 0;
-  const h = parseFloat(document.getElementById('labelHeight').value) || 0;
-  const boxDepth = parseFloat(document.getElementById('boxDepth')?.value) || 0;
+  // Always compute in inches regardless of display unit
+  const unitFactor = _jt_sizeUnit === 'mm' ? 1/25.4 : 1;
+  const w = (parseFloat(document.getElementById('labelWidth').value) || 0) * unitFactor;
+  const h = (parseFloat(document.getElementById('labelHeight').value) || 0) * unitFactor;
+  const boxDepth = (parseFloat(document.getElementById('boxDepth')?.value) || 0) * unitFactor;
   const result = document.getElementById('labelFitResult');
   const warnBox = document.getElementById('labelFitWarning');
 
@@ -1378,7 +1443,7 @@ function calcLabelFit() {
 
   // ─── POUCH calculation ─────────────────────────────────────────
   if (productType === 'Pouches') {
-    const gusset = parseFloat(document.getElementById('pouchGusset')?.value) || 0;
+    const gusset = (parseFloat(document.getElementById('pouchGusset')?.value) || 0) * unitFactor;
     const BLEED = 0.24;
     const FRAME_WIDTH = 12.24; // usable pouch web width (same working width as labels, with bleed)
     const FRAME_LENGTH = 39;   // Karlville frame length (inches)
@@ -2583,10 +2648,10 @@ async function saveTicket(suppressRedirect = false) {
       cutMethod: document.getElementById('cutMethod').value,
       dieStatus: document.getElementById('dieStatus').value,
       dieName: document.getElementById('dieName').value.trim(),
-      labelWidth: document.getElementById('labelWidth').value || '',
-      labelHeight: document.getElementById('labelHeight').value || '',
-      boxDepth: document.getElementById('boxDepth')?.value || '',
-      pouchGusset: document.getElementById('pouchGusset')?.value || '',
+      labelWidth: jtToInches(document.getElementById('labelWidth').value),
+      labelHeight: jtToInches(document.getElementById('labelHeight').value),
+      boxDepth: jtToInches(document.getElementById('boxDepth')?.value || ''),
+      pouchGusset: jtToInches(document.getElementById('pouchGusset')?.value || ''),
       rollDirection: document.getElementById('rollDirection').value,
       customBatching,
       unitsPerRoll: customBatching && printType === 'Roll' ? (parseInt(document.getElementById('unitsPerRoll').value) || null) : null,
@@ -2794,10 +2859,10 @@ async function loadOrderIntoForm(order) {
   if (order.printType === 'Roll') document.getElementById('rollDirection').value = order.rollDirection || '1';
 
   // Label size
-  if (order.labelWidth) document.getElementById('labelWidth').value = order.labelWidth;
-  if (order.labelHeight) document.getElementById('labelHeight').value = order.labelHeight;
-  if (order.boxDepth) { const bEl = document.getElementById('boxDepth'); if (bEl) bEl.value = order.boxDepth; }
-  if (order.pouchGusset) { const gEl = document.getElementById('pouchGusset'); if(gEl) gEl.value = order.pouchGusset; }
+  if (order.labelWidth) document.getElementById('labelWidth').value = jtFromInches(order.labelWidth);
+  if (order.labelHeight) document.getElementById('labelHeight').value = jtFromInches(order.labelHeight);
+  if (order.boxDepth) { const bEl = document.getElementById('boxDepth'); if (bEl) bEl.value = jtFromInches(order.boxDepth); }
+  if (order.pouchGusset) { const gEl = document.getElementById('pouchGusset'); if(gEl) gEl.value = jtFromInches(order.pouchGusset); }
   updateLabelSizeSection();
 
   // Color mode

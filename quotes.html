@@ -156,14 +156,20 @@
       <div>
         <!-- Size & Quantity -->
         <div class="form-section">
-          <h3 class="section-title">📐 Size & Quantity</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h3 class="section-title" style="margin:0;">📐 Size & Quantity</h3>
+            <div class="unit-toggle">
+              <button id="q_unitBtn_in" onclick="setQSizeUnit('in')">in</button>
+              <button id="q_unitBtn_mm" onclick="setQSizeUnit('mm')">mm</button>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">
             <div class="field">
-              <label style="font-size:11px;">Width (in)</label>
+              <label id="q_widthLabel" style="font-size:11px;">Width (in)</label>
               <input type="number" id="q_width" step="0.125" min="0" placeholder='e.g. 4' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
             </div>
             <div class="field">
-              <label style="font-size:11px;">Height (in)</label>
+              <label id="q_heightLabel" style="font-size:11px;">Height (in)</label>
               <input type="number" id="q_height" step="0.125" min="0" placeholder='e.g. 3' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
             </div>
             <div class="field">
@@ -279,6 +285,10 @@ document.getElementById('page-styles').textContent = `
   .addon-card:hover { border-color: #a5b4fc; }
   .addon-card.active { border-color: var(--accent); background: #eff6ff; }
   .addon-card.rush-card.active { border-color: #dc2626; background: #fef2f2; }
+  .unit-toggle { display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:11px; }
+  .unit-toggle button { padding:3px 10px;border:none;cursor:pointer;font-weight:600;transition:background 0.15s,color 0.15s; }
+  .unit-toggle button.active { background:var(--accent);color:#fff; }
+  .unit-toggle button:not(.active) { background:#f9fafb;color:#6b7280; }
 `;
 
 let _quotes = [];
@@ -289,6 +299,56 @@ let _companyFilter = 'all';
 let _repFilter = '';
 let _activeTab = 'quotes';
 let _sendModalQuoteId = null;
+let _q_sizeUnit = localStorage.getItem('pulse_size_unit') || 'in';
+
+// Helpers: convert display value to inches for storage
+function qToInches(displayVal) {
+  const v = parseFloat(displayVal);
+  if (isNaN(v)) return null;
+  return _q_sizeUnit === 'mm' ? +(v / 25.4).toFixed(5) : v;
+}
+// Convert from stored inches to current display unit
+function qFromInches(inchVal) {
+  const v = parseFloat(inchVal);
+  if (isNaN(v) || !v) return '';
+  return _q_sizeUnit === 'mm' ? +(v * 25.4).toFixed(1) : v;
+}
+
+function setQSizeUnit(unit) {
+  if (unit === _q_sizeUnit) return;
+  const factor = unit === 'mm' ? 25.4 : (1 / 25.4);
+  const ids = ['q_width', 'q_height'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = parseFloat(el.value);
+    if (!isNaN(v) && v > 0) {
+      el.value = unit === 'mm' ? +(v * factor).toFixed(1) : +(v * factor).toFixed(4);
+    }
+    el.step = unit === 'mm' ? '1' : '0.125';
+    el.placeholder = unit === 'mm' ? (id === 'q_width' ? 'e.g. 102' : 'e.g. 76') : (id === 'q_width' ? 'e.g. 4' : 'e.g. 3');
+  });
+  document.getElementById('q_widthLabel').textContent = `Width (${unit})`;
+  document.getElementById('q_heightLabel').textContent = `Height (${unit})`;
+  _q_sizeUnit = unit;
+  localStorage.setItem('pulse_size_unit', unit);
+  updateQUnitToggle();
+}
+
+function updateQUnitToggle() {
+  const inBtn = document.getElementById('q_unitBtn_in');
+  const mmBtn = document.getElementById('q_unitBtn_mm');
+  if (inBtn) inBtn.classList.toggle('active', _q_sizeUnit === 'in');
+  if (mmBtn) mmBtn.classList.toggle('active', _q_sizeUnit === 'mm');
+  const wLabel = document.getElementById('q_widthLabel');
+  const hLabel = document.getElementById('q_heightLabel');
+  if (wLabel) wLabel.textContent = `Width (${_q_sizeUnit})`;
+  if (hLabel) hLabel.textContent = `Height (${_q_sizeUnit})`;
+  const wEl = document.getElementById('q_width');
+  const hEl = document.getElementById('q_height');
+  if (wEl) { wEl.step = _q_sizeUnit === 'mm' ? '1' : '0.125'; }
+  if (hEl) { hEl.step = _q_sizeUnit === 'mm' ? '1' : '0.125'; }
+}
 
 // Tax configuration — stored in localStorage so admin can configure without code change
 function getTaxRate() {
@@ -419,6 +479,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   populateRepDropdown();
   populateRepFilterDropdown();
   populateContainerDropdown();
+  updateQUnitToggle();
   addLineItem(); // start with one line item
 });
 
@@ -649,8 +710,8 @@ function editQuote(quoteId) {
   document.getElementById('q_appFeeInline').textContent = '';
   document.getElementById('q_addon_scodix').checked = qt.addons?.scodix || false;
   document.getElementById('q_addon_rush').checked = qt.addons?.rush || false;
-  document.getElementById('q_width').value = qt.width || '';
-  document.getElementById('q_height').value = qt.height || '';
+  document.getElementById('q_width').value = qFromInches(qt.width);
+  document.getElementById('q_height').value = qFromInches(qt.height);
   document.getElementById('q_qty_main').value = qt.qty_main || '';
   document.getElementById('q_fin_lamination').checked = qt.finishing?.lamination || false;
   document.getElementById('q_fin_uv').checked = qt.finishing?.uv || false;
@@ -751,7 +812,8 @@ function generateChargeDesc(id) {
   const h = document.getElementById('q_height')?.value;
 
   const parts = [];
-  if (w && h) parts.push(`${w}" × ${h}"`);
+  const unitSuffix = _q_sizeUnit === 'mm' ? 'mm' : '"';
+  if (w && h) parts.push(`${w}${unitSuffix} × ${h}${unitSuffix}`);
   if (product) parts.push(product);
   if (qty) parts.push(`${Number(qty).toLocaleString()} units`);
   if (lam) parts.push(`${lam} Lamination`);
@@ -975,8 +1037,8 @@ function saveQuote(status) {
       foil: document.getElementById('q_fin_foil').checked,
       perforation: document.getElementById('q_fin_perforation').checked,
     },
-    width: parseFloat(document.getElementById('q_width').value) || null,
-    height: parseFloat(document.getElementById('q_height').value) || null,
+    width: qToInches(document.getElementById('q_width').value),
+    height: qToInches(document.getElementById('q_height').value),
     qty_main: parseInt(document.getElementById('q_qty_main').value) || null,
     taxRate: getTaxRate(),
     taxExempt: document.getElementById('q_taxExempt')?.checked || false,
