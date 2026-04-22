@@ -234,8 +234,23 @@
       <button class="btn" onclick="showQuoteList()">Cancel</button>
       <button class="btn" onclick="saveQuote('draft')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;">💾 Save Draft</button>
       <button class="btn btn-primary" onclick="saveQuote(document.getElementById('q_status').value)">💾 Save Quote</button>
+      <button class="btn" id="sendBtn" style="display:none;background:#2563eb;color:#fff;border:none;" onclick="showSendModal(_editingQuoteId)">📤 Send to Customer</button>
       <button class="btn" id="convertBtn" style="display:none;background:#16a34a;color:#fff;border:none;" onclick="convertToOrder()">📋 Convert to Order</button>
     </div>
+  </div>
+</div>
+
+<!-- Send Quote Modal -->
+<div id="sendModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h3 id="sendModalTitle" style="margin:0 0 6px;font-size:18px;font-weight:700;">📤 Send Quote to Customer</h3>
+    <p id="sendModalSubtitle" style="color:#6b7280;font-size:13px;margin:0 0 20px;line-height:1.5;"></p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button id="sendEmailBtn" onclick="sendQuoteByEmail()" class="btn btn-primary" style="justify-content:center;padding:12px;font-size:14px;">📧 Send by Email</button>
+      <button id="sendTextBtn" onclick="sendQuoteByText()" class="btn" style="justify-content:center;padding:12px;font-size:14px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">💬 Send via Text Message</button>
+      <button onclick="skipSendQuote()" class="btn" style="justify-content:center;padding:10px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;">⏩ Skip — Send Later</button>
+    </div>
+    <div id="sendModalConfirmation" style="display:none;margin-top:16px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;"></div>
   </div>
 </div>
 
@@ -258,6 +273,7 @@ let _quoteFilter = 'all';
 let _lineItemCount = 0;
 let _companyFilter = 'all';
 let _activeTab = 'quotes';
+let _sendModalQuoteId = null;
 
 // Tax configuration — stored in localStorage so admin can configure without code change
 function getTaxRate() {
@@ -454,8 +470,9 @@ function renderQuoteList() {
             <div style="font-size:12px;">${qt.rep||'—'}</div>
             <div style="font-size:12px;font-weight:700;color:var(--accent);">${qt.total ? '$'+Number(qt.total).toLocaleString() : '—'}</div>
             <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${STATUS_COLORS[qt.status]||'#9ca3af'}22;color:${STATUS_COLORS[qt.status]||'#9ca3af'};font-weight:600;">${qt.status}</span></div>
-            <div style="display:flex;gap:4px;">
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
               <button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
+              ${qt.status !== 'converted' ? `<button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">📤 Send</button>` : ''}
               ${qt.status === 'approved' ? `<button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">📋 To Order</button>` : ''}
               ${qt.status === 'converted' ? '<span style="font-size:11px;color:#7c3aed;">✓ Converted</span>' : ''}
             </div>
@@ -499,6 +516,7 @@ function showNewQuoteForm() {
   document.getElementById('q_fin_perforation').checked = false;
   syncAllAddonCards();
   document.getElementById('convertBtn').style.display = 'none';
+  document.getElementById('sendBtn').style.display = 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
   addLineItem();
@@ -548,6 +566,7 @@ function editQuote(quoteId) {
   document.getElementById('q_fin_perforation').checked = qt.finishing?.perforation || false;
   syncAllAddonCards();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
+  document.getElementById('sendBtn').style.display = qt.status !== 'converted' ? '' : 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
   (qt.lineItems || [{}]).forEach(li => addLineItem(li));
@@ -887,7 +906,105 @@ function saveQuote(status) {
   }
   saveQuotes();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
-  alert(`✅ Quote #${quoteId} saved as "${qt.status}".`);
+  document.getElementById('sendBtn').style.display = qt.status !== 'converted' ? '' : 'none';
+  showSendModal(quoteId);
+}
+
+function showSendModal(quoteId) {
+  if (!quoteId) return;
+  _sendModalQuoteId = quoteId;
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  const modal = document.getElementById('sendModal');
+  const title = document.getElementById('sendModalTitle');
+  const subtitle = document.getElementById('sendModalSubtitle');
+  const confirmation = document.getElementById('sendModalConfirmation');
+  const emailBtn = document.getElementById('sendEmailBtn');
+  const textBtn = document.getElementById('sendTextBtn');
+
+  title.textContent = `📤 Send Quote ${quoteId}`;
+  const customer = qt?.customer || 'Customer';
+  const emailLine = qt?.email ? `📧 ${qt.email}` : '📧 No email on file';
+  const phoneLine = qt?.phone ? `💬 ${qt.phone}` : '💬 No phone on file';
+  subtitle.innerHTML = `<strong>${customer}</strong><br><span style="font-size:12px;">${emailLine} &nbsp;·&nbsp; ${phoneLine}</span>`;
+
+  confirmation.style.display = 'none';
+  confirmation.textContent = '';
+  emailBtn.style.display = '';
+  textBtn.style.display = '';
+  emailBtn.disabled = !qt?.email;
+  emailBtn.style.opacity = qt?.email ? '1' : '0.45';
+  emailBtn.title = qt?.email ? '' : 'No email address on file';
+  textBtn.disabled = !qt?.phone;
+  textBtn.style.opacity = qt?.phone ? '1' : '0.45';
+  textBtn.title = qt?.phone ? '' : 'No phone number on file';
+
+  modal.style.display = 'flex';
+}
+
+function _markQuoteSent(quoteId, via) {
+  loadQuotes();
+  const idx = _quotes.findIndex(x => x.quoteId === quoteId);
+  if (idx < 0) return;
+  _quotes[idx].status = 'sent';
+  _quotes[idx].sentAt = new Date().toISOString();
+  _quotes[idx].sentVia = via;
+  saveQuotes();
+  const statusEl = document.getElementById('q_status');
+  if (statusEl) statusEl.value = 'sent';
+}
+
+function sendQuoteByEmail() {
+  const quoteId = _sendModalQuoteId;
+  if (!quoteId) return;
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  if (!qt?.email) { alert('No email address on file.'); return; }
+
+  // Stub: real email service integration out of scope (PUL-302)
+  console.log('[PUL-302] Stub: emailing quote', quoteId, 'to', qt.email, qt);
+
+  _markQuoteSent(quoteId, 'email');
+
+  document.getElementById('sendEmailBtn').style.display = 'none';
+  document.getElementById('sendTextBtn').style.display = 'none';
+  const confirmation = document.getElementById('sendModalConfirmation');
+  confirmation.textContent = `✅ Quote emailed to ${qt.email}. Status updated to Sent.`;
+  confirmation.style.display = '';
+  setTimeout(() => closeSendModal(), 2800);
+}
+
+function sendQuoteByText() {
+  const quoteId = _sendModalQuoteId;
+  if (!quoteId) return;
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  if (!qt?.phone) { alert('No phone number on file.'); return; }
+
+  // Stub: real SMS service integration out of scope (PUL-302)
+  console.log('[PUL-302] Stub: texting quote', quoteId, 'to', qt.phone, qt);
+
+  _markQuoteSent(quoteId, 'sms');
+
+  document.getElementById('sendEmailBtn').style.display = 'none';
+  document.getElementById('sendTextBtn').style.display = 'none';
+  const confirmation = document.getElementById('sendModalConfirmation');
+  confirmation.textContent = `✅ Quote sent via text to ${qt.phone}. Status updated to Sent.`;
+  confirmation.style.display = '';
+  setTimeout(() => closeSendModal(), 2800);
+}
+
+function skipSendQuote() {
+  closeSendModal();
+}
+
+function closeSendModal() {
+  const modal = document.getElementById('sendModal');
+  modal.style.display = 'none';
+  _sendModalQuoteId = null;
+  document.getElementById('sendEmailBtn').style.display = '';
+  document.getElementById('sendTextBtn').style.display = '';
+  renderQuoteList();
 }
 
 function convertToOrder() {
