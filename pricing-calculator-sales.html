@@ -132,6 +132,30 @@
         <div id="fitExplanation" class="callout callout-amber" style="display:none;"></div>
       </div>
 
+      <div class="form-section" id="packagingApplicationSection">
+        <h3 class="section-title">📦 Packaging Application</h3>
+        <div class="field checkbox-field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="packagingToggle" onchange="togglePackagingPanel()"> Add packaging application service?
+          </label>
+        </div>
+        <div id="packagingPanel" style="display:none; margin-top:14px;">
+          <div class="form-grid two-up">
+            <div class="field">
+              <label>Container Type</label>
+              <select id="packagingContainer" onchange="calculateEstimate()">
+                <option value="">— Select Container —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Application Qty</label>
+              <input type="number" id="packagingQty" min="0" placeholder="e.g. 10000" oninput="calculateEstimate()">
+            </div>
+          </div>
+          <div id="packagingFeeDisplay" style="margin-top:10px; font-size:13px; color:var(--text-muted);"></div>
+        </div>
+      </div>
+
     </div>
 
     <div class="sidebar-column">
@@ -150,6 +174,9 @@
         </div>
 
         <div class="summary-block">
+          <div id="packagingFeeRow" class="summary-row" style="display:none;">
+            <span id="packagingFeeLabel">Packaging application</span><strong id="packagingFeeAmount">—</strong>
+          </div>
           <div class="summary-total"><span>Total Price</span><strong id="priceTotal">$0.00</strong></div>
           <div class="summary-row compact-price-row"><span id="pricePerPieceLabel">Price per piece</span><strong id="pricePerPiece">—</strong></div>
         </div>
@@ -382,10 +409,27 @@ const BOX_BOYD_TIERS = [
   { maxFrames: 250, framePrice: 22.00 }
 ];
 
+const APPLICATION_FEE_RATES = {
+  jar:        0.10,
+  tube:       0.10,
+  bag_7g:     0.15,
+  bag_exit:   0.25,
+  bag_lb:     0.50
+};
+
+const PACKAGING_CONTAINERS = [
+  { id: 'jar',      label: 'Jar',             rate: 0.10 },
+  { id: 'tube',     label: 'Tube',            rate: 0.10 },
+  { id: 'bag_7g',   label: '7g–1lb Bag',      rate: 0.15 },
+  { id: 'bag_exit', label: 'Exit Bag',         rate: 0.25 },
+  { id: 'bag_lb',   label: 'Large Bag (1lb+)', rate: 0.50 }
+];
+
 window.addEventListener('DOMContentLoaded', () => {
   populateRepDropdown();
   populateProductDropdown();
   loadSavedRates();
+  populatePackagingContainers();
   document.getElementById('facility').value = '16th-street';
   document.getElementById('productType').value = 'Labels (Roll)';
   handleProductTypeChange();
@@ -695,6 +739,38 @@ function syncManualFits(value) {
   calculateEstimate();
 }
 
+function populatePackagingContainers() {
+  const sel = $('packagingContainer');
+  if (!sel) return;
+  PACKAGING_CONTAINERS.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.label} — $${c.rate.toFixed(2)}/unit`;
+    sel.appendChild(opt);
+  });
+}
+
+function togglePackagingPanel() {
+  const on = $('packagingToggle')?.checked;
+  const panel = $('packagingPanel');
+  if (panel) panel.style.display = on ? '' : 'none';
+  if (on) {
+    const mainQty = toNumber('quantity');
+    if (mainQty > 0 && !toNumber('packagingQty')) $('packagingQty').value = mainQty;
+  }
+  calculateEstimate();
+}
+
+function getPackagingFee() {
+  if (!$('packagingToggle')?.checked) return null;
+  const containerId = $('packagingContainer')?.value;
+  if (!containerId) return null;
+  const container = PACKAGING_CONTAINERS.find(c => c.id === containerId);
+  if (!container) return null;
+  const qty = toNumber('packagingQty');
+  return { fee: qty * container.rate, qty, rate: container.rate, label: container.label };
+}
+
 function calculateGridFit(sheetWidth, sheetHeight, itemWidth, itemHeight, allowRotate) {
   const normalAcross = Math.floor(sheetWidth / itemWidth);
   const normalDown = Math.floor(sheetHeight / itemHeight);
@@ -841,6 +917,18 @@ function calculateEstimate() {
     warnings.push('Pricing table is not wired for this product yet, so the calculator cannot produce a real price.');
   }
 
+  const packagingFee = getPackagingFee();
+  const feeDisplay = $('packagingFeeDisplay');
+  if (feeDisplay) {
+    if (packagingFee && packagingFee.qty > 0) {
+      feeDisplay.textContent = `${packagingFee.qty.toLocaleString()} × $${packagingFee.rate.toFixed(2)}/unit = ${formatMoney(packagingFee.fee)}`;
+    } else if ($('packagingToggle')?.checked && $('packagingContainer')?.value) {
+      feeDisplay.textContent = 'Enter application quantity.';
+    } else {
+      feeDisplay.textContent = '';
+    }
+  }
+
   renderSummary({
     mode,
     profile,
@@ -851,7 +939,8 @@ function calculateEstimate() {
     modeLabel,
     explanation,
     warnings,
-    pricing
+    pricing,
+    packagingFee
   });
 
   renderQuantitySuggestions(mode, fitsPerUnit);
@@ -1247,7 +1336,7 @@ function calculatePricing(mode, fitsPerUnit, neededUnits, quantityOverride = nul
   };
 }
 
-function renderSummary({ mode, profile, material, footprint, fitsPerUnit, neededUnits, modeLabel, explanation, warnings, pricing }) {
+function renderSummary({ mode, profile, material, footprint, fitsPerUnit, neededUnits, modeLabel, explanation, warnings, pricing, packagingFee }) {
   $('summaryTitle').textContent = $('productType').value || 'Pricing ready';
   $('calcModeBadge').textContent = modeLabel;
   const finishSelections = [];
@@ -1259,10 +1348,21 @@ function renderSummary({ mode, profile, material, footprint, fitsPerUnit, needed
   if ($('doubleSided')?.checked && getDoubleSidedPercent(mode) > 0) finishSelections.push('Double-sided print');
   $('selectionBrief').textContent = finishSelections.length ? finishSelections.join(' • ') : 'Base material only';
 
-  $('priceTotal').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(pricing.total);
+  const packagingFeeAmt = (packagingFee && packagingFee.qty > 0) ? packagingFee.fee : 0;
+  const grandTotal = pricing.total + packagingFeeAmt;
+  $('priceTotal').textContent = pricing.awaitingPricingTable ? '—' : formatMoney(grandTotal);
   const qty = toNumber('quantity');
   $('pricePerPieceLabel').textContent = mode === '6k-label' ? 'Price per label' : mode === '6k-pouch' ? 'Price per pouch' : mode === '15k-booklet' ? 'Price per booklet' : 'Price per piece';
-  $('pricePerPiece').textContent = pricing.awaitingPricingTable ? '—' : qty > 0 ? formatMoney(pricing.total / qty) : '—';
+  $('pricePerPiece').textContent = pricing.awaitingPricingTable ? '—' : qty > 0 ? formatMoney(grandTotal / qty) : '—';
+
+  const packagingFeeRow = $('packagingFeeRow');
+  const packagingFeeAmount = $('packagingFeeAmount');
+  if (packagingFee && packagingFee.qty > 0) {
+    if (packagingFeeRow) packagingFeeRow.style.display = '';
+    if (packagingFeeAmount) packagingFeeAmount.textContent = formatMoney(packagingFee.fee);
+  } else {
+    if (packagingFeeRow) packagingFeeRow.style.display = 'none';
+  }
 
   const fitExplanation = $('fitExplanation');
   fitExplanation.style.display = explanation ? '' : 'none';
