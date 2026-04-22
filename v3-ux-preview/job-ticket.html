@@ -474,6 +474,16 @@
       </div>
     </div>
 
+    <!-- Fix #4: Notes Log — append-only timestamped comment thread (AC4.1–AC4.4) -->
+    <div class="section">
+      <div class="section-title">📋 Notes Log</div>
+      <div id="notesLogList" style="display:grid;gap:6px;margin-bottom:10px;font-size:12px;"></div>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <textarea id="notesLogInput" rows="2" placeholder="Add a note…" style="flex:1;resize:none;overflow:hidden;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></textarea>
+        <button type="button" class="btn btn-primary" onclick="addNoteToLog()" style="height:38px;white-space:nowrap;">+ Add Note</button>
+      </div>
+    </div>
+
     <div style="display:none;">
       <input type="text" id="customerPO" value="">
       <input type="text" id="quoteRef" value="">
@@ -688,10 +698,12 @@ document.getElementById('page-styles').textContent = `
 let editingOrderId = null;
 let editingDbId = null;
 let artworkDataList = []; // { name, type, dataUrl, role }
+let notesLog = [];        // Fix #4: { text, author, timestamp } — append-only notes log (AC4.4)
 let singleFileData = { white: null, uv: null, foil: null };
 let skuList = [];
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
+let _isLoadingOrder = false; // Fix #2: guard — suppresses autoDetectWorkflow overwrite during load
 
 // ─── Parent Order Linking ───────────────────────────────────
 async function linkParentOrder() {
@@ -1081,6 +1093,40 @@ function onFacilityChange() {
 function autoExpandNotes(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+// Fix #4: Notes Log — append-only, timestamped thread (AC4.2–AC4.3, AC4.6–AC4.7)
+function renderNotesLog() {
+  const listEl = document.getElementById('notesLogList');
+  if (!listEl) return;
+  if (!notesLog.length) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No notes yet.</div>';
+    return;
+  }
+  listEl.innerHTML = notesLog.map(n => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:#f8fafc;">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-weight:600;font-size:12px;color:#1e293b;">${escapeHtml(n.author || 'Unknown')}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${n.timestamp ? new Date(n.timestamp).toLocaleString() : ''}</span>
+      </div>
+      <div style="margin-top:4px;font-size:12px;color:#374151;white-space:pre-wrap;">${escapeHtml(n.text)}</div>
+    </div>
+  `).join('');
+}
+
+function addNoteToLog() {
+  const input = document.getElementById('notesLogInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const author = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'User';
+  notesLog.push({ text, author, timestamp: new Date().toISOString() });
+  input.value = '';
+  renderNotesLog();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // P2-D: Update specialNotes textarea border/bg to reflect note type
@@ -1830,6 +1876,9 @@ function updateJetFXNote() {
 // Workflow auto-detection (internal — not shown to rep)
 // ─────────────────────────────────────────────────────────────
 function autoDetectWorkflow() {
+  // Fix #2 AC2.4: Don't overwrite a saved workflowTemplate while loading an edit
+  if (_isLoadingOrder && editingDbId) return;
+
   const productType = document.getElementById('productType').value;
   const cutMethod = document.getElementById('cutMethod').value;
   const facility = document.getElementById('facility').value;
@@ -2155,8 +2204,8 @@ async function saveTicket(suppressRedirect = false) {
   if (!productType) { alert('Please select a Product Type.'); return; }
   if (!quantity) { alert('Please enter Quantity.'); return; }
 
-  // Artwork check
-  if (skuList.length === 0) {
+  // Artwork check — required for new tickets; edits rely on defensive DB merge below (Fix #1)
+  if (skuList.length === 0 && !editingDbId) {
     const mainArtFiles = artworkDataList.filter(a => a.role === 'main');
     if (mainArtFiles.length === 0) {
       alert('📎 Please upload at least one artwork file before saving.');
@@ -2364,17 +2413,24 @@ async function saveTicket(suppressRedirect = false) {
       paymentTerms: document.getElementById('paymentTerms').value,
       invoiceNumber: document.getElementById('invoiceNumber').value.trim(),
       invoiceStatus: document.getElementById('invoiceStatus').value || 'not-invoiced',
+      notesLog: [...notesLog], // Fix #4: include current notesLog state (AC4.4)
     };
 
     if (editingDbId) {
       const previousOrder = await getOrder(editingDbId);
       // Preserve dueDate if form field was cleared or unchanged
       if (!order.dueDate && previousOrder?.dueDate) order.dueDate = previousOrder.dueDate;
-      // Preserve artwork files if none were newly uploaded
+      // Fix #1: Preserve artwork files if none were newly uploaded (defensive merge)
       if ((!order.artworkFiles || !order.artworkFiles.length) && previousOrder?.artworkFiles?.length) order.artworkFiles = previousOrder.artworkFiles;
       if (!order.whiteLayerFile && previousOrder?.whiteLayerFile) order.whiteLayerFile = previousOrder.whiteLayerFile;
       if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
       if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
+      // Fix #4: Preserve existing notesLog entries (merge, not overwrite)
+      if (previousOrder?.notesLog?.length) {
+        const existingIds = new Set((previousOrder.notesLog || []).map(n => n.timestamp));
+        const newEntries = (order.notesLog || []).filter(n => !existingIds.has(n.timestamp));
+        order.notesLog = [...previousOrder.notesLog, ...newEntries];
+      }
       if (previousOrder?.status === 'pending-account-manager') {
         order.status = 'prepress';
         order.needsAccountManagerAction = false;
@@ -2471,6 +2527,7 @@ async function saveTicket(suppressRedirect = false) {
 // Load order into form (editing mode)
 // ─────────────────────────────────────────────────────────────
 async function loadOrderIntoForm(order) {
+  _isLoadingOrder = true; // Fix #2: suppress autoDetectWorkflow overwrite during load
   renderAccountManagerIssueBanner(order);
   renderCurrentStepTimerBanner(order);
   renderOvertimeApprovalBanner(order);
@@ -2622,6 +2679,18 @@ async function loadOrderIntoForm(order) {
 
   calcFrames();
   renderRevisedETAStatus(order);
+
+  // Fix #2 AC2.4: Restore saved workflowTemplate AFTER all field loads + auto-detection
+  // This overrides whatever autoDetectWorkflow() computed during loading, preserving the original.
+  if (order.workflowTemplate) {
+    document.getElementById('workflowTemplate').value = order.workflowTemplate;
+  }
+
+  // Fix #4: Restore notesLog state
+  notesLog = Array.isArray(order.notesLog) ? [...order.notesLog] : [];
+  renderNotesLog();
+
+  _isLoadingOrder = false; // Fix #2: re-enable autoDetectWorkflow for user-triggered changes
 }
 
 function renderAccountManagerIssueBanner(order) {
@@ -2955,15 +3024,17 @@ async function renderQueuePane() {
     const dueText = diffDays === null ? '\u2014' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
     const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
     const sColor = statusColors[o.status] || '#9ca3af';
-    const editableStatuses = ['prepress','on-hold','new'];
-    const salesLock = editableStatuses.includes(o.status) ? '' : '<span title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>';
+    // PUL-65: only 'new' (INTAKE) tickets are editable by sales; all others show lock icon
+    const editableStatuses = ['new'];
+    const isLocked = !editableStatuses.includes(o.status);
+    const salesLock = isLocked ? '<span aria-label="Locked — read-only for sales" title="Sales cannot edit this ticket directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>' : '';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
       : o.facility === '16th-street'
       ? '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;margin-left:4px;">16th</span>' : '';
     // PUL-137 Fix #3: Highlight the active (currently editing) order card.
     const isActive = editingOrderId && o.orderId === editingOrderId;
-    return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '" onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
+    return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '"' + (isLocked ? ' data-locked="true"' : '') + ' onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
       + '<div class="qp-card-info">'
       + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'

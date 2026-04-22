@@ -619,7 +619,11 @@ function renderOrderBody(order) {
         ${di('Die Status', order.dieStatus || '—')}
         ${di('Die Name', order.dieName || '—')}
         <h4 style="margin-top:12px;">Notes</h4>
-        <div style="font-size:13px;color:var(--text);">${order.specialNotes || '—'}</div>
+        <div style="font-size:13px;color:var(--text);">${order.specialNotes ? `${
+          order.noteType === 'CRITICAL'      ? '<span style="padding:2px 8px;border-radius:6px;background:#fde8e8;color:#b91c1c;font-weight:700;font-size:11px;margin-right:6px;">🚨 Critical</span>'
+          : order.noteType === 'INSTRUCTIONS' ? '<span style="padding:2px 8px;border-radius:6px;background:#fef3cd;color:#92600a;font-weight:700;font-size:11px;margin-right:6px;">📋 Instructions</span>'
+          :                                     '<span style="padding:2px 8px;border-radius:6px;background:#e0edff;color:#1d4ed8;font-weight:700;font-size:11px;margin-right:6px;">ℹ️ Info</span>'
+        }${order.specialNotes}` : '—'}</div>
         ${order.artworkFiles?.length ? `
           <h4 style="margin-top:12px;">Artwork Files</h4>
           <div class="artwork-preview-row">
@@ -636,10 +640,56 @@ function renderOrderBody(order) {
       <div class="workflow-steps-list">${stepsHtml}</div>
     </div>
 
+    <!-- Fix #5 AC5.3: Communication History for supervisors/production managers -->
+    <div style="margin-top:12px;padding:12px;background:#f8fafc;border:1px solid var(--border,#e2e8f0);border-radius:10px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#64748b);margin-bottom:8px;">💬 Communication History</div>
+      <div id="commHistory-${order.id}" style="display:grid;gap:6px;font-size:12px;"><span style="color:var(--text-muted,#64748b);">Loading…</span></div>
+    </div>
+
     <div class="action-bar">
       ${getActionButtons(order)}
     </div>
   `;
+  // Populate communication history asynchronously after DOM render
+  requestAnimationFrame(() => populateOrderCommHistory(order.id, order.orderId));
+}
+
+const _PREPRESS_EVENT_TYPES = ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'];
+const _PREPRESS_EVENT_LABELS = {
+  'prepress-started':     { label: '▶ Started',              color: '#2563eb' },
+  'prepress-paused':      { label: '⏸ Paused',              color: '#d97706' },
+  'prepress-returned':    { label: '↩ Sent back to AM',     color: '#b91c1c' },
+  'prepress-resubmitted': { label: '↪ Resubmitted by AM',   color: '#2563eb' },
+  'prepress-approved':    { label: '✅ Approved to Production', color: '#16a34a' },
+};
+
+async function populateOrderCommHistory(dbId, orderId) {
+  const el = document.getElementById(`commHistory-${dbId}`);
+  if (!el) return;
+  try {
+    const allActivity = typeof getAllActivity === 'function' ? await getAllActivity() : [];
+    const history = allActivity
+      .filter(a => a.orderId === orderId && _PREPRESS_EVENT_TYPES.includes(a.type))
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (!history.length) {
+      el.innerHTML = '<span style="color:var(--text-muted,#64748b);">No communication history.</span>';
+    } else {
+      el.innerHTML = history.map(a => {
+        const meta = _PREPRESS_EVENT_LABELS[a.type] || { label: a.type, color: '#64748b' };
+        const dir = a.type === 'prepress-resubmitted' ? 'AM → Prepress' : 'Prepress → AM';
+        return `<div style="border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;background:#fff;">
+          <div style="display:flex;justify-content:space-between;gap:6px;align-items:center;">
+            <span style="font-weight:600;color:${meta.color};">${meta.label}</span>
+            <span style="color:#94a3b8;font-size:11px;">${typeof formatDateTime === 'function' ? formatDateTime(a.timestamp) : a.timestamp}</span>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;">${dir}${a.by ? ` · ${a.by}` : ''}</div>
+          ${a.message ? `<div style="margin-top:3px;color:#374151;">${a.message}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    if (el) el.innerHTML = '<span style="color:#94a3b8;">Could not load history.</span>';
+  }
 }
 
 function di(label, val) {

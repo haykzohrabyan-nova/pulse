@@ -291,6 +291,13 @@
       ? `<div style="font-size:10px;color:#2563eb;margin-top:2px;">📝 Waiting for prepress start</div>`
       : '';
 
+    // Sales-view lock indicator — PUL-65: only 'new' (INTAKE) tickets are editable by sales
+    const _editableStatuses = ['new'];
+    const _isLocked = !_editableStatuses.includes(order.status);
+    const lockHTML = _isLocked
+      ? '<span aria-label="Locked — read-only for sales" data-locked="true" title="Sales cannot edit this ticket" style="font-size:10px;background:#fff7ed;color:#c2410c;padding:1px 5px;border-radius:999px;margin-left:4px;vertical-align:middle;">🔒</span>'
+      : '';
+
     // Queue visualization classes
     let queueClass = '';
     let statusDot = '';
@@ -354,7 +361,7 @@
 
     return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="card-order">${statusDot}#${order.orderId}</span>
+        <span class="card-order">${statusDot}#${order.orderId}${lockHTML}</span>
         <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
       </div>
       <div class="card-customer">${order.customerName || order.customer || '—'}</div>
