@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Competitor Pricing Data Center — Pulse [INTERNAL] (PUL-68)</title>
+  <title>Competitor Pricing Data Center — Pulse [INTERNAL] (PUL-278)</title>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -15,28 +15,59 @@
     <span style="font-size:15px;">🔒</span>
     <div>
       <strong>INTERNAL USE ONLY — Admin Only. Not linked in navigation.</strong>
-      56 price points across labels, folding cartons, and stand-up pouches + Quad Labels tracked (approval pending). Confidence levels are honest.
+      65 price points across labels, folding cartons, and stand-up pouches. 8 product types tracked across 7 competitors.
       Do not share with reps or operators.
     </div>
   </div>
 
   <div class="page-header">
     <div>
-      <h2>Competitor Pricing Data Center</h2>
+      <h2>Competitor Pricing Data Center — Pulse [INTERNAL] (PUL-278)</h2>
       <p>
-        56 captured price points across 3 product categories and 7 competitors (+ Quad Labels tracked, approval pending).
-        Filter by product type, or use the label benchmark tool below for exact-match comparisons.
-        Only verified captures shown — no inferred data.
+        65 captured price points across 3 product categories and 7 competitors.
+        Full coverage matrix below · Filter by product type, or use the label benchmark tool · Only verified captures shown.
+      </p>
+      <p style="margin-top:4px;font-size:12px;color:#94a3b8;">
+        65 price points across 3 captured product categories · 8 product types tracked across 7 competitors · Full coverage matrix below
       </p>
     </div>
     <div class="header-meta">
-      <div>Last capture: <strong>2026-04-19</strong></div>
-      <div>Scope: <strong>Labels · Folding Cartons · Pouches</strong></div>
+      <div>Last capture: <strong>2026-04-22</strong></div>
+      <div>Scope: <strong>Labels · Diecut Stickers · Folding Cartons · Pouches · Business Cards · Flyers · Booklets · Sheet Labels</strong></div>
       <div style="margin-top:6px;">
         <a href="competitor-pricing.html" class="meta-link">← Benchmark view</a>
         &nbsp;·&nbsp;
+        <a href="competitor-price-calculator.html" class="meta-link">Company Explorer</a>
+        &nbsp;·&nbsp;
         <a href="COMPETITOR-PRICING-NOTES.md" target="_blank" class="meta-link">Capture notes</a>
       </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 0: Coverage Matrix Dashboard ──────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title" style="margin-bottom:8px;">Coverage Matrix — 7 Competitors × 8 Product Types</div>
+    <p style="font-size:12px;color:#64748b;margin:0 0 12px;">
+      Click a LIVE or PARTIAL cell to filter the data table below. BLOCKED cells require credential resolution.
+    </p>
+    <div style="overflow-x:auto;">
+      <table class="matrix-table" id="coverageMatrix">
+        <thead>
+          <tr>
+            <th class="matrix-comp-col">Competitor</th>
+            <th>Roll Labels</th>
+            <th>Diecut Stickers</th>
+            <th>Folding Cartons</th>
+            <th>Stand-up Pouches</th>
+            <th>Business Cards</th>
+            <th>Flyers / Postcards</th>
+            <th>Booklets</th>
+            <th>Sheet Labels</th>
+          </tr>
+        </thead>
+        <tbody id="matrixBody"></tbody>
+        <tfoot id="matrixFoot"></tfoot>
+      </table>
     </div>
   </div>
 
@@ -50,6 +81,11 @@
           <option value="roll_labels">Roll Labels</option>
           <option value="folding_cartons">Folding Cartons</option>
           <option value="stand_up_pouches">Stand-up Pouches</option>
+          <option value="diecut_stickers">Diecut Stickers</option>
+          <option value="business_cards">Business Cards</option>
+          <option value="flyers_postcards">Flyers / Postcards</option>
+          <option value="booklets">Booklets</option>
+          <option value="sheet_labels">Sheet Labels</option>
         </select>
         <select id="filterCompetitor" class="filter-select" onchange="renderCapturesTable()">
           <option value="">All competitors</option>
@@ -210,17 +246,18 @@
         <div style="margin-top:8px;"><strong>NO PRICE CAPTURED</strong> — spec confirmed but price not available</div>
         <div><strong>NO DATA</strong> — no captured data for this competitor</div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;color:#64748b;">
-          <strong>GotPrint note:</strong> Live prices are for Clear Gloss Indoor finish. Matte finish capture still pending.
-          When querying Matte, GotPrint will show CLOSEST MATCH with a finish delta.
+          <strong>GotPrint note:</strong> Matte finish (ID 3) = same price as Clear Gloss Indoor — confirmed via API probe 2026-04-21.
+          When querying Matte, GotPrint will show EXACT or CLOSEST MATCH with no finish penalty.
         </div>
       </div>
     </div>
   </div>
 
   <div class="footer-note">
-    Competitor Pricing Data Center · Labels / Folding Cartons / Stand-up Pouches · Admin Access Only ·
-    56 data points (April 2026) ·
+    Competitor Pricing Data Center · 8 product types · 7 competitors · Admin Access Only ·
+    65 data points (last verified 2026-04-22) · PUL-278 ·
     <a href="competitor-pricing.html">← Benchmark view</a> ·
+    <a href="competitor-price-calculator.html">Company Explorer</a> ·
     <a href="data/competitor-pricing-raw.json" target="_blank">Raw JSON</a> ·
     <a href="data/competitor-pricing-normalized.json" target="_blank">Normalized JSON</a>
   </div>
@@ -231,10 +268,89 @@
 <script src="auth.js?v=20260414-1358"></script>
 <script>
 
+// ─── Coverage Matrix data ─────────────────────────────────────────────────────
+// Status values: 'live' | 'partial' | 'na' | 'missing' | 'blocked'
+
+const MATRIX_COMPETITORS = ['UPrinting','Vistaprint','GotPrint','Axiom Print','Sticker Mule','Packola','Quad Labels'];
+const MATRIX_PRODUCTS    = ['roll_labels','diecut_stickers','folding_cartons','stand_up_pouches','business_cards','flyers_postcards','booklets','sheet_labels'];
+const MATRIX_PRODUCT_LABELS = ['Roll Labels','Diecut Stickers','Folding Cartons','Stand-up Pouches','Business Cards','Flyers / Postcards','Booklets','Sheet Labels'];
+
+// [competitor][product] = { status, tooltip }
+const MATRIX_DATA = {
+  'UPrinting': {
+    roll_labels:      { status: 'live',    tooltip: '12 confirmed price points captured.' },
+    diecut_stickers:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    folding_cartons:  { status: 'live',    tooltip: '7 confirmed price points captured.' },
+    stand_up_pouches: { status: 'live',    tooltip: '6 confirmed price points captured.' },
+    business_cards:   { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    flyers_postcards: { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    booklets:         { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    sheet_labels:     { status: 'missing', tooltip: 'Offered — no data captured yet.' }
+  },
+  'Vistaprint': {
+    roll_labels:      { status: 'live',    tooltip: '13 confirmed price points via Cimpress API.' },
+    diecut_stickers:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    folding_cartons:  { status: 'na',      tooltip: 'Vistaprint does not offer folding cartons.' },
+    stand_up_pouches: { status: 'na',      tooltip: 'Vistaprint does not offer stand-up pouches.' },
+    business_cards:   { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    flyers_postcards: { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    booklets:         { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    sheet_labels:     { status: 'missing', tooltip: 'Offered — no data captured yet.' }
+  },
+  'GotPrint': {
+    roll_labels:      { status: 'live',    tooltip: '8 confirmed price points via GotPrint REST API.' },
+    diecut_stickers:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    folding_cartons:  { status: 'na',      tooltip: 'GotPrint does not offer folding cartons.' },
+    stand_up_pouches: { status: 'na',      tooltip: 'GotPrint does not offer stand-up pouches.' },
+    business_cards:   { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    flyers_postcards: { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    booklets:         { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    sheet_labels:     { status: 'missing', tooltip: 'Offered — no data captured yet.' }
+  },
+  'Axiom Print': {
+    roll_labels:      { status: 'partial', tooltip: '8 points captured — max 2500 qty, no 3×3 standard size.' },
+    diecut_stickers:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    folding_cartons:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    stand_up_pouches: { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    business_cards:   { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    flyers_postcards: { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    booklets:         { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    sheet_labels:     { status: 'missing', tooltip: 'Offered — no data captured yet.' }
+  },
+  'Sticker Mule': {
+    roll_labels:      { status: 'partial', tooltip: 'Starting price only ($47). Upload-first — no configure-then-price path.' },
+    diecut_stickers:  { status: 'partial', tooltip: 'Some data captured — upload-wall limits full capture.' },
+    folding_cartons:  { status: 'na',      tooltip: 'Sticker Mule does not offer folding cartons.' },
+    stand_up_pouches: { status: 'na',      tooltip: 'Sticker Mule does not offer stand-up pouches.' },
+    business_cards:   { status: 'na',      tooltip: 'Sticker Mule does not offer business cards.' },
+    flyers_postcards: { status: 'na',      tooltip: 'Sticker Mule does not offer flyers/postcards.' },
+    booklets:         { status: 'na',      tooltip: 'Sticker Mule does not offer booklets.' },
+    sheet_labels:     { status: 'missing', tooltip: 'Offered — no data captured yet.' }
+  },
+  'Packola': {
+    roll_labels:      { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    diecut_stickers:  { status: 'missing', tooltip: 'Offered — no data captured yet.' },
+    folding_cartons:  { status: 'live',    tooltip: '5 confirmed price points for STE 4"×2"×5".' },
+    stand_up_pouches: { status: 'live',    tooltip: '5 confirmed price points for Medium ~4"×6" pouches.' },
+    business_cards:   { status: 'na',      tooltip: 'Packola does not offer business cards.' },
+    flyers_postcards: { status: 'na',      tooltip: 'Packola does not offer flyers/postcards.' },
+    booklets:         { status: 'na',      tooltip: 'Packola does not offer booklets.' },
+    sheet_labels:     { status: 'na',      tooltip: 'Packola does not offer sheet labels.' }
+  },
+  'Quad Labels': {
+    roll_labels:      { status: 'blocked', tooltip: 'Credential blocked — 2026-04-22. Awaiting correct login from Hayk.' },
+    diecut_stickers:  { status: 'blocked', tooltip: 'Credential blocked — 2026-04-22. Awaiting correct login from Hayk.' },
+    folding_cartons:  { status: 'missing', tooltip: 'Offered — no data captured yet (pending auth).' },
+    stand_up_pouches: { status: 'missing', tooltip: 'Offered — no data captured yet (pending auth).' },
+    business_cards:   { status: 'na',      tooltip: 'Quad Labels does not offer business cards.' },
+    flyers_postcards: { status: 'na',      tooltip: 'Quad Labels does not offer flyers/postcards.' },
+    booklets:         { status: 'na',      tooltip: 'Quad Labels does not offer booklets.' },
+    sheet_labels:     { status: 'blocked', tooltip: 'Credential blocked — 2026-04-22. Awaiting correct login from Hayk.' }
+  }
+};
+
 // ─── All captured data points ─────────────────────────────────────────────────
-// 56 total across roll labels, folding cartons, and stand-up pouches.
-// Each entry has a `type` field for filtering.
-// Only include captures with real price data or confirmed spec (no-price entries clearly marked).
+// 65 total. Last verified 2026-04-22.
 
 const ALL_CAPTURES = [
 
@@ -352,7 +468,7 @@ const ALL_CAPTURES = [
     note: '2"×2" at 10k qty. API-confirmed.'
   },
 
-  // ── Vistaprint ─ 4 price points (PARTIAL) ────────────────────────────────────
+  // ── Vistaprint ─ 13 price points (LIVE — confirmed via Cimpress API) ──────────
   {
     id: 'vp-1x1-50', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
@@ -381,13 +497,94 @@ const ALL_CAPTURES = [
     note: 'Rounded Square shape confirmed via DOM click. Size not confirmed — do NOT treat as 3"×3". 5k qty.'
   },
   {
-    id: 'vp-3x3-5000-directional', type: 'roll_labels', competitor: 'Vistaprint',
+    id: 'vp-3x3-5000-confirmed', type: 'roll_labels', competitor: 'Vistaprint',
     url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
-    status: 'partial', confidence: 'medium', capturedAt: '2026-04-14',
-    method: 'Cimpress API: W=3/H=3 injected alongside Rounded Square selection (DIRECTIONAL)',
-    specs: { w: 3, h: 3, qty: 5000, material: null, finish: null, shape: 'rounded_square', format: 'slit_roll' },
+    status: 'live', confidence: 'high', capturedAt: '2026-04-21',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=3"x3"',
+    specs: { w: 3, h: 3, qty: 5000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
     pricing: { total: 544.86, unit: 0.10897, turnaround: null, shippingIncl: null },
-    note: 'DIRECTIONAL ONLY — W=3/H=3 injected into Cimpress call, size not DOM-confirmed. To verify: DevTools at VP, watch for selections[Custom Width] in Cimpress XHR.'
+    note: 'SIZE CONFIRMED via standard Cimpress selection (not custom width/height). Material: White Plastic = VP naming for White BOPP.'
+  },
+  {
+    id: 'vp-3x3-5000-matte', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-21',
+    method: 'Cimpress API with Matte finish selection',
+    specs: { w: 3, h: 3, qty: 5000, material: 'White Plastic', finish: 'Matte', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 618.41, unit: 0.12368, turnaround: null, shippingIncl: null },
+    note: 'White Plastic + Matte finish. 3"×3" Rounded Square confirmed.'
+  },
+  {
+    id: 'vp-3x3-1000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=3"x3"',
+    specs: { w: 3, h: 3, qty: 1000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 239.31, unit: 0.23931, turnaround: null, shippingIncl: null },
+    note: '3"×3" Rounded Square at 1k qty.'
+  },
+  {
+    id: 'vp-2x2-1000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=2"x2"',
+    specs: { w: 2, h: 2, qty: 1000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 148.66, unit: 0.14866, turnaround: null, shippingIncl: null },
+    note: '2"×2" Rounded Square at 1k qty.'
+  },
+  {
+    id: 'vp-2x2-5000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=2"x2"',
+    specs: { w: 2, h: 2, qty: 5000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 336.89, unit: 0.06738, turnaround: null, shippingIncl: null },
+    note: '2"×2" Rounded Square at 5k qty.'
+  },
+  {
+    id: 'vp-2x2-10000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=2"x2"',
+    specs: { w: 2, h: 2, qty: 10000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 482.86, unit: 0.04829, turnaround: null, shippingIncl: null },
+    note: '2"×2" Rounded Square at 10k qty.'
+  },
+  {
+    id: 'vp-2x3-1000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Rectangle + selections[Size]=2"x3"',
+    specs: { w: 2, h: 3, qty: 1000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_rectangle', format: 'slit_roll' },
+    pricing: { total: 183.81, unit: 0.18381, turnaround: null, shippingIncl: null },
+    note: '2"×3" Rounded Rectangle at 1k qty.'
+  },
+  {
+    id: 'vp-2x3-5000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Rectangle + selections[Size]=2"x3"',
+    specs: { w: 2, h: 3, qty: 5000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_rectangle', format: 'slit_roll' },
+    pricing: { total: 424.88, unit: 0.08498, turnaround: null, shippingIncl: null },
+    note: '2"×3" Rounded Rectangle at 5k qty.'
+  },
+  {
+    id: 'vp-4x4-1000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=4"x4"',
+    specs: { w: 4, h: 4, qty: 1000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 278.47, unit: 0.27847, turnaround: null, shippingIncl: null },
+    note: '4"×4" Rounded Square at 1k qty.'
+  },
+  {
+    id: 'vp-4x4-5000', type: 'roll_labels', competitor: 'Vistaprint',
+    url: 'https://www.vistaprint.com/labels-stickers/roll-labels',
+    status: 'live', confidence: 'high', capturedAt: '2026-04-22',
+    method: 'Cimpress API: selections[Shape]=Rounded Square + selections[Size]=4"x4"',
+    specs: { w: 4, h: 4, qty: 5000, material: 'White Plastic', finish: 'Gloss', shape: 'rounded_square', format: 'slit_roll' },
+    pricing: { total: 767.24, unit: 0.15345, turnaround: null, shippingIncl: null },
+    note: '4"×4" Rounded Square at 5k qty.'
   },
 
   // ── Axiom Print ─ 8 price points (PARTIAL — no 3×3, max 2500 qty) ─────────────
@@ -465,9 +662,6 @@ const ALL_CAPTURES = [
   },
 
   // ── GotPrint ─ 8 price points (7 LIVE clear gloss + 1 partial promo) ──────────
-  // BREAKTHROUGH: /service/rest/v1/products/300158845/prices — Clear Gloss Indoor
-  // shape=4 (Square-Rounded), size=452 (3"×3"), paper=12 (White BOPP), finish=1
-  // Matte (finish=3) capture still pending — expect ~5-10% higher than clear gloss.
   {
     id: 'gp-3x3-100', type: 'roll_labels', competitor: 'GotPrint',
     url: 'https://www.gotprint.com/products/roll-labels/order',
@@ -475,7 +669,7 @@ const ALL_CAPTURES = [
     method: 'Playwright + GotPrint REST API /service/rest/v1/products/300158845/prices',
     specs: { w: 3, h: 3, qty: 100, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
     pricing: { total: 76.28, unit: 0.7628, turnaround: null, shippingIncl: null },
-    note: 'LIVE. Square-Rounded 3"×3", White BOPP, Clear Gloss Indoor. Matte capture pending.'
+    note: 'LIVE. Square-Rounded 3"×3", White BOPP, Clear Gloss Indoor. Matte (ID 3) = same price confirmed 2026-04-21.'
   },
   {
     id: 'gp-3x3-250', type: 'roll_labels', competitor: 'GotPrint',
@@ -484,7 +678,7 @@ const ALL_CAPTURES = [
     method: 'Playwright + GotPrint REST API',
     specs: { w: 3, h: 3, qty: 250, material: 'White BOPP', finish: 'Clear Gloss Indoor', shape: 'square_rounded', format: 'roll' },
     pricing: { total: 86.16, unit: 0.34464, turnaround: null, shippingIncl: null },
-    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 250.'
+    note: 'LIVE. 3"×3" Clear Gloss Indoor, qty 250. Matte finish (ID 3) = same price — confirmed via API probe 2026-04-21.'
   },
   {
     id: 'gp-3x3-500', type: 'roll_labels', competitor: 'GotPrint',
@@ -776,22 +970,16 @@ const ALL_CAPTURES = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // QUAD LABELS — Trade-only wholesale (approval pending as of 2026-04-19)
+  // QUAD LABELS — Trade-only wholesale (credential blocked 2026-04-22)
   // ══════════════════════════════════════════════════════════════════════════════
-  // Account registered: info@pixelpressprint.com — awaiting reseller approval.
-  // Open API confirmed at api.quadlabels.com — pricing endpoints require auth.
-  // Expected to significantly undercut market rates (possibly 3–4× cheaper per intel).
-  // Products: PAPER label (id:14), SYNTHETIC label/White BOPP (id:15), SILVER label (id:20), +more
-  // Config: USD · inch · min 100 · custom die $140 · custom shape $220 · rush +30% · UPS flat $50
-
   {
     id: 'ql-pending', type: 'roll_labels', competitor: 'Quad Labels',
     url: 'https://orders.quadlabels.com',
     status: 'blocked', confidence: 'low', capturedAt: '2026-04-19',
-    method: 'Open API probe (api.quadlabels.com/open/*) + login attempt — approval pending',
+    method: 'Open API probe (api.quadlabels.com/open/*) + login attempt — credential blocked',
     specs: { w: null, h: null, qty: null, material: null, finish: null, shape: null, format: 'roll' },
     pricing: { total: null, unit: null, turnaround: null, shippingIncl: null },
-    note: 'APPROVAL PENDING — No pricing captured yet. Trade-only reseller platform (Valencia, CA). Parent: Quadriga USA. Login API confirmed at /customer/login. Account info@pixelpressprint.com registered; awaiting access grant. Full product catalog confirmed (13 types): PAPER (14), SYNTHETIC/White BOPP (15), SILVER (20), CLEAR (23), GOLD (24), FLUORESCENT (25), HOLOGRAPHIC (26), FELT (27), UL CERTIFIED (28), COVER-UP (29), BLANK (30), SECURITY SEAL (31), THERMAL (33). Max label 12"×24". Custom die $140, small die $220. $5/version setup <500 pcs. Once approved: run scripts/capture-quadlabels-authenticated.js — will probe /customer/ endpoints and capture full benchmark suite. PUL-69.'
+    note: 'CREDENTIAL BLOCKED — 2026-04-22. Awaiting correct login from Hayk. Trade-only reseller platform (Valencia, CA). Parent: Quadriga USA. Open API confirmed at /customer/login. Full product catalog confirmed (13 types): PAPER (14), SYNTHETIC/White BOPP (15), SILVER (20), CLEAR (23), GOLD (24), FLUORESCENT (25), HOLOGRAPHIC (26), FELT (27), UL CERTIFIED (28), COVER-UP (29), BLANK (30), SECURITY SEAL (31), THERMAL (33). PUL-69.'
   }
 
 ];
@@ -832,15 +1020,6 @@ function getLamAdder(lam, charge) {
 }
 
 // ─── Closest-match algorithm (label benchmark only) ───────────────────────────
-//
-// Scoring per capture vs a query (labels only — only considers roll_labels captures):
-//   Size:     area difference ratio × 4   (0 if exact, penalized if unknown)
-//   Qty:      log₂(queryQty/capQty) × 2  (0 if exact, penalized if unknown)
-//   Material: +1.5 if mismatch between two known values
-//   Finish:   +0.5 if mismatch between two known values
-//   Confidence: +0.3 (low), +0.1 (medium) — tiebreaker
-//
-// isExact: true only if all known fields match within tolerance
 
 function scoreCapture(cap, q) {
   const deltas = [];
@@ -904,7 +1083,6 @@ function scoreCapture(cap, q) {
   return { score, deltas, isExact };
 }
 
-// Per competitor: score all roll_labels captures for that competitor.
 function findBestMatch(competitor, q) {
   const all = ALL_CAPTURES.filter(c => c.competitor === competitor && c.type === 'roll_labels');
   if (!all.length) return null;
@@ -921,7 +1099,6 @@ function findBestMatch(competitor, q) {
   }
 
   if (!best) return null;
-
   best.noPrice = best.cap.pricing.total == null;
   return best;
 }
@@ -969,9 +1146,14 @@ function fmtMatFin(cap) {
 
 function fmtTypeBadge(t) {
   const map = {
-    roll_labels:    ['type-label', 'Labels'],
-    folding_cartons:['type-box',   'Cartons'],
-    stand_up_pouches:['type-pouch','Pouches']
+    roll_labels:      ['type-label',   'Labels'],
+    folding_cartons:  ['type-box',     'Cartons'],
+    stand_up_pouches: ['type-pouch',   'Pouches'],
+    diecut_stickers:  ['type-sticker', 'Stickers'],
+    business_cards:   ['type-bcard',   'Bus. Cards'],
+    flyers_postcards: ['type-flyer',   'Flyers'],
+    booklets:         ['type-booklet', 'Booklets'],
+    sheet_labels:     ['type-sheet',   'Sheet Labels']
   };
   const [cls, label] = map[t] || ['type-label', t];
   return `<span class="type-badge ${cls}">${label}</span>`;
@@ -992,6 +1174,64 @@ function matchBadge(isExact, noPrice) {
   if (noPrice) return '<span class="match-badge match-noprice">NO PRICE CAPTURED</span>';
   if (isExact) return '<span class="match-badge match-exact">EXACT MATCH</span>';
   return '<span class="match-badge match-closest">CLOSEST MATCH</span>';
+}
+
+// ─── Render: Coverage Matrix ──────────────────────────────────────────────────
+
+function renderCoverageMatrix() {
+  const statusMeta = {
+    live:    { cls: 'mx-live',    label: 'LIVE',    icon: '' },
+    partial: { cls: 'mx-partial', label: 'PARTIAL', icon: '' },
+    na:      { cls: 'mx-na',      label: 'N/A',     icon: '' },
+    missing: { cls: 'mx-missing', label: 'MISSING', icon: '' },
+    blocked: { cls: 'mx-blocked', label: 'BLOCKED', icon: '🔒 ' }
+  };
+
+  // Count price points per product type for summary row
+  const ptCounts = {};
+  MATRIX_PRODUCTS.forEach(p => { ptCounts[p] = 0; });
+  ALL_CAPTURES.forEach(c => {
+    if (c.pricing.total != null && ptCounts[c.type] !== undefined) {
+      ptCounts[c.type]++;
+    }
+  });
+
+  const tbody = document.getElementById('matrixBody');
+  tbody.innerHTML = MATRIX_COMPETITORS.map(comp => {
+    const cells = MATRIX_PRODUCTS.map(prod => {
+      const cell = (MATRIX_DATA[comp] && MATRIX_DATA[comp][prod]) || { status: 'missing', tooltip: '' };
+      const meta = statusMeta[cell.status] || statusMeta.missing;
+      const isClickable = (cell.status === 'live' || cell.status === 'partial' || cell.status === 'missing');
+      const clickAttr = isClickable && cell.status !== 'missing'
+        ? `onclick="filterToCell('${comp}','${prod}')" style="cursor:pointer;"`
+        : '';
+      return `
+        <td class="matrix-cell ${cell.status === 'na' ? 'matrix-cell-na' : ''}">
+          <div class="mx-pill ${meta.cls}" ${clickAttr} title="${cell.tooltip}">
+            ${meta.icon}${meta.label}
+          </div>
+        </td>`;
+    }).join('');
+    return `<tr><td class="matrix-comp-col"><strong>${comp}</strong></td>${cells}</tr>`;
+  }).join('');
+
+  // Summary footer row
+  const foot = document.getElementById('matrixFoot');
+  const footCells = MATRIX_PRODUCTS.map((p, i) => {
+    const n = ptCounts[p];
+    return `<td style="text-align:center;font-size:11px;color:#64748b;padding:6px 4px;">${n > 0 ? `<strong style="color:#0f172a;">${n}</strong> pts` : '—'}</td>`;
+  }).join('');
+  foot.innerHTML = `<tr><td style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:6px 8px;">Price Points</td>${footCells}</tr>`;
+}
+
+function filterToCell(comp, prod) {
+  // Set filter dropdowns and scroll to data table
+  const typeSelect = document.getElementById('filterType');
+  const compSelect = document.getElementById('filterCompetitor');
+  typeSelect.value = prod;
+  compSelect.value = comp;
+  renderCapturesTable();
+  document.getElementById('capturesTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ─── Render: all captures table ───────────────────────────────────────────────
@@ -1096,7 +1336,6 @@ function renderMatchRows(q, ourTotal) {
 
     const { cap, deltas, isExact, noPrice } = match;
 
-    // Price cell
     let priceCell, unitCell;
     if (noPrice) {
       priceCell = '<span style="color:#dc2626;font-weight:700;">NO PRICE</span>';
@@ -1106,7 +1345,6 @@ function renderMatchRows(q, ourTotal) {
       unitCell  = fmtUnit(cap.pricing.unit);
     }
 
-    // vs Our Price
     let vsCell = '—';
     if (!noPrice && cap.pricing.total != null && ourTotal) {
       const diff = cap.pricing.total - ourTotal;
@@ -1123,7 +1361,6 @@ function renderMatchRows(q, ourTotal) {
       }
     }
 
-    // Data point used
     const s = cap.specs;
     const specDesc = [
       s.w != null ? `${s.w}"×${s.h}"` : 'size unknown',
@@ -1132,7 +1369,6 @@ function renderMatchRows(q, ourTotal) {
       s.finish || 'finish unknown'
     ].join(' · ');
 
-    // Deltas display
     let deltaCell;
     if (isExact) {
       deltaCell = '<span style="color:#16a34a;font-size:11px;">All matched fields agree ✓</span>';
@@ -1146,7 +1382,6 @@ function renderMatchRows(q, ourTotal) {
       if (!cap.specs.finish)   deltaCell += `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">finish not captured</div>`;
     }
 
-    // Turnaround + shipping
     const ta = cap.pricing.turnaround ? `${cap.pricing.turnaround}d` : '—';
     const ship = cap.pricing.shippingIncl === true  ? '+ free ship' :
                  cap.pricing.shippingIncl === false ? '+ ship extra' : 'ship unknown';
@@ -1177,11 +1412,11 @@ function renderMatchRows(q, ourTotal) {
 function renderCoverageSummary() {
   const labelItems = [
     { comp: 'UPrinting',    status: 'live',    detail: '12 verified price points · 2×2, 2×3, 2×4, 3×3, 4×4 at multiple qtys · EXACT MATCH for 3"×3"/5k ($505.85, 6-day)' },
-    { comp: 'Vistaprint',   status: 'partial', detail: '4 points · 1×1/50 + 1×1/1k (HIGH) · Rounded Square/5k default (MED) · 3×3/5k directional $544.86 (size not DOM-confirmed)' },
+    { comp: 'Vistaprint',   status: 'live',    detail: '13 confirmed price points · 2×2, 2×3, 3×3, 4×4 at multiple qtys · size confirmed via standard Cimpress selection · Matte available' },
     { comp: 'Axiom Print',  status: 'partial', detail: '8 points · 2×3 (250–2500) + 3×4 (250–2500) · 3"×3" NOT in standard configurator · 5k = custom quote' },
-    { comp: 'GotPrint',     status: 'live',    detail: '7 LIVE points · 3"×3" Square-Rounded, White BOPP, Clear Gloss Indoor, qty 100–10k · Matte capture still pending' },
+    { comp: 'GotPrint',     status: 'live',    detail: '7 LIVE points · 3"×3" Square-Rounded, White BOPP, Clear Gloss Indoor, qty 100–10k · Matte finish (ID 3) = same price as Clear Gloss Indoor — confirmed via API probe 2026-04-21' },
     { comp: 'Sticker Mule', status: 'partial', detail: 'Starting price $47 (any size) · Upload-first confirmed · No configure-then-price path · Free shipping + 4-day' },
-    { comp: 'Quad Labels',  status: 'blocked', detail: 'Trade-only wholesale (Valencia, CA) · Reseller account registered, approval pending as of 2026-04-19 · Expected 3–4× cheaper than retail · Open API confirmed, pricing endpoints require auth · PUL-69' }
+    { comp: 'Quad Labels',  status: 'blocked', detail: 'Trade-only wholesale (Valencia, CA) · Credential blocked 2026-04-22 · Awaiting correct login from Hayk · Open API confirmed, pricing endpoints require auth · PUL-69' }
   ];
 
   const cartonItems = [
@@ -1194,6 +1429,10 @@ function renderCoverageSummary() {
     { comp: 'UPrinting',  status: 'live',    detail: '6 LIVE points · 4.375"×6"×2" gusset, Thick Gauge White, qty 100–5000 · EXACT SPEC confirmed' },
     { comp: 'Packola',    status: 'live',    detail: '5 LIVE points · Medium ~4"×6" (directional proxy), qty 250–5000 · Packola ~40–65% cheaper at high qtys' },
     { comp: 'Others',     status: 'partial', detail: 'No other captured competitors offer stand-up pouches in current dataset.' }
+  ];
+
+  const pendingItems = [
+    { comp: 'In Progress (PUL-288)', status: 'partial', detail: 'Business Cards, Diecut Stickers, Flyers/Postcards, Booklets, Sheet Labels — data capture in progress (PUL-288)' }
   ];
 
   function sectionHTML(title, items) {
@@ -1216,7 +1455,8 @@ function renderCoverageSummary() {
   document.getElementById('coverageSummary').innerHTML =
     sectionHTML('Roll Labels', labelItems) +
     sectionHTML('Folding Cartons', cartonItems) +
-    sectionHTML('Stand-up Pouches', pouchItems);
+    sectionHTML('Stand-up Pouches', pouchItems) +
+    sectionHTML('Upcoming Product Types', pendingItems);
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -1231,7 +1471,7 @@ function injectStyles() {
       gap: 10px; font-size: 13px; color: #7f1d1d;
     }
     .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-    .page-header h2 { margin: 0; font-size: 22px; font-weight: 800; }
+    .page-header h2 { margin: 0; font-size: 20px; font-weight: 800; }
     .page-header p  { margin: 6px 0 0; color: #64748b; font-size: 13px; }
     .header-meta { text-align: right; font-size: 12px; color: #64748b; flex-shrink: 0; }
     .meta-link { color: #2563eb; text-decoration: none; }
@@ -1253,11 +1493,38 @@ function injectStyles() {
     .data-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: #f8fafc; }
+
+    /* Coverage Matrix */
+    .matrix-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .matrix-table th { padding: 8px 10px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; border-bottom: 2px solid #e2e8f0; background: #f8fafc; white-space: nowrap; }
+    .matrix-table th.matrix-comp-col { text-align: left; }
+    .matrix-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .matrix-comp-col { font-size: 12px; white-space: nowrap; padding-right: 12px; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 110px; }
+    .matrix-cell { text-align: center; }
+    .matrix-cell-na { background: #fafafa; }
+    .mx-pill {
+      display: inline-block; padding: 3px 8px; border-radius: 10px;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .mx-pill:hover { opacity: 0.8; }
+    .mx-live    { background: #dcfce7; color: #15803d; }
+    .mx-partial { background: #fef3c7; color: #92400e; }
+    .mx-na      { background: #f1f5f9; color: #94a3b8; }
+    .mx-missing { background: #fee2e2; color: #991b1b; }
+    .mx-blocked { background: #7f1d1d; color: #fecaca; }
+
     /* Type badges */
     .type-badge { display: inline-block; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
-    .type-label { background: #dbeafe; color: #1e40af; }
-    .type-box   { background: #f3e8ff; color: #6b21a8; }
-    .type-pouch { background: #d1fae5; color: #065f46; }
+    .type-label   { background: #dbeafe; color: #1e40af; }
+    .type-box     { background: #f3e8ff; color: #6b21a8; }
+    .type-pouch   { background: #d1fae5; color: #065f46; }
+    .type-sticker { background: #ffedd5; color: #9a3412; }
+    .type-bcard   { background: #ccfbf1; color: #134e4a; }
+    .type-flyer   { background: #e0e7ff; color: #3730a3; }
+    .type-booklet { background: #fce7f3; color: #9d174d; }
+    .type-sheet   { background: #f1f5f9; color: #334155; }
+
     /* Status badges */
     .cov-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
     .cov-live    { background: #dcfce7; color: #15803d; }
@@ -1292,8 +1559,9 @@ window.addEventListener('DOMContentLoaded', () => {
   injectThemeCSS();
   injectStyles();
   document.getElementById('nav').innerHTML = renderNav('competitor-pricing');
-  initAuth('competitor-pricing'); // same admin role gate as competitor-pricing.html
+  initAuth('competitor-pricing');
 
+  renderCoverageMatrix();
   renderCapturesTable();
   renderCoverageSummary();
   runMatch();
