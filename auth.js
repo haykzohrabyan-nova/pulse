@@ -220,6 +220,11 @@ function submitLogin() {
   const overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
   const currentPage = document.body.dataset.page || '';
+  // Operators always land on the Operator Terminal
+  if (_selectedLoginUser.role === 'operator' && currentPage !== 'operator-terminal') {
+    window.location.href = 'operator-terminal.html';
+    return;
+  }
   if (currentPage && !canAccessPage(currentPage)) {
     window.location.href = getDefaultPageForRole(_selectedLoginUser.role);
     return;
@@ -324,13 +329,13 @@ function applyTicketEditLock(ticket) {
 function initAuth(pageId) {
   document.body.dataset.page = pageId;
 
-  // Check if logged in
-  const session = getSession();
+  // Temporary preview mode for local working sessions.
+  // If no session exists, default to admin so internal navigation stays usable.
+  let session = getSession();
   if (!session) {
-    // Don't block operator terminal (has its own login)
     if (pageId === 'operator-terminal') return;
-    injectLoginModal();
-    return;
+    setSession('Hayk Zohrabyan', 'admin');
+    session = getSession();
   }
 
   // Check page access

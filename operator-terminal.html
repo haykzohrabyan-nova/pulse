@@ -1287,6 +1287,9 @@ async function refreshQueue() {
   const myJobs      = [];
   const comingJobs  = [];
 
+  const opNameLower = currentOperator.toLowerCase();
+  const assignedToMe = s => (s.assignedTo || '').toLowerCase() === opNameLower;
+
   orders.forEach(order => {
     if (!order.workflowSteps || !order.workflowSteps.length) return;
     // Skip terminal statuses
@@ -1296,7 +1299,7 @@ async function refreshQueue() {
     if (!step) return;
 
     const atMyMachine = matchMachine(step.machine, myMachines);
-    if (atMyMachine && order.status === 'in-production') {
+    if ((atMyMachine || assignedToMe(step)) && order.status === 'in-production') {
       myJobs.push({ order, stepIdx: idx, step });
       return;
     }
@@ -1304,7 +1307,7 @@ async function refreshQueue() {
     const nextIdx  = idx + 1;
     if (nextIdx < order.workflowSteps.length) {
       const nextStep = order.workflowSteps[nextIdx];
-      if (matchMachine(nextStep.machine, myMachines)) {
+      if (matchMachine(nextStep.machine, myMachines) || assignedToMe(nextStep)) {
         comingJobs.push({ order, stepIdx: nextIdx, step: nextStep });
       }
     }

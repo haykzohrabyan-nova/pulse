@@ -1873,6 +1873,21 @@ function addPersonnel(person) {
 function getAllPersonnel() { return _getAll('personnel'); }
 function updatePersonnel(id, changes) { return _update('personnel', id, changes); }
 function deletePersonnel(id) { return _delete('personnel', id); }
+
+async function seedPersonnelFromProfiles() {
+  const existing = await getAllPersonnel();
+  if (existing.length > 0) return; // idempotent — only seed if empty
+  for (const [name, profile] of Object.entries(OPERATOR_PROFILES)) {
+    await addPersonnel({
+      name,
+      role: profile.role || 'operator',
+      notes: profile.notes || '',
+      facility: profile.facility || '',
+      phone: profile.phone || '',
+      active: true,
+    });
+  }
+}
 async function getPersonnelByName(name) {
   const people = await getAllPersonnel();
   return people.find(p => p.name === name) || null;
@@ -2817,3 +2832,6 @@ function renderNextStepBanner(nextMachine, nextOperation) {
     </div>
   </div>`;
 }
+
+// Auto-seed Personnel DB from OPERATOR_PROFILES on every page load (idempotent — skips if already seeded)
+document.addEventListener('DOMContentLoaded', () => { seedPersonnelFromProfiles().catch(() => {}); });

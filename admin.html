@@ -48,15 +48,46 @@
     <div class="tab-pane" id="tab-dies">
       <div class="pane-header">
         <h2>Die Registry</h2>
-        <button class="btn btn-primary" onclick="openDieModal()">+ Add Die</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" id="dieViewToggle" onclick="toggleDieView()" title="Switch view">⊞ Cards</button>
+          <button class="btn btn-primary" onclick="openDieModal()">+ Add Die</button>
+        </div>
       </div>
-      <div class="search-bar">
-        <input type="text" id="dieSearch" placeholder="Search by number, barcode, or customer..." oninput="renderDies()">
+      <div class="die-filter-row">
+        <input type="text" id="dieSearch" placeholder="Search dies..." oninput="renderDies()">
+        <select id="dieMachineFilter" onchange="renderDies()">
+          <option value="all">All Machines</option>
+          <option value="moll">Moll Brothers (Sheet)</option>
+          <option value="gm">GM Die-Cutter (Roll)</option>
+        </select>
+        <select id="dieTypeFilter" onchange="renderDies()">
+          <option value="all">All Types</option>
+          <option value="box">Box</option>
+          <option value="label">Label</option>
+          <option value="card">Card / Business Card</option>
+          <option value="flyer">Flyer</option>
+          <option value="pillow">Pillow</option>
+          <option value="tube-box">Tube Box</option>
+          <option value="cereal-box">Cereal Box</option>
+          <option value="master-box">Master Box</option>
+          <option value="folder">Folder</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="dieStatusFilter" onchange="renderDies()">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="damaged">Damaged</option>
+          <option value="retired">Retired</option>
+        </select>
+        <span id="dieCount" style="font-size:12px;color:var(--text-muted);align-self:center;white-space:nowrap;"></span>
       </div>
-      <div class="table-wrap">
+      <!-- Card grid view -->
+      <div id="dieCardGrid" class="die-card-grid" style="display:none;"></div>
+      <!-- Table view -->
+      <div class="table-wrap" id="dieTableWrap">
         <table class="data-table">
           <thead><tr>
-            <th>Die #</th><th>Barcode</th><th>Description</th><th>Customer</th><th>Machine</th><th>Status</th><th>Uses</th><th>Last Used</th><th>Actions</th>
+            <th>Die #</th><th>Dieline</th><th>Description</th><th>Type</th><th>Machine</th><th>Status</th><th>Uses</th><th>Last Used</th><th>Actions</th>
           </tr></thead>
           <tbody id="dieTableBody"></tbody>
         </table>
@@ -239,9 +270,11 @@
       <div class="field"><label>Role</label>
         <select id="pRole">
           <option value="operator">Operator</option>
-          <option value="manager">Manager</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="prepress">Prepress</option>
+          <option value="production_manager">Production Manager</option>
+          <option value="account_manager">Account Manager</option>
           <option value="admin">Admin</option>
-          <option value="qc">QC Inspector</option>
         </select>
       </div>
       <div class="field"><label>Facility</label>
@@ -270,26 +303,55 @@
 
 <!-- Die Modal -->
 <div class="modal-overlay" id="dieModal">
-  <div class="modal">
+  <div class="modal" style="max-width:600px;">
     <h2 id="dieModalTitle">Add Die</h2>
     <input type="hidden" id="dieDbId">
     <div class="modal-form">
-      <div class="field"><label>Die Number *</label><input type="text" id="dNumber" placeholder="e.g. 1042" required></div>
-      <div class="field"><label>Description</label><input type="text" id="dDescription" placeholder="e.g. Standard 2oz Bag"></div>
-      <div class="field"><label>Customer</label><input type="text" id="dCustomer" placeholder="Customer name (if die-specific)"></div>
-      <div class="field"><label>Machine</label>
-        <select id="dMachine">
-          <option value="Moll Brothers Cutter">Moll Brothers Cutter</option>
-          <option value="GM Die Cutter w/ JetFX">GM Die Cutter w/ JetFX</option>
-        </select>
+      <div class="field-row">
+        <div class="field"><label>Die Number *</label><input type="text" id="dNumber" placeholder="e.g. 42 or GM-7" required></div>
+        <div class="field"><label>Type</label>
+          <select id="dType">
+            <option value="">— Select —</option>
+            <option value="box">Box</option>
+            <option value="label">Label</option>
+            <option value="business-card">Business Card</option>
+            <option value="card">Card</option>
+            <option value="flyer">Flyer</option>
+            <option value="pillow">Pillow</option>
+            <option value="tube-box">Tube Box</option>
+            <option value="cereal-box">Cereal Box</option>
+            <option value="master-box">Master Box</option>
+            <option value="jar-box">Jar Box</option>
+            <option value="vape-box">Vape Box</option>
+            <option value="shoe-box">Shoe Box</option>
+            <option value="juice-box">Juice Box</option>
+            <option value="bucket">Bucket</option>
+            <option value="folder">Folder</option>
+            <option value="window-cut">Window Cut</option>
+            <option value="imposition">Imposition</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="dStatus">
+            <option value="active">Active</option>
+            <option value="damaged">Damaged</option>
+            <option value="retired">Retired</option>
+          </select>
+        </div>
       </div>
-      <div class="field"><label>Status</label>
-        <select id="dStatus">
-          <option value="active">Active</option>
-          <option value="damaged">Damaged</option>
-          <option value="retired">Retired</option>
-        </select>
+      <div class="field"><label>Description</label><input type="text" id="dDescription" placeholder="e.g. Standard 2oz Bag Label"></div>
+      <div class="field-row">
+        <div class="field"><label>Customer</label><input type="text" id="dCustomer" placeholder="Customer (if die-specific)"></div>
+        <div class="field"><label>Machine</label>
+          <select id="dMachine">
+            <option value="Moll Brothers Cutter">Moll Brothers Cutter (Sheet)</option>
+            <option value="GM Die-Cutter w/ JetFX">GM Die-Cutter w/ JetFX (Roll)</option>
+          </select>
+        </div>
       </div>
+      <div class="field"><label>Dieline PDF filename</label><input type="text" id="dTemplatePdf" placeholder="e.g. Kream 20ct box.pdf"></div>
+      <div class="field"><label>Google Drive Photo / Preview URL</label><input type="url" id="dPhotosUrl" placeholder="https://drive.google.com/file/d/…/view"></div>
       <div class="field"><label>Notes</label><input type="text" id="dNotes"></div>
       <div class="field" id="barcodeDisplay" style="display:none;">
         <label>Barcode</label>
@@ -426,12 +488,12 @@ document.getElementById('nav').innerHTML = renderNav('admin');
 initAuth('admin');
 
 document.getElementById('page-styles').textContent = `
-  .admin-layout { display: flex; flex-direction: column; height: calc(100vh - 52px); overflow: hidden; }
+  .admin-layout { display: flex; flex-direction: column; min-height: calc(100vh - 52px); overflow: visible; }
   .admin-tabs { display: flex; gap: 2px; padding: 10px 16px 0; background: var(--card); border-bottom: 2px solid var(--border); overflow-x: auto; }
   .tab-btn { padding: 8px 16px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; transition: all 0.15s; }
   .tab-btn:hover { background: var(--card-hover); color: var(--text); }
   .tab-btn.active { background: var(--bg); border-color: var(--border); color: var(--accent); font-weight: 700; margin-bottom: -2px; }
-  .admin-content { flex: 1; overflow-y: auto; }
+  .admin-content { flex: 1; overflow-y: visible; }
   .tab-pane { display: none; padding: 20px 24px; }
   .tab-pane.active { display: block; }
   .pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -466,6 +528,27 @@ document.getElementById('page-styles').textContent = `
   .kb-severity-critical { color: var(--red); font-weight: 700; }
   .kb-severity-warning { color: var(--yellow); font-weight: 700; }
   .kb-severity-info { color: var(--accent); }
+
+  /* Die Data Center */
+  .die-filter-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+  .die-filter-row input[type="text"] { flex:1; min-width:200px; max-width:320px; }
+  .die-filter-row select { min-width:160px; }
+  .die-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+  .die-card { background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow 0.15s; }
+  .die-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.15); }
+  .die-card-thumb { position:relative; height:140px; background:var(--bg); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .die-card-thumb img { width:100%; height:100%; object-fit:cover; }
+  .die-card-thumb .die-no-preview { font-size:40px; opacity:0.25; }
+  .die-card-thumb .die-machine-badge { position:absolute; top:6px; left:6px; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; color:#fff; }
+  .die-card-thumb .badge-moll { background:#2563eb; }
+  .die-card-thumb .badge-gm { background:#7c3aed; }
+  .die-card-thumb .badge-damaged { position:absolute; top:6px; right:6px; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; background:var(--red); color:#fff; }
+  .die-card-body { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:4px; }
+  .die-card-name { font-size:13px; font-weight:700; line-height:1.3; }
+  .die-card-meta { font-size:11px; color:var(--text-muted); }
+  .die-card-actions { padding:8px 12px; border-top:1px solid var(--border); display:flex; gap:6px; flex-wrap:wrap; }
+  .die-card-actions .btn { font-size:11px; padding:3px 8px; }
+  .die-type-pill { display:inline-block; font-size:10px; padding:1px 7px; border-radius:20px; background:var(--bg); border:1px solid var(--border); color:var(--text-muted); font-weight:600; }
 `;
 
 // Populate KB machine options
@@ -834,49 +917,348 @@ async function deletePersonnelConfirm(id, name) {
   await loadPersonnel();
 }
 
+// ── DIE MASTER DATA ────────────────────────────────────────
+// Source: dies-website-working-list-2026-04-16.csv + Roll Dielines folder scan
+// driveId → Google Drive thumbnail & preview; pdf → local filename reference
+const DIE_MASTER_DATA = [
+  // ── Moll Brothers Sheet Dies (CSV 1–88) ───────────────────────────────
+  {n:'1',  name:'6in Box Dieline',            m:'Moll Brothers Cutter', t:'box',           pdf:'6in Box Dieline.pdf', folder:'sheet'},
+  {n:'2',  name:'8.5 x 11 Flyer',             m:'Moll Brothers Cutter', t:'flyer',         pdf:'8.5_ x 11_ Flyer.pdf', folder:'sheet'},
+  {n:'3',  name:'11 x 17 Flyer',              m:'Moll Brothers Cutter', t:'flyer',         pdf:'11_ x 17_ Flyer.pdf', folder:'sheet'},
+  {n:'4',  name:'606 Boyz Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'606 Boyz Box.pdf', folder:'sheet'},
+  {n:'5',  name:'606 Boyz Large Box v2',       m:'Moll Brothers Cutter', t:'box',           pdf:'606 Boyz large box v2 dieline.pdf', folder:'sheet'},
+  {n:'6',  name:'606 Boyz Large Box',          m:'Moll Brothers Cutter', t:'box',           pdf:'606 Boyz Large Box.pdf', folder:'sheet'},
+  {n:'7',  name:'606 Powerboyz',               m:'Moll Brothers Cutter', t:'box',           pdf:'606 Powerboyz Diline.pdf', folder:'sheet'},
+  {n:'8',  name:'AG Masterpiece',              m:'Moll Brothers Cutter', t:'other',         pdf:'AG Masterpiece.pdf', folder:'sheet'},
+  {n:'9',  name:'Arizona Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'Arizona Box Dieline.pdf', folder:'sheet'},
+  {n:'10', name:'ATM Boyz',                    m:'Moll Brothers Cutter', t:'box',           pdf:'ATM Boyz Dieline.pdf', folder:'sheet'},
+  {n:'11', name:'Bazaar Business Card',        m:'Moll Brothers Cutter', t:'business-card', pdf:'bazaar business card.pdf', folder:'sheet'},
+  {n:'12', name:'Berry Nerdz Window Die',      m:'Moll Brothers Cutter', t:'box',           pdf:'Berry Nerdz Window Die.pdf', folder:'sheet'},
+  {n:'13', name:'Black Cherry Box',            m:'Moll Brothers Cutter', t:'box',           pdf:'Black Cherry Box dieline.pdf', folder:'sheet'},
+  {n:'14', name:'Boyz in The Hood Window',     m:'Moll Brothers Cutter', t:'box',           pdf:'Boyz in The Hood Window.pdf', folder:'sheet'},
+  {n:'15', name:'BPB Blossom Box',             m:'Moll Brothers Cutter', t:'box',           pdf:'BPB Blossom Box Dieline.pdf', folder:'sheet'},
+  {n:'16', name:'Buddha Box',                  m:'Moll Brothers Cutter', t:'box',           pdf:'Buddha Box Dieline.pdf', folder:'sheet'},
+  {n:'17', name:'Business Cards',              m:'Moll Brothers Cutter', t:'business-card', pdf:'Business Cards Dieline.pdf', folder:'sheet'},
+  {n:'18', name:'Cali Banger Orange Popsicle', m:'Moll Brothers Cutter', t:'other',         pdf:'Cali Banger Orange Popsicle.pdf', folder:'sheet', driveId:'1jz_QIL-DAK84DvYAuw_XNJ8SOLzV3fXf'},
+  {n:'19', name:'Callishroom Small Box',        m:'Moll Brothers Cutter', t:'box',           pdf:'Callishroom Small Box Dieline.pdf', folder:'sheet', driveId:'13TiNZUuhxQWc1jOK0N9JHmQ8_VjgAq4o'},
+  {n:'20', name:'Candy Canes Window',           m:'Moll Brothers Cutter', t:'box',           pdf:'Candy Canes Window Dieline.pdf', folder:'sheet'},
+  {n:'21', name:'Chocolate Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'Chocolate Box Dieline.pdf', folder:'sheet'},
+  {n:'22', name:'Chucky Box',                  m:'Moll Brothers Cutter', t:'box',           pdf:'Chucky Box Dieline.pdf', folder:'sheet'},
+  {n:'23', name:'Crumpets Master Box',         m:'Moll Brothers Cutter', t:'master-box',    pdf:'Crumpets Master Box Dieline.pdf', folder:'sheet', driveId:'14iC2EJd9DwaZyUv50vslwKxzD9FombWS'},
+  {n:'24', name:'Crumpets Small Box',          m:'Moll Brothers Cutter', t:'box',           pdf:'Crumpets Small Box Dieline.pdf', folder:'sheet', driveId:'1sjD-Waopt19SHfClz6jsQaDf9yxbryeA'},
+  {n:'25', name:'DankMob 1g Small Box Window', m:'Moll Brothers Cutter', t:'box',           pdf:'DankMob 1g Small Box Window.pdf', folder:'sheet'},
+  {n:'26', name:'DankMob 1g Small Box',        m:'Moll Brothers Cutter', t:'box',           pdf:'DankMob 1g Small Box.pdf', folder:'sheet'},
+  {n:'27', name:'Dankmob Chicken Bucket',      m:'Moll Brothers Cutter', t:'bucket',        pdf:'Dankmob Chicken Bucket Dieline.pdf', folder:'sheet', driveId:'1IYfcb2w8VzzROwnlRvSHWEViKSmn0qig'},
+  {n:'28', name:'Dankmob Gamecube Box',        m:'Moll Brothers Cutter', t:'box',           pdf:'Dankmob Gamecube Box.pdf', folder:'sheet', driveId:'12k9QNKI108T6G-8sZ26xqxCq1foER-sJ'},
+  {n:'29', name:'Dankmob Window',              m:'Moll Brothers Cutter', t:'box',           pdf:'Dankmob Window Dieline.pdf', folder:'sheet'},
+  {n:'30', name:'F Pillow',                    m:'Moll Brothers Cutter', t:'pillow',        pdf:'F Pillow Dieline.pdf', folder:'sheet'},
+  {n:'31', name:'Fanta Box',                   m:'Moll Brothers Cutter', t:'box',           pdf:'Fanta Box Dieline.pdf', folder:'sheet'},
+  {n:'32', name:'Fanta Cereal Box',            m:'Moll Brothers Cutter', t:'cereal-box',    pdf:'Fanta Cereal Box.pdf', folder:'sheet'},
+  {n:'33', name:'Fanta Small Boxes Die Offer', m:'Moll Brothers Cutter', t:'box',           pdf:'Fanta small boxes die offer.pdf', folder:'sheet'},
+  {n:'34', name:'Flavor R',                    m:'Moll Brothers Cutter', t:'box',           pdf:'Flavor R Dieline.pdf', folder:'sheet'},
+  {n:'35', name:'Flavor R Window',             m:'Moll Brothers Cutter', t:'box',           pdf:'Flavor R Window Dieline.pdf', folder:'sheet'},
+  {n:'36', name:'Folder',                      m:'Moll Brothers Cutter', t:'folder',        pdf:'Folder Dieline.pdf', folder:'sheet', driveId:'1gFZ8TR25bI2g0_aA4b6xUHLYaNH1WMNB'},
+  {n:'37', name:'Fruity Box',                  m:'Moll Brothers Cutter', t:'box',           pdf:'Fruity box dieline.pdf', folder:'sheet'},
+  {n:'38', name:'Gassanova Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'Gassanova Box Dieline.pdf', folder:'sheet'},
+  {n:'39', name:'Green Lobby Box',             m:'Moll Brothers Cutter', t:'box',           pdf:'Green Lobby Box.pdf', folder:'sheet'},
+  {n:'40', name:'Hakob Backpack Boyz',         m:'Moll Brothers Cutter', t:'box',           pdf:'Hakob Backpack Boyz die.pdf', folder:'sheet', driveId:'1-91aEb-vrZ_5f-AJPP8nEUEkzqIXUP8X'},
+  {n:'41', name:'Hakob Fanta Small Box',       m:'Moll Brothers Cutter', t:'box',           pdf:'Hakob Fanta Small Box Dieline.pdf', folder:'sheet'},
+  {n:'42', name:'Hash Hole Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'Hash Hole Box Dieline.pdf', folder:'sheet'},
+  {n:'43', name:'Hayk Cereal Box v2',          m:'Moll Brothers Cutter', t:'cereal-box',    pdf:'Hayk Cereal Box_v2.pdf', folder:'sheet', driveId:'19z_ZgQzFncGef1ex7-OsaI5mkdnQlA5G'},
+  {n:'44', name:'Hayk Cereal Box',             m:'Moll Brothers Cutter', t:'cereal-box',    pdf:'Hayk Cereal Box.pdf', folder:'sheet', driveId:'19s7buWM4EDsJ3Eesb2nSYRdIr_wFwxJ3'},
+  {n:'45', name:'Individual Square Box',       m:'Moll Brothers Cutter', t:'box',           pdf:'Individual Square box.pdf', folder:'sheet'},
+  {n:'46', name:'Juiced Small Box Die Offer',  m:'Moll Brothers Cutter', t:'box',           pdf:'Juiced small box die offer.pdf', folder:'sheet'},
+  {n:'47', name:'Kiana Zour Stash Box',        m:'Moll Brothers Cutter', t:'box',           pdf:'Kiana Zour Stash box Dieline.pdf', folder:'sheet', driveId:'1qCnJYOD6ALRf2jwrQquhcf1RWrcQe-Vf'},
+  {n:'48', name:'Kiddoho Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'Kiddoho Box Dieline.pdf', folder:'sheet'},
+  {n:'49', name:'Kream 5ct Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'Kream 5ct Box.pdf', folder:'sheet', driveId:'1qrigrviRR5IyvqLU2WZTTltCWI7uJDXI'},
+  {n:'50', name:'Kream 10ct Box',              m:'Moll Brothers Cutter', t:'box',           pdf:'Kream 10ct box.pdf', folder:'sheet'},
+  {n:'51', name:'Kream 20ct Box v2',           m:'Moll Brothers Cutter', t:'box',           pdf:'Kream 20ct box v2.pdf', folder:'sheet', driveId:'1qTUffEfp8NrcUnGQ43WC_6FUA3C-cj6k'},
+  {n:'52', name:'Kream 20ct Box',              m:'Moll Brothers Cutter', t:'box',           pdf:'Kream 20ct box.pdf', folder:'sheet', driveId:'1wFEjUpI0rrvRCYTZVyMnSIrP9qK8WM9z'},
+  {n:'53', name:'Kream 20ct Tub Box',          m:'Moll Brothers Cutter', t:'tube-box',      pdf:'Kream 20ct Tub Box.pdf', folder:'sheet', driveId:'1OUVhQwgCNz9WjJvbk-JFk0xzFUwTS2Ww'},
+  {n:'54', name:'Kream Jar Box',               m:'Moll Brothers Cutter', t:'jar-box',       pdf:'Kream Jar Box.pdf', folder:'sheet'},
+  {n:'55', name:'Kream Lean Box',              m:'Moll Brothers Cutter', t:'box',           pdf:'Kream Lean Box.pdf', folder:'sheet', driveId:'1ETPglVh_Cu7b-G0LECerLKNikRFVxMHV'},
+  {n:'56', name:'Kream Square Box',            m:'Moll Brothers Cutter', t:'box',           pdf:'Kream Square Box Dieline.pdf', folder:'sheet'},
+  {n:'57', name:'Kream Zour Stash 10ct Box',   m:'Moll Brothers Cutter', t:'box',           pdf:'Kream Zour Stash 10ct Box.pdf', folder:'sheet'},
+  {n:'58', name:'LA Kush Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'LA Kush box Dieline.pdf', folder:'sheet'},
+  {n:'59', name:'LA Kush Small Box',           m:'Moll Brothers Cutter', t:'box',           pdf:'LA Kush Small Box.pdf', folder:'sheet'},
+  {n:'60', name:'Loudnose Box',                m:'Moll Brothers Cutter', t:'box',           pdf:'Loudnose box die.pdf', folder:'sheet'},
+  {n:'61', name:'Macaronz Box',                m:'Moll Brothers Cutter', t:'box',           pdf:'Macaronz Box Dieline.pdf', folder:'sheet'},
+  {n:'62', name:'Macaronz Box Window',         m:'Moll Brothers Cutter', t:'box',           pdf:'Macaronz Box Window Dieline.pdf', folder:'sheet'},
+  {n:'63', name:'Milk Box',                    m:'Moll Brothers Cutter', t:'box',           pdf:'Milk Box Dieline.pdf', folder:'sheet'},
+  {n:'64', name:'Muhamed Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'Muhamed Box Dieline.pdf', folder:'sheet'},
+  {n:'65', name:'Noah The Plant Card',         m:'Moll Brothers Cutter', t:'card',          pdf:'Noah The Plant Card Dieline.pdf', folder:'sheet', driveId:'14rwUu6mV7nYgx6POH50rrHVQCjtVG4xQ'},
+  {n:'66', name:'Orbit Box',                   m:'Moll Brothers Cutter', t:'box',           pdf:'Orbit Box Dieline.pdf', folder:'sheet'},
+  {n:'67', name:'Packs Box',                   m:'Moll Brothers Cutter', t:'box',           pdf:'Packs Box Dieline.pdf', folder:'sheet'},
+  {n:'68', name:'Packs XL Box',                m:'Moll Brothers Cutter', t:'box',           pdf:'Packs XL Box Dieline.pdf', folder:'sheet'},
+  {n:'69', name:'PackWood Box',                m:'Moll Brothers Cutter', t:'box',           pdf:'PackWood Box Dieline.pdf', folder:'sheet'},
+  {n:'70', name:'Pastry Valentine Box',        m:'Moll Brothers Cutter', t:'box',           pdf:'Pastry Valentine Box Dieline.pdf', folder:'sheet'},
+  {n:'71', name:'Pops Masterbox v2',           m:'Moll Brothers Cutter', t:'master-box',    pdf:'Pops Masterbox Dieline v2.pdf', folder:'sheet'},
+  {n:'72', name:'Pops Masterbox',              m:'Moll Brothers Cutter', t:'master-box',    pdf:'Pops Masterbox Dieline.pdf', folder:'sheet'},
+  {n:'73', name:'Push UP Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'Push UP Box Dieline.pdf', folder:'sheet'},
+  {n:'74', name:'Rene Figueroa Box',           m:'Moll Brothers Cutter', t:'box',           pdf:'Rene Figueroa Box Dieline.pdf', folder:'sheet'},
+  {n:'75', name:'Seaweed Box',                 m:'Moll Brothers Cutter', t:'box',           pdf:'Seaweed Box Dieline.pdf', folder:'sheet'},
+  {n:'76', name:'Shoe Box',                    m:'Moll Brothers Cutter', t:'shoe-box',      pdf:'Shoe Box Dieline.pdf', folder:'sheet', driveId:'1YwVPJvBHNLP10IPXCx_Ya6Wp3JsVjjat'},
+  {n:'77', name:'Slot Machine',                m:'Moll Brothers Cutter', t:'box',           pdf:'Slot Machine Dieline.pdf', folder:'sheet', driveId:'1f38PWcBg3qinm7-_bSMcW4bNp2Xz3xsv'},
+  {n:'78', name:'Spark',                       m:'Moll Brothers Cutter', t:'box',           pdf:'Spark Dieline.pdf', folder:'sheet'},
+  {n:'79', name:'Tokely Box',                  m:'Moll Brothers Cutter', t:'box',           pdf:'Tokely Box Dieline.pdf', folder:'sheet', driveId:'1wLrzotQHgVe1J8RDR1Ipj6f3i2Giek5C'},
+  {n:'80', name:'Transcend Box',               m:'Moll Brothers Cutter', t:'box',           pdf:'Transcend Box Dieline.pdf', folder:'sheet'},
+  {n:'81', name:'Tube Box 12up',               m:'Moll Brothers Cutter', t:'tube-box',      pdf:'Tube Box Dieline 12up.pdf', folder:'sheet', driveId:'1IJ7tuMTUYcnj4gi3HoJeGGWHTv0vAVQ9'},
+  {n:'82', name:'USPS Box',                    m:'Moll Brothers Cutter', t:'box',           pdf:'USPS Box Dieline.pdf', folder:'sheet'},
+  {n:'83', name:'Valentine Window Cut',        m:'Moll Brothers Cutter', t:'window-cut',    pdf:'Valentine Window Cut.pdf', folder:'sheet'},
+  {n:'84', name:'Vape Box',                    m:'Moll Brothers Cutter', t:'vape-box',      pdf:'Vape Box Dieline.pdf', folder:'sheet'},
+  {n:'85', name:'Wally Wonka Box',             m:'Moll Brothers Cutter', t:'box',           pdf:'Wally Wonka Box Dieline.pdf', folder:'sheet'},
+  {n:'86', name:'Yehee Juice Box',             m:'Moll Brothers Cutter', t:'juice-box',     pdf:'Yehee Juice Box dieline.pdf', folder:'sheet'},
+  {n:'87', name:'Zerbert Box (Damaged)',       m:'Moll Brothers Cutter', t:'box',           pdf:'Zerbert Box Dieline (Damaged).pdf', folder:'sheet'},
+  {n:'88', name:'Zerbert Die Imposition v2',   m:'Moll Brothers Cutter', t:'imposition',    pdf:'Zerbert die imposition v2.pdf', folder:'sheet'},
+  // ── Mixed / Sheet-only (CSV 89–102) ──────────────────────────────────
+  {n:'89',  name:'Desserts Circle Label',          m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Desserts Circle Label Dieline.pdf', folder:'roll', driveId:'1moUeG8_wv62uc_nAhuCU27zeHS004vbK'},
+  {n:'90',  name:'Dolo LLC Small Box',             m:'Moll Brothers Cutter',   t:'box',      pdf:'DOLO LLC Small Box Die.pdf', folder:'sheet', driveId:'175-JeCiu9GYKZKOX0SG_k-7JmYTbNY1J'},
+  {n:'91',  name:'Kream Zour Stash Jar Label',     m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Kream Zour Stash Jar Label.pdf', folder:'roll', driveId:'1tm95kNDORjNldRsPOnf5LggdOGuK1XH-'},
+  {n:'92',  name:'Lundose Box',                    m:'Moll Brothers Cutter',   t:'box',      pdf:'Loudnose box die.pdf', folder:'sheet', driveId:'1wfYqxuKzFKqIJVgBJj4TjSz0rxnyK-xz'},
+  {n:'93',  name:'Kream Lean Jar Label',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Kream Lean Jar Label.pdf', folder:'roll', driveId:'16VwUqD0SekfmN1ItJSsu2nOHEybrrY2-'},
+  {n:'94',  name:'Yeehee Juice Box',               m:'Moll Brothers Cutter',   t:'juice-box',pdf:'Yehee Juice Box dieline.pdf', folder:'sheet', driveId:'1CuVB2a1jZBnyh11mUmvZsn03p6zrIpAJ'},
+  {n:'95',  name:'Kream 2G THCA Label New Size',   m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Kream 2G THCA Label New Size.pdf', folder:'roll', driveId:'1QYREx2ggDjJMVdgezBn3vGppw8eKVwx3'},
+  {n:'96',  name:'Kream Exotics Square Label',     m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Kream Exotics Square Label.pdf', folder:'roll', driveId:'1v81uvtDeyab_zWK-jHgr-SQ7ag1wpxGN'},
+  {n:'97',  name:'HM 4oz Label',                   m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'HM 4oz Label.pdf', folder:'roll', driveId:'1C_99oZ_l3oHJdsvHGJwc6SmnHrLEuW9L'},
+  {n:'98',  name:'Stizzy 40s 1g Preroll v2',       m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 40s 1g preroll DIELINE v2.pdf', folder:'roll', driveId:'1sBS1OX7fNnV7XZbubw5Z9FSZRGb_NMK5'},
+  {n:'99',  name:'Stizzy 40s 2g Blunt v2',         m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 40s 2g blunt DIELINE v2.pdf', folder:'roll', driveId:'1QgcWu7DMmykSsW9IvXdj8YiZlyc0maJ9'},
+  {n:'100', name:'HM 2oz Label',                   m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'HM 2oz Label.pdf', folder:'roll'},
+  {n:'101', name:'Covered Label Dieline',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Covered Label Dieline.pdf', folder:'roll'},
+  {n:'102', name:'Kream Hashiez Labels',            m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Kream Hashiez Labels.pdf', folder:'roll'},
+  // ── Additional GM Roll Dielines (not in CSV — from folder scan) ───────
+  {n:'GM-1',  name:'14g Bag Label',                m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'14g bag label DIELINE.pdf', folder:'roll'},
+  {n:'GM-2',  name:'2 Inch Round Label',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'2 inch round label DIELINE.pdf', folder:'roll'},
+  {n:'GM-3',  name:'2oz Jar Top Seal',             m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'2 oz jar Top Seal DIELINE.pdf', folder:'roll'},
+  {n:'GM-4',  name:'2oz Jar Label with Window',    m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'2 oz jar label with window DIELINE.pdf', folder:'roll'},
+  {n:'GM-5',  name:'2.5 x 3.5 Kream Dieline',     m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'2.5_ x 3.5_ Kream Dieline.pdf', folder:'roll'},
+  {n:'GM-6',  name:'28g Bag Label',                m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'28g bag label DIELINE.pdf', folder:'roll'},
+  {n:'GM-7',  name:'3.5g Bag with Perf',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'3.5g bag Dieline with perf.pdf', folder:'roll'},
+  {n:'GM-8',  name:'3.5g Bag Fanta',               m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'3.5g bag Fanta Dieline.pdf', folder:'roll'},
+  {n:'GM-9',  name:'3.5g Round Bag',               m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'3.5g round bag DIELINE.pdf', folder:'roll'},
+  {n:'GM-10', name:'3oz Jar Top Seal',             m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'3oz jar Top Seal DIELINE.pdf', folder:'roll'},
+  {n:'GM-11', name:'3oz Side Label with Window',   m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'3oz side label with window DIELINE.pdf', folder:'roll'},
+  {n:'GM-12', name:'7.75 x 1.5 Kream Label',      m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'7.75_ x 1.5_ Kream DIELINE.pdf', folder:'roll'},
+  {n:'GM-13', name:'95mm Chubby Tube Top Seal',    m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'95mm chubby tube Top Seal DIELINE.pdf', folder:'roll'},
+  {n:'GM-14', name:'95mm Chubby Tube Wrap',        m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'95mm chubby tube not all the way wrap DIELINE.pdf', folder:'roll'},
+  {n:'GM-15', name:'95mm Chubby Tube Top',         m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'95mm chubby tube top DIELINE.pdf', folder:'roll'},
+  {n:'GM-16', name:'Astro Label',                  m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Astro DIELINE.pdf', folder:'roll'},
+  {n:'GM-17', name:'FireCrackers 1g Tip Label',    m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'FireCrackers 1g tip label DIELINE.pdf', folder:'roll'},
+  {n:'GM-18', name:'FireCrackers 22x80',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'FireCrackers 22x80 DIELINE.pdf', folder:'roll'},
+  {n:'GM-19', name:'FireCrackers 27x80',           m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'FireCrackers 27x80 DIELINE.pdf', folder:'roll'},
+  {n:'GM-20', name:'FireCrackers Van Kush',        m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'FireCrackers Van Kush DIELINE.pdf', folder:'roll'},
+  {n:'GM-21', name:'Firecrackers Vanilla Kush Cap',m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Firecrackers Vanilla Kush CAP.pdf', folder:'roll'},
+  {n:'GM-22', name:'HM 4oz Label v2',              m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'HM 4oz Label_v2.pdf', folder:'roll'},
+  {n:'GM-23', name:'New Era Hilling',              m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'New Era Hilling.pdf', folder:'roll'},
+  {n:'GM-24', name:'Stizzy 0.5g Multiblunt',      m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 0.5g multiblunt DIELINE.pdf', folder:'roll'},
+  {n:'GM-25', name:'Stizzy 1.75 x 0.85',          m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 1.75_ x 0.85_ Dieline.pdf', folder:'roll'},
+  {n:'GM-26', name:'Stizzy 100mg Jar',             m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 100mg jar DIELINE.pdf', folder:'roll'},
+  {n:'GM-27', name:'Stizzy 1 x 0.545',            m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 1_ x 0.545_ Dieline.pdf', folder:'roll'},
+  {n:'GM-28', name:'Stizzy 1g Preroll',            m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 1g preroll DIELINE.pdf', folder:'roll'},
+  {n:'GM-29', name:'Stizzy 2g Blunt',              m:'GM Die-Cutter w/ JetFX', t:'label',    pdf:'Stizzy 2g blunt DIELINE.pdf', folder:'roll'},
+  {n:'GM-30', name:'Bazaar Tape',                  m:'GM Die-Cutter w/ JetFX', t:'other',    pdf:'bazaar tape.pdf', folder:'roll'},
+];
+
+// Convert Google Drive share URL to thumbnail URL
+function driveThumb(driveId) {
+  return `https://drive.google.com/thumbnail?id=${driveId}&sz=w300`;
+}
+// Convert Google Drive share URL to preview URL (opens in new tab)
+function drivePreview(driveId) {
+  return `https://drive.google.com/file/d/${driveId}/preview`;
+}
+
 // ── DIES ──────────────────────────────────────────────────
 let allDies = [];
+let dieViewMode = 'table'; // 'table' | 'cards'
+
 async function loadDies() {
   allDies = await getAllDies();
+  await migrateDieMetadata();
+  renderDies();
+}
+
+// Auto-enrich existing DB records from DIE_MASTER_DATA and add missing GM dies
+async function migrateDieMetadata() {
+  const existingNumbers = new Set(allDies.map(d => String(d.dieNumber)));
+  let changed = false;
+
+  // Enrich existing records that lack die_type or photos_url
+  for (const d of allDies) {
+    const master = DIE_MASTER_DATA.find(m => String(m.n) === String(d.dieNumber));
+    if (!master) continue;
+    const needsUpdate = !d.die_type || (!d.photos_url && master.driveId) || !d.template_pdf;
+    if (needsUpdate) {
+      const patch = {};
+      if (!d.die_type && master.t)       patch.die_type = master.t;
+      if (!d.photos_url && master.driveId) patch.photos_url = `https://drive.google.com/file/d/${master.driveId}/view`;
+      if (!d.template_pdf && master.pdf)  patch.template_pdf = master.pdf;
+      if (!d.machine && master.m)         patch.machine = master.m;
+      if (Object.keys(patch).length > 0) {
+        await updateDie(d.id, patch);
+        Object.assign(d, patch); // update in-memory
+        changed = true;
+      }
+    }
+  }
+
+  // Add new GM dies not yet in DB
+  const gmDies = DIE_MASTER_DATA.filter(m => m.n.startsWith('GM-'));
+  for (const master of gmDies) {
+    if (!existingNumbers.has(master.n)) {
+      const newDie = {
+        dieNumber: master.n,
+        description: master.name,
+        machine: master.m,
+        status: 'active',
+        die_type: master.t,
+        template_pdf: master.pdf,
+        notes: `Roll Dieline — ${master.pdf}`,
+      };
+      newDie.barcode = generateDieBarcode(master.n);
+      await addDie(newDie);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    allDies = await getAllDies();
+  }
+}
+
+function getFilteredDies() {
+  const q        = (document.getElementById('dieSearch')?.value || '').toLowerCase();
+  const machine  = document.getElementById('dieMachineFilter')?.value || 'all';
+  const typeF    = document.getElementById('dieTypeFilter')?.value || 'all';
+  const statusF  = document.getElementById('dieStatusFilter')?.value || 'all';
+
+  return allDies.filter(d => {
+    if (q && !([d.dieNumber, d.barcode, d.customer, d.description, d.die_type, d.template_pdf].join(' ').toLowerCase().includes(q))) return false;
+    if (machine === 'moll' && !(d.machine || '').toLowerCase().includes('moll')) return false;
+    if (machine === 'gm'   && !(d.machine || '').toLowerCase().includes('gm'))   return false;
+    if (typeF !== 'all') {
+      const dt = (d.die_type || '').toLowerCase();
+      if (typeF === 'card' && dt !== 'card' && dt !== 'business-card') return false;
+      else if (typeF !== 'card' && dt !== typeF) return false;
+    }
+    if (statusF !== 'all' && (d.status || 'active') !== statusF) return false;
+    return true;
+  });
+}
+
+function toggleDieView() {
+  dieViewMode = dieViewMode === 'table' ? 'cards' : 'table';
+  const btn = document.getElementById('dieViewToggle');
+  btn.textContent = dieViewMode === 'cards' ? '☰ List' : '⊞ Cards';
+  document.getElementById('dieCardGrid').style.display = dieViewMode === 'cards' ? 'grid' : 'none';
+  document.getElementById('dieTableWrap').style.display = dieViewMode === 'table' ? '' : 'none';
   renderDies();
 }
 
 function renderDies() {
-  const q = document.getElementById('dieSearch')?.value?.toLowerCase() || '';
-  const filtered = q ? allDies.filter(d => [d.dieNumber, d.barcode, d.customer, d.description].join(' ').toLowerCase().includes(q)) : allDies;
+  const filtered = getFilteredDies();
+  const countEl = document.getElementById('dieCount');
+  if (countEl) countEl.textContent = `${filtered.length} of ${allDies.length}`;
+
+  if (dieViewMode === 'cards') {
+    renderDieCards(filtered);
+  } else {
+    renderDieTable(filtered);
+  }
+}
+
+function renderDieTable(filtered) {
   const tbody = document.getElementById('dieTableBody');
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No dies found.</td></tr>';
     return;
   }
-  tbody.innerHTML = filtered.map(d => `
-    <tr>
+  tbody.innerHTML = filtered.map(d => {
+    const isGM = (d.machine || '').toLowerCase().includes('gm');
+    const machineBadge = isGM
+      ? '<span style="font-size:10px;background:#7c3aed;color:#fff;padding:1px 6px;border-radius:10px;">GM Roll</span>'
+      : '<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 6px;border-radius:10px;">Moll Sheet</span>';
+    const driveBtn = d.photos_url
+      ? `<a href="${d.photos_url.replace('/view', '/preview')}" target="_blank" class="btn btn-sm" style="font-size:10px;">View</a>`
+      : (d.template_pdf ? `<span style="font-size:10px;color:var(--text-muted);" title="${d.template_pdf}">📄 ${d.template_pdf.length > 20 ? d.template_pdf.slice(0,18)+'…' : d.template_pdf}</span>` : '—');
+    return `<tr>
       <td style="font-weight:700;font-family:monospace;">${d.dieNumber}</td>
-      <td style="font-family:monospace;font-size:11px;">${d.barcode || '—'}</td>
+      <td>${driveBtn}</td>
       <td>${d.description || '—'}</td>
-      <td>${d.customer || '—'}</td>
-      <td style="font-size:12px;">${d.machine || '—'}</td>
+      <td><span class="die-type-pill">${d.die_type || '—'}</span></td>
+      <td style="font-size:12px;">${machineBadge}</td>
       <td><span class="status-${d.status || 'active'}">${d.status || 'active'}</span></td>
       <td>${d.usageCount || 0}</td>
       <td>${d.lastUsed ? formatDate(d.lastUsed) : '—'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm" onclick="editDie(${d.id})">Edit</button>
-        ${d.status === 'active' ? `<button class="btn btn-sm btn-warning" onclick="setDieStatus(${d.id},'damaged')">Mark Damaged</button>` : ''}
+        ${d.status === 'active' ? `<button class="btn btn-sm btn-warning" onclick="setDieStatus(${d.id},'damaged')">Damaged</button>` : ''}
         ${d.status !== 'retired' ? `<button class="btn btn-sm btn-danger" onclick="setDieStatus(${d.id},'retired')">Retire</button>` : ''}
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
+}
+
+function renderDieCards(filtered) {
+  const grid = document.getElementById('dieCardGrid');
+  if (filtered.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted);padding:20px;">No dies found.</p>';
+    return;
+  }
+  grid.innerHTML = filtered.map(d => {
+    const isGM    = (d.machine || '').toLowerCase().includes('gm');
+    const badgeCls = isGM ? 'badge-gm' : 'badge-moll';
+    const badgeTxt = isGM ? 'GM Roll' : 'Moll Sheet';
+    const dmgBadge = (d.status === 'damaged') ? '<span class="badge-damaged">Damaged</span>' : '';
+    const retBadge = (d.status === 'retired') ? '<span class="badge-damaged" style="background:var(--text-muted);">Retired</span>' : '';
+
+    let thumbHtml;
+    if (d.photos_url) {
+      // Extract Drive ID and show thumbnail
+      const match = d.photos_url.match(/\/d\/([^/]+)/);
+      const tid   = match ? match[1] : null;
+      thumbHtml = tid
+        ? `<img src="${driveThumb(tid)}" alt="${d.description}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="die-no-preview" style="display:none;">📄</div>`
+        : `<div class="die-no-preview">📄</div>`;
+    } else {
+      thumbHtml = `<div class="die-no-preview">📄</div>`;
+    }
+
+    const viewBtn = d.photos_url
+      ? `<a href="${d.photos_url.replace('/view', '/preview')}" target="_blank" class="btn btn-sm">View PDF</a>`
+      : (d.template_pdf ? `<span class="btn btn-sm" style="cursor:default;opacity:0.6;" title="${d.template_pdf}">Local PDF</span>` : '');
+
+    return `<div class="die-card">
+      <div class="die-card-thumb">
+        ${thumbHtml}
+        <span class="die-machine-badge ${badgeCls}">${badgeTxt}</span>
+        ${dmgBadge}${retBadge}
+      </div>
+      <div class="die-card-body">
+        <div class="die-card-name">${d.description || d.dieNumber}</div>
+        <div class="die-card-meta">#${d.dieNumber} &nbsp;·&nbsp; <span class="die-type-pill">${d.die_type || '?'}</span></div>
+        ${d.template_pdf ? `<div class="die-card-meta" style="font-size:10px;" title="${d.template_pdf}">📎 ${d.template_pdf.length > 28 ? d.template_pdf.slice(0,26)+'…' : d.template_pdf}</div>` : ''}
+      </div>
+      <div class="die-card-actions">
+        ${viewBtn}
+        <button class="btn btn-sm" onclick="editDie(${d.id})">Edit</button>
+        ${d.status === 'active' ? `<button class="btn btn-sm btn-warning" onclick="setDieStatus(${d.id},'damaged')">Damaged</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openDieModal(die) {
   document.getElementById('dieModalTitle').textContent = die ? 'Edit Die' : 'Add Die';
-  document.getElementById('dieDbId').value = die?.id || '';
-  document.getElementById('dNumber').value = die?.dieNumber || '';
+  document.getElementById('dieDbId').value      = die?.id || '';
+  document.getElementById('dNumber').value      = die?.dieNumber || '';
   document.getElementById('dDescription').value = die?.description || '';
-  document.getElementById('dCustomer').value = die?.customer || '';
-  document.getElementById('dMachine').value = die?.machine || 'Moll Brothers Cutter';
-  document.getElementById('dStatus').value = die?.status || 'active';
-  document.getElementById('dNotes').value = die?.notes || '';
+  document.getElementById('dCustomer').value    = die?.customer || '';
+  document.getElementById('dMachine').value     = die?.machine || 'Moll Brothers Cutter';
+  document.getElementById('dStatus').value      = die?.status || 'active';
+  document.getElementById('dType').value        = die?.die_type || '';
+  document.getElementById('dTemplatePdf').value = die?.template_pdf || '';
+  document.getElementById('dPhotosUrl').value   = die?.photos_url || '';
+  document.getElementById('dNotes').value       = die?.notes || '';
   if (die?.barcode) {
     document.getElementById('dBarcode').value = die.barcode;
     document.getElementById('barcodeDisplay').style.display = 'block';
@@ -903,11 +1285,14 @@ async function saveDie() {
   const id = parseInt(document.getElementById('dieDbId').value) || null;
   const data = {
     dieNumber,
-    description: document.getElementById('dDescription').value.trim(),
-    customer: document.getElementById('dCustomer').value.trim(),
-    machine: document.getElementById('dMachine').value,
-    status: document.getElementById('dStatus').value,
-    notes: document.getElementById('dNotes').value.trim(),
+    description:  document.getElementById('dDescription').value.trim(),
+    customer:     document.getElementById('dCustomer').value.trim(),
+    machine:      document.getElementById('dMachine').value,
+    status:       document.getElementById('dStatus').value,
+    die_type:     document.getElementById('dType').value,
+    template_pdf: document.getElementById('dTemplatePdf').value.trim(),
+    photos_url:   document.getElementById('dPhotosUrl').value.trim(),
+    notes:        document.getElementById('dNotes').value.trim(),
   };
   try {
     if (id) {
