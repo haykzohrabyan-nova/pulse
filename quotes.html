@@ -57,30 +57,23 @@
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <!-- Left -->
+      <!-- Left column -->
       <div>
+        <!-- Customer Info (includes company, facility, due date — no separate Quote Details panel) -->
         <div class="form-section">
           <h3 class="section-title">👤 Customer Info</h3>
           <div class="form-row">
             <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required></div>
           </div>
-          <div class="form-row">
-            <div class="field"><label>Customer Email</label><input type="email" id="q_email" placeholder="customer@email.com"></div>
-          </div>
-          <div class="form-row">
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="field"><label>Email</label><input type="email" id="q_email" placeholder="customer@email.com"></div>
             <div class="field"><label>Phone</label><input type="tel" id="q_phone" placeholder="(xxx) xxx-xxxx"></div>
           </div>
           <div class="form-row">
             <div class="field"><label>Account Manager / Rep</label>
-              <select id="q_rep">
-                <option value="">— Select Rep —</option>
-              </select>
+              <select id="q_rep"><option value="">— Select Rep —</option></select>
             </div>
           </div>
-        </div>
-
-        <div class="form-section">
-          <h3 class="section-title">📋 Quote Details</h3>
           <div class="form-row">
             <div class="field"><label>Company *</label>
               <select id="q_company" onchange="updateCompanyLogo()">
@@ -93,7 +86,7 @@
               </div>
             </div>
           </div>
-          <div class="form-row">
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="field"><label>Facility</label>
               <select id="q_facility">
                 <option value="">— Select —</option>
@@ -101,45 +94,72 @@
                 <option value="boyd-street">Boyd Street</option>
               </select>
             </div>
+            <div class="field"><label>Due Date</label><input type="date" id="q_due"></div>
           </div>
-          <div class="form-row">
-            <div class="field"><label>Quoted Due Date</label><input type="date" id="q_due"></div>
+        </div>
+
+        <!-- Add-ons (card-style) -->
+        <div class="form-section">
+          <h3 class="section-title">🏷️ Add-ons</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <label class="addon-card" id="addonCard_design">
+              <input type="checkbox" id="q_addon_design" onchange="syncAddonCard(this,'addonCard_design')" style="position:absolute;opacity:0;width:0;height:0;">
+              <div style="font-weight:600;font-size:13px;">✏️ Design Job</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">File prep included</div>
+            </label>
+            <label class="addon-card rush-card" id="addonCard_rush">
+              <input type="checkbox" id="q_addon_rush" onchange="syncAddonCard(this,'addonCard_rush')" style="position:absolute;opacity:0;width:0;height:0;">
+              <div style="font-weight:600;font-size:13px;">⚡ Rush Order</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">Priority processing</div>
+            </label>
           </div>
-          <div class="form-row">
-            <div class="field"><label>Quote Notes / Scope</label><textarea id="q_notes" rows="3" placeholder="Describe what the customer wants..." style="resize:vertical;"></textarea></div>
-          </div>
-          <div class="form-row">
-            <div class="field"><label>Add-ons</label>
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_design"> Design job included</label>
-                <div id="appAddonSection">
-                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_application" onchange="toggleApplicationPanel()"> Label application service</label>
-                  <div id="appAddonPanel" style="display:none;margin-top:8px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                      <div class="field">
-                        <label style="font-size:11px;">Container Type *</label>
-                        <select id="q_appContainerType" onchange="calcAppFee()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
-                          <option value="">— Select container —</option>
-                        </select>
-                      </div>
-                      <div class="field">
-                        <label style="font-size:11px;">Application Qty</label>
-                        <input type="number" id="q_appQty" oninput="calcAppFee()" placeholder="e.g. 500" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
-                      </div>
-                    </div>
-                    <div id="q_appFeeInline" style="margin-top:8px;font-size:12px;color:#059669;font-weight:600;"></div>
-                  </div>
+          <div id="appAddonSection">
+            <label class="addon-card" id="addonCard_application" style="width:100%;box-sizing:border-box;display:block;">
+              <input type="checkbox" id="q_addon_application" onchange="syncAddonCard(this,'addonCard_application');toggleApplicationPanel()" style="position:absolute;opacity:0;width:0;height:0;">
+              <div style="font-weight:600;font-size:13px;">📦 Label Application <span style="font-size:11px;font-weight:400;color:#6b7280;">(jars / tubes / bags)</span></div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">Applied to your filled containers</div>
+            </label>
+            <div id="appAddonPanel" style="display:none;margin-top:8px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="field">
+                  <label style="font-size:11px;">Container Type *</label>
+                  <select id="q_appContainerType" onchange="calcAppFee()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
+                    <option value="">— Select container —</option>
+                  </select>
                 </div>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_scodix"> Scodix embellishment</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="q_addon_rush"> Rush order</label>
+                <div class="field">
+                  <label style="font-size:11px;">Application Qty</label>
+                  <input type="number" id="q_appQty" oninput="calcAppFee()" placeholder="e.g. 500" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;">
+                </div>
               </div>
+              <div id="q_appFeeInline" style="margin-top:8px;font-size:12px;color:#059669;font-weight:600;"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right: Line items -->
+      <!-- Right column -->
       <div>
+        <!-- Size & Quantity -->
+        <div class="form-section">
+          <h3 class="section-title">📐 Size & Quantity</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">
+            <div class="field">
+              <label style="font-size:11px;">Width (in)</label>
+              <input type="number" id="q_width" step="0.125" min="0" placeholder='e.g. 4' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            </div>
+            <div class="field">
+              <label style="font-size:11px;">Height (in)</label>
+              <input type="number" id="q_height" step="0.125" min="0" placeholder='e.g. 3' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            </div>
+            <div class="field">
+              <label style="font-size:11px;">Quantity (units)</label>
+              <input type="number" id="q_qty_main" min="1" placeholder="e.g. 1000" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Line Items -->
         <div class="form-section">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <h3 class="section-title" style="margin:0;">📦 Line Items (SKUs)</h3>
@@ -164,6 +184,19 @@
           </div>
         </div>
 
+        <!-- Special Finishing (includes Scodix) -->
+        <div class="form-section">
+          <h3 class="section-title">✨ Special Finishing</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_lamination"> Lamination</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_uv"> UV Coating</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_foil"> Foil Stamping</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_perforation"> Perforation</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_addon_scodix"> Scodix</label>
+          </div>
+        </div>
+
+        <!-- Quote Status -->
         <div class="form-section">
           <h3 class="section-title">📊 Quote Status</h3>
           <div class="form-row">
@@ -183,7 +216,12 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+    <!-- Standalone Notes — full width below the grid -->
+    <div class="form-section" style="margin-top:0;">
+      <div class="field"><label>Quote Notes / Scope</label><textarea id="q_notes" rows="3" placeholder="Describe what the customer wants..." style="resize:vertical;width:100%;box-sizing:border-box;"></textarea></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:0;padding-top:16px;border-top:1px solid var(--border);">
       <button class="btn" onclick="showQuoteList()">Cancel</button>
       <button class="btn" onclick="saveQuote('draft')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;">💾 Save Draft</button>
       <button class="btn btn-primary" onclick="saveQuote(document.getElementById('q_status').value)">💾 Save Quote</button>
@@ -199,6 +237,10 @@ initAuth('quotes');
 document.getElementById('page-styles').textContent = `
   .main-tab-btn { padding: 8px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -2px; color: #6b7280; }
   .main-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .addon-card { position:relative; border: 2px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; background: #fff; display: block; transition: border-color 0.15s, background 0.15s; }
+  .addon-card:hover { border-color: #a5b4fc; }
+  .addon-card.active { border-color: var(--accent); background: #eff6ff; }
+  .addon-card.rush-card.active { border-color: #dc2626; background: #fef2f2; }
 `;
 
 let _quotes = [];
@@ -240,6 +282,19 @@ function populateContainerDropdown() {
     opt.value = c.id;
     opt.textContent = `${c.label} — $${c.rate.toFixed(2)}/unit`;
     sel.appendChild(opt);
+  });
+}
+
+function syncAddonCard(cb, cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.classList.toggle('active', cb.checked);
+}
+
+function syncAllAddonCards() {
+  [['q_addon_design','addonCard_design'],['q_addon_application','addonCard_application'],['q_addon_rush','addonCard_rush']].forEach(([cbId, cardId]) => {
+    const cb = document.getElementById(cbId);
+    if (cb) syncAddonCard(cb, cardId);
   });
 }
 
@@ -389,6 +444,14 @@ function showNewQuoteForm() {
   document.getElementById('q_appFeeInline').textContent = '';
   document.getElementById('q_addon_scodix').checked = false;
   document.getElementById('q_addon_rush').checked = false;
+  document.getElementById('q_width').value = '';
+  document.getElementById('q_height').value = '';
+  document.getElementById('q_qty_main').value = '';
+  document.getElementById('q_fin_lamination').checked = false;
+  document.getElementById('q_fin_uv').checked = false;
+  document.getElementById('q_fin_foil').checked = false;
+  document.getElementById('q_fin_perforation').checked = false;
+  syncAllAddonCards();
   document.getElementById('convertBtn').style.display = 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
@@ -425,6 +488,14 @@ function editQuote(quoteId) {
   document.getElementById('q_appFeeInline').textContent = '';
   document.getElementById('q_addon_scodix').checked = qt.addons?.scodix || false;
   document.getElementById('q_addon_rush').checked = qt.addons?.rush || false;
+  document.getElementById('q_width').value = qt.width || '';
+  document.getElementById('q_height').value = qt.height || '';
+  document.getElementById('q_qty_main').value = qt.qty_main || '';
+  document.getElementById('q_fin_lamination').checked = qt.finishing?.lamination || false;
+  document.getElementById('q_fin_uv').checked = qt.finishing?.uv || false;
+  document.getElementById('q_fin_foil').checked = qt.finishing?.foil || false;
+  document.getElementById('q_fin_perforation').checked = qt.finishing?.perforation || false;
+  syncAllAddonCards();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
@@ -572,6 +643,15 @@ function saveQuote(status) {
       scodix: document.getElementById('q_addon_scodix').checked,
       rush: document.getElementById('q_addon_rush').checked,
     },
+    finishing: {
+      lamination: document.getElementById('q_fin_lamination').checked,
+      uv: document.getElementById('q_fin_uv').checked,
+      foil: document.getElementById('q_fin_foil').checked,
+      perforation: document.getElementById('q_fin_perforation').checked,
+    },
+    width: parseFloat(document.getElementById('q_width').value) || null,
+    height: parseFloat(document.getElementById('q_height').value) || null,
+    qty_main: parseInt(document.getElementById('q_qty_main').value) || null,
     applicationContainerType: appData?.containerId || null,
     applicationQty: appData?.qty || null,
     applicationFee: appData?.fee || null,
