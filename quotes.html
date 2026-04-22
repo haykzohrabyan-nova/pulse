@@ -28,18 +28,29 @@
 
   <!-- Quote list -->
   <div id="quoteListSection">
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <!-- Row 1: Status tabs + search -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <button class="qp-filter-btn active" data-qf="all" onclick="setQuoteFilter('all')">All</button>
-      <button class="qp-filter-btn" data-qf="draft" onclick="setQuoteFilter('draft')">Drafts</button>
-      <button class="qp-filter-btn" data-qf="sent" onclick="setQuoteFilter('sent')">Sent</button>
-      <button class="qp-filter-btn" data-qf="approved" onclick="setQuoteFilter('approved')">Approved</button>
-      <button class="qp-filter-btn" data-qf="converted" onclick="setQuoteFilter('converted')">Converted</button>
-      <input id="quoteSearch" type="text" placeholder="Search..." oninput="renderQuoteList()" style="padding:4px 10px;border:1px solid var(--border);border-radius:12px;font-size:12px;margin-left:auto;">
+      <button class="qp-filter-btn" data-qf="draft" onclick="setQuoteFilter('draft')">○ Drafts</button>
+      <button class="qp-filter-btn" data-qf="sent" onclick="setQuoteFilter('sent')">📤 Sent</button>
+      <button class="qp-filter-btn" data-qf="approved" onclick="setQuoteFilter('approved')">✅ Approved</button>
+      <button class="qp-filter-btn" data-qf="declined" onclick="setQuoteFilter('declined')">✗ Declined</button>
+      <button class="qp-filter-btn" data-qf="converted" onclick="setQuoteFilter('converted')">⇒ Converted</button>
+      <input id="quoteSearch" type="text" placeholder="Search customer..." oninput="renderQuoteList()" style="padding:4px 10px;border:1px solid var(--border);border-radius:12px;font-size:12px;margin-left:auto;min-width:160px;">
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <!-- Row 2: Company + Rep + Date filters -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
       <button class="qp-filter-btn active" data-co="all" onclick="setCompanyFilter('all')">All Companies</button>
       <button class="qp-filter-btn" data-co="bazaar" onclick="setCompanyFilter('bazaar')">🏢 Bazaar Printing</button>
       <button class="qp-filter-btn" data-co="pixel" onclick="setCompanyFilter('pixel')">🏭 Pixel Press Print</button>
+      <span style="color:var(--border);font-size:14px;padding:0 2px;">|</span>
+      <select id="repFilter" onchange="setRepFilter(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:12px;font-size:12px;background:#fff;">
+        <option value="">All Reps</option>
+      </select>
+      <span style="color:var(--border);font-size:14px;padding:0 2px;">|</span>
+      <label style="font-size:12px;color:#6b7280;white-space:nowrap;">From <input type="date" id="filterDateFrom" onchange="renderQuoteList()" style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-left:4px;"></label>
+      <label style="font-size:12px;color:#6b7280;white-space:nowrap;">To <input type="date" id="filterDateTo" onchange="renderQuoteList()" style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-left:4px;"></label>
+      <button onclick="clearAllFilters()" class="btn btn-sm" style="font-size:11px;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;margin-left:auto;">✕ Clear Filters</button>
     </div>
     <div id="quoteList"></div>
   </div>
@@ -52,7 +63,10 @@
   <!-- New/Edit Quote Form -->
   <div id="quoteFormSection" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 id="quoteFormTitle" style="margin:0;font-size:17px;font-weight:700;">New Quote</h3>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <h3 id="quoteFormTitle" style="margin:0;font-size:17px;font-weight:700;">New Quote</h3>
+        <span id="quoteStateBadge" style="display:none;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span>
+      </div>
       <button class="btn" onclick="showQuoteList()">← Back to Quotes</button>
     </div>
 
@@ -272,6 +286,7 @@ let _editingQuoteId = null;
 let _quoteFilter = 'all';
 let _lineItemCount = 0;
 let _companyFilter = 'all';
+let _repFilter = '';
 let _activeTab = 'quotes';
 let _sendModalQuoteId = null;
 
@@ -402,6 +417,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadQuotes();
   renderQuoteList();
   populateRepDropdown();
+  populateRepFilterDropdown();
   populateContainerDropdown();
   addLineItem(); // start with one line item
 });
@@ -430,6 +446,72 @@ function setCompanyFilter(c) {
   renderQuoteList();
 }
 
+function setRepFilter(rep) {
+  _repFilter = rep;
+  renderQuoteList();
+}
+
+function clearAllFilters() {
+  _quoteFilter = 'all';
+  _companyFilter = 'all';
+  _repFilter = '';
+  document.querySelectorAll('.qp-filter-btn[data-qf]').forEach(b => b.classList.toggle('active', b.dataset.qf === 'all'));
+  document.querySelectorAll('.qp-filter-btn[data-co]').forEach(b => b.classList.toggle('active', b.dataset.co === 'all'));
+  const repEl = document.getElementById('repFilter');
+  if (repEl) repEl.value = '';
+  const dateFrom = document.getElementById('filterDateFrom');
+  const dateTo = document.getElementById('filterDateTo');
+  if (dateFrom) dateFrom.value = '';
+  if (dateTo) dateTo.value = '';
+  const search = document.getElementById('quoteSearch');
+  if (search) search.value = '';
+  renderQuoteList();
+}
+
+function populateRepFilterDropdown() {
+  const sel = document.getElementById('repFilter');
+  if (!sel) return;
+  Object.entries(OPERATOR_PROFILES).filter(([,p]) => p.role === 'account-manager' || p.role === 'supervisor').forEach(([name]) => {
+    const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+  });
+}
+
+// Returns a styled status badge HTML string for quote lists and headers
+function statusBadgeHtml(status, large = false) {
+  const cfg = {
+    draft:     { icon: '○', label: 'Draft',     bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' },
+    sent:      { icon: '📤', label: 'Sent',      bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+    approved:  { icon: '✅', label: 'Approved',  bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+    declined:  { icon: '✗', label: 'Declined',  bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+    converted: { icon: '⇒', label: 'Converted', bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+  };
+  const c = cfg[status] || { icon: '?', label: status, bg: '#f3f4f6', color: '#9ca3af', border: '#e5e7eb' };
+  const px = large ? '6px 14px' : '3px 9px';
+  const fs = large ? '13px' : '11px';
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:${fs};font-weight:700;padding:${px};border-radius:20px;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;">${c.icon} ${c.label}</span>`;
+}
+
+function updateFormStateBadge(status) {
+  const badge = document.getElementById('quoteStateBadge');
+  if (!badge) return;
+  if (!status) { badge.style.display = 'none'; return; }
+  badge.style.display = '';
+  badge.outerHTML; // trigger read
+  const cfg = {
+    draft:     { icon: '○', label: 'Draft',     bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' },
+    sent:      { icon: '📤', label: 'Sent',      bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+    approved:  { icon: '✅', label: 'Approved',  bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+    declined:  { icon: '✗', label: 'Declined',  bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+    converted: { icon: '⇒', label: 'Converted', bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+  };
+  const c = cfg[status] || { icon: '?', label: status, bg: '#f3f4f6', color: '#9ca3af', border: '#e5e7eb' };
+  badge.textContent = `${c.icon} ${c.label}`;
+  badge.style.background = c.bg;
+  badge.style.color = c.color;
+  badge.style.border = `1px solid ${c.border}`;
+  badge.style.display = '';
+}
+
 function updateCompanyLogo() {
   const val = document.getElementById('q_company').value;
   const banner = document.getElementById('q_companyLogoBanner');
@@ -446,19 +528,27 @@ function updateCompanyLogo() {
 function renderQuoteList() {
   loadQuotes();
   const q = (document.getElementById('quoteSearch')?.value || '').toLowerCase();
+  const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+  const dateTo = document.getElementById('filterDateTo')?.value || '';
   let list = _quotes;
   if (_quoteFilter !== 'all') list = list.filter(x => x.status === _quoteFilter);
   if (_companyFilter !== 'all') list = list.filter(x => (x.company || '') === _companyFilter);
+  if (_repFilter) list = list.filter(x => (x.rep || '') === _repFilter);
   if (q) list = list.filter(x => (x.customer||'').toLowerCase().includes(q) || String(x.quoteId||'').includes(q));
+  if (dateFrom) list = list.filter(x => x.createdAt && x.createdAt.slice(0, 10) >= dateFrom);
+  if (dateTo) list = list.filter(x => x.createdAt && x.createdAt.slice(0, 10) <= dateTo);
   list = [...list].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const STATUS_COLORS = { draft:'#9ca3af', sent:'#2563eb', approved:'#16a34a', declined:'#dc2626', converted:'#7c3aed' };
+  const activeFilters = _quoteFilter !== 'all' || _companyFilter !== 'all' || _repFilter || q || dateFrom || dateTo;
 
   document.getElementById('quoteList').innerHTML = list.length === 0
-    ? '<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No quotes yet. Click + New Quote to start.</div>'
+    ? `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">${activeFilters ? 'No quotes match the current filters.' : 'No quotes yet. Click + New Quote to start.'}</div>`
     : `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:90px 1fr 120px 110px 140px 200px;padding:7px 14px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:#6b7280;gap:8px;">
+          <div>Quote #</div><div>Customer</div><div>Rep</div><div>Total</div><div>Status</div><div>Actions</div>
+        </div>
         ${list.map(qt => `
-          <div style="display:grid;grid-template-columns:90px 1fr 120px 120px 130px 180px;padding:10px 14px;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;font-size:13px;">
+          <div style="display:grid;grid-template-columns:90px 1fr 120px 110px 140px 200px;padding:10px 14px;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;font-size:13px;">
             <div style="font-weight:700;color:var(--accent);">#${qt.quoteId||'—'}</div>
             <div>
               <div style="display:flex;align-items:center;gap:6px;">
@@ -469,7 +559,7 @@ function renderQuoteList() {
             </div>
             <div style="font-size:12px;">${qt.rep||'—'}</div>
             <div style="font-size:12px;font-weight:700;color:var(--accent);">${qt.total ? '$'+Number(qt.total).toLocaleString() : '—'}</div>
-            <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${STATUS_COLORS[qt.status]||'#9ca3af'}22;color:${STATUS_COLORS[qt.status]||'#9ca3af'};font-weight:600;">${qt.status}</span></div>
+            <div>${statusBadgeHtml(qt.status)}</div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;">
               <button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
               ${qt.status !== 'converted' ? `<button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">📤 Send</button>` : ''}
@@ -499,6 +589,7 @@ function showNewQuoteForm() {
   document.getElementById('q_permitNumber').style.display = 'none';
   document.getElementById('q_permitOnFile').style.display = 'none';
   document.getElementById('q_status').value = 'draft';
+  updateFormStateBadge(null); // new quote — hide badge until saved
   document.getElementById('q_addon_design').checked = false;
   document.getElementById('q_addon_application').checked = false;
   document.getElementById('appAddonPanel').style.display = 'none';
@@ -548,6 +639,7 @@ function editQuote(quoteId) {
   document.getElementById('q_permitNumber').style.display = taxExempt ? '' : 'none';
   document.getElementById('q_permitOnFile').style.display = 'none';
   document.getElementById('q_status').value = qt.status || 'draft';
+  updateFormStateBadge(qt.status || 'draft');
   document.getElementById('q_addon_design').checked = qt.addons?.design || false;
   const appChecked = !!(qt.addons?.application || qt.applicationContainerType);
   document.getElementById('q_addon_application').checked = appChecked;
@@ -907,6 +999,7 @@ function saveQuote(status) {
   saveQuotes();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
   document.getElementById('sendBtn').style.display = qt.status !== 'converted' ? '' : 'none';
+  updateFormStateBadge(qt.status);
   showSendModal(quoteId);
 }
 
@@ -952,6 +1045,7 @@ function _markQuoteSent(quoteId, via) {
   saveQuotes();
   const statusEl = document.getElementById('q_status');
   if (statusEl) statusEl.value = 'sent';
+  updateFormStateBadge('sent');
 }
 
 function sendQuoteByEmail() {
