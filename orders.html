@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orders — Bazaar Print</title>
-  <script src="shared.js?v=20260419-PUL70"></script>
-  <script src="auth.js?v=20260419-PUL70"></script>
+  <script src="shared.js?v=20260422-PUL258"></script>
+  <script src="auth.js?v=20260422-PUL258"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -136,6 +136,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h2 id="modalTitle" style="margin:0;font-size:18px;font-weight:700;"></h2>
       <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" id="modalInvoiceBtn" onclick="openInvoice()" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;">📋 Invoice</button>
         <button class="btn btn-primary btn-sm" id="modalEditBtn" onclick="openJobTicket()">Open Job Ticket</button>
         <button class="btn btn-sm" onclick="closeDetail()">✕ Close</button>
       </div>
@@ -600,8 +601,8 @@
           ${o.pricePerUnit != null ? `<div class="detail-field"><span class="detail-label">Price / Unit</span><span class="detail-value">$${parseFloat(o.pricePerUnit).toFixed(4)}</span></div>` : ''}
           ${o.orderTotal != null ? `<div class="detail-field"><span class="detail-label">Order Total</span><span class="detail-value" style="font-size:15px;font-weight:700;color:#16a34a;">$${parseFloat(o.orderTotal).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>` : ''}
           ${o.paymentTerms ? `<div class="detail-field"><span class="detail-label">Payment Terms</span><span class="detail-value">${escHtml(PAYMENT_TERMS_LABELS[o.paymentTerms] || o.paymentTerms)}</span></div>` : ''}
-          ${o.invoiceNumber ? `<div class="detail-field"><span class="detail-label">Invoice #</span><span class="detail-value" style="font-family:monospace;">${escHtml(o.invoiceNumber)}</span></div>` : ''}
-          <div class="detail-field"><span class="detail-label">Invoice Status</span><span class="detail-value">${renderInvoiceBadge(o.invoiceStatus || 'not-invoiced')}</span></div>
+          ${o.invoiceNumber ? `<div class="detail-field"><span class="detail-label">Invoice #</span><span class="detail-value" style="font-family:monospace;"><a href="invoice.html?order=${encodeURIComponent(o.orderId||o.id)}" style="color:var(--accent);font-weight:700;">${escHtml(o.invoiceNumber)}</a></span></div>` : ''}
+          <div class="detail-field"><span class="detail-label">Invoice Status</span><span class="detail-value">${renderInvoiceBadge(o.invoiceStatus || 'not-invoiced')} ${!o.invoiceNumber ? `<a href="invoice.html?order=${encodeURIComponent(o.orderId||o.id)}" style="font-size:11px;color:var(--accent);margin-left:6px;">+ Generate</a>` : ''}</span></div>
         </div>
       </div>
       ` : ''}
@@ -690,6 +691,12 @@
     const o = allOrders.find(x => x.id === currentOrderId);
     if (!o) return;
     window.location.href = `job-ticket.html?order=${encodeURIComponent(o.orderId || o.id)}`;
+  }
+
+  function openInvoice() {
+    const o = allOrders.find(x => x.id === currentOrderId);
+    if (!o) return;
+    window.location.href = `invoice.html?order=${encodeURIComponent(o.orderId || o.id)}`;
   }
 
   // ── Actions ────────────────────────────────────────────────

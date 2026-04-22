@@ -4,8 +4,8 @@
 // ============================================================
 
 const DB_NAME = 'BazaarPrintDB';
-const DB_VERSION = 5;
-const PULSE_UI_VERSION = 'v20';
+const DB_VERSION = 6;
+const PULSE_UI_VERSION = 'v21';
 
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
   const localConfigScript = document.createElement('script');
@@ -1545,6 +1545,14 @@ function openDB() {
         po.createIndex('vendor', 'vendor', { unique: false });
         po.createIndex('status', 'status', { unique: false });
       }
+      // Invoices — v6
+      if (!db.objectStoreNames.contains('invoices')) {
+        const inv = db.createObjectStore('invoices', { keyPath: 'id', autoIncrement: true });
+        inv.createIndex('invoiceNumber', 'invoiceNumber', { unique: true });
+        inv.createIndex('orderId', 'orderId', { unique: false });
+        inv.createIndex('status', 'status', { unique: false });
+        inv.createIndex('createdAt', 'createdAt', { unique: false });
+      }
     };
     request.onsuccess = (event) => {
       _dbInstance = event.target.result;
@@ -2385,6 +2393,33 @@ async function receivePO(poId, receivedBy) {
   });
 }
 
+// ── Invoice CRUD ────────────────────────────────────────────
+
+function addInvoice(inv) {
+  return _add('invoices', {
+    ...inv,
+    createdAt: inv.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: inv.status || 'draft',
+    lineItems: inv.lineItems || [],
+    discount: inv.discount || 0,
+  });
+}
+
+function getInvoice(id) { return _get('invoices', id); }
+function getAllInvoices() { return _getAll('invoices'); }
+function updateInvoice(id, changes) { return _update('invoices', id, changes); }
+function deleteInvoice(id) { return _delete('invoices', id); }
+
+async function getInvoiceByOrderId(orderId) {
+  const all = await getAllInvoices();
+  return all.find(inv => inv.orderId === String(orderId)) || null;
+}
+
+async function generateInvoiceNumber(orderId) {
+  return 'INV-' + String(orderId || '').split('_')[0];
+}
+
 // ── Helpers ────────────────────────────────────────────────
 
 function formatDuration(ms) {
@@ -2642,12 +2677,24 @@ function injectThemeCSS() {
 
 function renderNav(activePage) {
   // access: 'all' | 'admin' | 'production' | 'operator' | 'account-manager'
+  const safeHref = (href) => {
+    try {
+      if (typeof window !== 'undefined' && href && href.endsWith('.html')) {
+        const probe = new URL(href, window.location.href);
+        if (probe.pathname && !probe.pathname.endsWith('.html')) {
+          return 'dashboard.html';
+        }
+      }
+    } catch (_) {}
+    return href;
+  };
   const pages = [
     { id: 'dashboard',          label: '\uD83C\uDFE0 Dashboard',         href: 'dashboard.html',           access: 'all' },
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
     { id: 'pricing-calculator', label: '\uD83D\uDCB2 Pricing',            href: 'pricing-calculator.html',  access: 'all' },
     { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
     { id: 'orders',             label: '\uD83D\uDCE6 Orders',             href: 'orders.html',              access: 'all' },
+    { id: 'invoices',           label: '\uD83D\uDCCB Invoices',           href: 'invoice.html',             access: 'all' },
     { id: 'prepress',           label: '\uD83D\uDCC4 Prepress',          href: 'prepress.html',            access: 'production' },
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
@@ -2667,7 +2714,7 @@ function renderNav(activePage) {
         <span class="preview-build-tag">🔍 UX Preview</span>
       </a>
       <div class="nav-links">
-        ${pages.map(p => `<a href="${p.href}" data-page-id="${p.id}" class="nav-link ${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
+        ${pages.map(p => `<a href="${safeHref(p.href)}" data-page-id="${p.id}" class="nav-link ${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
       </div>
     </nav>
   `;
