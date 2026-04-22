@@ -1345,6 +1345,24 @@ function renderFilteredMaterialOptions(productType, facility = '') {
 const LAMINATION_OPTIONS = ['None', 'Gloss', 'Matte', 'Soft Touch', 'Holo', 'Coating'];
 const FINISHING_OPTIONS = ['None', 'Spot UV', 'Foil', 'Spot UV + Foil', 'Scodix UV', 'Scodix Foil', 'Scodix UV + Foil'];
 
+// Application fee rates per container type (per unit, in $)
+const APPLICATION_FEE_RATES = {
+  jar:        0.10,
+  tube:       0.10,
+  bag_7g:     0.15,
+  bag_exit:   0.25,
+  bag_lb:     0.50
+};
+
+// Packaging container options for application service add-on
+const PACKAGING_CONTAINERS = [
+  { id: 'jar',      label: 'Jar',              rate: 0.10 },
+  { id: 'tube',     label: 'Tube',             rate: 0.10 },
+  { id: 'bag_7g',   label: '7g–1lb Bag',       rate: 0.15 },
+  { id: 'bag_exit', label: 'Exit Bag',          rate: 0.25 },
+  { id: 'bag_lb',   label: 'Large Bag (1lb+)',  rate: 0.50 }
+];
+
 const STATUS_LABELS = {
   'waiting-approval': 'Waiting Approval',
   'new': 'New',
