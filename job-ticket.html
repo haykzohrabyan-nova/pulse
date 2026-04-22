@@ -284,6 +284,31 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION: Application Service                           -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <h3 class="section-title">📦 Application Service</h3>
+      <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
+        <input type="checkbox" id="applicationService" onchange="toggleApplicationServicePanel()">
+        <span>Label application service included?</span>
+      </label>
+      <div id="applicationServicePanel" style="display:none;margin-top:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label style="font-size:12px;font-weight:600;">Container Type <span style="color:#dc2626;">*</span></label>
+            <select id="applicationContainerType" onchange="calcApplicationFee()" style="width:100%;">
+              <option value="">— Select container —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label style="font-size:12px;font-weight:600;">Fee per Piece</label>
+            <div id="applicationFeeDisplay" style="padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;color:#059669;min-height:36px;display:flex;align-items:center;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
     <!-- SECTION: Size, Quantity, Attachments & SKUs            -->
     <!-- ═══════════════════════════════════════════════════════ -->
     <div class="form-section">
@@ -764,6 +789,7 @@ document.addEventListener('change', e => {
 window.addEventListener('DOMContentLoaded', async () => {
   populateProductTypes();
   populateAccountManagers();
+  populateApplicationContainerDropdown();
   stampCreationDate();
   renderNotesLog(); // initialize empty notes log display
 
@@ -800,6 +826,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (qMaterial) { const mSel = document.getElementById('material'); if (mSel) mSel.value = qMaterial; }
     if (qQty)      { const qEl  = document.getElementById('quantity'); if (qEl) { qEl.value = qQty; calcFrames(); } }
+    // Pre-fill application service from quote conversion
+    const qAppContainerType = params.get('applicationContainerType');
+    if (qAppContainerType) {
+      const appSvc = document.getElementById('applicationService');
+      if (appSvc) {
+        appSvc.checked = true;
+        toggleApplicationServicePanel();
+        document.getElementById('applicationContainerType').value = qAppContainerType;
+        calcApplicationFee();
+      }
+    }
   }
 
   if (parentId) {
@@ -1617,6 +1654,44 @@ function onPerforationChange() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Application Service
+// ─────────────────────────────────────────────────────────────
+function populateApplicationContainerDropdown() {
+  const sel = document.getElementById('applicationContainerType');
+  if (!sel) return;
+  PACKAGING_CONTAINERS.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.label} — $${c.rate.toFixed(2)}/unit`;
+    sel.appendChild(opt);
+  });
+}
+
+function toggleApplicationServicePanel() {
+  const checked = document.getElementById('applicationService')?.checked;
+  const panel = document.getElementById('applicationServicePanel');
+  if (panel) panel.style.display = checked ? '' : 'none';
+  if (!checked) {
+    const sel = document.getElementById('applicationContainerType');
+    if (sel) sel.value = '';
+    const display = document.getElementById('applicationFeeDisplay');
+    if (display) display.textContent = '—';
+  }
+}
+
+function calcApplicationFee() {
+  const containerId = document.getElementById('applicationContainerType')?.value;
+  const container = PACKAGING_CONTAINERS.find(c => c.id === containerId);
+  const el = document.getElementById('applicationFeeDisplay');
+  if (!el) return;
+  if (container) {
+    el.textContent = `$${container.rate.toFixed(2)}/piece — ${container.label}`;
+  } else {
+    el.textContent = '—';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Due Date & Rush
 // ─────────────────────────────────────────────────────────────
 function checkDueDate() {
@@ -2358,6 +2433,25 @@ async function saveTicket(suppressRedirect = false) {
       stepIndex: i
     })) : [];
 
+    // Auto-insert Application Dept step when application service is active
+    if (document.getElementById('applicationService')?.checked && workflowSteps.length > 0) {
+      const hasAppDept = workflowSteps.some(s => s.machine === 'Application Dept');
+      if (!hasAppDept) {
+        workflowSteps.push({
+          id: generateStepId(),
+          machine: 'Application Dept',
+          operation: MACHINES['Application Dept']?.operations?.[0] || 'Label Application',
+          status: 'pending',
+          assignedTo: null,
+          startedAt: null,
+          completedAt: null,
+          unitsLost: 0,
+          notes: '',
+          stepIndex: workflowSteps.length,
+        });
+      }
+    }
+
     // Production Capacity Check
     let capOrder = {};
     if (workflowSteps.length > 0 && !editingDbId) {
@@ -2475,6 +2569,17 @@ async function saveTicket(suppressRedirect = false) {
       hasPerforation: document.getElementById('hasPerforation')?.checked || false,
       perforationNotes: document.getElementById('hasPerforation')?.checked ? (document.getElementById('perforationNotes')?.value.trim() || '') : '',
       finishingNotes: document.getElementById('finishingNotes').value.trim(),
+      applicationService: document.getElementById('applicationService')?.checked || false,
+      applicationContainerType: (() => {
+        if (!document.getElementById('applicationService')?.checked) return null;
+        return document.getElementById('applicationContainerType')?.value || null;
+      })(),
+      applicationFeePerPiece: (() => {
+        if (!document.getElementById('applicationService')?.checked) return null;
+        const cId = document.getElementById('applicationContainerType')?.value;
+        const c = PACKAGING_CONTAINERS.find(x => x.id === cId);
+        return c ? c.rate : null;
+      })(),
       cutMethod: document.getElementById('cutMethod').value,
       dieStatus: document.getElementById('dieStatus').value,
       dieName: document.getElementById('dieName').value.trim(),
@@ -2730,6 +2835,17 @@ async function loadOrderIntoForm(order) {
   onFinishingChange();
 
   document.getElementById('finishingNotes').value = order.finishingNotes || '';
+
+  // Application Service
+  const appSvcCheck = document.getElementById('applicationService');
+  if (appSvcCheck) {
+    appSvcCheck.checked = order.applicationService || false;
+    toggleApplicationServicePanel();
+    if (order.applicationService && order.applicationContainerType) {
+      document.getElementById('applicationContainerType').value = order.applicationContainerType;
+      calcApplicationFee();
+    }
+  }
 
   // Custom Batching
   if (order.customBatching) {

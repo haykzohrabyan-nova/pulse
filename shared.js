@@ -235,6 +235,22 @@ const MACHINE_CAPACITY = {
 // ── Pouch Materials (ONLY these are pouch materials) ───────
 const POUCH_MATERIALS = ['Clear Cosmetic Web', 'White Cosmetic Web', 'Silver Cosmetic Web'];
 
+const APPLICATION_FEE_RATES = {
+  jar:        0.10,
+  tube:       0.10,
+  bag_7g:     0.15,
+  bag_exit:   0.25,
+  bag_lb:     0.50,
+};
+
+const PACKAGING_CONTAINERS = [
+  { id: 'jar',      label: 'Jar',              rate: 0.10 },
+  { id: 'tube',     label: 'Tube',             rate: 0.10 },
+  { id: 'bag_7g',   label: '7g–1lb Bag',       rate: 0.15 },
+  { id: 'bag_exit', label: 'Exit Bag',          rate: 0.25 },
+  { id: 'bag_lb',   label: 'Large Bag (1lb+)',  rate: 0.50 },
+];
+
 function isPouchMaterial(material) {
   if (!material) return false;
   return POUCH_MATERIALS.some(pm => material === pm || material.includes('Cosmetic Web'));
