@@ -187,10 +187,34 @@ function _fmt(n) {
   return '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Staleness badge based on capture date string "YYYY-MM-DD"
+function _stalenessInfo(capDate) {
+  if (!capDate) return { daysAgo: null, badge: '' };
+  const cap = new Date(capDate + 'T00:00:00');
+  const daysAgo = Math.floor((Date.now() - cap.getTime()) / 86400000);
+  if (daysAgo <= 14) {
+    return { daysAgo, badge: '' }; // Fresh — no badge
+  } else if (daysAgo <= 90) {
+    return { daysAgo, badge: `<span style="font-size:10px;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:8px;" title="Captured ${daysAgo} days ago — verify before quoting">📅 ${daysAgo}d ago</span>` };
+  } else {
+    return { daysAgo, badge: `<span style="font-size:10px;color:#9a3412;background:#ffedd5;border:1px solid #fed7aa;padding:1px 6px;border-radius:8px;" title="Pricing may have changed — recapture recommended">⚠ ${daysAgo}d — Stale</span>` };
+  }
+}
+
+// Per-competitor capture confidence badge
 function _confBadge(conf) {
-  if (conf === 'high')   return '<span style="color:#16a34a;font-size:11px;">● Exact</span>';
-  if (conf === 'medium') return '<span style="color:#d97706;font-size:11px;">◑ Dir.</span>';
-  return                        '<span style="color:#9ca3af;font-size:11px;">○ Est.</span>';
+  if (conf === 'high')   return '<span style="font-size:10px;color:#16a34a;font-weight:600;">● Exact</span>';
+  if (conf === 'medium') return '<span style="font-size:10px;color:#d97706;font-weight:600;">◑ Close</span>';
+  return                        '<span style="font-size:10px;color:#9ca3af;font-weight:600;">○ Approx</span>';
+}
+
+// Overall query-to-benchmark match quality badge
+function _matchQualityBadge(matchQuality) {
+  if (matchQuality === 'exact')
+    return '<span style="font-size:10px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:1px 8px;border-radius:10px;">✓ Exact match</span>';
+  if (matchQuality === 'directional')
+    return '<span style="font-size:10px;font-weight:700;color:#d97706;background:#fffbeb;border:1px solid #fde68a;padding:1px 8px;border-radius:10px;">≈ Close match</span>';
+  return   '<span style="font-size:10px;font-weight:700;color:#9a3412;background:#ffedd5;border:1px solid #fdba74;padding:1px 8px;border-radius:10px;">~ Approximate</span>';
 }
 
 /**
@@ -202,8 +226,9 @@ function _confBadge(conf) {
  * @param {number|null} heightIn
  * @param {number|null} quantity
  * @param {number|null} bazaarTotal — our quoted total (null = hide delta row)
+ * @param {object} [opts]       — optional transparency hints: { material, lamination, uv, colorMode }
  */
-function updateBenchmarkPanel(elementId, productType, widthIn, heightIn, quantity, bazaarTotal) {
+function updateBenchmarkPanel(elementId, productType, widthIn, heightIn, quantity, bazaarTotal, opts = {}) {
   const el = document.getElementById(elementId);
   if (!el) return;
 
@@ -217,67 +242,123 @@ function updateBenchmarkPanel(elementId, productType, widthIn, heightIn, quantit
 
   el.style.display = '';
 
-  const { competitors, marketAvg, matchQuality, size, quantity: benchQty, captureDate } = match;
+  const { competitors, marketAvg, matchQuality, size, quantity: benchQty, material: benchMat } = match;
 
-  // Size/qty label for the panel header
-  const sizeLabel = size && size !== '?' ? size.replace('x', '×') : null;
-  const qtyLabel  = benchQty ? Number(benchQty).toLocaleString() + ' pcs' : null;
-  const specLine  = [sizeLabel, qtyLabel].filter(Boolean).join(' · ');
+  // ── Query header ─────────────────────────────────────────────────────────
+  const queryParts = [];
+  if (widthIn && heightIn) queryParts.push(`${widthIn}"×${heightIn}"`);
+  if (quantity) queryParts.push(`${Number(quantity).toLocaleString()} pcs`);
+  if (opts.material) queryParts.push(opts.material);
+  if (opts.lamination) queryParts.push(`${opts.lamination} Lam`);
+  if (opts.uv) queryParts.push('UV Coat');
+  const queryLine = queryParts.length ? `Benchmarked for: ${queryParts.join(' · ')}` : '';
 
-  // Competitor rows
-  const compRows = competitors.map(r => `
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:5px 8px;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
-      <span style="font-weight:500;color:#374151;">${COMP_DISPLAY[r.comp] || r.comp}</span>
-      <span style="font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">${_fmt(r.price)}</span>
-      ${_confBadge(r.conf)}
-    </div>`).join('');
+  // ── Mismatch disclosure ───────────────────────────────────────────────────
+  const mismatches = [];
+  if (widthIn && heightIn && size) {
+    const s = _parseSize(size);
+    if (s && s.w && s.h) {
+      const areaRatio = Math.max(widthIn * heightIn, s.w * s.h) / Math.min(widthIn * heightIn, s.w * s.h);
+      if (areaRatio > 1.15) {
+        mismatches.push(`Size: benchmark is ${size.replace(/x/g,'×')}" (queried ${widthIn}"×${heightIn}")`);
+      }
+    }
+  }
+  if (quantity && benchQty) {
+    const qtyRatio = Math.max(quantity, benchQty) / Math.min(quantity, benchQty);
+    if (qtyRatio > 1.5) {
+      mismatches.push(`Qty: benchmark is ${Number(benchQty).toLocaleString()} (queried ${Number(quantity).toLocaleString()})`);
+    }
+  }
+  if (opts.material && benchMat) {
+    const userMatKey = opts.material.toLowerCase().split(' ')[0];
+    if (!benchMat.toLowerCase().includes(userMatKey)) {
+      mismatches.push(`Material: benchmark uses ${benchMat}`);
+    }
+  }
 
-  // Market avg row
+  let mismatchHtml = '';
+  if (mismatches.length === 1) {
+    mismatchHtml = `<div style="font-size:11px;color:#92400e;margin-top:3px;margin-bottom:2px;">Close match — ${mismatches[0]}</div>`;
+  } else if (mismatches.length >= 2) {
+    const bullets = mismatches.slice(0, 4).map(m => `<li style="margin-bottom:1px;">${m}</li>`).join('');
+    mismatchHtml = `<div style="font-size:11px;color:#92400e;margin-top:3px;"><ul style="margin:2px 0 0 14px;padding:0;">${bullets}</ul></div>`;
+  }
+
+  // ── Odd size disclosure ───────────────────────────────────────────────────
+  let oddSizeNote = '';
+  if (widthIn && heightIn && size) {
+    const s = _parseSize(size);
+    if (s && s.w && s.h && (widthIn !== s.w || heightIn !== s.h)) {
+      oddSizeNote = `<div style="font-size:10px;color:#6b7280;margin-top:4px;">Non-standard size (${widthIn}"×${heightIn}"). Nearest benchmark: ${size.replace(/x/g,'×')}".</div>`;
+    }
+  }
+
+  // ── Per-competitor rows ───────────────────────────────────────────────────
+  const compRows = competitors.map(r => {
+    const { badge: staleBadge } = _stalenessInfo(r.cap);
+    return `
+    <div style="padding:6px 0;border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-weight:600;font-size:12px;color:#374151;">${COMP_DISPLAY[r.comp] || r.comp}</span>
+        <span style="font-weight:700;font-size:13px;color:#0f172a;font-variant-numeric:tabular-nums;">${_fmt(r.price)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
+        <span style="font-size:10px;color:#94a3b8;">${r.size.replace(/x/g,'×')}" · ${Number(r.qty).toLocaleString()} · ${r.mat}</span>
+        ${_confBadge(r.conf)}
+        ${staleBadge}
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Market avg / limited data note ───────────────────────────────────────
+  const compCount = competitors.length;
+  const avgLabel = compCount === 1 ? 'Listed price (limited data)' : 'Market avg';
   const avgRow = `
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0 2px;font-size:12px;font-weight:600;color:#374151;">
-      <span>Market avg</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 2px;font-size:12px;font-weight:600;color:#374151;">
+      <span>${avgLabel}</span>
       <span style="font-variant-numeric:tabular-nums;">${_fmt(marketAvg)}</span>
     </div>`;
+  const limitedNote = compCount === 1
+    ? '<div style="font-size:10px;color:#9ca3af;font-style:italic;margin-bottom:2px;">Only 1 competitor captured — avg not meaningful.</div>'
+    : '';
 
-  // Our price delta row
+  // ── Our price delta row ───────────────────────────────────────────────────
   let deltaRow = '';
   if (bazaarTotal && bazaarTotal > 0 && marketAvg) {
     const deltaPct = ((bazaarTotal - marketAvg) / marketAvg) * 100;
     const absPct   = Math.abs(deltaPct).toFixed(0);
     let deltaColor, deltaSymbol;
     if (Math.abs(deltaPct) < 5) {
-      deltaColor  = '#16a34a'; deltaSymbol = '≈ at market avg';
+      deltaColor = '#16a34a'; deltaSymbol = '≈ at market avg';
     } else if (deltaPct > 30) {
-      deltaColor  = '#dc2626'; deltaSymbol = `▲ ${absPct}% above avg`;
+      deltaColor = '#dc2626'; deltaSymbol = `▲ ${absPct}% above avg`;
     } else if (deltaPct > 0) {
-      deltaColor  = '#d97706'; deltaSymbol = `▲ ${absPct}% above avg`;
+      deltaColor = '#d97706'; deltaSymbol = `▲ ${absPct}% above avg`;
     } else {
-      deltaColor  = '#16a34a'; deltaSymbol = `▼ ${absPct}% below avg`;
+      deltaColor = '#16a34a'; deltaSymbol = `▼ ${absPct}% below avg`;
     }
     deltaRow = `
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:2px 0 5px;border-bottom:2px solid #e2e8f0;font-size:12px;font-weight:700;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0 5px;border-bottom:2px solid #e2e8f0;font-size:12px;font-weight:700;">
       <span>Your total</span>
       <span style="color:var(--accent,#2563eb);font-variant-numeric:tabular-nums;">${_fmt(bazaarTotal)}</span>
     </div>
     <div style="font-size:12px;font-weight:700;color:${deltaColor};padding-top:4px;">${deltaSymbol}</div>`;
   }
 
-  // Match quality note
-  const matchNote = matchQuality === 'exact' ? '' : matchQuality === 'directional'
-    ? '<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:6px;">⚠ Directional match — specs comparable, not identical</div>'
-    : '<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:6px;">⚠ Nearest match shown — specs differ significantly</div>';
-
   el.innerHTML = `
 <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
     <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#64748b;">📊 Market Benchmark</span>
-    <span style="font-size:10px;color:#94a3b8;">${captureDate}</span>
+    ${_matchQualityBadge(matchQuality)}
   </div>
-  ${specLine ? `<div style="font-size:11px;color:#64748b;margin-bottom:7px;">${specLine}</div>` : ''}
-  ${compRows}
+  ${queryLine ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px;">${queryLine}</div>` : ''}
+  ${mismatchHtml}
+  ${oddSizeNote}
+  <div style="margin-top:4px;">${compRows}</div>
   ${avgRow}
+  ${limitedNote}
   ${deltaRow}
-  ${matchNote}
   <div style="font-size:10px;color:#94a3b8;margin-top:6px;">Advisory only — turnaround &amp; shipping may differ.</div>
 </div>`;
 }
