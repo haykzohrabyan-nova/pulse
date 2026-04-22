@@ -527,6 +527,58 @@ const COLOR_MODES = ['','CMYK','CMYK+White'];
 const SIDES_OPTIONS = ['','1-sided','2-sided'];
 const ROLL_DIRECTIONS = ['','Left Wind','Right Wind','Center Wind'];
 
+// Approximate base unit rates by product + qty tier for internal pricing reference
+const UNIT_RATE_TIERS = {
+  'Labels (Roll)':          [[500,0.180],[2000,0.090],[10000,0.055],[Infinity,0.038]],
+  'Labels (Sheet)':         [[500,0.200],[2000,0.100],[10000,0.065],[Infinity,0.042]],
+  'Stickers':               [[500,0.160],[2000,0.080],[10000,0.050],[Infinity,0.035]],
+  'Business Cards':         [[500,0.080],[1000,0.055],[5000,0.035],[Infinity,0.025]],
+  'Flyers / Postcards':     [[500,0.120],[2000,0.060],[10000,0.040],[Infinity,0.028]],
+  'Pouches':                [[500,0.450],[2000,0.280],[10000,0.180],[Infinity,0.120]],
+  'Folding Cartons / Boxes':[[500,0.600],[1000,0.400],[5000,0.280],[Infinity,0.200]],
+  'Booklets':               [[100,1.800],[500,0.900],[1000,0.550],[Infinity,0.380]],
+  'Vinyl Banners':          [[10,8.000],[50,6.000],[100,4.500],[Infinity,3.500]],
+  'Canvas Prints':          [[10,12.000],[50,8.000],[100,6.000],[Infinity,4.500]],
+};
+const LAM_ADDON = { Gloss:0.015, Matte:0.020, 'Soft Touch':0.028, Holo:0.035, Coating:0.012 };
+
+function getCalcUnitPrice(product, qty, lam, sides, uv) {
+  const tiers = UNIT_RATE_TIERS[product];
+  if (!tiers || qty <= 0) return null;
+  let base = tiers[tiers.length - 1][1];
+  for (const [max, rate] of tiers) { if (qty <= max) { base = rate; break; } }
+  let addons = (LAM_ADDON[lam] || 0) + (uv ? 0.008 : 0) + (sides === '2-sided' ? base * 0.15 : 0);
+  return { base, addons, total: +(base + addons).toFixed(4) };
+}
+
+function updatePricePanel(id) {
+  const product = document.getElementById(`li_product_${id}`)?.value || '';
+  const qty = parseFloat(document.getElementById(`li_qty_${id}`)?.value) || 0;
+  const lam = document.getElementById(`li_lam_${id}`)?.value || '';
+  const sides = document.getElementById(`li_sides_${id}`)?.value || '';
+  const uv = document.getElementById(`li_uv_${id}`)?.checked || false;
+  const override = parseFloat(document.getElementById(`li_price_${id}`)?.value) || 0;
+  const calc = getCalcUnitPrice(product, qty, lam, sides, uv);
+  const fmt = v => '$' + v.toFixed(4);
+  const g = elId => document.getElementById(elId);
+
+  g(`li_calcBase_${id}`).textContent = calc ? fmt(calc.base) : '—';
+  g(`li_calcAddons_${id}`).textContent = calc ? (calc.addons > 0 ? '+' + fmt(calc.addons) : '$0.0000') : '—';
+  g(`li_calcPrice_${id}`).textContent = calc ? fmt(calc.total) : '—';
+
+  const finalEl = g(`li_priceFinal_${id}`);
+  if (calc) {
+    if (override > 0) {
+      finalEl.innerHTML = `<span style="color:#6b7280">Calculated: ${fmt(calc.total)}</span>&ensp;<span style="color:#7c3aed">| Override: ${fmt(override)}</span>&ensp;<span style="color:#16a34a;font-weight:700">| Final: ${fmt(override)}</span>`;
+    } else {
+      finalEl.innerHTML = `<span style="color:#16a34a;font-weight:600">Final (calculated): ${fmt(calc.total)}</span>`;
+    }
+    finalEl.style.display = '';
+  } else {
+    finalEl.style.display = 'none';
+  }
+}
+
 function generateChargeDesc(id) {
   const product = document.getElementById(`li_product_${id}`)?.value || '';
   const qty = document.getElementById(`li_qty_${id}`)?.value || '';
@@ -563,7 +615,7 @@ function addLineItem(data = {}) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div class="field"><label style="font-size:11px;">Product Type *</label>
-        <select id="li_product_${id}" onchange="calcTotal();generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <select id="li_product_${id}" onchange="calcTotal();generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
           ${sel(PRODUCT_TYPES_SIMPLE, data.product)}
         </select>
       </div>
@@ -578,18 +630,15 @@ function addLineItem(data = {}) {
         </select>
       </div>
       <div class="field"><label style="font-size:11px;">Sides</label>
-        <select id="li_sides_${id}" onchange="generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <select id="li_sides_${id}" onchange="generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
           ${sel(SIDES_OPTIONS, data.sides)}
         </select>
       </div>
       <div class="field"><label style="font-size:11px;">Quantity</label>
-        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal();generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-      </div>
-      <div class="field"><label style="font-size:11px;">Unit Price ($)</label>
-        <input type="number" id="li_price_${id}" value="${data.price||''}" placeholder="0.00" step="0.01" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal();generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
       <div class="field"><label style="font-size:11px;">Lamination</label>
-        <select id="li_lam_${id}" onchange="generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <select id="li_lam_${id}" onchange="generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
           ${sel(LAMINATION_OPTIONS, data.lamination)}
         </select>
       </div>
@@ -598,9 +647,26 @@ function addLineItem(data = {}) {
           ${sel(ROLL_DIRECTIONS, data.rollDirection)}
         </select>
       </div>
+      <!-- Pricing panel (calculator-style, internal) -->
+      <div class="field" style="grid-column:span 2;">
+        <label style="font-size:11px;">Unit Price</label>
+        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px;margin-top:4px;">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:3px;font-size:11px;color:#374151;margin-bottom:8px;">
+            <span style="color:#6b7280;">Base material + qty tier</span><span id="li_calcBase_${id}" style="font-weight:600;text-align:right;">—</span>
+            <span style="color:#6b7280;">Add-ons (lam / UV / sides)</span><span id="li_calcAddons_${id}" style="font-weight:600;text-align:right;">—</span>
+            <span style="font-weight:600;border-top:1px solid #c7d2fe;padding-top:4px;">Calculated unit price</span><span id="li_calcPrice_${id}" style="font-weight:700;color:var(--accent);border-top:1px solid #c7d2fe;padding-top:4px;text-align:right;">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:11px;white-space:nowrap;color:#6b7280;">Override ($):</label>
+            <input type="number" id="li_price_${id}" value="${data.price||''}" placeholder="0.0000" step="0.0001" oninput="updatePricePanel(${id});calcTotal()" style="padding:4px 8px;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;width:100px;">
+          </div>
+          <div id="li_priceFinal_${id}" style="margin-top:6px;font-size:11px;padding:5px 8px;background:#fff;border-radius:6px;display:none;"></div>
+          <div style="margin-top:6px;font-size:10px;color:#94a3b8;border-top:1px solid #e0e7ff;padding-top:5px;">🔒 Internal — rates are reference estimates; verify with pricing calculator before quoting</div>
+        </div>
+      </div>
     </div>
     <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;font-size:12px;align-items:center;">
-      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_uv_${id}" ${data.finUV?'checked':''}> UV Coating</label>
+      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_uv_${id}" ${data.finUV?'checked':''} onchange="updatePricePanel(${id})"> UV Coating</label>
       <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_foil_${id}" ${data.finFoil?'checked':''}> Foil</label>
       <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_perf_${id}" ${data.finPerforation?'checked':''}> Perforation</label>
       <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_scodix_${id}" ${data.finScodix?'checked':''}> Scodix</label>
@@ -617,6 +683,7 @@ function addLineItem(data = {}) {
   `;
   document.getElementById('lineItems').appendChild(div);
   calcTotal();
+  updatePricePanel(id);
   if (!data.chargeDesc) generateChargeDesc(id);
 }
 
