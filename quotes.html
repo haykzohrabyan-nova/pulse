@@ -522,9 +522,37 @@ function showTab(tab) {
   if (tab === 'quotes') renderQuoteList();
 }
 
+const LAMINATION_OPTIONS = ['','Gloss','Matte','Soft Touch','Holo','Coating'];
+const COLOR_MODES = ['','CMYK','CMYK+White'];
+const SIDES_OPTIONS = ['','1-sided','2-sided'];
+const ROLL_DIRECTIONS = ['','Left Wind','Right Wind','Center Wind'];
+
+function generateChargeDesc(id) {
+  const product = document.getElementById(`li_product_${id}`)?.value || '';
+  const qty = document.getElementById(`li_qty_${id}`)?.value || '';
+  const colorMode = document.getElementById(`li_colorMode_${id}`)?.value || '';
+  const sides = document.getElementById(`li_sides_${id}`)?.value || '';
+  const lam = document.getElementById(`li_lam_${id}`)?.value || '';
+  const w = document.getElementById('q_width')?.value;
+  const h = document.getElementById('q_height')?.value;
+
+  const parts = [];
+  if (w && h) parts.push(`${w}" × ${h}"`);
+  if (product) parts.push(product);
+  if (qty) parts.push(`${Number(qty).toLocaleString()} units`);
+  if (lam) parts.push(`${lam} Lamination`);
+  if (sides) parts.push(sides);
+  if (colorMode) parts.push(colorMode);
+
+  const desc = parts.join(', ');
+  const descEl = document.getElementById(`li_chargeDesc_${id}`);
+  if (descEl && !descEl.dataset.manuallyEdited) descEl.value = desc;
+}
+
 function addLineItem(data = {}) {
   _lineItemCount++;
   const id = _lineItemCount;
+  const sel = (opts, val, pid) => opts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o||'—'}</option>`).join('');
   const div = document.createElement('div');
   div.id = `li_${id}`;
   div.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;';
@@ -534,30 +562,62 @@ function addLineItem(data = {}) {
       <button onclick="document.getElementById('li_${id}').remove();calcTotal();" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:16px;">×</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div class="field"><label style="font-size:11px;">Product Type</label>
-        <select id="li_product_${id}" onchange="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-          <option value="">—</option>${PRODUCT_TYPES_SIMPLE.map(p=>`<option value="${p}" ${data.product===p?'selected':''}>${p}</option>`).join('')}
+      <div class="field"><label style="font-size:11px;">Product Type *</label>
+        <select id="li_product_${id}" onchange="calcTotal();generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          ${sel(PRODUCT_TYPES_SIMPLE, data.product)}
         </select>
       </div>
-      <div class="field"><label style="font-size:11px;">Material</label>
+      <div class="field"><label style="font-size:11px;">Material *</label>
         <select id="li_material_${id}" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-          <option value="">—</option>${MATERIALS_SIMPLE.map(m=>`<option value="${m}" ${data.material===m?'selected':''}>${m}</option>`).join('')}
+          ${sel(MATERIALS_SIMPLE, data.material)}
+        </select>
+      </div>
+      <div class="field"><label style="font-size:11px;">Color Mode</label>
+        <select id="li_colorMode_${id}" onchange="generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          ${sel(COLOR_MODES, data.colorMode)}
+        </select>
+      </div>
+      <div class="field"><label style="font-size:11px;">Sides</label>
+        <select id="li_sides_${id}" onchange="generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          ${sel(SIDES_OPTIONS, data.sides)}
         </select>
       </div>
       <div class="field"><label style="font-size:11px;">Quantity</label>
-        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal();generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
       <div class="field"><label style="font-size:11px;">Unit Price ($)</label>
         <input type="number" id="li_price_${id}" value="${data.price||''}" placeholder="0.00" step="0.01" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
-      <div class="field" style="grid-column:span 2;"><label style="font-size:11px;">Size / Notes</label>
-        <input type="text" id="li_notes_${id}" value="${data.notes||''}" placeholder='e.g. 3"x4", white BOPP, matte lam' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      <div class="field"><label style="font-size:11px;">Lamination</label>
+        <select id="li_lam_${id}" onchange="generateChargeDesc(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          ${sel(LAMINATION_OPTIONS, data.lamination)}
+        </select>
       </div>
+      <div class="field"><label style="font-size:11px;">Roll Direction</label>
+        <select id="li_rollDir_${id}" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          ${sel(ROLL_DIRECTIONS, data.rollDirection)}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;font-size:12px;align-items:center;">
+      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_uv_${id}" ${data.finUV?'checked':''}> UV Coating</label>
+      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_foil_${id}" ${data.finFoil?'checked':''}> Foil</label>
+      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_perf_${id}" ${data.finPerforation?'checked':''}> Perforation</label>
+      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_scodix_${id}" ${data.finScodix?'checked':''}> Scodix</label>
+      <input type="text" id="li_foilNotes_${id}" value="${data.finFoilNotes||''}" placeholder="Foil type / notes" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;flex:1;min-width:100px;">
+    </div>
+    <div style="margin-top:8px;">
+      <input type="text" id="li_pantone_${id}" value="${data.pantone||''}" placeholder="Special Color / Pantone (optional)" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;">
+    </div>
+    <div style="margin-top:8px;">
+      <label style="font-size:10px;color:#6b7280;display:block;margin-bottom:3px;">Customer-facing charge description (auto-generated, editable)</label>
+      <input type="text" id="li_chargeDesc_${id}" value="${data.chargeDesc||''}" placeholder="e.g. 4&quot; × 3&quot; Labels (Roll), 1000 units, Gloss Lamination, 2-sided CMYK" oninput="this.dataset.manuallyEdited='1'" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;background:#fffbeb;">
     </div>
     <div style="text-align:right;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;" id="li_subtotal_${id}"></div>
   `;
   document.getElementById('lineItems').appendChild(div);
   calcTotal();
+  if (!data.chargeDesc) generateChargeDesc(id);
 }
 
 function getLineItems() {
@@ -572,8 +632,19 @@ function getLineItems() {
     items.push({
       product: document.getElementById(`li_product_${id}`)?.value || '',
       material: document.getElementById(`li_material_${id}`)?.value || '',
+      colorMode: document.getElementById(`li_colorMode_${id}`)?.value || '',
+      sides: document.getElementById(`li_sides_${id}`)?.value || '',
       qty, price,
-      notes: document.getElementById(`li_notes_${id}`)?.value || '',
+      lamination: document.getElementById(`li_lam_${id}`)?.value || '',
+      rollDirection: document.getElementById(`li_rollDir_${id}`)?.value || '',
+      finUV: document.getElementById(`li_uv_${id}`)?.checked || false,
+      finFoil: document.getElementById(`li_foil_${id}`)?.checked || false,
+      finFoilNotes: document.getElementById(`li_foilNotes_${id}`)?.value || '',
+      finPerforation: document.getElementById(`li_perf_${id}`)?.checked || false,
+      finScodix: document.getElementById(`li_scodix_${id}`)?.checked || false,
+      pantone: document.getElementById(`li_pantone_${id}`)?.value || '',
+      chargeDesc: document.getElementById(`li_chargeDesc_${id}`)?.value || '',
+      notes: document.getElementById(`li_chargeDesc_${id}`)?.value || '', // keep compat
       subtotal: sub
     });
   });
