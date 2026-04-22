@@ -63,7 +63,7 @@
         <div class="form-section">
           <h3 class="section-title">👤 Customer Info</h3>
           <div class="form-row">
-            <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required></div>
+            <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required oninput="checkCustomerExemption()"></div>
           </div>
           <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="field"><label>Email</label><input type="email" id="q_email" placeholder="customer@email.com"></div>
@@ -177,6 +177,15 @@
               <label style="font-size:11px;">Discount ($)</label>
               <input type="number" id="q_discount" value="0" oninput="calcTotal()" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
             </div>
+            <!-- Tax exemption toggle -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:#fefce8;border:1px solid #fef08a;border-radius:8px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="q_taxExempt" onchange="toggleTaxExempt()"> Tax Exempt</label>
+              <input type="text" id="q_permitNumber" placeholder="Seller permit # (required)" style="display:none;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;flex:1;" oninput="calcTotal()">
+              <span id="q_permitOnFile" style="display:none;font-size:11px;color:#059669;"></span>
+            </div>
+            <div id="q_taxRow" style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#374151;">
+              <span id="q_taxLabel">Tax (10.25%)</span><span id="q_taxAmount">$0.00</span>
+            </div>
             <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;">
               <span>Total</span><span id="q_total" style="color:var(--accent);">$0.00</span>
             </div>
@@ -249,6 +258,39 @@ let _quoteFilter = 'all';
 let _lineItemCount = 0;
 let _companyFilter = 'all';
 let _activeTab = 'quotes';
+
+// Tax configuration — stored in localStorage so admin can configure without code change
+function getTaxRate() {
+  const stored = parseFloat(localStorage.getItem('pulse_tax_rate'));
+  return isNaN(stored) ? 0.1025 : stored; // Default: 10.25% (CA)
+}
+
+// Tax-exempt customer records: { customerName (lowercase): permitNumber }
+function getTaxExemptCustomers() {
+  try { return JSON.parse(localStorage.getItem('pulse_tax_exempt_customers') || '{}'); } catch(e) { return {}; }
+}
+
+function toggleTaxExempt() {
+  const exempt = document.getElementById('q_taxExempt').checked;
+  document.getElementById('q_permitNumber').style.display = exempt ? '' : 'none';
+  calcTotal();
+}
+
+function checkCustomerExemption() {
+  const customer = document.getElementById('q_customer')?.value.trim().toLowerCase() || '';
+  const exempts = getTaxExemptCustomers();
+  const permit = exempts[customer];
+  const onFileEl = document.getElementById('q_permitOnFile');
+  const taxExemptCb = document.getElementById('q_taxExempt');
+  if (permit && taxExemptCb && !taxExemptCb.checked) {
+    taxExemptCb.checked = true;
+    document.getElementById('q_permitNumber').style.display = 'none';
+    if (onFileEl) { onFileEl.textContent = `Permit #${permit} (on file)`; onFileEl.style.display = ''; }
+    calcTotal();
+  } else if (!permit && onFileEl) {
+    onFileEl.style.display = 'none';
+  }
+}
 
 function getNextNumber() {
   let n = parseInt(localStorage.getItem('pulse_next_number') || '17999', 10);
@@ -435,6 +477,10 @@ function showNewQuoteForm() {
   document.getElementById('q_notes').value = '';
   document.getElementById('q_internal').value = '';
   document.getElementById('q_discount').value = '0';
+  document.getElementById('q_taxExempt').checked = false;
+  document.getElementById('q_permitNumber').value = '';
+  document.getElementById('q_permitNumber').style.display = 'none';
+  document.getElementById('q_permitOnFile').style.display = 'none';
   document.getElementById('q_status').value = 'draft';
   document.getElementById('q_addon_design').checked = false;
   document.getElementById('q_addon_application').checked = false;
@@ -478,6 +524,11 @@ function editQuote(quoteId) {
   document.getElementById('q_notes').value = qt.notes || '';
   document.getElementById('q_internal').value = qt.internal || '';
   document.getElementById('q_discount').value = qt.discount || 0;
+  const taxExempt = qt.taxExempt || false;
+  document.getElementById('q_taxExempt').checked = taxExempt;
+  document.getElementById('q_permitNumber').value = qt.taxPermitNumber || '';
+  document.getElementById('q_permitNumber').style.display = taxExempt ? '' : 'none';
+  document.getElementById('q_permitOnFile').style.display = 'none';
   document.getElementById('q_status').value = qt.status || 'draft';
   document.getElementById('q_addon_design').checked = qt.addons?.design || false;
   const appChecked = !!(qt.addons?.application || qt.applicationContainerType);
@@ -724,7 +775,14 @@ function calcTotal() {
   const appData = getApplicationFee();
   const appFee = appData ? appData.fee : 0;
   const discount = parseFloat(document.getElementById('q_discount')?.value) || 0;
-  const total = Math.max(0, subtotal + appFee - discount);
+  const preTax = Math.max(0, subtotal + appFee - discount);
+
+  // Tax calculation
+  const taxRate = getTaxRate();
+  const isExempt = document.getElementById('q_taxExempt')?.checked || false;
+  const permitNum = document.getElementById('q_permitNumber')?.value.trim() || '';
+  const taxAmt = isExempt ? 0 : preTax * taxRate;
+  const total = preTax + taxAmt;
 
   document.getElementById('q_subtotal').textContent = '$' + subtotal.toLocaleString(undefined,{minimumFractionDigits:2});
 
@@ -735,6 +793,25 @@ function calcTotal() {
     appFeeRow.style.display = 'flex';
   } else {
     appFeeRow.style.display = 'none';
+  }
+
+  // Tax row
+  const taxRow = document.getElementById('q_taxRow');
+  const taxLabel = document.getElementById('q_taxLabel');
+  const taxAmtEl = document.getElementById('q_taxAmount');
+  if (taxRow && taxLabel && taxAmtEl) {
+    if (isExempt) {
+      const onFileSrc = document.getElementById('q_permitOnFile')?.style.display !== 'none';
+      const permitDisplay = onFileSrc ? '(on file)' : (permitNum ? `Permit #${permitNum}` : '(no permit entered)');
+      taxLabel.textContent = `Tax: Exempt ${permitDisplay}`;
+      taxAmtEl.textContent = '$0.00';
+      taxRow.style.color = '#059669';
+    } else {
+      taxLabel.textContent = `Tax (${(taxRate * 100).toFixed(2)}%)`;
+      taxAmtEl.textContent = '$' + taxAmt.toLocaleString(undefined,{minimumFractionDigits:2});
+      taxRow.style.color = '#374151';
+    }
+    taxRow.style.display = 'flex';
   }
 
   document.getElementById('q_total').textContent = '$' + total.toLocaleString(undefined,{minimumFractionDigits:2});
@@ -790,6 +867,9 @@ function saveQuote(status) {
     width: parseFloat(document.getElementById('q_width').value) || null,
     height: parseFloat(document.getElementById('q_height').value) || null,
     qty_main: parseInt(document.getElementById('q_qty_main').value) || null,
+    taxRate: getTaxRate(),
+    taxExempt: document.getElementById('q_taxExempt')?.checked || false,
+    taxPermitNumber: document.getElementById('q_permitNumber')?.value.trim() || null,
     applicationContainerType: appData?.containerId || null,
     applicationQty: appData?.qty || null,
     applicationFee: appData?.fee || null,
