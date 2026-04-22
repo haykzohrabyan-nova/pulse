@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quotes — Bazaar Print</title>
-  <script src="shared.js?v=20260419-PUL70"></script>
-  <script src="auth.js?v=20260419-PUL70"></script>
+  <script src="shared.js?v=20260422-PUL366"></script>
+  <script src="auth.js?v=20260422-PUL366"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -405,14 +405,6 @@ const COMPANY_LABELS = { bazaar: 'Bazaar Printing', pixel: 'Pixel Press Print' }
 const PRODUCT_TYPES_SIMPLE = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets','Vinyl Banners','Canvas Prints','Other'];
 const MATERIALS_SIMPLE = ['White BOPP','Silver BOPP','Clear BOPP','Kraft Paper','White Matte','Gloss Paper','Cardstock','Vinyl','Other'];
 
-const PACKAGING_CONTAINERS = [
-  { id: 'jar',      label: 'Jar',             rate: 0.10 },
-  { id: 'tube',     label: 'Tube',            rate: 0.10 },
-  { id: 'bag_7g',   label: '7g–1lb Bag',      rate: 0.15 },
-  { id: 'bag_exit', label: 'Exit Bag',         rate: 0.25 },
-  { id: 'bag_lb',   label: 'Large Bag (1lb+)', rate: 0.50 },
-];
-
 function populateContainerDropdown() {
   const sel = document.getElementById('q_appContainerType');
   if (!sel) return;
@@ -757,7 +749,6 @@ function showTab(tab) {
   if (tab === 'quotes') renderQuoteList();
 }
 
-const LAMINATION_OPTIONS = ['','Gloss','Matte','Soft Touch','Holo','Coating'];
 const COLOR_MODES = ['','CMYK','CMYK+White'];
 const SIDES_OPTIONS = ['','1-sided','2-sided'];
 const ROLL_DIRECTIONS = ['','Left Wind','Right Wind','Center Wind'];
