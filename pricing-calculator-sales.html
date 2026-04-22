@@ -1282,7 +1282,13 @@ function renderSummary({ mode, profile, material, footprint, fitsPerUnit, needed
     const bHeight = parseFloat(document.getElementById('itemHeight')?.value) || null;
     const bQty    = toNumber('quantity') || null;
     const bTotal  = pricing.awaitingPricingTable ? null : (pricing.total || null);
-    updateBenchmarkPanel('benchmarkPanel', $('productType')?.value, bWidth, bHeight, bQty, bTotal);
+    const bSpecs  = {
+      material:   $('material')?.value   || null,
+      lamination: $('lamination')?.value || null,
+      uv:         $('hasUV')?.checked    ? 'spot' : null,
+      foil:       $('hasFoil')?.checked  ? true   : null,
+    };
+    updateBenchmarkPanel('benchmarkPanel', $('productType')?.value, bWidth, bHeight, bQty, bTotal, bSpecs);
   }
 }
 
