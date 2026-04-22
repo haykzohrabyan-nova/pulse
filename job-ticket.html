@@ -523,7 +523,7 @@
 </div><!-- /formPane -->
 
 <!-- ═══ QUEUE PANE (right side, narrow) ══════════════════════ -->
-<div id="queuePane">
+<div id="queuePane" class="collapsed">
   <div class="qp-header">
     <div style="font-size:12px;font-weight:700;color:#1e293b;">📋 Placed Orders <span id="qpOrderCount" style="font-weight:400;color:#6b7280;"></span></div>
     <button onclick="toggleQueuePane()" id="queueCollapseBtn" style="border:none;background:none;cursor:pointer;font-size:14px;color:#6b7280;padding:2px 4px;" title="Collapse">▶</button>
@@ -2850,7 +2850,7 @@ async function saveAndAddSubTicket() {
 // ─── After-Save Sub-Ticket Prompt ───────────────────────────────
 // ─── Queue Pane ──────────────────────────────────────────────────
 let _qFilter = 'all';
-let _queuePaneVisible = true;
+let _queuePaneVisible = false;
 let _queueStatusInitialized = false;
 let _queueRepInitialized = false;
 let _currentStepTimerOrder = null;
@@ -3058,11 +3058,19 @@ async function renderQueuePane() {
 }
 
 
-// Init queue pane — visible by default on left side
+// Init queue pane — hidden by default; show only when an order is pre-loaded via URL param (PUL-219 fix)
 window.addEventListener('DOMContentLoaded', () => {
-  _queuePaneVisible = true;
-  document.getElementById('queuePane').classList.remove('collapsed');
-  document.getElementById('showQueueBtn').style.display = 'none';
+  const _initParams = new URLSearchParams(window.location.search);
+  const _initOrderId = _initParams.get('order');
+  if (_initOrderId) {
+    _queuePaneVisible = true;
+    document.getElementById('queuePane').classList.remove('collapsed');
+    document.getElementById('showQueueBtn').style.display = 'none';
+  } else {
+    _queuePaneVisible = false;
+    document.getElementById('queuePane').classList.add('collapsed');
+    document.getElementById('showQueueBtn').style.display = '';
+  }
   renderQueuePane();
 }, { once: false });
 
