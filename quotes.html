@@ -57,6 +57,11 @@
 
   <!-- Orders Section -->
   <div id="ordersSection" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+      <button class="qp-filter-btn active" data-ofc="all" onclick="setCompanyOrderFilter('all')">All Companies</button>
+      <button class="qp-filter-btn" data-ofc="bazaar" onclick="setCompanyOrderFilter('bazaar')">🏢 Bazaar Printing</button>
+      <button class="qp-filter-btn" data-ofc="pixel" onclick="setCompanyOrderFilter('pixel')">🏭 Pixel Press Print</button>
+    </div>
     <div id="ordersList"></div>
   </div>
 
@@ -296,6 +301,7 @@ let _editingQuoteId = null;
 let _quoteFilter = 'all';
 let _lineItemCount = 0;
 let _companyFilter = 'all';
+let _companyOrderFilter = 'all';
 let _repFilter = '';
 let _activeTab = 'quotes';
 let _sendModalQuoteId = null;
@@ -505,6 +511,12 @@ function setCompanyFilter(c) {
   _companyFilter = c;
   document.querySelectorAll('.qp-filter-btn[data-co]').forEach(b => b.classList.toggle('active', b.dataset.co === c));
   renderQuoteList();
+}
+
+function setCompanyOrderFilter(c) {
+  _companyOrderFilter = c;
+  document.querySelectorAll('.qp-filter-btn[data-ofc]').forEach(b => b.classList.toggle('active', b.dataset.ofc === c));
+  renderOrdersList();
 }
 
 function setRepFilter(rep) {
@@ -1250,7 +1262,8 @@ function createJobTicketFromOrder(orderId) {
 }
 
 function renderOrdersList() {
-  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  let orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  if (_companyOrderFilter !== 'all') orders = orders.filter(o => (o.company || '') === _companyOrderFilter);
   const STATUS_COLORS = { pending: '#2563eb', confirmed: '#16a34a', converted: '#7c3aed', cancelled: '#dc2626' };
   document.getElementById('ordersList').innerHTML = orders.length === 0
     ? '<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No orders yet. Convert an approved quote to create an order.</div>'
