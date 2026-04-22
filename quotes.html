@@ -15,9 +15,15 @@
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
     <div>
       <h2 style="margin:0;font-size:22px;font-weight:700;">💬 Quotes & Orders</h2>
-      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Create a quote, save it, convert to job ticket when confirmed</p>
+      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Create a quote, convert to an order, then create a job ticket</p>
     </div>
     <button class="btn btn-primary" onclick="showNewQuoteForm()">+ New Quote</button>
+  </div>
+
+  <!-- Main tabs -->
+  <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);">
+    <button class="main-tab-btn active" data-tab="quotes" onclick="showTab('quotes')">Quotes</button>
+    <button class="main-tab-btn" data-tab="orders" onclick="showTab('orders')">Orders</button>
   </div>
 
   <!-- Quote list -->
@@ -36,6 +42,11 @@
       <button class="qp-filter-btn" data-co="pixel" onclick="setCompanyFilter('pixel')">🏭 Pixel Press Print</button>
     </div>
     <div id="quoteList"></div>
+  </div>
+
+  <!-- Orders Section -->
+  <div id="ordersSection" style="display:none;">
+    <div id="ordersList"></div>
   </div>
 
   <!-- New/Edit Quote Form -->
@@ -176,7 +187,7 @@
       <button class="btn" onclick="showQuoteList()">Cancel</button>
       <button class="btn" onclick="saveQuote('draft')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;">💾 Save Draft</button>
       <button class="btn btn-primary" onclick="saveQuote(document.getElementById('q_status').value)">💾 Save Quote</button>
-      <button class="btn" id="convertBtn" style="display:none;background:#16a34a;color:#fff;border:none;" onclick="convertToJobTicket()">🎫 Convert to Job Ticket</button>
+      <button class="btn" id="convertBtn" style="display:none;background:#16a34a;color:#fff;border:none;" onclick="convertToOrder()">📋 Convert to Order</button>
     </div>
   </div>
 </div>
@@ -185,13 +196,24 @@
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('quotes');
 initAuth('quotes');
-document.getElementById('page-styles').textContent = ``;
+document.getElementById('page-styles').textContent = `
+  .main-tab-btn { padding: 8px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -2px; color: #6b7280; }
+  .main-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+`;
 
 let _quotes = [];
 let _editingQuoteId = null;
 let _quoteFilter = 'all';
 let _lineItemCount = 0;
 let _companyFilter = 'all';
+let _activeTab = 'quotes';
+
+function getNextNumber() {
+  let n = parseInt(localStorage.getItem('pulse_next_number') || '17999', 10);
+  n++;
+  localStorage.setItem('pulse_next_number', String(n));
+  return n;
+}
 
 const COMPANY_LOGOS = {
   bazaar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAAAXNSR0IArs4c6QAAAHhlWElmTU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAACWAAAAAQAAAJYAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAMigAwAEAAAAAQAAAMgAAAAAKbgSSwAAAAlwSFlzAAAXEgAAFxIBZ5/SUgAAGy9JREFUeAHtnXO8JbkSx2d21sZb27Zt47O2bZuztm3b/qxt27Ztve++mq1bk3T36XPuydmbeXX/mEmnk0p15deVqkqlT++//vqrl/+5BNotgYHaTdDpuQT+loADy3GQRAIOrCRidaIOLMdAEgk4sJKI1Yk6sBwDSSTgwEoiVifqwHIMJJGAAyuJWJ2oA8sxkEQCDqwkYnWiDizHQBIJOLCSiNWJOrAcA0kk4MBKIlYn6sByDCSRgAMriVidqAPLMZBEAg6sJGJ1og4sx0ASCTiwkojViTqwHANJJODASiJWJ+rAcgwkkYADK4lYnagDyzGQRAIOrCRidaIOLMdAEgk4sJKI1Yk6sBwDSSTgwEoiVifqwHIMJJGAAyuJWJ2oA8sxkEQCDqwkYnWiDizHQBIJOLCSiNWJOrAcA0kk4MBKIlYn6sByDCSRgAMriVidqAPLMZBEAg6sJGJ1og4sx0ASCTiwkojViTqwHANJJODASiJWJ+rAcgwkkYADK4lYnagDyzGQRAIOrCRidaIOLMdAEgk4sJKI1Yk6sBwDSSTgwEoiVifqwHIMJJGAAyuJWJ2oA8sxkEQCDqwkYnWiDizHQBIJOLCSiNWJOrAcA0kk4MBKIlYn6sByDCSRwMANqf70008vvvjiKKOMMvbYYzdsTIPff/+dLt9///2333779ddff/XVV1988cVnn31GzcwzzzzXXHMNNdRQdeh4m6wlUAWsd99999JLLz3vvPNeeOGFkUYa6cwzz1xmmWXKnvbjjz++8cYbr7766nfeeeebb74BRj/++OMvv/wStJ9kkkkWXXTRxRdffJZZZoFmcNcvBxwJ/FX099tvv+25557BxAOFP//8M2gOem655ZZ1110XldaUUEYfffTlllvu5JNPRh0GNP1yAJBAr/gZfv755zXXXDNGydxzz22BRfnss8+eaqqp4pZxTe/eveNKqRl88MGXWGKJZ555JubEa/KVQG9Yt1P+66+/rrfeehdddJGtlPJll1220korSfn555/fbbfdbrjhhqDZ0EMPPcMMM4w22mj/+d/fyCOPzP9ovhFHHPG777679tprb7311pdeeikYFCLDDTfcHnvssfXWWw822GABTb/MUgL2nUBXrb322oWPMd9882GV0xhFdfjhh4ODoBl4OuSQQ1555RVLMC5j1z/88MMHHHAABGMi88wzz6OPPhr3ogbz/9577/3www8L73plT5NAf0vhvvvuq3AZdNBBZ5xxRr3Eiod19NnGG2+slRRY49Zaay2mnFvNPtvbb7+NZzDNNNNYgviMxx57bEAK72GiiSai2RhjjHHOOecEd/2yB0qgC1iffvrpqKOOKnPcp0+fU045ZY011pDLYYYZ5oMPPgA6YMiCYOqpp2Y17OZTEZLYaaedghUQpWjJbrPNNnZcfAW4tQ283NMk0AWsI444Qidvhx12wDEca6yxpGb++ednBWQ6tQGF7bffHky063nuueceolyW/mGHHabEd999d3uL8kwzzUR4TBt4oadJoB+wCGbKWsOcYfqgn1in8NdkOnfeeefttttOp5blDxS2/Umw7gMLD60po9x1112xX7nBBhu0nQcn2C4J9AMWwU/FzRZbbAH1l19+GTNLKvHy9C6Fo446ql3DB3RYbddff30da4QRRnj11VdpQ8Q1jvsPNNBAhGQDCn7ZQyTQD1gaR0AxoB5gDv8OS0vnWAuHHnpoUtZZgq0lt/TSS0vwbLbZZhMeBh64a7dgiimmAHNJ+XHirUmgH7CIFCh0Vl99dWixG7PiiitqpRT69u3b2jBN9WJ7ceKJJ9ah8RzpvsACC0gNXiSbQnqXHYKmiHvjzkigH7DsXKKobrvtNoYnrAXgcAllFnfdddfO8MQo1113HSudjEuIAR9whRVWkMspp5zyySefZJWUywkmmIDYWMcY84FqSqAfsGhto+3TTTfdl19+KSSYRYz3zkePrCGPnc6aKEgaf/zxYQxDUC4xBCWUX/OBvVlnJNAFLALrCy64oMwW/zKR/64mwDNFVwk/WH7qSRCyRzT2NZDgbWfk5aPUlEBXoh8rIIY5m30yl9dff724hwq1DhdA1cEHHyyD8jA4jFKedtppKfCvQo1doA7z5sM1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',
@@ -337,7 +359,7 @@ function renderQuoteList() {
             <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${STATUS_COLORS[qt.status]||'#9ca3af'}22;color:${STATUS_COLORS[qt.status]||'#9ca3af'};font-weight:600;">${qt.status}</span></div>
             <div style="display:flex;gap:4px;">
               <button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
-              ${qt.status === 'approved' && qt.status !== 'converted' ? `<button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">🎫 Convert</button>` : ''}
+              ${qt.status === 'approved' ? `<button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">📋 To Order</button>` : ''}
               ${qt.status === 'converted' ? '<span style="font-size:11px;color:#7c3aed;">✓ Converted</span>' : ''}
             </div>
           </div>`).join('')}
@@ -372,6 +394,7 @@ function showNewQuoteForm() {
   document.getElementById('lineItems').innerHTML = '';
   addLineItem();
   document.getElementById('quoteListSection').style.display = 'none';
+  document.getElementById('ordersSection').style.display = 'none';
   document.getElementById('quoteFormSection').style.display = '';
 }
 
@@ -408,14 +431,24 @@ function editQuote(quoteId) {
   (qt.lineItems || [{}]).forEach(li => addLineItem(li));
   calcTotal();
   document.getElementById('quoteListSection').style.display = 'none';
+  document.getElementById('ordersSection').style.display = 'none';
   document.getElementById('quoteFormSection').style.display = '';
 }
 
-function editQuoteAndConvert(quoteId) { editQuote(quoteId); convertToJobTicket(); }
+function editQuoteAndConvert(quoteId) { editQuote(quoteId); convertToOrder(); }
 function showQuoteList() {
-  document.getElementById('quoteListSection').style.display = '';
   document.getElementById('quoteFormSection').style.display = 'none';
-  renderQuoteList();
+  showTab('quotes');
+}
+
+function showTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('quoteListSection').style.display = tab === 'quotes' ? '' : 'none';
+  document.getElementById('ordersSection').style.display = tab === 'orders' ? '' : 'none';
+  document.getElementById('quoteFormSection').style.display = 'none';
+  if (tab === 'orders') renderOrdersList();
+  if (tab === 'quotes') renderQuoteList();
 }
 
 function addLineItem(data = {}) {
@@ -519,7 +552,7 @@ function saveQuote(status) {
   }
   const total = calcTotal();
   const appData = getApplicationFee();
-  const quoteId = _editingQuoteId || ('Q' + Date.now().toString().slice(-6));
+  const quoteId = _editingQuoteId || ('Q-' + getNextNumber());
   const qt = {
     quoteId,
     customer: document.getElementById('q_customer').value.trim(),
@@ -559,34 +592,117 @@ function saveQuote(status) {
   alert(`✅ Quote #${quoteId} saved as "${qt.status}".`);
 }
 
-async function convertToJobTicket() {
+function convertToOrder() {
   loadQuotes();
   const qt = _quotes.find(x => x.quoteId === _editingQuoteId);
   if (!qt) { saveQuote('approved'); return; }
   if (!qt.customer) { alert('Enter a customer name before converting.'); return; }
-  if (!confirm(`Convert quote #${qt.quoteId} to job ticket(s)? This will open the job ticket form pre-filled with customer info.`)) return;
-  // Mark as converted
+  if (!confirm(`Convert ${qt.quoteId} to an Order? An Order record will be created inheriting all quote details.`)) return;
+
+  // Extract base number from Q-##### or generate a new one
+  const match = qt.quoteId.match(/^Q-(\d+)$/);
+  const baseNum = match ? match[1] : String(getNextNumber());
+  const orderId = `O-${baseNum}`;
+
+  // Mark quote as converted
   const idx = _quotes.findIndex(x => x.quoteId === qt.quoteId);
   _quotes[idx].status = 'converted';
   _quotes[idx].convertedAt = new Date().toISOString();
+  _quotes[idx].orderId = orderId;
   saveQuotes();
-  // Build URL params for first line item
-  const li = qt.lineItems?.[0] || {};
-  const params = new URLSearchParams({
+
+  // Create order record
+  const order = {
+    orderId,
+    baseNumber: baseNum,
+    fromQuoteId: qt.quoteId,
     customer: qt.customer,
+    email: qt.email || '',
+    phone: qt.phone || '',
     rep: qt.rep || '',
+    company: qt.company || '',
     facility: qt.facility || '',
     due: qt.due || '',
+    notes: qt.notes || '',
+    internal: qt.internal || '',
+    lineItems: qt.lineItems || [],
+    discount: qt.discount || 0,
+    total: qt.total || 0,
+    addons: qt.addons || {},
+    applicationContainerType: qt.applicationContainerType || null,
+    applicationQty: qt.applicationQty || null,
+    applicationFee: qt.applicationFee || null,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  orders.unshift(order);
+  localStorage.setItem('pulse_orders', JSON.stringify(orders));
+
+  alert(`✅ Order ${orderId} created from ${qt.quoteId}.`);
+  showTab('orders');
+}
+
+function createJobTicketFromOrder(orderId) {
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  const order = orders.find(x => x.orderId === orderId);
+  if (!order) return;
+  if (!confirm(`Create Job Ticket from Order ${orderId}?`)) return;
+
+  const baseNum = order.baseNumber || orderId.replace('O-', '');
+  const jtId = `JT-${baseNum}`;
+
+  const idx = orders.findIndex(x => x.orderId === orderId);
+  orders[idx].status = 'converted';
+  orders[idx].convertedAt = new Date().toISOString();
+  orders[idx].jobTicketId = jtId;
+  localStorage.setItem('pulse_orders', JSON.stringify(orders));
+
+  const li = order.lineItems?.[0] || {};
+  const params = new URLSearchParams({
+    customer: order.customer,
+    rep: order.rep || '',
+    facility: order.facility || '',
+    due: order.due || '',
     product: li.product || '',
     material: li.material || '',
     qty: li.qty || '',
-    fromQuote: qt.quoteId,
+    fromOrder: order.orderId,
+    jobTicketId: jtId,
   });
-  if (qt.applicationContainerType) params.set('applicationContainerType', qt.applicationContainerType);
-  if (qt.applicationQty) params.set('applicationQty', qt.applicationQty);
-  if (qt.applicationFee) params.set('applicationFee', qt.applicationFee);
-  if (qt.company) params.set('company', qt.company);
+  if (order.applicationContainerType) params.set('applicationContainerType', order.applicationContainerType);
+  if (order.applicationQty) params.set('applicationQty', order.applicationQty);
+  if (order.applicationFee) params.set('applicationFee', order.applicationFee);
+  if (order.company) params.set('company', order.company);
   window.location.href = `job-ticket.html?${params.toString()}`;
+}
+
+function renderOrdersList() {
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  const STATUS_COLORS = { pending: '#2563eb', confirmed: '#16a34a', converted: '#7c3aed', cancelled: '#dc2626' };
+  document.getElementById('ordersList').innerHTML = orders.length === 0
+    ? '<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No orders yet. Convert an approved quote to create an order.</div>'
+    : `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        ${orders.map(o => `
+          <div style="display:grid;grid-template-columns:110px 1fr 120px 120px 130px 210px;padding:10px 14px;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;font-size:13px;">
+            <div style="font-weight:700;color:var(--accent);">${o.orderId}</div>
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-weight:600;">${o.customer || '—'}</span>
+                ${o.company && COMPANY_LOGOS[o.company] ? `<img src="${COMPANY_LOGOS[o.company]}" alt="${COMPANY_LABELS[o.company]}" title="${COMPANY_LABELS[o.company]}" style="height:18px;width:auto;object-fit:contain;border-radius:2px;">` : ''}
+              </div>
+              <div style="font-size:11px;color:#6b7280;">From ${o.fromQuoteId} · ${(o.lineItems || []).map(li => li.product).filter(Boolean).join(', ') || o.notes?.slice(0, 40) || '—'}</div>
+            </div>
+            <div style="font-size:12px;">${o.rep || '—'}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent);">${o.total ? '$' + Number(o.total).toLocaleString() : '—'}</div>
+            <div><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${STATUS_COLORS[o.status] || '#9ca3af'}22;color:${STATUS_COLORS[o.status] || '#9ca3af'};font-weight:600;">${o.status}</span></div>
+            <div style="display:flex;gap:4px;align-items:center;">
+              ${o.status !== 'converted' ? `<button onclick="createJobTicketFromOrder('${o.orderId}')" class="btn btn-sm" style="font-size:11px;background:#7c3aed;color:#fff;border:none;">🎫 Create Job Ticket</button>` : ''}
+              ${o.status === 'converted' ? `<span style="font-size:11px;color:#7c3aed;font-weight:600;">✓ ${o.jobTicketId || 'JT Created'}</span>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`;
 }
 </script>
 <script src="pulse-benchmark.js"></script>
