@@ -3072,6 +3072,20 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('showQueueBtn').style.display = '';
   }
   renderQueuePane();
+
+  // Collapse pane and deselect ticket when clicking empty space (not on card/interactive element)
+  document.getElementById('queuePane').addEventListener('click', function(e) {
+    if (e.target.closest('.qp-card') || e.target.closest('input') ||
+        e.target.closest('button') || e.target.closest('select') || e.target.closest('a')) {
+      return;
+    }
+    _queuePaneVisible = false;
+    document.getElementById('queuePane').classList.add('collapsed');
+    document.getElementById('showQueueBtn').style.display = '';
+    if (editingOrderId) {
+      window.location.href = 'job-ticket.html';
+    }
+  });
 }, { once: false });
 
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
