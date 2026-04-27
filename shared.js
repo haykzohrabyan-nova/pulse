@@ -1436,6 +1436,19 @@ function onDBUpdate(callback) {
   _dbUpdateCallbacks.push(callback);
 }
 
+// Bridge Supabase realtime → onDBUpdate callbacks (PRI-240)
+// supabase-client.js fires 'pulse:order-change' / 'pulse:activity-change' on window
+// when Supabase pushes a realtime update; mirror those into _dbUpdateCallbacks so
+// all pages with onDBUpdate() handlers refresh without polling.
+window.addEventListener('pulse:order-change', (event) => {
+  const id = (event.detail && (event.detail.new?.id || event.detail.old?.id)) || null;
+  _dbUpdateCallbacks.forEach(cb => cb({ type: 'db-update', store: 'orders', id }));
+});
+window.addEventListener('pulse:activity-change', (event) => {
+  const id = (event.detail && (event.detail.new?.id || event.detail.old?.id)) || null;
+  _dbUpdateCallbacks.forEach(cb => cb({ type: 'db-update', store: 'activity_log', id }));
+});
+
 function isValidAccessCode(code) {
   return /^\d{4,}$/.test(String(code || '').trim());
 }
