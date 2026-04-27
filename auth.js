@@ -70,6 +70,15 @@ const ROLE_CONFIG = {
     canViewProduction: true,
     canViewOperator: false,
   },
+  qc: {
+    label: 'QC Inspector',
+    color: '#0d9488',
+    pages: ['dashboard','qc-checkout'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+  },
 };
 
 // ── Session helpers ───────────────────────────────────────
@@ -117,6 +126,8 @@ function isAdminOrSupervisor() {
 
 const EXTRA_AUTH_USERS = [
   { name: 'David Zargaryan', role: 'david-review', notes: 'David review access' },
+  // QC Inspector — dedicated production QC login (name TBD, pending Hayk confirmation)
+  { name: 'QC Inspector', role: 'qc', notes: 'Dedicated QC role — update name once Hayk confirms person' },
 ];
 
 // ── Login modal ───────────────────────────────────────────
@@ -141,7 +152,7 @@ function injectLoginModal() {
     grouped[r].push(u);
   });
 
-  const roleOrder = ['admin','david-review','supervisor','production-manager','account-manager','prepress','operator'];
+  const roleOrder = ['admin','david-review','supervisor','production-manager','account-manager','prepress','qc','operator'];
 
   const userButtons = roleOrder
     .filter(r => grouped[r])
@@ -223,6 +234,11 @@ function submitLogin() {
   // Operators always land on the Operator Terminal
   if (_selectedLoginUser.role === 'operator' && currentPage !== 'operator-terminal') {
     window.location.href = 'operator-terminal.html';
+    return;
+  }
+  // QC Inspectors always land on the QC Checkout page
+  if (_selectedLoginUser.role === 'qc' && currentPage !== 'qc-checkout') {
+    window.location.href = 'qc-checkout.html';
     return;
   }
   if (currentPage && !canAccessPage(currentPage)) {
