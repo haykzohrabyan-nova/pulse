@@ -81,6 +81,20 @@ const ROLE_CONFIG = {
   },
 };
 
+// ── Supabase auth detection ───────────────────────────────
+// Returns true only when supabase-client.js loaded and PULSE_STORAGE_BACKEND='supabase'
+function _supaActive() {
+  return typeof window.supabaseSignIn === 'function';
+}
+
+// Derive email from display name for supabase.auth.signInWithPassword
+// "Hayk Zohrabyan" → "hayk@bazaar-admin.com"
+// "QC Inspector"   → "qc@bazaar-admin.com"
+function _getUserEmail(displayName) {
+  const first = String(displayName || '').trim().split(/\s+/)[0].toLowerCase();
+  return `${first}@bazaar-admin.com`;
+}
+
 // ── Session helpers ───────────────────────────────────────
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('pulse_session') || 'null'); } catch(e) { return null; }
@@ -183,8 +197,8 @@ function injectLoginModal() {
       ${userButtons}
       <div style="margin-top:14px;display:flex;gap:10px;align-items:flex-end;">
         <div style="flex:1;">
-          <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Access Code</label>
-          <input id="loginAccessCode" type="password" inputmode="numeric" placeholder="Enter 4+ digit code" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${_supaActive() ? 'Password' : 'Access Code'}</label>
+          <input id="loginAccessCode" type="password" ${_supaActive() ? '' : 'inputmode="numeric"'} placeholder="${_supaActive() ? 'Enter your password' : 'Enter 4+ digit code'}" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
         </div>
         <button onclick="submitLogin()" style="padding:10px 18px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">Sign In</button>
       </div>
@@ -216,18 +230,51 @@ function selectUser(name, role, btn) {
   if (err) { err.style.display = 'none'; err.textContent = ''; }
 }
 
-function submitLogin() {
+async function submitLogin() {
   const err = document.getElementById('loginError');
   if (!_selectedLoginUser) {
     if (err) { err.style.display = 'block'; err.textContent = 'Select your name first.'; }
     return;
   }
   const code = document.getElementById('loginAccessCode')?.value || '';
-  if (typeof isValidAccessCode === 'function' && !isValidAccessCode(code)) {
-    if (err) { err.style.display = 'block'; err.textContent = 'Enter a valid 4+ digit access code.'; }
-    return;
+
+  if (_supaActive()) {
+    // ── Supabase real auth ──────────────────────────────────
+    if (!code.trim()) {
+      if (err) { err.style.display = 'block'; err.textContent = 'Enter your password.'; }
+      return;
+    }
+    const btn = document.querySelector('#loginOverlay button[onclick="submitLogin()"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+    try {
+      const email = _getUserEmail(_selectedLoginUser.name);
+      await window.supabaseSignIn(email, code.trim());
+      // Get authoritative role/name from profiles table (RLS-enforced)
+      const profile = await window.supabaseGetProfile();
+      if (!profile) throw new Error('Profile not found — ask admin to set up your account.');
+      // DB stores role with underscores; ROLE_CONFIG uses hyphens (e.g. production_manager → production-manager)
+      const role = String(profile.role || 'operator').replace(/_/g, '-');
+      setSession(profile.display_name, role);
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      if (err) {
+        err.style.display = 'block';
+        const msg = e.message || '';
+        err.textContent = /invalid|credentials|password/i.test(msg)
+          ? 'Incorrect password. Try again.'
+          : msg || 'Sign-in failed. Try again.';
+      }
+      return;
+    }
+  } else {
+    // ── IndexedDB mode: local access code check ─────────────
+    if (typeof isValidAccessCode === 'function' && !isValidAccessCode(code)) {
+      if (err) { err.style.display = 'block'; err.textContent = 'Enter a valid 4+ digit access code.'; }
+      return;
+    }
+    setSession(_selectedLoginUser.name, _selectedLoginUser.role);
   }
-  setSession(_selectedLoginUser.name, _selectedLoginUser.role);
+
   const overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
   const currentPage = document.body.dataset.page || '';
@@ -267,7 +314,10 @@ function injectUserBadge() {
   document.body.appendChild(badge);
 }
 
-function logoutUser() {
+async function logoutUser() {
+  if (_supaActive()) {
+    try { await window.supabaseSignOut(); } catch (_) {}
+  }
   clearSession();
   location.reload();
 }
@@ -342,16 +392,34 @@ function applyTicketEditLock(ticket) {
 }
 
 // ── Init — called on every page load ─────────────────────
-function initAuth(pageId) {
+async function initAuth(pageId) {
   document.body.dataset.page = pageId;
 
-  // Temporary preview mode for local working sessions.
-  // If no session exists, default to admin so internal navigation stays usable.
+  if (_supaActive()) {
+    // ── Supabase mode: check for an existing valid session ──
+    const loader = _injectAuthLoader();
+    try {
+      const session = await window.supabaseGetSession();
+      if (session) {
+        const profile = await window.supabaseGetProfile();
+        if (profile) {
+          // DB role uses underscores; ROLE_CONFIG uses hyphens
+          const role = String(profile.role || 'operator').replace(/_/g, '-');
+          setSession(profile.display_name, role);
+        }
+      }
+    } catch (e) {
+      console.error('[Pulse/Auth] Session check error:', e);
+    } finally {
+      loader.remove();
+    }
+  }
+
   let session = getSession();
   if (!session) {
-    if (pageId === 'operator-terminal') return;
-    setSession('Hayk Zohrabyan', 'admin');
-    session = getSession();
+    // No session — show the login modal (both Supabase and IndexedDB modes)
+    injectLoginModal();
+    return;
   }
 
   // Check page access
@@ -371,4 +439,13 @@ function initAuth(pageId) {
 
   applyRoleAccess(pageId);
   injectUserBadge();
+}
+
+function _injectAuthLoader() {
+  const el = document.createElement('div');
+  el.id = 'authLoader';
+  el.style.cssText = 'position:fixed;inset:0;background:#f8fafc;z-index:99998;display:flex;align-items:center;justify-content:center;';
+  el.innerHTML = '<div style="text-align:center;"><img src="pulse-logo.png" alt="Pulse" style="height:36px;margin:0 auto 10px;display:block;"><div style="color:#64748b;font-size:13px;">Checking session…</div></div>';
+  document.body.appendChild(el);
+  return el;
 }
