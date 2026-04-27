@@ -8,126 +8,160 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f6fa; color: #1a1a2e; }
-    .page-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .page-wrap { max-width: 1600px; margin: 0 auto; padding: 20px 24px; }
 
     /* ── Stats Bar ── */
-    .stats-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
-    .stat-card { background: #fff; border-radius: 10px; padding: 16px 20px; border: 1px solid #e8eaf0; }
-    .stat-card .label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
-    .stat-card .sub { font-size: 11px; color: #aaa; margin-top: 3px; }
-    .stat-card.red .value { color: #e53e3e; }
-    .stat-card.green .value { color: #38a169; }
-    .stat-card.orange .value { color: #dd6b20; }
+    .stats-bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 12px 18px; border: 1px solid #e8eaf0; min-width: 110px; }
+    .stat-card .lbl { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .stat-card .val { font-size: 24px; font-weight: 800; color: #1a1a2e; }
+    .stat-card.red .val { color: #e53e3e; }
+    .stat-card.green .val { color: #38a169; }
+    .stat-card.orange .val { color: #dd6b20; }
+    .stat-card.purple .val { color: #805ad5; }
+    .stat-card.stale { background: #fff5f5; border-color: #fed7d7; }
+    .stat-card.stale .val { color: #c53030; }
 
-    /* ── Layout ── */
-    .main-layout { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
-
-    /* ── Lead List ── */
-    .panel { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; overflow: hidden; }
-    .panel-header { padding: 16px 20px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; justify-content: space-between; }
-    .panel-header h2 { font-size: 15px; font-weight: 700; }
-    .panel-header .controls { display: flex; gap: 8px; align-items: center; }
-
-    .filter-tabs { display: flex; gap: 4px; }
-    .filter-tab { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #e0e0e0; background: #fff; color: #666; transition: all .15s; }
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .filter-tabs { display: flex; gap: 3px; flex-wrap: wrap; }
+    .filter-tab { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #e0e0e0; background: #fff; color: #666; transition: all .15s; white-space: nowrap; }
     .filter-tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
-
+    .toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .search-input { padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; width: 200px; outline: none; }
+    .search-input:focus { border-color: #1a1a2e; }
+    .rep-select { padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 12px; outline: none; background: #fff; }
     .btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
     .btn-primary { background: #1a1a2e; color: #fff; }
     .btn-primary:hover { background: #2d2d4e; }
-    .btn-success { background: #38a169; color: #fff; }
-    .btn-success:hover { background: #2f855a; }
-    .btn-danger { background: #e53e3e; color: #fff; }
-    .btn-danger:hover { background: #c53030; }
-    .btn-ghost { background: #f0f0f0; color: #444; }
-    .btn-ghost:hover { background: #e0e0e0; }
-    .btn-slack { background: #4a154b; color: #fff; }
-    .btn-slack:hover { background: #3a1039; }
     .btn-hubspot { background: #ff7a59; color: #fff; }
     .btn-hubspot:hover { background: #e86c4a; }
+    .btn-ghost { background: #f0f0f0; color: #444; }
+    .btn-ghost:hover { background: #e0e0e0; }
+    .btn-danger { background: #e53e3e; color: #fff; }
     .btn-sm { padding: 4px 10px; font-size: 11px; }
 
-    .search-input { padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; width: 200px; outline: none; }
-    .search-input:focus { border-color: #1a1a2e; }
+    /* ── Main Layout ── */
+    .main-layout { display: grid; grid-template-columns: 1fr 420px; gap: 16px; }
+    .main-layout.no-detail { grid-template-columns: 1fr; }
 
-    /* ── Lead Cards ── */
-    .lead-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 280px); overflow-y: auto; }
-    .lead-card { border: 1px solid #e8eaf0; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all .15s; position: relative; }
-    .lead-card:hover { border-color: #1a1a2e; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
-    .lead-card.selected { border-color: #1a1a2e; background: #f8f9ff; box-shadow: 0 2px 8px rgba(26,26,46,.1); }
-    .lead-card.urgent { border-left: 3px solid #e53e3e; }
-    .lead-card.new { border-left: 3px solid #3182ce; }
-    .lead-card.replied { border-left: 3px solid #38a169; }
-    .lead-card.qualified { border-left: 3px solid #805ad5; }
-    .lead-card.cold { border-left: 3px solid #aaa; opacity: .7; }
+    /* ── Lead Table ── */
+    .table-panel { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th { background: #1a1a2e; color: #fff; padding: 9px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+    thead th:first-child { padding-left: 14px; }
+    tbody tr { border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background .1s; }
+    tbody tr:hover { background: #f8f9ff; }
+    tbody tr.selected { background: #eff3ff; }
+    tbody tr.stale-lead { border-left: 3px solid #e53e3e; }
+    tbody td { padding: 9px 10px; vertical-align: top; }
+    tbody td:first-child { padding-left: 14px; }
+    .no-leads { text-align: center; padding: 60px 20px; color: #bbb; }
+    .no-leads .icon { font-size: 40px; margin-bottom: 10px; }
 
-    .lead-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-    .lead-handle { font-size: 14px; font-weight: 700; color: #1a1a2e; }
-    .lead-time { font-size: 11px; color: #aaa; }
-    .lead-preview { font-size: 12px; color: #555; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .lead-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-    .badge-new { background: #ebf8ff; color: #2b6cb0; }
-    .badge-replied { background: #f0fff4; color: #276749; }
-    .badge-qualified { background: #faf5ff; color: #6b46c1; }
-    .badge-cold { background: #f5f5f5; color: #888; }
-    .badge-urgent { background: #fff5f5; color: #c53030; }
-    .badge-in-hubspot { background: #fff3ee; color: #c05621; }
-    .badge-won { background: #f0fff4; color: #22543d; }
-    .badge-lost { background: #fff5f5; color: #742a2a; }
+    /* ── Score badge ── */
+    .score-badge { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .score-hot  { background: #fff0f0; color: #c53030; border: 1px solid #fc8181; }
+    .score-warm { background: #fffbf0; color: #c05621; border: 1px solid #f6ad55; }
+    .score-cool { background: #ebf8ff; color: #2b6cb0; border: 1px solid #90cdf4; }
 
-    .no-leads { text-align: center; padding: 60px 20px; color: #aaa; }
-    .no-leads .icon { font-size: 48px; margin-bottom: 12px; }
-    .no-leads p { font-size: 14px; }
+    /* ── Stage badge ── */
+    .stage-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .stage-new         { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+    .stage-reached_out { background: #ebf8ff; color: #2b6cb0; border: 1px solid #90cdf4; }
+    .stage-quoting     { background: #faf5ff; color: #6b46c1; border: 1px solid #d6bcfa; }
+    .stage-sampling    { background: #fffbf0; color: #c05621; border: 1px solid #f6ad55; }
+    .stage-follow_up   { background: #fffff0; color: #b7791f; border: 1px solid #f6e05e; }
+    .stage-won         { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+    .stage-lost        { background: #f5f5f5; color: #718096; border: 1px solid #cbd5e0; }
 
-    /* ── Right Panel: Lead Detail ── */
-    .detail-panel { display: flex; flex-direction: column; gap: 16px; }
+    /* ── Rep badge ── */
+    .rep-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+    .rep-gary    { background: #e6fffa; color: #234e52; border: 1px solid #81e6d9; }
+    .rep-ernesto { background: #faf5ff; color: #553c9a; border: 1px solid #d6bcfa; }
+    .rep-none    { background: #f5f5f5; color: #a0aec0; border: 1px solid #e2e8f0; }
 
-    .detail-card { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; padding: 18px; }
-    .detail-card h3 { font-size: 13px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+    /* ── HS badge ── */
+    .hs-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; background: #fff3ee; color: #c05621; border: 1px solid #fbd38d; }
 
-    .field-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    /* ── Stale indicator ── */
+    .stale-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e53e3e; margin-right: 4px; }
+
+    /* ── Lead name/handle cell ── */
+    .lead-name { font-weight: 700; font-size: 12px; color: #1a1a2e; }
+    .lead-handle { font-size: 10px; color: #888; margin-top: 1px; }
+    .lead-company { font-size: 10px; color: #666; margin-top: 1px; }
+    .brief-cell { max-width: 260px; color: #444; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .contact-cell { font-size: 11px; color: #555; }
+    .contact-cell a { color: #3182ce; text-decoration: none; }
+    .time-small { font-size: 10px; color: #aaa; }
+    .next-action-cell { font-size: 11px; color: #555; max-width: 140px; }
+    .next-action-cell .date { font-size: 10px; color: #888; margin-top: 2px; }
+
+    /* ── Detail Panel ── */
+    .detail-panel { display: flex; flex-direction: column; gap: 12px; }
+    .detail-card { background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; padding: 16px; }
+    .detail-card h3 { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+    .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .detail-header .handle-big { font-size: 16px; font-weight: 800; color: #1a1a2e; }
+    .detail-header .sub { font-size: 11px; color: #888; margin-top: 3px; }
+
+    .field-row { margin-bottom: 10px; }
     .field-row:last-child { margin-bottom: 0; }
-    .field-row label { font-size: 11px; font-weight: 600; color: #999; }
-    .field-row input, .field-row select, .field-row textarea { padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; font-family: inherit; outline: none; width: 100%; background: #fafafa; transition: border-color .15s; }
+    .field-row label { display: block; font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+    .field-row input, .field-row select, .field-row textarea {
+      width: 100%; padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 7px;
+      font-size: 12px; font-family: inherit; outline: none; background: #fafafa; transition: border-color .15s;
+    }
     .field-row input:focus, .field-row select:focus, .field-row textarea:focus { border-color: #1a1a2e; background: #fff; }
-    .field-row textarea { resize: vertical; min-height: 70px; }
+    .field-row textarea { resize: vertical; min-height: 60px; }
+    .field-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .action-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .meta-row { font-size: 10px; color: #bbb; margin-top: 10px; line-height: 1.6; }
 
-    .conversation-box { background: #f8f9fa; border-radius: 8px; padding: 12px; max-height: 180px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: #444; border: 1px solid #eee; }
-    .conversation-box .msg { margin-bottom: 8px; }
-    .conversation-box .msg.them { color: #1a1a2e; }
-    .conversation-box .msg.us { color: #3182ce; text-align: right; font-style: italic; }
-    .conversation-box .msg .who { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; color: #aaa; }
+    /* ── Conversation box ── */
+    .conv-box { background: #f8f9fa; border-radius: 8px; padding: 10px 12px; max-height: 160px; overflow-y: auto; font-size: 11px; line-height: 1.5; color: #444; border: 1px solid #eee; }
+    .conv-msg { margin-bottom: 7px; }
+    .conv-msg .who { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #bbb; letter-spacing: .4px; margin-bottom: 1px; }
+    .conv-msg.us { color: #3182ce; text-align: right; }
+    .conv-msg.us .who { color: #90cdf4; }
 
-    .reply-box { position: relative; }
-    .reply-textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 100px; background: #fafafa; transition: border-color .15s; }
-    .reply-textarea:focus { border-color: #1a1a2e; background: #fff; }
-    .reply-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-
-    .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-
-    .empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #ccc; text-align: center; }
-    .empty-detail .icon { font-size: 48px; margin-bottom: 12px; }
+    /* ── Empty detail ── */
+    .empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; color: #ccc; text-align: center; background: #fff; border-radius: 12px; border: 1px solid #e8eaf0; }
+    .empty-detail .icon { font-size: 40px; margin-bottom: 10px; }
     .empty-detail p { font-size: 13px; }
 
-    /* ── Add Lead Modal ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; align-items: center; justify-content: center; }
+    /* ── Add Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: #fff; border-radius: 14px; padding: 28px; width: 480px; max-width: 95vw; }
-    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .modal .field-row { margin-bottom: 10px; }
+    .section-label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
 
     /* ── Toast ── */
-    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 11px 16px; border-radius: 9px; font-size: 12px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(8px); transition: all .22s; pointer-events: none; max-width: 340px; }
     .toast.show { opacity: 1; transform: translateY(0); }
 
-    /* ── Config Banner ── */
-    .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #856404; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .config-banner a { color: #856404; font-weight: 700; cursor: pointer; }
+    /* ── Config banner ── */
+    .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 8px 14px; font-size: 11px; color: #856404; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .config-banner a { color: #856404; font-weight: 700; cursor: pointer; text-decoration: underline; }
+    .config-banner.ok { background: #d4edda; border-color: #28a745; color: #155724; }
+
+    /* ── Stale alert bar ── */
+    .stale-bar { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 8px 14px; font-size: 11px; color: #c53030; margin-bottom: 14px; display: none; }
+    .stale-bar.visible { display: flex; align-items: center; gap: 8px; }
 
     /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+    @media (max-width: 1100px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -135,95 +169,158 @@
 
   <div class="page-wrap">
 
-    <!-- Config Banner -->
+    <!-- Config banner -->
     <div class="config-banner" id="configBanner">
-      ⏳ Instagram API connected — awaiting Meta App Review approval for live DMs. Leads can be added manually in the meantime. <a onclick="openSettings()">Settings →</a>
+      ⚙️ HubSpot not configured — leads won't sync automatically.
+      <a onclick="openSettings()">Configure →</a>
     </div>
+
+    <!-- Stale alert -->
+    <div class="stale-bar" id="staleBar"></div>
 
     <!-- Stats -->
-    <div class="stats-bar">
-      <div class="stat-card red">
-        <div class="label">🔴 Needs Reply</div>
-        <div class="value" id="statNew">0</div>
-        <div class="sub">respond within 10 min</div>
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card red">  <div class="lbl">🔴 New</div>         <div class="val" id="sNew">0</div></div>
+      <div class="stat-card">      <div class="lbl">📞 Reached Out</div> <div class="val" id="sReached">0</div></div>
+      <div class="stat-card purple"><div class="lbl">💬 Quoting</div>     <div class="val" id="sQuoting">0</div></div>
+      <div class="stat-card orange"><div class="lbl">🎨 Sampling</div>    <div class="val" id="sSampling">0</div></div>
+      <div class="stat-card">      <div class="lbl">🔁 Follow-up</div>   <div class="val" id="sFollowUp">0</div></div>
+      <div class="stat-card green"> <div class="lbl">✅ Won</div>         <div class="val" id="sWon">0</div></div>
+      <div class="stat-card">      <div class="lbl">❌ Lost</div>         <div class="val" id="sLost">0</div></div>
+      <div class="stat-card stale"> <div class="lbl">⚠️ Stale</div>      <div class="val" id="sStale">0</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" data-filter="active"   onclick="setFilter('active',this)">Active</button>
+        <button class="filter-tab"        data-filter="all"      onclick="setFilter('all',this)">All</button>
+        <button class="filter-tab"        data-filter="new"      onclick="setFilter('new',this)">🔴 New</button>
+        <button class="filter-tab"        data-filter="reached_out" onclick="setFilter('reached_out',this)">📞 Reached Out</button>
+        <button class="filter-tab"        data-filter="quoting"  onclick="setFilter('quoting',this)">💬 Quoting</button>
+        <button class="filter-tab"        data-filter="sampling" onclick="setFilter('sampling',this)">🎨 Sampling</button>
+        <button class="filter-tab"        data-filter="follow_up" onclick="setFilter('follow_up',this)">🔁 Follow-up</button>
+        <button class="filter-tab"        data-filter="won"      onclick="setFilter('won',this)">✅ Won</button>
+        <button class="filter-tab"        data-filter="stale"    onclick="setFilter('stale',this)">⚠️ Stale</button>
       </div>
-      <div class="stat-card orange">
-        <div class="label">⏳ Awaiting Them</div>
-        <div class="value" id="statReplied">0</div>
-        <div class="sub">waiting on customer</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">🎯 Qualified</div>
-        <div class="value" id="statQualified">0</div>
-        <div class="sub">ready to quote</div>
-      </div>
-      <div class="stat-card green">
-        <div class="label">✅ In HubSpot</div>
-        <div class="value" id="statHubspot">0</div>
-        <div class="sub">leads synced</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">🧊 Cold</div>
-        <div class="value" id="statCold">0</div>
-        <div class="sub">no response 3+ days</div>
+      <div class="toolbar-right">
+        <select class="rep-select" id="repFilter" onchange="renderLeads()">
+          <option value="">All Reps</option>
+          <option value="gary">Gary</option>
+          <option value="ernesto">Ernesto</option>
+          <option value="">Unassigned</option>
+        </select>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search leads..." oninput="renderLeads()" />
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add Lead</button>
       </div>
     </div>
 
-    <!-- Main Layout -->
-    <div class="main-layout">
+    <!-- Main layout -->
+    <div class="main-layout" id="mainLayout">
 
-      <!-- Left: Lead List -->
-      <div class="panel">
-        <div class="panel-header">
-          <h2>📸 Instagram DM Leads</h2>
-          <div class="controls">
-            <input type="text" class="search-input" id="searchInput" placeholder="Search leads..." oninput="renderLeads()" />
-            <button class="btn btn-primary" onclick="openAddModal()">+ Add Lead</button>
-          </div>
+      <!-- Lead table -->
+      <div class="table-panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Score</th>
+                <th>Handle / Name</th>
+                <th>Phone</th>
+                <th>What They Need</th>
+                <th>Qty / Specs</th>
+                <th>Stage</th>
+                <th>Rep</th>
+                <th>Next Action</th>
+                <th>HubSpot</th>
+                <th>Age</th>
+              </tr>
+            </thead>
+            <tbody id="leadTableBody">
+              <tr><td colspan="11"><div class="no-leads"><div class="icon">📭</div><p>No leads</p></div></td></tr>
+            </tbody>
+          </table>
         </div>
-        <div style="padding: 10px 12px 0; border-bottom: 1px solid #f0f0f0;">
-          <div class="filter-tabs" id="filterTabs">
-            <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
-            <button class="filter-tab" data-filter="new" onclick="setFilter('new', this)">🔴 New</button>
-            <button class="filter-tab" data-filter="replied" onclick="setFilter('replied', this)">⏳ Replied</button>
-            <button class="filter-tab" data-filter="qualified" onclick="setFilter('qualified', this)">🎯 Qualified</button>
-            <button class="filter-tab" data-filter="in-hubspot" onclick="setFilter('in-hubspot', this)">🟠 HubSpot</button>
-            <button class="filter-tab" data-filter="cold" onclick="setFilter('cold', this)">🧊 Cold</button>
-          </div>
-        </div>
-        <div class="lead-list" id="leadList"></div>
       </div>
 
-      <!-- Right: Detail Panel -->
-      <div class="detail-panel" id="detailPanel">
-        <div class="panel empty-detail">
-          <div class="icon">📨</div>
-          <p>Select a lead to view details</p>
-        </div>
+      <!-- Detail panel placeholder -->
+      <div class="empty-detail" id="detailPanel">
+        <div class="icon">📨</div>
+        <p>Select a lead to view and edit</p>
       </div>
 
     </div>
   </div>
 
-  <!-- Add Lead Modal -->
+  <!-- ─── Add Lead Modal ─── -->
   <div class="modal-overlay" id="addModal">
     <div class="modal">
       <h2>➕ Add Instagram Lead</h2>
-      <div class="field-row">
-        <label>Instagram Handle *</label>
-        <input type="text" id="newHandle" placeholder="@username" />
+
+      <div class="section-label">Contact</div>
+      <div class="field-2col">
+        <div class="field-row"><label>IG Handle *</label><input id="nHandle" placeholder="@username" /></div>
+        <div class="field-row"><label>Name</label><input id="nName" placeholder="First Last" /></div>
       </div>
-      <div class="field-row">
-        <label>Their Message *</label>
-        <textarea id="newMessage" placeholder="Paste their DM here..." rows="3"></textarea>
+      <div class="field-2col">
+        <div class="field-row"><label>Phone</label><input id="nPhone" placeholder="(310) 555-0123" /></div>
+        <div class="field-row"><label>Email</label><input id="nEmail" placeholder="name@company.com" /></div>
       </div>
-      <div class="field-row">
-        <label>Account</label>
-        <select id="newAccount">
-          <option value="bazaar">Bazaar Printing</option>
-          <option value="pixelpress">PixelPress Print</option>
-        </select>
+      <div class="field-row"><label>Company</label><input id="nCompany" placeholder="ABC Co." /></div>
+
+      <div class="section-label">Lead Details</div>
+      <div class="field-row"><label>Their Message / Brief *</label><textarea id="nMessage" rows="3" placeholder="Paste their DM or describe what they need..."></textarea></div>
+      <div class="field-2col">
+        <div class="field-row"><label>Product Type</label><input id="nProduct" placeholder="e.g. mylar bags, labels, boxes" /></div>
+        <div class="field-row"><label>Quantity</label><input id="nQty" placeholder="e.g. 500 units" /></div>
       </div>
+      <div class="field-2col">
+        <div class="field-row"><label>Urgency / Timeline</label><input id="nUrgency" placeholder="e.g. 2 weeks, ASAP" /></div>
+        <div class="field-row"><label>Artwork Status</label>
+          <select id="nArtwork">
+            <option value="">Unknown</option>
+            <option value="has artwork">Has artwork</option>
+            <option value="needs design">Needs design help</option>
+            <option value="uploading">Uploading soon</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-label">Assignment</div>
+      <div class="field-2col">
+        <div class="field-row"><label>Score</label>
+          <select id="nScore">
+            <option value="hot">🔥 Hot</option>
+            <option value="warm" selected>🌡 Warm</option>
+            <option value="cool">❄️ Cool</option>
+          </select>
+        </div>
+        <div class="field-row"><label>Assign Rep</label>
+          <select id="nRep">
+            <option value="">Unassigned</option>
+            <option value="gary">Gary</option>
+            <option value="ernesto">Ernesto</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-2col">
+        <div class="field-row"><label>Account</label>
+          <select id="nAccount">
+            <option value="bazaar">Bazaar Printing</option>
+            <option value="pixelpress">PixelPress Print</option>
+          </select>
+        </div>
+        <div class="field-row"><label>Source</label>
+          <select id="nSource">
+            <option value="manual">Manual entry</option>
+            <option value="manychat">ManyChat</option>
+            <option value="webhook">Webhook / API</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row"><label>ManyChat Conversation URL</label><input id="nConvUrl" placeholder="https://..." /></div>
+
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
         <button class="btn btn-primary" onclick="addLead()">Add Lead</button>
@@ -235,77 +332,232 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // ── Nav ──
+    // ── Nav ──────────────────────────────────────────────────────
     document.getElementById('nav').innerHTML = renderNav('instagram-leads');
     injectThemeCSS();
 
-    // ── Config ──
-    const CONFIG = {
+    // ── Config ───────────────────────────────────────────────────
+    const CFG = {
       hubspotToken: localStorage.getItem('ig_hubspot_token') || '',
-      slackWebhook: localStorage.getItem('ig_slack_webhook') || '',
+      proxyBase:    localStorage.getItem('ig_proxy_base')   || 'http://localhost:8879',
     };
 
     function openSettings() {
-      const token = prompt('HubSpot Private App Token:', CONFIG.hubspotToken);
-      if (token !== null) { CONFIG.hubspotToken = token; localStorage.setItem('ig_hubspot_token', token); }
-      const slack = prompt('Slack Webhook URL:', CONFIG.slackWebhook);
-      if (slack !== null) { CONFIG.slackWebhook = slack; localStorage.setItem('ig_slack_webhook', slack); }
+      const t = prompt('HubSpot Private App Token (leave blank to clear):', CFG.hubspotToken);
+      if (t !== null) { CFG.hubspotToken = t.trim(); localStorage.setItem('ig_hubspot_token', CFG.hubspotToken); }
+      const p = prompt('Proxy base URL (default http://localhost:8879):', CFG.proxyBase);
+      if (p !== null) { CFG.proxyBase = p.trim() || 'http://localhost:8879'; localStorage.setItem('ig_proxy_base', CFG.proxyBase); }
       updateBanner();
       toast('Settings saved');
     }
 
     function updateBanner() {
       const b = document.getElementById('configBanner');
-      if (CONFIG.hubspotToken && CONFIG.slackWebhook) {
-        b.style.background = '#d4edda'; b.style.borderColor = '#28a745'; b.style.color = '#155724';
-        b.innerHTML = '✅ HubSpot + Slack connected. Ready for automation.';
+      if (CFG.hubspotToken) {
+        b.className = 'config-banner ok';
+        b.innerHTML = '✅ HubSpot connected. Leads will auto-sync on push. <a onclick="openSettings()">Settings →</a>';
+      } else {
+        b.className = 'config-banner';
+        b.innerHTML = '⚙️ HubSpot not configured — leads won\'t sync. <a onclick="openSettings()">Configure →</a>';
       }
     }
     updateBanner();
 
-    // ── Data ──
-    const DB_KEY = 'pulse_instagram_leads';
-    let leads = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    // ── Pipeline config ──────────────────────────────────────────
+    const STAGES = [
+      { id: 'new',         label: 'New / Needs Contact',      staleHours: 8  },
+      { id: 'reached_out', label: 'Called / Reached Out',     staleHours: 72 },
+      { id: 'quoting',     label: 'Quoting',                  staleHours: 96 },
+      { id: 'sampling',    label: 'Sampling / Waiting',        staleHours: 168 },
+      { id: 'follow_up',   label: 'Follow-up Needed',         staleHours: 48 },
+      { id: 'won',         label: 'Closed Won',                staleHours: null },
+      { id: 'lost',        label: 'Closed Lost / Not Qualified', staleHours: null },
+    ];
+    const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.id, s]));
+    const ACTIVE_STAGES = ['new','reached_out','quoting','sampling','follow_up'];
+
+    const REPS = {
+      gary:    'Gary',
+      ernesto: 'Ernesto',
+      '':      'Unassigned',
+    };
+
+    // ── Data layer ───────────────────────────────────────────────
+    // Uses Supabase when PULSE_STORAGE_BACKEND==='supabase' + URL/key present,
+    // otherwise falls back to localStorage (DB_KEY below).
+    const DB_KEY     = 'pulse_instagram_leads_v2';
+    const SUPA_TABLE = 'instagram_leads';
+
+    let leads = [];
     let selectedId = null;
-    let currentFilter = 'all';
+    let currentFilter = 'active';
+    let _supaClient  = null;
+    let _usingSupabase = false;
 
-    function saveLeads() { localStorage.setItem(DB_KEY, JSON.stringify(leads)); }
-
-    function getLead(id) { return leads.find(l => l.id === id); }
-
-    function addLead() {
-      const handle = document.getElementById('newHandle').value.trim();
-      const message = document.getElementById('newMessage').value.trim();
-      const account = document.getElementById('newAccount').value;
-      if (!handle || !message) { toast('Handle and message are required'); return; }
-
-      const lead = {
-        id: 'ig_' + Date.now(),
-        handle: handle.startsWith('@') ? handle : '@' + handle,
-        account,
-        status: 'new',
-        messages: [{ from: 'them', text: message, time: Date.now() }],
-        name: '', company: '', email: '', phone: '', product: '', notes: '',
-        draftReply: '',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        hubspotId: '',
-        followUpAt: null,
-      };
-
-      leads.unshift(lead);
-      saveLeads();
-      closeAddModal();
-      renderLeads();
-      selectLead(lead.id);
-      updateStats();
-      toast('Lead added — generating reply draft...');
-
-      // Auto-generate draft reply
-      setTimeout(() => generateDraft(lead.id), 500);
+    // Try to get Supabase client (set up by supabase-client.js / pulse-config.local.js)
+    async function _initSupabase() {
+      const url  = window.PULSE_SUPABASE_URL     || '';
+      const key  = window.PULSE_SUPABASE_ANON_KEY || '';
+      const mode = window.PULSE_STORAGE_BACKEND   || '';
+      if (mode !== 'supabase' || !url || !key) return false;
+      try {
+        if (!window.supabase) {
+          await new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+        }
+        _supaClient = window.supabase.createClient(url, key, { auth: { persistSession: true } });
+        _usingSupabase = true;
+        return true;
+      } catch(e) { console.warn('[IG Leads] Supabase init failed, using localStorage', e); return false; }
     }
 
-    // ── Filters ──
+    async function loadLeads() {
+      if (_usingSupabase && _supaClient) {
+        const { data, error } = await _supaClient
+          .from(SUPA_TABLE)
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) { console.error('[IG Leads] Supabase load error', error); }
+        else { leads = (data || []).map(rowToLocal); saveLocal(); return; }
+      }
+      leads = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    }
+
+    async function saveLead(lead) {
+      lead.updatedAt = Date.now();
+      const idx = leads.findIndex(l => l.id === lead.id);
+      if (idx >= 0) leads[idx] = lead; else leads.unshift(lead);
+      saveLocal();
+      if (_usingSupabase && _supaClient) {
+        const row = localToRow(lead);
+        const { error } = await _supaClient.from(SUPA_TABLE).upsert(row, { onConflict: 'id' });
+        if (error) console.error('[IG Leads] Supabase save error', error);
+      }
+    }
+
+    function saveLocal() {
+      localStorage.setItem(DB_KEY, JSON.stringify(leads));
+    }
+
+    // ── Data mapping ─────────────────────────────────────────────
+    function rowToLocal(row) {
+      return {
+        id:              row.id,
+        igHandle:        row.ig_handle,
+        name:            row.name || '',
+        company:         row.company || '',
+        phone:           row.phone || '',
+        email:           row.email || '',
+        productType:     row.product_type || '',
+        quantity:        row.quantity || '',
+        specs:           row.specs || '',
+        urgency:         row.urgency || '',
+        artworkStatus:   row.artwork_status || '',
+        brief:           row.brief || '',
+        score:           row.score || 'warm',
+        stage:           row.stage || 'new',
+        assignedRep:     row.assigned_rep || '',
+        repNotes:        row.rep_notes || '',
+        nextAction:      row.next_action || '',
+        nextActionDate:  row.next_action_date || '',
+        conversationUrl: row.conversation_url || '',
+        hubspotContactId:row.hubspot_contact_id || '',
+        hubspotDealId:   row.hubspot_deal_id || '',
+        source:          row.source || 'manual',
+        account:         row.account || 'bazaar',
+        originalMessage: row.original_message || '',
+        messages:        row.messages || [],
+        createdAt:       new Date(row.created_at).getTime(),
+        updatedAt:       new Date(row.updated_at).getTime(),
+        lastContactAt:   row.last_contact_at ? new Date(row.last_contact_at).getTime() : null,
+      };
+    }
+
+    function localToRow(l) {
+      return {
+        id:                l.id,
+        ig_handle:         l.igHandle,
+        name:              l.name,
+        company:           l.company,
+        phone:             l.phone,
+        email:             l.email,
+        product_type:      l.productType,
+        quantity:          l.quantity,
+        specs:             l.specs,
+        urgency:           l.urgency,
+        artwork_status:    l.artworkStatus,
+        brief:             l.brief,
+        score:             l.score,
+        stage:             l.stage,
+        assigned_rep:      l.assignedRep,
+        rep_notes:         l.repNotes,
+        next_action:       l.nextAction,
+        next_action_date:  l.nextActionDate || null,
+        conversation_url:  l.conversationUrl,
+        hubspot_contact_id:l.hubspotContactId,
+        hubspot_deal_id:   l.hubspotDealId,
+        source:            l.source,
+        account:           l.account,
+        original_message:  l.originalMessage,
+        messages:          l.messages,
+        updated_at:        new Date(l.updatedAt).toISOString(),
+        last_contact_at:   l.lastContactAt ? new Date(l.lastContactAt).toISOString() : null,
+      };
+    }
+
+    function newLocalLead(fields) {
+      return {
+        id:              'ig_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        igHandle:        fields.igHandle || '',
+        name:            fields.name || '',
+        company:         fields.company || '',
+        phone:           fields.phone || '',
+        email:           fields.email || '',
+        productType:     fields.productType || '',
+        quantity:        fields.quantity || '',
+        specs:           '',
+        urgency:         fields.urgency || '',
+        artworkStatus:   fields.artworkStatus || '',
+        brief:           fields.brief || fields.originalMessage || '',
+        score:           fields.score || 'warm',
+        stage:           'new',
+        assignedRep:     fields.assignedRep || autoAssign(),
+        repNotes:        '',
+        nextAction:      '',
+        nextActionDate:  '',
+        conversationUrl: fields.conversationUrl || '',
+        hubspotContactId:'',
+        hubspotDealId:   '',
+        source:          fields.source || 'manual',
+        account:         fields.account || 'bazaar',
+        originalMessage: fields.originalMessage || '',
+        messages:        fields.originalMessage ? [{ from: 'them', text: fields.originalMessage, time: Date.now() }] : [],
+        createdAt:       Date.now(),
+        updatedAt:       Date.now(),
+        lastContactAt:   null,
+      };
+    }
+
+    // Round-robin auto-assign between Gary and Ernesto
+    function autoAssign() {
+      const garyCount    = leads.filter(l => l.assignedRep === 'gary').length;
+      const ernestoCount = leads.filter(l => l.assignedRep === 'ernesto').length;
+      return garyCount <= ernestoCount ? 'gary' : 'ernesto';
+    }
+
+    // ── Stale detection ───────────────────────────────────────────
+    function isStale(lead) {
+      const stage = STAGE_MAP[lead.stage];
+      if (!stage || stage.staleHours === null) return false;
+      const ref = lead.lastContactAt || lead.updatedAt || lead.createdAt;
+      return (Date.now() - ref) > stage.staleHours * 3600 * 1000;
+    }
+
+    // ── Filters ───────────────────────────────────────────────────
     function setFilter(f, el) {
       currentFilter = f;
       document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -314,56 +566,93 @@
     }
 
     function getFilteredLeads() {
-      const q = document.getElementById('searchInput').value.toLowerCase();
+      const q   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const rep = document.getElementById('repFilter').value;
       return leads.filter(l => {
-        const matchFilter = currentFilter === 'all' || l.status === currentFilter;
-        const matchSearch = !q || l.handle.toLowerCase().includes(q) || l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q);
-        return matchFilter && matchSearch;
+        if (currentFilter === 'active' && !ACTIVE_STAGES.includes(l.stage)) return false;
+        if (currentFilter !== 'active' && currentFilter !== 'all' && currentFilter !== 'stale' && l.stage !== currentFilter) return false;
+        if (currentFilter === 'stale' && !isStale(l)) return false;
+        if (rep && l.assignedRep !== rep) return false;
+        if (q) {
+          const hay = [l.igHandle, l.name, l.company, l.phone, l.email, l.brief, l.productType].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
       });
     }
 
-    // ── Render Lead List ──
+    // ── Render table ─────────────────────────────────────────────
     function renderLeads() {
-      const list = document.getElementById('leadList');
-      const filtered = getFilteredLeads();
-      if (!filtered.length) {
-        list.innerHTML = `<div class="no-leads"><div class="icon">📭</div><p>No leads in this filter</p></div>`;
+      const tbody = document.getElementById('leadTableBody');
+      const list  = getFilteredLeads();
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="11"><div class="no-leads"><div class="icon">📭</div><p>No leads in this filter</p></div></td></tr>`;
         return;
       }
-      list.innerHTML = filtered.map(l => {
-        const lastMsg = l.messages[l.messages.length - 1];
-        const age = timeAgo(l.updatedAt);
-        const isUrgent = l.status === 'new' && (Date.now() - l.createdAt) > 10 * 60 * 1000;
+      tbody.innerHTML = list.map((l, i) => {
+        const stale  = isStale(l);
+        const hs     = l.hubspotContactId ? `<span class="hs-badge">HS</span>` : '';
+        const convLk = l.conversationUrl  ? `<a href="${escAttr(l.conversationUrl)}" target="_blank" title="ManyChat conversation" onclick="event.stopPropagation()">📱</a>` : '';
+        const scoreBadge = `<span class="score-badge score-${l.score}">${scoreLabel(l.score)}</span>`;
+        const stageBadge = `<span class="stage-badge stage-${l.stage}">${STAGE_MAP[l.stage]?.label || l.stage}</span>`;
+        const repBadge   = l.assignedRep
+          ? `<span class="rep-badge rep-${l.assignedRep}">${REPS[l.assignedRep] || l.assignedRep}</span>`
+          : `<span class="rep-badge rep-none">—</span>`;
+        const nextActionHtml = l.nextAction
+          ? `<div>${escHtml(l.nextAction)}</div>${l.nextActionDate ? `<div class="date">${l.nextActionDate}</div>` : ''}`
+          : `<span style="color:#ccc;font-size:11px;">—</span>`;
+
         return `
-          <div class="lead-card ${l.status} ${isUrgent ? 'urgent' : ''} ${l.id === selectedId ? 'selected' : ''}" onclick="selectLead('${l.id}')">
-            <div class="lead-card-top">
-              <div class="lead-handle">${l.handle} ${l.account === 'pixelpress' ? '<span style="font-size:10px;color:#805ad5;font-weight:600;">PP</span>' : ''}</div>
-              <div class="lead-time">${age}</div>
-            </div>
-            <div class="lead-preview">${escHtml(lastMsg?.text || '')}</div>
-            <div class="lead-meta">
-              <span class="badge badge-${l.status}">${statusLabel(l.status)}</span>
-              ${l.name ? `<span style="font-size:11px;color:#666;">👤 ${l.name}</span>` : ''}
-              ${l.company ? `<span style="font-size:11px;color:#666;">🏢 ${l.company}</span>` : ''}
-              ${l.phone ? `<span style="font-size:11px;color:#666;">📞 ${l.phone}</span>` : ''}
-              ${l.hubspotId ? `<span class="badge badge-in-hubspot">HS</span>` : ''}
-              ${isUrgent ? `<span class="badge badge-urgent">URGENT</span>` : ''}
-            </div>
-          </div>
+          <tr class="${stale ? 'stale-lead' : ''} ${l.id === selectedId ? 'selected' : ''}" onclick="selectLead('${l.id}')">
+            <td class="time-small">${i + 1}</td>
+            <td>${scoreBadge}</td>
+            <td>
+              <div class="lead-name">${stale ? '<span class="stale-dot"></span>' : ''}${escHtml(l.name || l.igHandle)}</div>
+              <div class="lead-handle">${escHtml(l.igHandle)}</div>
+              ${l.company ? `<div class="lead-company">${escHtml(l.company)}</div>` : ''}
+            </td>
+            <td class="contact-cell">${escHtml(l.phone || '—')}</td>
+            <td><div class="brief-cell">${escHtml(l.brief || l.productType || '—')}</div></td>
+            <td class="contact-cell">${escHtml(l.quantity || '—')}</td>
+            <td>${stageBadge}</td>
+            <td>${repBadge}</td>
+            <td class="next-action-cell">${nextActionHtml}</td>
+            <td style="white-space:nowrap;">${hs} ${convLk}</td>
+            <td class="time-small">${timeAgo(l.createdAt)}</td>
+          </tr>
         `;
       }).join('');
     }
 
-    // ── Stats ──
+    // ── Stats ─────────────────────────────────────────────────────
     function updateStats() {
-      document.getElementById('statNew').textContent = leads.filter(l => l.status === 'new').length;
-      document.getElementById('statReplied').textContent = leads.filter(l => l.status === 'replied').length;
-      document.getElementById('statQualified').textContent = leads.filter(l => l.status === 'qualified').length;
-      document.getElementById('statHubspot').textContent = leads.filter(l => l.hubspotId).length;
-      document.getElementById('statCold').textContent = leads.filter(l => l.status === 'cold').length;
+      const counts = {};
+      STAGES.forEach(s => { counts[s.id] = 0; });
+      let staleCount = 0;
+      leads.forEach(l => {
+        if (counts[l.stage] !== undefined) counts[l.stage]++;
+        if (isStale(l)) staleCount++;
+      });
+      document.getElementById('sNew').textContent      = counts['new'];
+      document.getElementById('sReached').textContent  = counts['reached_out'];
+      document.getElementById('sQuoting').textContent  = counts['quoting'];
+      document.getElementById('sSampling').textContent = counts['sampling'];
+      document.getElementById('sFollowUp').textContent = counts['follow_up'];
+      document.getElementById('sWon').textContent      = counts['won'];
+      document.getElementById('sLost').textContent     = counts['lost'];
+      document.getElementById('sStale').textContent    = staleCount;
+
+      // Stale bar
+      const bar = document.getElementById('staleBar');
+      if (staleCount > 0) {
+        bar.className = 'stale-bar visible';
+        bar.textContent = `⚠️ ${staleCount} lead${staleCount > 1 ? 's are' : ' is'} stale and need attention. Click "⚠️ Stale" filter to review.`;
+      } else {
+        bar.className = 'stale-bar';
+      }
     }
 
-    // ── Select Lead ──
+    // ── Select / Detail ───────────────────────────────────────────
     function selectLead(id) {
       selectedId = id;
       renderLeads();
@@ -371,315 +660,407 @@
     }
 
     function renderDetail() {
-      const l = getLead(selectedId);
-      if (!l) { document.getElementById('detailPanel').innerHTML = `<div class="panel empty-detail"><div class="icon">📨</div><p>Select a lead to view details</p></div>`; return; }
+      const panel = document.getElementById('detailPanel');
+      const l = leads.find(x => x.id === selectedId);
+      if (!l) {
+        panel.className = 'empty-detail';
+        panel.innerHTML = `<div class="icon">📨</div><p>Select a lead to view and edit</p>`;
+        return;
+      }
+      panel.className = 'detail-panel';
 
-      document.getElementById('detailPanel').innerHTML = `
-        <!-- Conversation -->
+      const stale = isStale(l);
+      panel.innerHTML = `
+
+        <!-- Header card -->
         <div class="detail-card">
-          <h3>💬 Conversation — ${l.handle}</h3>
-          <div class="conversation-box" id="convBox">
-            ${l.messages.map(m => `
-              <div class="msg ${m.from === 'them' ? 'them' : 'us'}">
-                <div class="who">${m.from === 'them' ? l.handle : '✦ You'}</div>
-                ${escHtml(m.text)}
-              </div>
-            `).join('')}
+          <div class="detail-header">
+            <div>
+              <div class="detail-header handle-big">${escHtml(l.name || l.igHandle)} ${stale ? '<span style="color:#e53e3e;font-size:12px;">⚠️ Stale</span>' : ''}</div>
+              <div class="detail-header sub">${escHtml(l.igHandle)} · ${l.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing'}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span class="score-badge score-${l.score}">${scoreLabel(l.score)}</span>
+              ${l.hubspotContactId ? `<span class="hs-badge">HS</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            ${l.conversationUrl ? `<a href="${escAttr(l.conversationUrl)}" target="_blank" class="btn btn-ghost btn-sm">📱 ManyChat</a>` : ''}
+            ${l.hubspotContactId ? `<a href="https://app.hubspot.com/contacts/${escAttr(l.hubspotContactId)}" target="_blank" class="btn btn-hubspot btn-sm">🟠 HubSpot Contact</a>` : ''}
           </div>
         </div>
 
-        <!-- Contact Info -->
+        <!-- Pipeline control -->
         <div class="detail-card">
-          <h3>👤 Contact Info</h3>
-          <div class="field-row"><label>Name</label><input id="fName" value="${escHtml(l.name)}" placeholder="John Smith" oninput="updateField('name', this.value)" /></div>
-          <div class="field-row"><label>Company</label><input id="fCompany" value="${escHtml(l.company)}" placeholder="ABC Dispensary" oninput="updateField('company', this.value)" /></div>
-          <div class="field-row"><label>Email</label><input id="fEmail" value="${escHtml(l.email)}" placeholder="john@company.com" oninput="updateField('email', this.value)" /></div>
-          <div class="field-row"><label>Phone</label><input id="fPhone" value="${escHtml(l.phone)}" placeholder="(310) 555-0123" oninput="updateField('phone', this.value)" /></div>
-          <div class="field-row"><label>Product Interest</label><input id="fProduct" value="${escHtml(l.product)}" placeholder="e.g. mylar bags, labels, boxes" oninput="updateField('product', this.value)" /></div>
-          <div class="field-row"><label>Notes</label><textarea id="fNotes" oninput="updateField('notes', this.value)" placeholder="Any notes...">${escHtml(l.notes)}</textarea></div>
-        </div>
-
-        <!-- Draft Reply -->
-        <div class="detail-card">
-          <h3>✍️ Draft Reply</h3>
-          <div class="reply-box">
-            <textarea class="reply-textarea" id="replyText" placeholder="Draft reply will appear here...">${escHtml(l.draftReply)}</textarea>
+          <h3>⚡ Pipeline</h3>
+          <div class="field-2col">
+            <div class="field-row">
+              <label>Stage</label>
+              <select onchange="updateField('${l.id}','stage',this.value)">
+                ${STAGES.map(s => `<option value="${s.id}" ${l.stage===s.id?'selected':''}>${s.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-row">
+              <label>Assigned Rep</label>
+              <select onchange="updateField('${l.id}','assignedRep',this.value)">
+                <option value="" ${!l.assignedRep?'selected':''}>Unassigned</option>
+                <option value="gary" ${l.assignedRep==='gary'?'selected':''}>Gary</option>
+                <option value="ernesto" ${l.assignedRep==='ernesto'?'selected':''}>Ernesto</option>
+              </select>
+            </div>
           </div>
-          <div class="reply-actions">
-            <button class="btn btn-ghost btn-sm" onclick="generateDraft('${l.id}')">🤖 Regenerate</button>
-            <button class="btn btn-slack btn-sm" onclick="sendToSlack('${l.id}')">📨 Send to Slack for Approval</button>
+          <div class="field-2col">
+            <div class="field-row">
+              <label>Score</label>
+              <select onchange="updateField('${l.id}','score',this.value)">
+                <option value="hot"  ${l.score==='hot' ?'selected':''}>🔥 Hot</option>
+                <option value="warm" ${l.score==='warm'?'selected':''}>🌡 Warm</option>
+                <option value="cool" ${l.score==='cool'?'selected':''}>❄️ Cool</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <label>Next Action Date</label>
+              <input type="date" value="${escAttr(l.nextActionDate||'')}" onchange="updateField('${l.id}','nextActionDate',this.value)" />
+            </div>
           </div>
-        </div>
-
-        <!-- Status + Actions -->
-        <div class="detail-card">
-          <h3>⚡ Actions</h3>
           <div class="field-row">
-            <label>Status</label>
-            <select onchange="updateStatus('${l.id}', this.value)">
-              <option value="new" ${l.status==='new'?'selected':''}>🔴 New — Needs Reply</option>
-              <option value="replied" ${l.status==='replied'?'selected':''}>⏳ Replied — Awaiting Them</option>
-              <option value="qualified" ${l.status==='qualified'?'selected':''}>🎯 Qualified</option>
-              <option value="in-hubspot" ${l.status==='in-hubspot'?'selected':''}>🟠 In HubSpot</option>
-              <option value="won" ${l.status==='won'?'selected':''}>✅ Won</option>
-              <option value="cold" ${l.status==='cold'?'selected':''}>🧊 Cold</option>
-              <option value="lost" ${l.status==='lost'?'selected':''}>❌ Lost</option>
-            </select>
+            <label>Next Action / Rep Notes</label>
+            <textarea rows="2" oninput="updateField('${l.id}','nextAction',this.value)">${escHtml(l.nextAction)}</textarea>
+          </div>
+          <div class="field-row">
+            <label>Internal Rep Notes</label>
+            <textarea rows="3" oninput="updateField('${l.id}','repNotes',this.value)">${escHtml(l.repNotes)}</textarea>
           </div>
           <div class="action-row">
+            <button class="btn btn-ghost btn-sm" onclick="markContacted('${l.id}')">✅ Mark Contacted Now</button>
             <button class="btn btn-hubspot btn-sm" onclick="pushToHubspot('${l.id}')">🟠 Push to HubSpot</button>
-            <button class="btn btn-ghost btn-sm" onclick="markCold('${l.id}')">🧊 Mark Cold</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')">🗑 Delete</button>
           </div>
-          <div style="margin-top:10px;font-size:11px;color:#aaa;">Created: ${new Date(l.createdAt).toLocaleString()} · Updated: ${new Date(l.updatedAt).toLocaleString()}</div>
+        </div>
+
+        <!-- Contact info -->
+        <div class="detail-card">
+          <h3>👤 Contact Info</h3>
+          <div class="field-2col">
+            <div class="field-row"><label>Name</label><input value="${escAttr(l.name)}" oninput="updateField('${l.id}','name',this.value)" placeholder="Full name" /></div>
+            <div class="field-row"><label>Company</label><input value="${escAttr(l.company)}" oninput="updateField('${l.id}','company',this.value)" placeholder="Company" /></div>
+          </div>
+          <div class="field-2col">
+            <div class="field-row"><label>Phone</label><input value="${escAttr(l.phone)}" oninput="updateField('${l.id}','phone',this.value)" placeholder="(310) 555-0123" /></div>
+            <div class="field-row"><label>Email</label><input value="${escAttr(l.email)}" oninput="updateField('${l.id}','email',this.value)" placeholder="name@company.com" /></div>
+          </div>
+        </div>
+
+        <!-- Lead details -->
+        <div class="detail-card">
+          <h3>📦 Lead Details</h3>
+          <div class="field-row"><label>Product Interest</label><input value="${escAttr(l.productType)}" oninput="updateField('${l.id}','productType',this.value)" placeholder="e.g. mylar bags, labels, boxes" /></div>
+          <div class="field-2col">
+            <div class="field-row"><label>Quantity</label><input value="${escAttr(l.quantity)}" oninput="updateField('${l.id}','quantity',this.value)" placeholder="e.g. 500 units" /></div>
+            <div class="field-row"><label>Size / Specs</label><input value="${escAttr(l.specs)}" oninput="updateField('${l.id}','specs',this.value)" placeholder="e.g. 4x6 labels" /></div>
+          </div>
+          <div class="field-2col">
+            <div class="field-row"><label>Urgency / Timeline</label><input value="${escAttr(l.urgency)}" oninput="updateField('${l.id}','urgency',this.value)" placeholder="e.g. 2 weeks, ASAP" /></div>
+            <div class="field-row"><label>Artwork Status</label>
+              <select onchange="updateField('${l.id}','artworkStatus',this.value)">
+                <option value="" ${!l.artworkStatus?'selected':''}>Unknown</option>
+                <option value="has artwork" ${'has artwork'===l.artworkStatus?'selected':''}>Has artwork</option>
+                <option value="needs design" ${'needs design'===l.artworkStatus?'selected':''}>Needs design</option>
+                <option value="uploading" ${'uploading'===l.artworkStatus?'selected':''}>Uploading soon</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row"><label>Brief / Summary</label><textarea rows="2" oninput="updateField('${l.id}','brief',this.value)">${escHtml(l.brief)}</textarea></div>
+        </div>
+
+        <!-- Conversation -->
+        ${l.messages.length ? `
+        <div class="detail-card">
+          <h3>💬 Original Message</h3>
+          <div class="conv-box">
+            ${l.messages.map(m => `
+              <div class="conv-msg ${m.from === 'us' ? 'us' : ''}">
+                <div class="who">${m.from === 'us' ? '✦ You' : escHtml(l.igHandle)}</div>
+                ${escHtml(m.text)}
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <!-- External links -->
+        <div class="detail-card">
+          <h3>🔗 External Links</h3>
+          <div class="field-row"><label>ManyChat Conversation URL</label><input value="${escAttr(l.conversationUrl)}" oninput="updateField('${l.id}','conversationUrl',this.value)" placeholder="https://..." /></div>
+          <div class="field-row"><label>HubSpot Contact ID</label><input value="${escAttr(l.hubspotContactId)}" oninput="updateField('${l.id}','hubspotContactId',this.value)" placeholder="(auto-filled on push)" /></div>
+          <div class="action-row">
+            <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')">🗑 Delete Lead</button>
+          </div>
+          <div class="meta-row">
+            Created: ${new Date(l.createdAt).toLocaleString()}<br>
+            Updated: ${new Date(l.updatedAt).toLocaleString()}<br>
+            Last contact: ${l.lastContactAt ? new Date(l.lastContactAt).toLocaleString() : '—'}<br>
+            Source: ${l.source} · Account: ${l.account}
+          </div>
         </div>
       `;
-
-      // Sync reply text changes
-      document.getElementById('replyText').addEventListener('input', function() {
-        updateField('draftReply', this.value);
-      });
     }
 
-    // ── Field Updates ──
-    function updateField(field, value) {
-      const l = getLead(selectedId);
+    // ── Field updates ─────────────────────────────────────────────
+    async function updateField(id, field, value) {
+      const l = leads.find(x => x.id === id);
       if (!l) return;
       l[field] = value;
-      l.updatedAt = Date.now();
-      saveLeads();
-      // Auto-update stats if phone was just added
-      if (field === 'phone' && value) { updateStats(); renderLeads(); }
-    }
-
-    function updateStatus(id, status) {
-      const l = getLead(id);
-      if (!l) return;
-      l.status = status;
-      l.updatedAt = Date.now();
-      saveLeads();
+      await saveLead(l);
       renderLeads();
       updateStats();
-      toast(`Status → ${statusLabel(status)}`);
+      // Don't re-render detail panel on every keystroke — only for select/stage changes
+      if (['stage','assignedRep','score'].includes(field)) renderDetail();
     }
 
-    function markCold(id) {
-      updateStatus(id, 'cold');
+    async function markContacted(id) {
+      const l = leads.find(x => x.id === id);
+      if (!l) return;
+      l.lastContactAt = Date.now();
+      await saveLead(l);
+      renderLeads();
+      updateStats();
+      renderDetail();
+      toast('✅ Marked as contacted');
     }
 
-    function deleteLead(id) {
-      if (!confirm('Delete this lead?')) return;
+    async function deleteLead(id) {
+      if (!confirm('Delete this lead? This cannot be undone.')) return;
       leads = leads.filter(l => l.id !== id);
+      saveLocal();
+      if (_usingSupabase && _supaClient) {
+        await _supaClient.from(SUPA_TABLE).delete().eq('id', id);
+      }
       selectedId = null;
-      saveLeads();
       renderLeads();
       updateStats();
       renderDetail();
       toast('Lead deleted');
     }
 
-    // ── Draft Reply Generation ──
-    async function generateDraft(id) {
-      const l = getLead(id);
-      if (!l) return;
+    // ── Add lead ──────────────────────────────────────────────────
+    async function addLead() {
+      const handle = document.getElementById('nHandle').value.trim();
+      const message = document.getElementById('nMessage').value.trim();
+      if (!handle) { toast('IG Handle is required'); return; }
+      if (!message) { toast('Message / brief is required'); return; }
 
-      // Generate a smart draft based on their message + Bazaar context
-      const msg = l.messages[0]?.text || '';
-      const draft = buildDraftReply(l, msg);
-      l.draftReply = draft;
-      l.updatedAt = Date.now();
-      saveLeads();
+      const lead = newLocalLead({
+        igHandle:        handle.startsWith('@') ? handle : '@' + handle,
+        name:            document.getElementById('nName').value.trim(),
+        company:         document.getElementById('nCompany').value.trim(),
+        phone:           document.getElementById('nPhone').value.trim(),
+        email:           document.getElementById('nEmail').value.trim(),
+        productType:     document.getElementById('nProduct').value.trim(),
+        quantity:        document.getElementById('nQty').value.trim(),
+        urgency:         document.getElementById('nUrgency').value.trim(),
+        artworkStatus:   document.getElementById('nArtwork').value,
+        score:           document.getElementById('nScore').value,
+        assignedRep:     document.getElementById('nRep').value,
+        account:         document.getElementById('nAccount').value,
+        source:          document.getElementById('nSource').value,
+        conversationUrl: document.getElementById('nConvUrl').value.trim(),
+        originalMessage: message,
+        brief:           message,
+      });
 
-      if (selectedId === id) {
-        const ta = document.getElementById('replyText');
-        if (ta) ta.value = draft;
-      }
-      toast('Draft reply generated');
+      await saveLead(lead);
+      closeAddModal();
+      renderLeads();
+      updateStats();
+      selectLead(lead.id);
+      toast('Lead added' + (lead.assignedRep ? ` — assigned to ${REPS[lead.assignedRep]}` : ''));
     }
 
-    function buildDraftReply(lead, incomingMsg) {
-      const msg = incomingMsg.toLowerCase();
-      const acct = lead.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing';
-
-      // Detect product type from message
-      let productHint = '';
-      if (msg.includes('mylar') || msg.includes('bag') || msg.includes('pouch')) productHint = 'mylar bags / pouches';
-      else if (msg.includes('label') || msg.includes('sticker')) productHint = 'custom labels / stickers';
-      else if (msg.includes('box') || msg.includes('packaging')) productHint = 'custom packaging / boxes';
-      else if (msg.includes('card')) productHint = 'custom cards';
-      else if (msg.includes('price') || msg.includes('quote') || msg.includes('cost')) productHint = 'custom printing';
-
-      const name = lead.name ? `, ${lead.name.split(' ')[0]}` : '';
-
-      if (productHint) {
-        return `Hi${name}! Thanks for reaching out to ${acct} 🙌
-
-We'd love to help with your ${productHint}! To put together an accurate quote, can you share a few details?
-
-1. What quantity are you looking for?
-2. Any specific size or dimensions in mind?
-3. Do you have artwork ready, or do you need design help?
-4. What's your target timeline?
-
-Also, what's the best way to reach you — email or phone? We'll get you a quote fast!`;
-      }
-
-      return `Hi${name}! Thanks for reaching out to ${acct} 🙌
-
-We'd love to help! Could you share a bit more about what you're looking for? We specialize in custom packaging, labels, mylar bags, boxes, and more.
-
-What's your name and company? And what's the best way to follow up — email or phone? We'll get back to you right away!`;
-    }
-
-    // ── Slack Approval ──
-    async function sendToSlack(id) {
-      const l = getLead(id);
-      if (!l) return;
-
-      const replyText = document.getElementById('replyText')?.value || l.draftReply;
-      updateField('draftReply', replyText);
-
-      if (!CONFIG.slackWebhook) {
-        toast('⚠️ Slack webhook not configured — click configure integrations');
-        return;
-      }
-
-      const payload = {
-        text: `📸 *New Instagram Lead — Approval Needed*`,
-        blocks: [
-          { type: 'header', text: { type: 'plain_text', text: '📸 Instagram Lead — Reply Approval' } },
-          { type: 'section', fields: [
-            { type: 'mrkdwn', text: `*Handle:*\n${l.handle}` },
-            { type: 'mrkdwn', text: `*Account:*\n${l.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing'}` },
-            { type: 'mrkdwn', text: `*Name:*\n${l.name || '_unknown_'}` },
-            { type: 'mrkdwn', text: `*Company:*\n${l.company || '_unknown_'}` },
-          ]},
-          { type: 'section', text: { type: 'mrkdwn', text: `*Their Message:*\n> ${l.messages[0]?.text || ''}` } },
-          { type: 'divider' },
-          { type: 'section', text: { type: 'mrkdwn', text: `*📝 Draft Reply:*\n\`\`\`${replyText}\`\`\`` } },
-          { type: 'section', text: { type: 'mrkdwn', text: `*→ Review in Pulse:* http://localhost:8877/instagram-leads.html` } },
-        ]
-      };
-
-      try {
-        // Route through local proxy to avoid CORS
-        payload._webhook = CONFIG.slackWebhook;
-        const r = await fetch('http://localhost:8879/proxy/slack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (r.ok) {
-          updateStatus(id, 'replied');
-          toast('✅ Sent to Slack for approval!');
-        } else {
-          toast('⚠️ Slack send failed — check proxy is running');
-        }
-      } catch (e) {
-        toast('⚠️ Proxy not running — start it with: node proxy.js');
-        console.warn('Proxy error:', e);
-      }
-    }
-
-    // ── HubSpot Push ──
+    // ── HubSpot push ──────────────────────────────────────────────
     async function pushToHubspot(id) {
-      const l = getLead(id);
+      const l = leads.find(x => x.id === id);
       if (!l) return;
 
-      if (!CONFIG.hubspotToken) {
-        toast('⚠️ HubSpot token not configured — click configure integrations');
+      if (!CFG.hubspotToken) {
+        toast('⚠️ HubSpot token not configured — click Configure →');
         return;
       }
-
       if (!l.email && !l.phone && !l.name) {
-        toast('⚠️ Add at least a name, email, or phone before pushing to HubSpot');
+        toast('⚠️ Add name, email, or phone before pushing to HubSpot');
         return;
       }
 
       toast('Pushing to HubSpot...');
 
+      const noteBody = [
+        `Source: Instagram DM (${l.account === 'pixelpress' ? 'PixelPress Print' : 'Bazaar Printing'})`,
+        `IG Handle: ${l.igHandle}`,
+        `Product: ${l.productType || '—'}`,
+        `Quantity: ${l.quantity || '—'}`,
+        `Specs: ${l.specs || '—'}`,
+        `Urgency: ${l.urgency || '—'}`,
+        `Artwork: ${l.artworkStatus || '—'}`,
+        `Stage: ${STAGE_MAP[l.stage]?.label || l.stage}`,
+        `Rep: ${REPS[l.assignedRep] || '—'}`,
+        `Score: ${scoreLabel(l.score)}`,
+        `Brief: ${l.brief || l.originalMessage || '—'}`,
+        `Rep Notes: ${l.repNotes || '—'}`,
+        l.conversationUrl ? `Conversation: ${l.conversationUrl}` : '',
+      ].filter(Boolean).join('\n');
+
       try {
-        // Route through local proxy to avoid CORS
-        const res = await fetch('http://localhost:8879/proxy/hubspot/contacts', {
+        const res = await fetch(`${CFG.proxyBase}/proxy/hubspot/contacts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ _token: CONFIG.hubspotToken, properties: {
-            firstname: l.name.split(' ')[0] || '',
-            lastname: l.name.split(' ').slice(1).join(' ') || '',
-            company: l.company,
-            email: l.email,
-            phone: l.phone,
-            hs_lead_status: 'NEW',
-            lead_source: 'Instagram DM',
-            message: `Instagram: ${l.handle}\n\nProduct Interest: ${l.product}\n\nOriginal Message: ${l.messages[0]?.text || ''}`,
-          }})
+          body: JSON.stringify({
+            _token: CFG.hubspotToken,
+            properties: {
+              firstname:       l.name.split(' ')[0] || '',
+              lastname:        l.name.split(' ').slice(1).join(' ') || '',
+              company:         l.company,
+              email:           l.email,
+              phone:           l.phone,
+              hs_lead_status:  stageToHubspotStatus(l.stage),
+              lead_source:     'Instagram DM',
+              message:         noteBody,
+            }
+          })
         });
-
         if (res.ok) {
           const data = await res.json();
-          l.hubspotId = data.id;
-          l.status = 'in-hubspot';
-          l.updatedAt = Date.now();
-          saveLeads();
+          l.hubspotContactId = data.id || '';
+          await saveLead(l);
           renderLeads();
-          updateStats();
           renderDetail();
-          toast('✅ Contact created in HubSpot!');
+          updateStats();
+          toast('✅ Contact pushed to HubSpot!');
         } else {
-          const err = await res.json();
-          toast('HubSpot error: ' + (err.message || 'unknown error'));
+          const err = await res.json().catch(() => ({}));
+          toast('HubSpot error: ' + (err.message || res.status));
         }
-      } catch (e) {
-        toast('⚠️ HubSpot push failed — may need backend proxy for CORS');
-        console.error('HubSpot error:', e);
+      } catch(e) {
+        toast('⚠️ HubSpot push failed — is the local proxy running?');
+        console.error('[IG Leads] HubSpot error', e);
       }
     }
 
-    // ── Modal ──
+    function stageToHubspotStatus(stage) {
+      const map = {
+        new:         'NEW',
+        reached_out: 'OPEN',
+        quoting:     'IN_PROGRESS',
+        sampling:    'IN_PROGRESS',
+        follow_up:   'OPEN',
+        won:         'CONNECTED',
+        lost:        'UNQUALIFIED',
+      };
+      return map[stage] || 'NEW';
+    }
+
+    // ── Modal ─────────────────────────────────────────────────────
     function openAddModal() {
-      document.getElementById('newHandle').value = '';
-      document.getElementById('newMessage').value = '';
+      ['nHandle','nName','nCompany','nPhone','nEmail','nProduct','nQty','nUrgency','nConvUrl','nMessage'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('nScore').value   = 'warm';
+      document.getElementById('nRep').value     = '';
+      document.getElementById('nArtwork').value = '';
+      document.getElementById('nSource').value  = 'manual';
       document.getElementById('addModal').classList.add('open');
-      setTimeout(() => document.getElementById('newHandle').focus(), 100);
+      setTimeout(() => document.getElementById('nHandle').focus(), 80);
     }
     function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
-    document.getElementById('addModal').addEventListener('click', e => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
+    document.getElementById('addModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('addModal')) closeAddModal();
+    });
 
-    // ── Helpers ──
+    // ── Helpers ───────────────────────────────────────────────────
     function toast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
+      clearTimeout(t._tid);
+      t._tid = setTimeout(() => t.classList.remove('show'), 3200);
     }
 
-    function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(s) { return escHtml(s); }
 
     function timeAgo(ts) {
-      const diff = Date.now() - ts;
-      if (diff < 60000) return 'just now';
-      if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
-      if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
-      return Math.floor(diff/86400000) + 'd ago';
+      const d = Date.now() - ts;
+      if (d < 60000)    return 'just now';
+      if (d < 3600000)  return Math.floor(d/60000) + 'm';
+      if (d < 86400000) return Math.floor(d/3600000) + 'h';
+      return Math.floor(d/86400000) + 'd';
     }
 
-    function statusLabel(s) {
-      return { new: 'New', replied: 'Replied', qualified: 'Qualified', 'in-hubspot': 'In HubSpot', won: 'Won', cold: 'Cold', lost: 'Lost' }[s] || s;
+    function scoreLabel(s) {
+      return { hot: '🔥 Hot', warm: '🌡 Warm', cool: '❄️ Cool' }[s] || s;
     }
 
-    // ── Auto-cold detector (runs every 5 min) ──
-    function checkColdLeads() {
-      const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
-      leads.forEach(l => {
-        if (l.status === 'replied' && (Date.now() - l.updatedAt) > THREE_DAYS) {
-          l.status = 'cold';
-          l.updatedAt = Date.now();
-        }
-      });
-      saveLeads();
+    // ── Auto-stale scanner (every 5 min) ─────────────────────────
+    function runStaleCheck() { updateStats(); renderLeads(); }
+
+    // ── Migrate v1 localStorage data ─────────────────────────────
+    function migrateV1() {
+      const old = localStorage.getItem('pulse_instagram_leads');
+      if (!old) return;
+      try {
+        const oldLeads = JSON.parse(old);
+        if (!Array.isArray(oldLeads) || !oldLeads.length) return;
+        const migrated = oldLeads.map(o => ({
+          id:              o.id || ('ig_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+          igHandle:        o.handle || '',
+          name:            o.name || '',
+          company:         o.company || '',
+          phone:           o.phone || '',
+          email:           o.email || '',
+          productType:     o.product || '',
+          quantity:        '',
+          specs:           '',
+          urgency:         '',
+          artworkStatus:   '',
+          brief:           o.notes || (o.messages?.[0]?.text) || '',
+          score:           'warm',
+          stage:           legacyStatusToStage(o.status),
+          assignedRep:     '',
+          repNotes:        o.notes || '',
+          nextAction:      '',
+          nextActionDate:  '',
+          conversationUrl: '',
+          hubspotContactId:o.hubspotId || '',
+          hubspotDealId:   '',
+          source:          'manual',
+          account:         o.account || 'bazaar',
+          originalMessage: o.messages?.[0]?.text || '',
+          messages:        o.messages || [],
+          createdAt:       o.createdAt || Date.now(),
+          updatedAt:       o.updatedAt || Date.now(),
+          lastContactAt:   null,
+        }));
+        // Merge — don't overwrite existing v2 leads
+        const existingIds = new Set(leads.map(l => l.id));
+        migrated.forEach(m => { if (!existingIds.has(m.id)) leads.push(m); });
+        localStorage.removeItem('pulse_instagram_leads');
+        saveLocal();
+        toast(`Migrated ${migrated.length} leads from previous version`);
+      } catch(e) { console.warn('[IG Leads] v1 migration failed', e); }
+    }
+
+    function legacyStatusToStage(s) {
+      const map = { new: 'new', replied: 'reached_out', qualified: 'quoting', 'in-hubspot': 'reached_out', won: 'won', cold: 'lost', lost: 'lost' };
+      return map[s] || 'new';
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    (async () => {
+      await _initSupabase();
+      await loadLeads();
+      migrateV1();
       renderLeads();
       updateStats();
-    }
-
-    // ── Init ──
-    renderLeads();
-    updateStats();
-    setInterval(checkColdLeads, 5 * 60 * 1000);
+      setInterval(runStaleCheck, 5 * 60 * 1000);
+    })();
   </script>
 </body>
 </html>
