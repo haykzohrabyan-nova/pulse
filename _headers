@@ -1,0 +1,41 @@
+# Cloudflare Pages — HTTP Headers
+# ─────────────────────────────────
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+
+# ── HTML pages: always revalidate ──────────────────────────
+/*.html
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# ── JS files with cache-busting version query: long-term cache ──
+# Files are served with ?v=<git-sha> query strings which change on deploy.
+# Safe to cache aggressively; browsers revalidate when query string changes.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# ── Generated config (no-cache: must reflect latest deploy) ──
+/pulse-config.local.js
+  Cache-Control: no-store
+
+# ── Static assets: long-term cache ──────────────────────────
+/*.png
+  Cache-Control: public, max-age=31536000, immutable
+/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/*.ico
+  Cache-Control: public, max-age=86400
+
+# ── Security headers on all routes ──────────────────────────
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

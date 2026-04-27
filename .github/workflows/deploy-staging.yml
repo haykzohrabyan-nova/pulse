@@ -1,0 +1,58 @@
+name: Deploy — pulse-staging
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deploy"
+        required: false
+        default: "Manual staging deploy"
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to pulse-staging.bazaar-admin.com
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://pulse-staging.bazaar-admin.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build — inject staging config
+        env:
+          PULSE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          PULSE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          PULSE_STORAGE_BACKEND: supabase
+          PULSE_ENV: staging
+        run: bash deploy/build.sh
+
+      - name: Deploy to Cloudflare Pages (staging)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: pulse-staging
+          directory: .
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: staging
+
+      - name: Run smoke tests against staging
+        env:
+          SMOKE_BASE_URL: https://pulse-staging.bazaar-admin.com
+        run: bash deploy/smoke-test.sh
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Staging deploy complete: https://pulse-staging.bazaar-admin.com"
+          echo "Build: $(git rev-parse --short HEAD)"
+          echo "Trigger: ${{ github.event_name }}"
