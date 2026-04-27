@@ -14,6 +14,15 @@ if (typeof document !== 'undefined' && !document.querySelector('script[data-puls
   document.head.appendChild(localConfigScript);
 }
 
+// Load pulse-config.local.js (gitignored) if present — sets PULSE_SUPABASE_URL,
+// PULSE_SUPABASE_ANON_KEY, PULSE_STORAGE_BACKEND for supabase-client.js
+if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-config]')) {
+  const pulseConfigScript = document.createElement('script');
+  pulseConfigScript.src = 'pulse-config.local.js';
+  pulseConfigScript.dataset.pulseConfig = 'true';
+  document.head.appendChild(pulseConfigScript);
+}
+
 // ── Constants ──────────────────────────────────────────────
 
 const FACILITIES = {

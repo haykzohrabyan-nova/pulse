@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrate to Supabase — Pulse</title>
+  <script src="shared.js?v=20260427-PRI239"></script>
+  <script src="supabase-client.js?v=20260427-PRI239"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; padding: 40px 24px; }
+    .container { max-width: 740px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 32px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+    .row { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+    label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="url"], input[type="password"] {
+      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none;
+    }
+    input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-danger  { background: #dc2626; color: #fff; }
+    .btn-gray    { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .status-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-size: 13px; line-height: 1.6; min-height: 80px; white-space: pre-wrap; font-family: 'Courier New', monospace; }
+    .progress-bar-wrap { background: #e2e8f0; border-radius: 8px; overflow: hidden; height: 12px; margin-top: 8px; }
+    .progress-bar { background: #2563eb; height: 100%; border-radius: 8px; transition: width 0.3s; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+    .badge-green  { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: center; }
+    .stat-num { font-size: 28px; font-weight: 800; color: #1e293b; }
+    .stat-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+    .warn { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #92400e; margin-bottom: 16px; }
+    .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #1d4ed8; margin-bottom: 16px; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Pulse → Supabase Migration</h1>
+  <p class="subtitle">One-time tool to copy existing IndexedDB job tickets to your Supabase project. Admin access required.</p>
+
+  <!-- Step 1: Supabase Config -->
+  <div class="card">
+    <h2>Step 1 — Supabase Connection</h2>
+    <div class="info">
+      Run this tool <strong>before</strong> switching <code>PULSE_STORAGE_BACKEND</code> to <code>'supabase'</code>
+      in your <code>pulse-config.local.js</code>. This ensures IndexedDB is still readable as the source.
+    </div>
+    <div style="margin-bottom:12px;">
+      <label>Supabase Project URL</label>
+      <input type="url" id="supaUrl" placeholder="https://xxxxxxxxxxx.supabase.co"
+             value="" oninput="updateConfig()">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label>Supabase Anon Key (public, safe to use here)</label>
+      <input type="password" id="supaKey" placeholder="eyJhbGciOiJIUzI1..." oninput="updateConfig()">
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Use the <strong>anon</strong> key — never the service role key.</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label>Admin Email</label>
+      <input type="text" id="adminEmail" placeholder="you@bazaarprint.com">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label>Admin Password</label>
+      <input type="password" id="adminPassword" placeholder="Your Supabase auth password">
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" id="connectBtn" onclick="connectToSupabase()">Connect &amp; Verify</button>
+      <span id="connectStatus" style="font-size:13px;color:#6b7280;"></span>
+    </div>
+  </div>
+
+  <!-- Step 2: Source data inspection -->
+  <div class="card">
+    <h2>Step 2 — Inspect IndexedDB Source</h2>
+    <button class="btn btn-gray" id="inspectBtn" onclick="inspectIndexedDB()" disabled>Inspect Local Data</button>
+    <div id="inspectResult" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Step 3: Run migration -->
+  <div class="card">
+    <h2>Step 3 — Migrate to Supabase</h2>
+    <div class="warn">
+      ⚠️ This will insert all local job tickets into Supabase. Tickets already in Supabase (by <code>order_id</code>) are <strong>skipped</strong>, not overwritten.
+      Run this once on the primary device. Do not run on multiple devices simultaneously.
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="dryRunCheck" checked> <span style="font-size:13px;font-weight:600;">Dry run (preview only, no data written)</span>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" id="migrateBtn" onclick="runMigration()" disabled>Run Migration</button>
+      <span id="migrateStatus" style="font-size:13px;color:#6b7280;"></span>
+    </div>
+    <div id="progressWrap" style="display:none;margin-top:12px;">
+      <div style="font-size:12px;color:#64748b;margin-bottom:4px;" id="progressLabel">Preparing...</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    </div>
+    <div id="migrateResult" style="margin-top:14px;display:none;">
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="statInserted">—</div><div class="stat-label">Inserted</div></div>
+        <div class="stat"><div class="stat-num" id="statSkipped">—</div><div class="stat-label">Skipped</div></div>
+        <div class="stat"><div class="stat-num" id="statErrors">—</div><div class="stat-label">Errors</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Log -->
+  <div class="card">
+    <h2>Log</h2>
+    <div class="status-box" id="logBox">Ready. Complete Steps 1–3 above to start migration.</div>
+  </div>
+
+</div>
+
+<script>
+  let _supa = null;
+  let _connected = false;
+  let _idbOrders = [];
+
+  function _log(msg) {
+    const box = document.getElementById('logBox');
+    const ts  = new Date().toLocaleTimeString();
+    box.textContent += `\n[${ts}] ${msg}`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function updateConfig() {
+    // Expose config for supabase-client if it loaded without it
+    window.PULSE_SUPABASE_URL     = document.getElementById('supaUrl').value.trim();
+    window.PULSE_SUPABASE_ANON_KEY = document.getElementById('supaKey').value.trim();
+  }
+
+  // ── Step 1: Connect ─────────────────────────────────────────
+  async function connectToSupabase() {
+    const url   = document.getElementById('supaUrl').value.trim();
+    const key   = document.getElementById('supaKey').value.trim();
+    const email = document.getElementById('adminEmail').value.trim();
+    const pass  = document.getElementById('adminPassword').value.trim();
+
+    if (!url || !key) { _log('ERROR: Supabase URL and anon key are required.'); return; }
+
+    const btn = document.getElementById('connectBtn');
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+    document.getElementById('connectStatus').textContent = '';
+
+    try {
+      // Load Supabase JS if not already present
+      if (!window.supabase?.createClient) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+
+      _supa = window.supabase.createClient(url, key);
+
+      // Authenticate as admin if credentials provided
+      if (email && pass) {
+        const { error: authErr } = await _supa.auth.signInWithPassword({ email, password: pass });
+        if (authErr) throw authErr;
+        _log(`Authenticated as ${email}`);
+      } else {
+        _log('WARNING: No credentials provided — using anon session. RLS may block writes.');
+      }
+
+      // Test: count existing orders
+      const { count, error } = await _supa.from('orders').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+
+      _connected = true;
+      _log(`Connected! Supabase orders table has ${count ?? 0} existing records.`);
+      document.getElementById('connectStatus').textContent = `✅ Connected (${count ?? 0} orders in Supabase)`;
+      document.getElementById('connectStatus').style.color = '#16a34a';
+      document.getElementById('inspectBtn').disabled  = false;
+      document.getElementById('migrateBtn').disabled = false;
+      btn.textContent = '✅ Connected';
+    } catch (e) {
+      _log(`ERROR connecting: ${e.message}`);
+      document.getElementById('connectStatus').textContent = '❌ ' + e.message;
+      document.getElementById('connectStatus').style.color = '#dc2626';
+      btn.disabled = false;
+      btn.textContent = 'Connect & Verify';
+    }
+  }
+
+  // ── Step 2: Inspect IndexedDB ──────────────────────────────
+  async function inspectIndexedDB() {
+    document.getElementById('inspectResult').innerHTML = '<span style="color:#64748b;font-size:13px;">Reading IndexedDB...</span>';
+    try {
+      _idbOrders = await _readAllIDB('orders');
+      const activities = await _readAllIDB('activity_log');
+      const personnel  = await _readAllIDB('personnel');
+
+      const html = `
+        <div class="stats" style="grid-template-columns:repeat(3,1fr);">
+          <div class="stat"><div class="stat-num">${_idbOrders.length}</div><div class="stat-label">Job Tickets</div></div>
+          <div class="stat"><div class="stat-num">${activities.length}</div><div class="stat-label">Activity Entries</div></div>
+          <div class="stat"><div class="stat-num">${personnel.length}</div><div class="stat-label">Personnel</div></div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:#6b7280;">
+          Order IDs: ${_idbOrders.slice(0, 20).map(o => o.orderId).join(', ')}${_idbOrders.length > 20 ? ' ...' : ''}
+        </div>`;
+      document.getElementById('inspectResult').innerHTML = html;
+      _log(`IndexedDB: ${_idbOrders.length} orders, ${activities.length} activity entries, ${personnel.length} personnel`);
+    } catch (e) {
+      document.getElementById('inspectResult').innerHTML = `<span style="color:#dc2626;font-size:13px;">Error: ${e.message}</span>`;
+      _log(`ERROR reading IndexedDB: ${e.message}`);
+    }
+  }
+
+  function _readAllIDB(storeName) {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('BazaarPrintDB');
+      req.onsuccess = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(storeName)) { resolve([]); return; }
+        const tx  = db.transaction(storeName, 'readonly');
+        const all = tx.objectStore(storeName).getAll();
+        all.onsuccess = () => resolve(all.result);
+        all.onerror   = () => reject(all.error);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // ── Step 3: Run Migration ──────────────────────────────────
+  async function runMigration() {
+    if (!_connected || !_supa) { _log('ERROR: Connect to Supabase first (Step 1).'); return; }
+    if (_idbOrders.length === 0) {
+      _log('No IndexedDB orders loaded — running inspect first...');
+      await inspectIndexedDB();
+    }
+
+    const isDryRun = document.getElementById('dryRunCheck').checked;
+    const btn = document.getElementById('migrateBtn');
+    btn.disabled = true;
+
+    document.getElementById('progressWrap').style.display = '';
+    document.getElementById('migrateResult').style.display = 'none';
+
+    _log(`Starting migration — ${isDryRun ? 'DRY RUN (no writes)' : 'LIVE MODE'}`);
+    _log(`Source: ${_idbOrders.length} orders from IndexedDB`);
+
+    let inserted = 0, skipped = 0, errors = [];
+
+    // Fetch existing Supabase order IDs
+    const { data: existing, error: exErr } = await _supa.from('orders').select('order_id');
+    if (exErr) { _log('ERROR fetching existing Supabase orders: ' + exErr.message); btn.disabled = false; return; }
+    const existingIds = new Set((existing || []).map(r => r.order_id));
+    _log(`Supabase already has: ${existingIds.size} orders`);
+
+    for (let i = 0; i < _idbOrders.length; i++) {
+      const order = _idbOrders[i];
+      const pct = Math.round(((i + 1) / _idbOrders.length) * 100);
+      document.getElementById('progressBar').style.width  = pct + '%';
+      document.getElementById('progressLabel').textContent = `${i + 1}/${_idbOrders.length} — #${order.orderId} — ${order.customerName || order.customer || ''}`;
+      document.getElementById('migrateStatus').textContent = `${pct}%`;
+
+      if (existingIds.has(String(order.orderId))) {
+        skipped++;
+        continue;
+      }
+
+      if (!isDryRun) {
+        try {
+          const row = _orderToRow(order);
+          const { data: inserted_row, error: insErr } = await _supa
+            .from('orders')
+            .insert(row)
+            .select('id')
+            .single();
+
+          if (insErr) throw insErr;
+
+          // Insert workflow steps
+          if (Array.isArray(order.workflowSteps) && order.workflowSteps.length > 0) {
+            const steps = order.workflowSteps.map((s, idx) => ({
+              order_id:     inserted_row.id,
+              step_index:   s.stepIndex ?? idx,
+              machine:      s.machine,
+              operation:    s.operation || null,
+              status:       s.status || 'pending',
+              operator_name: s.assignedTo || null,
+              started_at:   s.startedAt || null,
+              completed_at: s.completedAt || null,
+              notes:        s.notes || null,
+            }));
+            await _supa.from('order_workflow_steps').insert(steps);
+          }
+
+          // Insert activity log entries
+          const acts = await _readActivityForOrder(order.orderId);
+          if (acts.length > 0) {
+            const actRows = acts.map(a => ({
+              order_id:   inserted_row.id,
+              action:     a.type || a.action || 'note',
+              details:    a.message ? { message: a.message } : (a.details || null),
+              actor_name: a.by || a.actorName || null,
+            }));
+            await _supa.from('activity_log').insert(actRows);
+          }
+
+          inserted++;
+        } catch (e) {
+          errors.push({ orderId: order.orderId, error: e.message });
+          _log(`ERROR #${order.orderId}: ${e.message}`);
+        }
+      } else {
+        // Dry run — just count
+        inserted++;
+      }
+
+      // Yield to keep UI responsive
+      if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    // Show results
+    document.getElementById('migrateResult').style.display = '';
+    document.getElementById('statInserted').textContent = inserted;
+    document.getElementById('statSkipped').textContent  = skipped;
+    document.getElementById('statErrors').textContent   = errors.length;
+
+    _log(`\n── Migration ${isDryRun ? 'preview' : 'complete'} ──`);
+    _log(`Inserted: ${inserted}  Skipped: ${skipped}  Errors: ${errors.length}`);
+    if (errors.length > 0) {
+      _log('Errors:');
+      errors.forEach(e => _log(`  #${e.orderId}: ${e.error}`));
+    }
+    if (isDryRun) {
+      _log(`\nDRY RUN complete. Uncheck "Dry run" and click Run Migration to write data.`);
+    } else {
+      _log(`\nMigration complete!`);
+      _log(`Next: update pulse-config.local.js to set PULSE_STORAGE_BACKEND = 'supabase'`);
+    }
+
+    document.getElementById('progressLabel').textContent = isDryRun ? 'Dry run complete' : 'Migration complete';
+    btn.disabled   = false;
+    btn.textContent = 'Run Migration';
+    document.getElementById('migrateStatus').textContent = isDryRun ? 'Preview done' : '✅ Done';
+  }
+
+  function _readActivityForOrder(orderId) {
+    return new Promise(resolve => {
+      try {
+        const req = indexedDB.open('BazaarPrintDB');
+        req.onsuccess = e => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('activity_log')) { resolve([]); return; }
+          const tx  = db.transaction('activity_log', 'readonly');
+          const idx = tx.objectStore('activity_log').index('orderId');
+          const all = idx.getAll(orderId);
+          all.onsuccess = () => resolve(all.result);
+          all.onerror   = () => resolve([]);
+        };
+        req.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+  }
+
+  // ── Local order → Supabase row mapping (mirrors supabase-client.js) ─
+  function _orderToRow(order) {
+    const specs = {
+      jobDescription:           order.jobDescription           || null,
+      otherProductDesc:         order.otherProductDesc         || null,
+      labelWidth:               order.labelWidth               ?? null,
+      labelHeight:              order.labelHeight              ?? null,
+      boxDepth:                 order.boxDepth                 ?? null,
+      pouchGusset:              order.pouchGusset              ?? null,
+      rollDirection:            order.rollDirection            || null,
+      customBatching:           order.customBatching           || false,
+      unitsPerRoll:             order.unitsPerRoll             ?? null,
+      packagingInstructions:    order.packagingInstructions    || null,
+      hasSpecialColor:          order.hasSpecialColor          || false,
+      specialColorDetails:      order.specialColorDetails      || null,
+      hasPerforation:           order.hasPerforation           || false,
+      perforationNotes:         order.perforationNotes         || null,
+      finishingNotes:           order.finishingNotes           || null,
+      applicationService:       order.applicationService       || false,
+      applicationContainerType: order.applicationContainerType || null,
+      applicationFeePerPiece:   order.applicationFeePerPiece   ?? null,
+      cutMethod:                order.cutMethod                || null,
+      dieName:                  order.dieName                  || null,
+      extraFrames:              order.extraFrames              ?? 0,
+      makeReadyFrames:          order.makeReadyFrames          ?? 0,
+      framesWasted:             order.framesWasted             ?? 0,
+      skus:                     order.skus                     || null,
+      skuCount:                 order.skuCount                 || 0,
+      artworkFiles: (order.artworkFiles || []).map(f => ({
+        name: f.name, size: f.size, type: f.type, role: f.role || 'main',
+      })),
+      customerPO:            order.customerPO          || null,
+      quoteRef:              order.quoteRef            || null,
+      pricePerUnit:          order.pricePerUnit         ?? null,
+      orderTotal:            order.orderTotal           ?? null,
+      paymentTerms:          order.paymentTerms         || null,
+      invoiceNumber:         order.invoiceNumber        || null,
+      invoiceStatus:         order.invoiceStatus        || 'not-invoiced',
+      parentOrderId:         order.parentOrderId        || null,
+      capacityOverride:      order.capacityOverride     || false,
+      capacityDetails:       order.capacityDetails      || null,
+      needsConfirmation:     order.needsConfirmation    || false,
+      confirmationReason:    order.confirmationReason   || null,
+      noteType:              order.noteType             || 'INFO',
+      specialNotes:          order.specialNotes         || null,
+      rushApprovedAt:        order.rushApprovedAt       || null,
+      hasWhiteLayer:         order.hasWhiteLayer        || false,
+      hasFoil:               order.hasFoil              || false,
+      foilNotes:             order.foilNotes            || null,
+      holdApprovals:         order.holdApprovals        || null,
+      holdRequestedAt:       order.holdRequestedAt      || null,
+      needsAccountManagerAction: order.needsAccountManagerAction || false,
+      prepressResubmittedAt: order.prepressResubmittedAt  || null,
+      prepressResubmittedBy: order.prepressResubmittedBy  || null,
+      overtimeApproval:      order.overtimeApproval     || null,
+      notesLog:            order.notesLog            || [],
+      conversationHistory: order.conversationHistory || [],
+    };
+
+    return {
+      order_id:                  order.orderId || '',
+      customer_name:             order.customerName || order.customer || '',
+      product_type:              order.productType || '',
+      material:                  order.material    || '',
+      print_type:                order.printType   || 'Sheet',
+      facility:                  order.facility    || '16th-street',
+      quantity:                  order.quantity    || 0,
+      sheet_count:               order.sheetCount  || 0,
+      pieces_per_sheet:          order.piecesPerSheet || 1,
+      color_mode:                order.colorMode || order.colors || '',
+      sides:                     order.sides     || '',
+      status:                    order.status    || 'new',
+      workflow_template:         order.workflowTemplate || null,
+      current_step:              order.currentStep || 0,
+      due_date:                  order.dueDate    || null,
+      lamination:                order.lamination || 'None',
+      finishing:                 order.finishingNotes || null,
+      has_uv:                    order.hasUV      || false,
+      foil_type:                 order.foilType   || 'None',
+      die_status:                order.dieStatus  || 'none',
+      is_rush:                   order.isRush     || false,
+      rush_approved_by:          order.rushApprovedBy || null,
+      account_manager:           order.accountManager || null,
+      rep:                       order.rep        || null,
+      is_reprint:                order.isReprint  || false,
+      reprint_of_order_id:       order.reprintOfOrderId   || null,
+      reprint_reason:            order.reprintReason      || null,
+      reprint_requested_by:      order.reprintRequestedBy || null,
+      reprint_notes:             order.reprintNotes       || null,
+      hold_reason:               order.holdReason         || null,
+      hold_previous_status:      order.holdPreviousStatus || null,
+      hold_requested_by:         order.holdRequestedBy    || null,
+      material_shortage:         order.materialShortage   || false,
+      material_shortage_details: order.materialShortageDetails
+        ? JSON.stringify(order.materialShortageDetails) : null,
+      parent_order_id:           order.parentOrderId || null,
+      specs,
+    };
+  }
+</script>
+</body>
+</html>

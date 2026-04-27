@@ -1,0 +1,29 @@
+// pulse-config.local.js — Supabase connection config for Pulse
+// ─────────────────────────────────────────────────────────────
+// Copy this file to pulse-config.local.js (gitignored) and fill in your values.
+// This file is loaded automatically by shared.js on every page.
+//
+// To switch to Supabase backend:
+//   1. Fill in the values below
+//   2. Set PULSE_STORAGE_BACKEND to 'supabase'
+//   3. Run migrate-to-supabase.html ONCE on the primary device to copy IndexedDB data
+//   4. Distribute pulse-config.local.js to all team devices
+//
+// To keep using IndexedDB (development):
+//   Set PULSE_STORAGE_BACKEND to 'indexeddb' (or leave commented out)
+
+// Supabase project URL — get from Supabase dashboard → Settings → API
+window.PULSE_SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
+
+// Supabase anon key — SAFE to use in browser (RLS enforces access control)
+// Get from Supabase dashboard → Settings → API → anon/public key
+window.PULSE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR-ANON-KEY';
+
+// Storage backend: 'supabase' | 'indexeddb'
+// Switch to 'supabase' only after running migration and verifying data in Supabase
+window.PULSE_STORAGE_BACKEND = 'indexeddb';
+
+// NEVER put these here — keep in Supabase Vault / Edge Function env only:
+// - Database password
+// - Service role key
+// - Cloudflare R2 credentials
