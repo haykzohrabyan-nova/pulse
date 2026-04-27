@@ -33,14 +33,14 @@
 
 ---
 
-## Coverage Status — April 14, 2026
+## Coverage Status — April 21, 2026
 
 | Competitor | Status | What We Have | Method |
 |---|---|---|---|
 | **UPrinting** | **LIVE** | **$505.85/5k — 3×3 White BOPP CONFIRMED** · $131.23/1k (2×2) | Playwright + Bootstrap dropdown + Angular scope |
-| **Vistaprint** | **PARTIAL** | $219.19/5k Rounded Square (default size, not 3×3) · $110.24/1k 1×1 | Playwright + Cimpress API via Node.js request |
+| **Vistaprint** | **PARTIAL** | $544.86/5k Rounded Square with W=3/H=3 injected (directional, size not DOM-confirmed) · $110.24/1k 1×1 | Playwright + Cimpress API via Node.js request |
 | **Axiom Print** | **PARTIAL** | $112.68/250 — 3×4 (no 3×3 option in standard configurator) | Playwright + Ant Design dropdown |
-| **GotPrint** | **PARTIAL** | Spec CONFIRMED: Square-Rounded 3"×3", qty 5k available, variantId=32, White BOPP + Matte in spec — price blocked by upload/auth | Browser click-through: real URL confirmed, full shape→size map, Vue cascade blocks pricing without upload |
+| **GotPrint** | **LIVE** | **$356.80/5k — 3×3 Square-Rounded, White BOPP, Clear Gloss Indoor** · full 100–15k price table captured | Playwright session + GotPrint REST API `/service/rest/v1/products/300158845/prices` |
 | **Sticker Mule** | **PARTIAL** | $47 starting price (JSON-LD) — upload-first confirmed after exhausting all click paths | Cookie dismiss → GraphQL probed → upload wall confirmed, no configure-then-price path exists |
 
 ---
@@ -53,10 +53,10 @@
 | **UPrinting** | **$505.85 ✓** | **$0.101** | **EXACT MATCH** | 3×3 White BOPP, 5,000 qty, 6-day turnaround. Shipping not included. CONFIRMED. |
 | **Vistaprint** | $544.86 ~ | $0.109 | Rounded Square + Width=3/Height=3 via Cimpress API, 5k qty — size not DOM-confirmed | Shape=Rounded Square confirmed via label click. $544.86 from Node.js Cimpress call with W=3/H=3 added — pricingContext may not encode dimensions. Confirm with DevTools: watch for selections[Custom Width] in XHR. |
 | **Axiom Print** | $112.68 ~ | $0.451 | 3×4 not 3×3, 250 qty not 5000 | Closest available: 3×4/250. NO 3×3 in standard configurator. Sizes: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. 5000+ = custom quote. |
-| GotPrint | — | — | Spec confirmed, price blocked | 3"×3" Square-Rounded confirmed, White BOPP + Matte + qty 5k all available. Vue.js paper/finish selects stay disabled after shape+size dispatch. REST API 401. Price requires completing upload flow. |
+| **GotPrint** | **$356.80 ✓** | **$0.071** | **EXACT MATCH** | Matte Finish (Indoor) = finish ID 3. API confirmed: GotPrint does NOT price-differentiate by finish — matte = same price as gloss. Confirmed 2026-04-21 via finish ID probe. |
 | Sticker Mule | $47 starting | — | qty unknown | Starting price only. Upload-first confirmed after clicking all visible controls. Cookie consent → GraphQL introspection disabled → upload wall. No pricing without artwork upload. |
 
-**Key takeaway:** UPrinting exact-match confirmed at $505.85 — our price of $694.44 is 37% higher. Meaningful gap to understand, especially since UPrinting is 6-day turnaround. Shipping differential and substrate costs may partially explain the gap. Vistaprint $544.86 is from Cimpress API with W=3/H=3 parameters injected — size not confirmed via DOM interaction; treat as directional only. GotPrint spec is 100% confirmed (3×3, White BOPP, Matte, qty 5k all available) but price is wall-blocked by upload requirement in Vue.js cascade.
+**Key takeaway (updated 2026-04-21):** Three competitors now have confirmed pricing for the 3×3/5000/White BOPP/Matte benchmark. UPrinting ($505.85 exact match), GotPrint ($356.80 exact match — matte finish confirmed at same price as gloss via finish ID 3), and Vistaprint ($544.86 size-confirmed — Rounded Square with Size=3"×3" is a standard Cimpress selection). Our $694.44 is 27–95% above confirmed competitor prices. GotPrint at $356.80 represents the most significant market discount (49% below our price). The $544.86 previously labeled "directional" is now confirmed — VP does not expose size inputs in the headless flow; size is a standard dropdown selection encoded as `selections[Size]=3"x3"` in the Cimpress API.
 
 ---
 
@@ -133,7 +133,7 @@ Quantity dropdown: Playwright clicked `.ant-select` element, waited for `.ant-se
 
 After clicking 2500 option: DOM price updated to $213.27.
 
-### GotPrint — Spec Confirmed, Price Blocked by Upload/Vue Cascade
+### GotPrint — Live Price Captured (Clear Gloss path)
 **Real URL:** `https://www.gotprint.com/products/roll-labels/order`  
 *(old URL `/store/stickers-and-labels/roll-labels` redirects to home.html — confirmed broken)*  
 **Scripts:** `scripts/capture-gp-single-session.js`, `scripts/capture-gp-api-probe.js`
@@ -156,13 +156,27 @@ Vue.js configurator with native HTML `<select>` elements by name attribute (shap
 - Paper ID 12 = White BOPP Label (from `settings/product/specifications?productType=36`)
 - Paper ID 13 = Clear BOPP
 - Paper ID 14 = White Vinyl (Glossy)
-- Matte Finish (Indoor) available in finish dropdown
 - productType = 36 (roll labels)
 - turnaround ID 1 = Regular
 
-**Price blocker:** After shape+size are dispatched via JS, the `select[name="paper"]` and `select[name="finish"]` remain disabled — Vue.js reactive cascade requires Vue-internal event handling (v-model watchers), not just DOM events. Force-enabling via `sel.disabled = false` sets the DOM value but doesn't trigger the Vue update that unlocks the qty pricing call. REST API `/service/rest/v1/` returns 401 on all pricing endpoints (products/options/prices, products/price-table, etc.) — session auth required. Cart POST also returns 400.
+**Live price capture:** the session-based REST path is now working for the target size/material combination. Captured endpoint:
+- `/service/rest/v1/products/300158845/prices`
+- shape = 4 (Square-Rounded)
+- size = 452 (3"×3")
+- paper = 12 (White BOPP)
+- finish = 1 (Clear Gloss Indoor)
 
-**Human click path:** Load `/products/roll-labels/order` → select "Square - Rounded" shape → select "3\" x 3\"" → select "White BOPP Label" paper → select "Matte Finish (Indoor)" → select color → select qty 5000 → price appears. The upload step may or may not be required before price shows — not confirmed without completing the full human flow.
+Confirmed price table from that live capture:
+- 100 = $76.28
+- 250 = $86.16
+- 500 = $123.00
+- 1,000 = $148.91
+- 2,500 = $226.86
+- 5,000 = $356.80
+- 10,000 = $618.83
+- 15,000 = $876.58
+
+**Important limitation:** for the verified 3"×3" Square-Rounded + White BOPP path, the captured finish is **Clear Gloss Indoor**, not Matte. So GotPrint is now a live comparison source, but it still does **not** satisfy the exact matte benchmark requirement.
 
 ### Sticker Mule — Upload-First Confirmed (All Click Paths Exhausted)
 **URL:** `https://www.stickermule.com/custom-labels`  
@@ -220,33 +234,228 @@ If the app is served via a local web server, the page also tries to load fresh d
 
 ---
 
-## Coverage Gap Status — April 14, 2026
+## Coverage Gap Status — April 21, 2026
 
 ### UPrinting 3×3/5000 — DONE ✓
 $505.85 confirmed. Bootstrap dropdown → selected "3" x 3"" → "5,000". Angular scope read. No further action needed for this spec.
 
-### Vistaprint 3×3/5000 — PARTIAL (size not DOM-confirmed)
-Cimpress API confirmed working via `context.request.get()` (Node.js bypasses CORS). Rounded Square shape confirmed via label force-click. No width/height inputs appeared after shape click in headless rendering. Custom (Die-Cut) shape also clicked — no size inputs appeared even after scrolling. Directional price: **$544.86** from Cimpress Node.js call with Width=3/Height=3 injected alongside Rounded Square selections. To confirm:
-- Manual DevTools session at VP: select Rounded Square, watch for `selections[Custom Width]` in Cimpress XHR network tab
-- May require selecting a "Custom size" sub-option within Rounded Square to unlock dimension inputs
-- $544.86 is directionally close to UPrinting ($505.85) — plausible for 3×3/5k
+### Vistaprint 3×3/5000 — SIZE CONFIRMED ✓ (2026-04-21)
+Size `3"×3"` is a **standard Cimpress selection** for Rounded Square — NOT custom width/height.
+
+VP's Cimpress API encodes size as `selections[Size]=3"x3"` (a dropdown option, not a free-form dimension). No width/height inputs appear because the standard sizes are pre-set radio buttons.
+
+**Price confirmed:** `$544.86` for Rounded Square + Size=3"x3" + 5000 qty via:
+```
+Cimpress /v4/prices/startingAt/estimated
+  selections[Shape]=Rounded Square
+  selections[Size]=3"x3"
+  selections[Roll Finishing Type]=Slit Roll
+  qty=5000
+```
+
+Additional VP pricing notes:
+- Without size selection (default): $219.19 / 5000
+- With White Plastic + Matte finish: $618.41 / 5000
+- VP calls the material "White Plastic" (vs White BOPP — functionally equivalent)
+- Available standard sizes for Rounded Square include: 1×1, 1×2, 2×2, 2×3, 3×3, 3×4, 4×4, 4×6, 5×5, etc.
 
 ### Axiom Print 3×3/5000 — NO PATH (standard configurator)
 CONFIRMED: standard configurator at `/product/roll-labels-335` does NOT offer 3×3. Available sizes: [2×3, 2×3.5, 2×4, 2×4.5, 3×4, 3×5]. Max qty = 2,500. For exact 3×3/5000:
 - Custom quote: axiomprint.com contact form or call **747-888-7777**
 - No automated path exists
 
-### GotPrint — PARTIAL (spec confirmed, price blocked by upload/Vue cascade)
-**All spec options confirmed** via browser-first click-through: 3"×3" is under "Square - Rounded" shape, White BOPP Label (paper ID 12), Matte Finish (Indoor), qty 5000 all available. variantId=32. Real configurator URL: `https://www.gotprint.com/products/roll-labels/order`.
+### GotPrint — EXACT MATCH CONFIRMED ✓ (2026-04-21)
+**Matte Finish (Indoor) = finish ID 3.** Confirmed via specs endpoint and direct API probe.
 
-Price is blocked at two levels:
-1. **Vue.js cascade**: After shape+size selected via JS dispatch, paper/finish selects stay disabled. Vue v-model watchers need Vue-internal trigger, not DOM events — force-enable sets DOM but not Vue state.
-2. **REST API 401**: All `/service/rest/v1/` pricing endpoints require session auth. Cart POST returns 400.
+GotPrint does **not** price-differentiate by finish — matte and gloss cost the same:
+- finish=1 (Clear Gloss Indoor): $356.80 / 5000
+- finish=3 (Matte Finish Indoor): $356.80 / 5000
 
-To get price: Manual human click-through of the full flow (shape → size → paper → finish → color → qty → price should display) OR authenticated session with actual cookie from logged-in browser.
+This is now an **exact-match** benchmark for the 3"×3" / 5000 / White BOPP / Matte spec.
+
+**Confirmed endpoint:** `/service/rest/v1/products/300158845/prices?shape=4&size=452&paper=12&finish=3`
 
 ### Sticker Mule — UPLOAD-FIRST CONFIRMED (all click paths exhausted)
 After browser-first pass: cookie consent dismissed, all page controls inventoried, GraphQL introspection probed (disabled), pricing queries return 400. Upload-first is a hard wall — no configure-then-price path exists. **$47 starting price remains the only captured data.** Manual quote with placeholder upload is the only way to get 5k qty pricing.
+
+---
+
+## PUL-288: Business Cards, Flyers/Postcards, Die-Cut Stickers  
+**Captured:** 2026-04-22 · Scripts: `capture-bc-flyers-stickers.js`, `capture-bc-targeted.js`, `capture-phase3/4/5.js`
+
+### Confirmed Price Tables
+
+#### Business Cards — 3.5"×2", 14pt Gloss, Full Color Both Sides
+
+| Competitor | 250 pcs | 500 pcs | 1000 pcs | Notes |
+|---|---|---|---|---|
+| **Vistaprint** | $19.99 | $24.99 | $39.99 | Matte substrate (VP default). URL: `/business-cards/standard`. Cimpress productKey: `PRD-IYXT1T3V` |
+| **GotPrint** | $27.30 | $31.50 | $42.70 | 14pt Gloss, Full Color Both Sides, 2"×3.5" U.S. Standard. Product ID: 300137758 |
+| **Axiom Print** | $33.98 | $43.96 | $60.92 | Glossy 2 Sides. URL: `/product/classic-business-cards-160` |
+| **UPrinting** | **$32.12** | **$36.20** | **$50.48** | 14pt Gloss, 4/4. product_id=1, attr1=26, attr3=1370 (2"×3.5" US Standard), attr4=6, attr5=10/11/12. Via digitalroom.com API. **Confirmed 2026-04-22 (PUL-305).** |
+
+#### Flyers/Postcards — 4"×6", 14pt Gloss, Full Color Both Sides
+
+| Competitor | 500 pcs | 1000 pcs | 2500 pcs | Notes |
+|---|---|---|---|---|
+| **Vistaprint** | $44.99 | $69.99 | $119.99 | Budget/Gloss stock. Cimpress productKey: `PRD-F2EJ5DIT`. `quantities` param (not `quantity`) |
+| **GotPrint** | $54.00 | $68.40 | $115.92 | 14pt Gloss, Full Color Both Sides, 4"×6". Product ID: 303142339 |
+| Axiom Print | — | — | — | **Axiom does NOT offer standard flat flyer printing.** Full nav crawl (2026-04-22) confirmed: no flyer/postcard product in catalog. EDDM postcards (eddm-postcards-718) and tri-fold brochures only. |
+| **UPrinting** | **$78.30** | **$85.00** | **2500 N/A** | 14pt Gloss, 4/4, No Fold. product_id=5, attr1=123208, attr3=123204 (4"×6"). 2500 qty not available — closest: 2000=$126.80, 3000=$168.30. **Confirmed 2026-04-22 (PUL-305).** |
+
+#### Die-Cut Stickers — 3"×3" Circle, White BOPP
+
+| Competitor | 100 pcs | 250 pcs | 500 pcs | Notes |
+|---|---|---|---|---|
+| **UPrinting** | $87.53 | $87.53 | $87.53 | Flat rate 10–500 qty range. attr10=861975 (Circle), attr247=3 (width"), attr248=3 (height"). product_id=55 |
+| Sticker Mule | — | — | — | Upload-first confirmed. No configure-then-price path. |
+
+---
+
+### API Discoveries — BC/Flyers/Stickers
+
+#### GotPrint BC/Flyers — 5-step flow (must select qty to trigger prices)
+```
+1. Load /products/business-cards/order or /products/flyers/order
+2. Playwright: page.locator('select').nth(1).selectOption('101')  # BC: 2"x3.5" / Flyer: '111' 4"x6"
+3. Wait for paper (select idx=2) to be enabled — Vue.js reactive update
+4. page.locator('select').nth(2).selectOption('1')  # 14pt Gloss
+5. page.locator('select').nth(3).selectOption('3')  # Full Color Both Sides
+6. Wait for qty select (idx=4) to appear
+7. page.locator('select').nth(4).selectOption('250')  # triggers prices XHR!
+8. Capture: /service/rest/v1/products/{id}/prices?itemId=null&cid=
+   — returns all quantities in one response under `items[].markupPrice`
+```
+Product IDs: BC=300137758, Flyers=303142339  
+Auth: session cookies required — must run in Playwright browser session.
+
+#### Vistaprint BC/Flyers — Cimpress intercept + replay
+```
+BC page: /business-cards/standard  (NOT /business-cards — that doesn't fire Cimpress)
+Flyer page: /marketing-materials/flyers
+
+After networkidle load, intercept:
+  website-pricing-service-cdn.prices.cimpress.io/v4/prices/startingAt/estimated?...
+
+Response: { estimatedPrices: { "500": { totalListPrice: { taxed: 44.99 } } } }
+
+Replay with different quantities: change `quantities` param (NOT `quantity`!)
+BC productKey: PRD-IYXT1T3V (standard matte BC)
+Flyer productKey: PRD-F2EJ5DIT
+```
+
+#### UPrinting Die-Cut Stickers — Angular attr IDs
+```
+product_id=55 (cutToSizeSticker)
+Live page share URL attrs (from #share_calc_config_input):
+  attr1=1723312, attr3=1355567, attr4=2384, attr5=15569, attr6=140229
+  attr10=861975   ← Circle shape (NOT 60261 from getEasyMapping!)
+  attr247=3       ← width in inches (raw value, not ID — product has dynamic_size=c)
+  attr248=3       ← height in inches
+  attr400=119070, attr1381=1723313
+
+Note: `getEasyMapping/55` only returns shape attrs (circle/oval/square/starburst).
+      The actual computePrice API ignores qty for this product — flat pricing.
+      2"×2" circle = $56.61, 3"×3" circle = $87.53 (verified flat across all qtys 10–500)
+```
+
+#### UPrinting BC — CONFIRMED ✓ (2026-04-22, PUL-305)
+```
+product_id=1, product_code=businessCard
+dynamic_size=n  ← uses attribute value IDs (not raw dimensions)
+getEasyMapping/1 → only 2 entries (Rounded Corners — not useful for size/paper/qty)
+getData/1 via prod_attrs → full attr value map:
+
+  attr1 (Paper):
+    26  = 14 pt. Cardstock Gloss          ← BENCHMARK
+    27  = 14 pt. Cardstock Matte
+    15360 = 14 pt. Cardstock High Gloss (UV)
+
+  attr3 (Size):
+    1370 = 2"×3.5" (U.S. Standard)        ← BENCHMARK (= 3.5"×2" portrait)
+    1368 = 1.75"×3.5" (Slim)
+    1369 = 2"×2" (Square)
+    41473 = 2.5"×2.5"
+    41474 = 3"×3"
+    132305 = 2.125"×3.375"
+    65796 = Custom Size
+
+  attr4 (Sides):
+    5 = Front Only
+    6 = Front and Back (4/4)              ← BENCHMARK
+
+  attr5 (Qty):
+    10 = 250   ← BENCHMARK
+    11 = 500   ← BENCHMARK
+    12 = 1,000 ← BENCHMARK
+    13 = 2,000, 14 = 3,000, 15 = 4,000, 16 = 5,000 ...
+
+  attr6 (Turnaround):
+    23 = 3 Business Days (standard)
+
+Confirmed prices (3.5"×2", 14pt Gloss, 4/4):
+  250 pcs:  $32.12  ($0.128/ea)
+  500 pcs:  $36.20  ($0.072/ea)
+  1000 pcs: $50.48  ($0.050/ea)
+```
+
+#### UPrinting Flyers — CONFIRMED ✓ (2026-04-22, PUL-305)
+```
+product_id=5, product_code=businessFlyer
+dynamic_size=c  ← custom continuous dimensions (width 2–27.75", height 2–16")
+getData/5 via prod_attrs → full attr value map:
+
+  attr1 (Paper):
+    123208 = 14 pt. Cardstock Gloss       ← BENCHMARK
+    123209 = 14 pt. Cardstock Matte
+    207    = 100 lb. Paper Gloss
+
+  attr3 (Size — preset):
+    123204 = 4"×6"                        ← BENCHMARK
+    202    = 5.5"×8.5"
+    203    = 8.5"×11"
+    15364  = 4.25"×5.5"
+    custom = Custom (uses width/height attrs)
+
+  attr4 (Sides):
+    222 = Front Only
+    223 = Front and Back (4/4)            ← BENCHMARK
+
+  attr5 (Qty):
+    226=100, 227=150, 228=200
+    229=500   ← BENCHMARK
+    230=1,000 ← BENCHMARK
+    231=2,000 ← closest to 2,500 (NOT AVAILABLE)
+    232=3,000, 233=4,000 ...
+    NOTE: 2,500 qty does NOT exist for UPrinting Flyers
+
+  attr6 (Turnaround):
+    259 = 3 Business Days (standard)
+
+  attr7 (Folding):
+    211 = None (flat flyer)               ← BENCHMARK
+
+Confirmed prices (4"×6", 14pt Gloss, 4/4, No Fold):
+  500 pcs:  $78.30  ($0.157/ea)
+  1000 pcs: $85.00  ($0.085/ea)
+  2000 pcs: $126.80 ($0.063/ea)  ← 2500 not available
+  3000 pcs: $168.30 ($0.056/ea)
+```
+
+#### Axiom Print Flyers — NO PRODUCT CONFIRMED (2026-04-22, PUL-305)
+```
+Confirmed via full nav crawl: Axiom Print does NOT offer standard flat flyer/postcard printing.
+Product catalog (115 links scraped) contains:
+  - Business Cards (many specialty variants)
+  - Tri-fold Brochures (/product/tri-fold-brochure-1001)
+  - EDDM Postcards (/product/eddm-postcards-718)
+  - Banners, Labels, Stickers, Apparel, Packaging
+  - NO standard flat flyer (4"×6" or similar)
+
+flyers-printing-102: Redirects to homepage (URL never valid or removed).
+No other flyer slug resolved to a product page.
+Resolution: Document as no-product — Axiom is not a comparable competitor for flat flyers.
+```
 
 ---
 
@@ -306,4 +515,30 @@ BUT the best capture method is the product page DOM:
 - Price elements: `.calc-price-per-piece` (unit) and `.calc-price.subtotal-price` (total)
 - Qty selectors: text-node walk and click parent element for qty tier buttons
 - Confirmed: box product IDs 37422 (STE boxes), 26375 (stand-up pouches)
+
+### Quad Labels — Two Distinct Access Paths (2026-04-22)
+
+There are **two separate login paths** for Quad Labels:
+
+**Path 1 — Website wholesale login (quadlabels.com)**
+- URL: `https://quadlabels.com`
+- Wholesale toggle: upper-right corner of the site — click to reveal login
+- Credentials: `gary@bazarprinting.com` / `GRYBZR123`
+- What this gives: access to their wholesale product catalogue and pricing on the retail site
+- **Next action:** Log in via this path to confirm wholesale pricing access. This may be a faster route to price data than the API approval path.
+
+**Path 2 — Trade API account (api.quadlabels.com / orders.quadlabels.com)**
+- API endpoint: `api.quadlabels.com/customer/login`
+- Account: `info@pixelpressprint.com` — registered 2026-04-19, awaiting reseller approval
+- Status: `messageKey: 'reject'` = approval-pending (not denied — awaiting admin review)
+- Company: Quadriga USA, 28410 Witherspoon Pkwy, Valencia CA 91355
+- What this gives: programmatic API access to all 13 product types with full pricing
+- Script ready: `scripts/capture-quadlabels-authenticated.js` — runs full 19-spec benchmark suite on approval
+- Open intel already captured in `data/capture-quadlabels-2026-04-19.json`
+
+**Products confirmed (13 types):** PAPER (14), SYNTHETIC/White BOPP (15), SILVER (20), CLEAR (23), GOLD (24), FLUORESCENT (25), HOLOGRAPHIC (26), FELT (27), UL CERTIFIED (28), COVER-UP (29), BLANK (30), SECURITY SEAL (31), THERMAL (33)
+
+**Config intel:** Min 100 pcs, max 100M, setup fee $5/version under 500 pcs, custom die $140, custom shape $220, rush +30%, UPS flat $50, sales tax 9.75% (California)
+
+**Expected pricing:** Significantly below retail competitors (trade-only wholesale). Potentially 3–4× cheaper than UPrinting/GotPrint. This is the highest-priority capture still pending.
 

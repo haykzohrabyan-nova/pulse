@@ -343,7 +343,7 @@ function renderDetail() {
   document.getElementById('checkSizing').checked = !!order.prepressChecklist?.sizing;
   document.getElementById('checkCutting').checked = !!order.prepressChecklist?.cutting;
   document.getElementById('issueCategory').value = order.prepressIssueCategory || '';
-  document.getElementById('prepressComment').value = order.prepressIssueComment || order.prepressComment || '';
+  document.getElementById('prepressComment').value = order.prepressComment || order.prepressIssueComment || '';
   updateApproveButtonVisibility();
 
   const issueBox = document.getElementById('lastIssueBox');
@@ -358,6 +358,16 @@ function renderDetail() {
 
 function getSelectedOrder() {
   return allOrders.find(o => o.id === selectedOrderId);
+}
+
+async function getFreshSelectedOrder() {
+  const order = getSelectedOrder();
+  if (!order?.id) return order;
+  try {
+    return await getOrder(order.id);
+  } catch (_) {
+    return order;
+  }
 }
 
 function updateApproveButtonVisibility() {
@@ -416,7 +426,7 @@ function collectReviewPatch(order) {
 }
 
 async function saveReview() {
-  const order = getSelectedOrder();
+  const order = await getFreshSelectedOrder();
   if (!order) return;
   const patch = collectReviewPatch(order);
   await updateOrder(order.id, patch);
@@ -425,7 +435,7 @@ async function saveReview() {
 }
 
 async function startReview() {
-  const order = getSelectedOrder();
+  const order = await getFreshSelectedOrder();
   if (!order) return;
   const patch = collectReviewPatch(order);
   patch.status = 'prepress-active';
@@ -437,7 +447,7 @@ async function startReview() {
 }
 
 async function pauseReview() {
-  const order = getSelectedOrder();
+  const order = await getFreshSelectedOrder();
   if (!order) return;
   const patch = collectReviewPatch(order);
   patch.status = 'prepress-paused';
@@ -449,7 +459,7 @@ async function pauseReview() {
 }
 
 async function sendBackToAccountManager() {
-  const order = getSelectedOrder();
+  const order = await getFreshSelectedOrder();
   if (!order) return;
   const comment = document.getElementById('prepressComment').value.trim();
   const category = document.getElementById('issueCategory').value;
@@ -462,12 +472,22 @@ async function sendBackToAccountManager() {
     return;
   }
   const patch = collectReviewPatch(order);
+  const issueAt = new Date().toISOString();
+  const conversationHistory = Array.isArray(order.conversationHistory) ? [...order.conversationHistory] : [];
+  conversationHistory.push({
+    text: comment,
+    author: patch.prepressLastUpdatedBy,
+    timestamp: issueAt,
+    source: 'prepress',
+    category
+  });
   patch.status = 'pending-account-manager';
   patch.needsAccountManagerAction = true;
   patch.prepressIssueComment = comment;
   patch.prepressIssueCategory = category;
-  patch.prepressIssueAt = new Date().toISOString();
+  patch.prepressIssueAt = issueAt;
   patch.prepressIssueBy = patch.prepressLastUpdatedBy;
+  patch.conversationHistory = conversationHistory;
   await updateOrder(order.id, patch);
   await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
   try {
@@ -482,7 +502,7 @@ async function sendBackToAccountManager() {
 }
 
 async function approveToProduction() {
-  const order = getSelectedOrder();
+  const order = await getFreshSelectedOrder();
   if (!order) return;
   const patch = collectReviewPatch(order);
   patch.status = 'pending-review';
@@ -532,8 +552,8 @@ async function renderHistory() {
     allOrds.forEach(o => { ordersMap[o.orderId] = o; });
   } catch (e) {}
 
-  // Filter to prepress-approved events
-  let events = activity.filter(a => a.type === 'prepress-approved');
+  // Filter to tickets that have real prepress activity history
+  let events = activity.filter(a => ['prepress-approved','prepress-returned','prepress-resubmitted','prepress-started','prepress-paused'].includes(a.type));
 
   // Date filter on event timestamp
   const now = new Date();
@@ -560,8 +580,13 @@ async function renderHistory() {
     });
   }
 
-  // Sort newest first
-  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  // Reduce to one row per order, using the newest prepress-related event
+  const newestByOrder = new Map();
+  events.forEach(evt => {
+    const prev = newestByOrder.get(evt.orderId);
+    if (!prev || new Date(evt.timestamp) > new Date(prev.timestamp)) newestByOrder.set(evt.orderId, evt);
+  });
+  events = Array.from(newestByOrder.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   if (!events.length) {
     listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">No approved tickets found.</div>';
@@ -589,7 +614,7 @@ async function renderHistory() {
     return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#f8fafc;">
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span style="font-weight:700;color:#1d4ed8;">#${a.orderId}</span>
-        <span style="color:#16a34a;font-weight:600;font-size:11px;">✅ Approved ${formatDateTime(a.timestamp)}</span>
+        <span style="color:${a.type==='prepress-approved' ? '#16a34a' : a.type==='prepress-returned' ? '#b91c1c' : '#64748b'};font-weight:600;font-size:11px;">${a.type==='prepress-approved' ? '✅ Approved' : a.type==='prepress-returned' ? '↩ Sent Back' : a.type==='prepress-resubmitted' ? '↪ Resubmitted' : a.type==='prepress-started' ? '▶ Started' : '⏸ Activity'} ${formatDateTime(a.timestamp)}</span>
       </div>
       <div style="color:#374151;margin-top:3px;">${o.customerName || o.customer || '—'}</div>
       <div style="color:var(--text-muted);font-size:11px;">${o.productType || '—'} · ${(o.quantity||0).toLocaleString()} pcs · Rep: ${o.accountManager||'—'}</div>

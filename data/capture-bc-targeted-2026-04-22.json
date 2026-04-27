@@ -1,0 +1,36 @@
+{
+  "results": {
+    "business_cards": [
+      {
+        "competitor": "Axiom Print",
+        "product_type": "business_cards",
+        "spec": {
+          "note": "default page state — qty unknown"
+        },
+        "total_price": null,
+        "raw": [
+          {
+            "cls": "ProductInfo_priceContainer__1TcTd",
+            "text": "Estimated Ready:Mon, Apr 27 - 5:00PMTotal:$25.70$0.51 each"
+          },
+          {
+            "cls": "ProductInfo_wrapperTotalPrice__8GP_q",
+            "text": "Total:$25.70$0.51 each"
+          },
+          {
+            "cls": "ProductInfo_totalBlock__Ona1l",
+            "text": "$25.70$0.51 each"
+          },
+          {
+            "cls": "ProductInfo_finalPrice__lqRBP",
+            "text": "$25.70"
+          }
+        ]
+      }
+    ],
+    "flyers": [],
+    "diecut_stickers": [],
+    "errors": []
+  },
+  "errors": []
+}

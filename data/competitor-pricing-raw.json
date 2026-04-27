@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "product_scope": "labels",
   "description": "Raw competitor label pricing captures. Each entry is a single data point from a competitor site. Do not normalize or infer specs not explicitly stated. Confidence field: high=confirmed quote, medium=page-displayed price, low=promo/example snippet.",
-  "last_updated": "2026-04-14",
+  "last_updated": "2026-04-22",
   "capture_tool_version": "2.0",
   "captures": [
     {
@@ -773,6 +773,177 @@
       "notes": "Configurator: /products/roll-labels/order — native selects by name=shape/size/paper/finish/color. All shape → size options: {\"Rectangle - Rounded\":[\"0.5\\\" x 1\\\"\",\"0.5\\\" x 2\\\"\",\"0.75\\\" x 1.5\\\"\",\"1\\\" x 2\\\"\",\"1.5\\\" x 2.5\\\"\",\"1.5\\\" x 3\\\"\",\"1.5\\\" x 3.5\\\"\",\"2\\\" x 3\\\"\",\"2.5\\\" x 3\\\"\",\"2.5\\\" x 3.5\\\"\",\"2.5\\\" x 4\\\"\",\"2.5\\\" x 5\\\"\",\"2.5\\\" x 7\\\"\",\"3\\\" x 4\\\"\",\"3\\\" x 5\\\"\",\"3\\\" x 5.5\\\"\",\"3.5\\\" x 4\\\"\",\"3.5\\\" x 5\\\"\",\"4\\\" x 5\\\"\",\"5\\\" x 7\\\"\",\"6\\\" x 6.5\\\"\"],\"Square - Rounded\":[\"1\\\" x 1\\\"\",\"1.5\\\" x 1.5\\\"\",\"2\\\" x 2\\\"\",\"2.5\\\" x 2.5\\\"\",\"3\\\" x 3\\\"\",\"4\\\" x 4\\\"\",\"5\\\" x 5\\\"\"],\"Arched\":[\"3\\\" x 4\\\" Arched\"],\"Circle\":[\"0.75\\\" Diameter\",\"1\\\" Diameter\",\"1.25\\\" Diameter\",\"1.5\\\" Diameter\",\"2\\\" Diameter\",\"2.5\\\" Diameter\",\"3\\\" Diameter\",\"3.5\\\" Diameter\",\"4\\\" Diameter\",\"5\\\" Diameter\"],\"Heart\":[\"1.5\\\" x 1.5\\\" Heart\"],\"Starburst\":[\"1.625\\\" x 1.625\\\"\"],\"Oval\":[\"0.75\\\" x 1.5\\\"\",\"1.5\\\" x 2.5\\\"\",\"2\\\" x 3\\\"\",\"3\\\" x 4\\\"\"],\"Rectangle\":[\"2.5\\\" x 3.5\\\"\",\"3.5\\\" x 4\\\"\",\"3.5\\\" x 5\\\"\",\"4\\\" x 6\\\" (Standard)\"],\"Square\":[\"4\\\" x 4\\\"\",\"5\\\" x 5\\\"\"]}. Shapes with 3×3: Square - Rounded. Best available for 3×3 target: shape=\"Square - Rounded\" size=\"3\" x 3\"\". NOTE: Qty selector NOT on configurator page — must upload artwork to proceed to qty+price. Materials confirmed: Clear BOPP, White BOPP, White Vinyl, White Removable, Clear Removable, Silver Foil BOPP. Finishes: Clear Gloss (Indoor), Clear Gloss (Outdoor), Matte Finish (Indoor).",
       "blocker": null,
       "next_step": "Manual: gotprint.com/products/roll-labels/order → shape=\"Square - Rounded\" → size=\"3\" x 3\"\" → White BOPP → Matte → Upload any image → enter qty 5000 → read subtotal."
+    },
+    {
+      "id": "gotprint-3x3-5000-matte-finish-confirmed-2026-04-21",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-21",
+      "capture_method": "gotprint_rest_api_finish_id_probe",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Square-Rounded 3\"x3\" White BOPP Matte Finish Indoor, 5000 qty",
+      "specs": {
+        "shape": "Square - Rounded",
+        "size": "3\" x 3\"",
+        "material": "White BOPP Label",
+        "finish": "Matte Finish (Indoor)",
+        "finish_id": 3,
+        "variant_id": 32,
+        "api_endpoint": "/service/rest/v1/products/300158845/prices?shape=4&size=452&paper=12&finish=3"
+      },
+      "pricing": {
+        "total_price": 356.8,
+        "unit_price": 0.07136,
+        "quantity": 5000,
+        "currency": "USD",
+        "price_type": "api_direct",
+        "full_price_table": [
+          {
+            "qty": 100,
+            "total": 76.28
+          },
+          {
+            "qty": 250,
+            "total": 86.16
+          },
+          {
+            "qty": 500,
+            "total": 123
+          },
+          {
+            "qty": 1000,
+            "total": 148.91
+          },
+          {
+            "qty": 2500,
+            "total": 226.86
+          },
+          {
+            "qty": 5000,
+            "total": 356.8
+          },
+          {
+            "qty": 10000,
+            "total": 618.83
+          },
+          {
+            "qty": 15000,
+            "total": 876.58
+          }
+        ]
+      },
+      "notes": "Matte finish ID confirmed as id=3 from GP specs endpoint. Price identical to Clear Gloss (id=1) — finish is not a pricing variable for GP roll labels. EXACT MATCH for 3x3/5000/White BOPP/Matte benchmark."
+    },
+    {
+      "id": "vistaprint-3x3-5000-rounded-square-size-confirmed-2026-04-21",
+      "competitor": "vistaprint",
+      "competitor_display": "Vistaprint",
+      "source_url": "https://www.vistaprint.com/labels-stickers/roll-labels",
+      "captured_at": "2026-04-21",
+      "capture_method": "cimpress_api_direct_size_confirmed",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Rounded Square, Size=3\"x3\", 5000 qty, default finish (Gloss)",
+      "specs": {
+        "shape": "Rounded Square",
+        "size": "3\"x3\"",
+        "material": "White Plastic (VP default)",
+        "finish": "Gloss (default)",
+        "product_key": "PRD-DF5PWTHC",
+        "api": "Cimpress /v4/prices/startingAt/estimated",
+        "selections": {
+          "Roll Finishing Type": "Slit Roll",
+          "Shape": "Rounded Square",
+          "Size": "3\"x3\""
+        }
+      },
+      "pricing": {
+        "total_price": 544.86,
+        "unit_price": 0.108972,
+        "quantity": 5000,
+        "currency": "USD",
+        "price_type": "cimpress_api",
+        "additional": {
+          "qty=1000_no_size": 110.24,
+          "qty=5000_no_size": 219.19,
+          "qty=1000_size_3x3": 239.31,
+          "qty=5000_size_3x3": 544.86,
+          "qty=5000_white_plastic_matte": 618.41
+        }
+      },
+      "notes": "Size=3\"x3\" is a STANDARD size option for VP Rounded Square (not custom W/H). Confirmed via Cimpress API with selections[Size]=3\"x3\". Prior directional capture of $544.86 was correct. Material naming: VP uses White Plastic (not White BOPP). Matte finish price = $618.41."
+    },
+    {
+      "id": "gotprint-universal-qty-pricing-confirmed-2026-04-21",
+      "competitor": "gotprint",
+      "competitor_display": "GotPrint",
+      "source_url": "https://www.gotprint.com/products/roll-labels/order",
+      "captured_at": "2026-04-21",
+      "capture_method": "gotprint_rest_api_multi_size_probe",
+      "capture_source": "automated_headless",
+      "confidence": "high",
+      "product_type": "roll_labels",
+      "raw_spec_description": "Universal qty-based pricing — confirmed for 1x1, 2x2, 3x3, 4x4, 2x3, 3x4",
+      "specs": {
+        "shapes_tested": [
+          "Rounded Square (1x1, 2x2, 3x3, 4x4)",
+          "Rectangle (2x3, 3x4)"
+        ],
+        "paper": "White BOPP Label (id=12)",
+        "finish": "Matte Finish Indoor (id=3)",
+        "finding": "Price is determined by qty only — not by size or shape"
+      },
+      "pricing": {
+        "currency": "USD",
+        "price_type": "api_direct_multi_size_confirmed",
+        "price_table": [
+          {
+            "qty": 100,
+            "total": 76.28,
+            "unit": 0.7628
+          },
+          {
+            "qty": 250,
+            "total": 86.16,
+            "unit": 0.34464
+          },
+          {
+            "qty": 500,
+            "total": 123,
+            "unit": 0.246
+          },
+          {
+            "qty": 1000,
+            "total": 148.91,
+            "unit": 0.14891
+          },
+          {
+            "qty": 2500,
+            "total": 226.86,
+            "unit": 0.090744
+          },
+          {
+            "qty": 5000,
+            "total": 356.8,
+            "unit": 0.07136
+          },
+          {
+            "qty": 10000,
+            "total": 618.83,
+            "unit": 0.061883
+          },
+          {
+            "qty": 15000,
+            "total": 876.58,
+            "unit": 0.058439
+          }
+        ]
+      },
+      "notes": "KEY FINDING: GotPrint uses flat qty-based pricing for all roll label sizes. Tested shape=4 (Rounded Square) at sizes 1x1 (id=448), 2x2 (id=450), 3x3 (id=452), 4x4 (id=109) and shape=15 (Rectangle) at 2x3 (id=427), 3x4 (id=442). All returned identical markupPrice tables. Competitive implication: GP is a fixed-rate label printer — cheaper per unit at higher quantities regardless of label size."
     }
   ],
   "capture_coverage_summary": {

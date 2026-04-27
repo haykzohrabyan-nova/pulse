@@ -1,0 +1,969 @@
+{
+  "run_date": "2026-04-22T08:24:36.615Z",
+  "business_cards": {
+    "discovered": {
+      "uprinting": {
+        "url": "https://www.uprinting.com/business-cards.html",
+        "apiCalls": [],
+        "selects": [
+          {
+            "id": "account_dropdown",
+            "options": []
+          },
+          {
+            "id": "wide_account_dropdown",
+            "options": []
+          },
+          {
+            "id": "",
+            "options": []
+          },
+          {
+            "id": "",
+            "options": []
+          },
+          {
+            "id": "total_cart_count",
+            "options": []
+          },
+          {
+            "id": "",
+            "options": []
+          },
+          {
+            "id": "",
+            "options": []
+          }
+        ],
+        "angularData": {}
+      },
+      "vistaprint": {
+        "url": "https://www.vistaprint.com/business-cards",
+        "title": "Create & Design Custom Business Cards Online | VistaPrint",
+        "bodySnip": "AccessibilitySkip to main contentWebsites by Vista x WixCorporate PricingVistaCreateSite Navigation\n\n\n\n\t.st0{fill:#006196;}\n\t.st1{fill:#2BA8E0;}\n\t.st2{fill:#6ECFF5;}\n\n\n\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\n\t\n\t\t\n\t\t\t\n\t\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\n\n\n\n\n\n\n\t.st0{fill:#006196;}\n\t.st1{fill:#2BA8E0;}\n\t.st2{fill:#6ECFF",
+        "productKey": "PRD-9TC2NHGKQ",
+        "cimpressCalls": 16
+      },
+      "gotprint": {
+        "productId": null,
+        "selects": [
+          "referrerType"
+        ]
+      },
+      "axiom": {
+        "navLinks": [
+          {
+            "text": "Business Cards",
+            "href": "https://axiomprint.com/catalog/business-cards"
+          },
+          {
+            "text": "Labels & Stickers",
+            "href": "https://axiomprint.com/catalog/labels-stickers"
+          },
+          {
+            "text": "Triple Layer Business Cards",
+            "href": "https://axiomprint.com/product/triple-color-layer-business-cards-448"
+          },
+          {
+            "text": "Raised Spot UV Business Cards",
+            "href": "https://axiomprint.com/product/raised-spot-uv-cards-184"
+          },
+          {
+            "text": "Square Business Cards",
+            "href": "https://axiomprint.com/product/square-business-cards-975"
+          },
+          {
+            "text": "Classic Business CardsPopular",
+            "href": "https://axiomprint.com/product/classic-business-cards-160"
+          },
+          {
+            "text": "Matte Business card",
+            "href": "https://axiomprint.com/product/matte-business-card-1200"
+          },
+          {
+            "text": "Kraft Business Cards",
+            "href": "https://axiomprint.com/product/kraft-business-cards-766"
+          },
+          {
+            "text": "Foil Business Cards",
+            "href": "https://axiomprint.com/product/foil-business-cards-155"
+          },
+          {
+            "text": "Hemp Business Cards",
+            "href": "https://axiomprint.com/product/hemp-business-cards-745"
+          }
+        ],
+        "bcLink": {
+          "text": "Business Cards",
+          "href": "https://axiomprint.com/catalog/business-cards"
+        },
+        "bcPageState": {
+          "url": "https://axiomprint.com/catalog/business-cards",
+          "title": "Business Cards - Printing Services, Los Angeles Print Shop, Digital Printing | AxiomPrint.com",
+          "antSelects": [],
+          "priceText": []
+        }
+      }
+    },
+    "prices": []
+  },
+  "flyers": {
+    "discovered": {
+      "uprinting": {
+        "url": "https://www.uprinting.com/brochure-printing.html",
+        "title": "Brochures - Multiple Fold and Paper Stock Options | UPrinting",
+        "selects": [
+          {
+            "name": "",
+            "id": "review_sort",
+            "options": [
+              {
+                "v": "high",
+                "t": "Highest to Lowest"
+              },
+              {
+                "v": "new",
+                "t": "Newest to Oldest"
+              },
+              {
+                "v": "old",
+                "t": "Oldest to Newest"
+              },
+              {
+                "v": "low",
+                "t": "Lowest to Highest"
+              }
+            ]
+          }
+        ],
+        "apiCalls": [
+          {
+            "url": "https://calculator.digitalroom.com/v1/getData/4",
+            "status": 200,
+            "bodySnip": "{\"product_id\":\"4\",\"parent_product_id\":\"0\",\"product_code\":\"brochure\",\"product_item_id\":\"23\",\"product_name\":\"Brochures\",\"dynamic_size\":\"c\",\"start_width\":\"5.5\",\"end_width\":\"27.75\",\"start_height\":\"4\",\"end"
+          },
+          {
+            "url": "https://calculator.digitalroom.com/v1/getEasyMapping/4",
+            "status": 200,
+            "bodySnip": "{\"data\":[{\"attr_val_code\":\"rollFold\",\"product_id\":\"4\",\"product_code\":\"brochure\",\"product_name\":\"Brochures\",\"attribute_id\":\"7\",\"attribute_code\":\"folding\",\"attribute_name\":\"Folding\",\"product_attribute_n"
+          },
+          {
+            "url": "https://calculator.digitalroom.com/v1/computePrice",
+            "status": 200,
+            "bodySnip": "{\"price_source\":\"STOCK\",\"orig_price\":224.25,\"total_price\":\"224.25\",\"price\":\"224.25\",\"product_markup\":-10,\"product_markdown\":0,\"min_markup\":0,\"has_markdown\":0,\"exceeded_pricing_threshold\":\"n\",\"unit_pri"
+          }
+        ]
+      },
+      "vistaprint": {
+        "url": "https://www.vistaprint.com/marketing-materials/flyers",
+        "productKey": "PRD-F2EJ5DIT",
+        "cimpressCalls": 23
+      },
+      "gotprint": {
+        "productId": null
+      }
+    },
+    "prices": [
+      {
+        "competitor": "UPrinting",
+        "source": "intercepted",
+        "data": {
+          "price_source": "STOCK",
+          "orig_price": 224.25,
+          "total_price": "224.25",
+          "price": "224.25",
+          "product_markup": -10,
+          "product_markdown": 0,
+          "min_markup": 0,
+          "has_markdown": 0,
+          "exceeded_pricing_threshold": "n",
+          "unit_price": "0.4485",
+          "in_stock_flag": "y",
+          "shipping_computation_type_id": "1",
+          "shipping_grid_stack_id": null,
+          "product_id": "4",
+          "item_name": "Brochures",
+          "pricing_system": "OFF",
+          "account_type_code": "OFF",
+          "turnaround": 3,
+          "max_turnaround": 3,
+          "qty": 500,
+          "sheet_qty": 1,
+          "page_qty": 2,
+          "maximum_order_quantity": 0,
+          "width": "8.5",
+          "height": "11",
+          "spine_width": 0,
+          "stock_attr_val_id": "1",
+          "stake": 0,
+          "sku": null,
+          "is_digital": 0,
+          "is_lfp": 0,
+          "has_mailing": 0,
+          "order_specs": [
+            {
+              "attr_val_order_spec_id": "61",
+              "attr_val_id": "61",
+              "attribute_id": "3",
+              "order_spec_option_id": "0",
+              "order_spec_code": "SZ",
+              "order_spec_value": "8.5\" x 11\"",
+              "custom_flag": "n",
+              "allow_reorder_flag": null,
+              "order_spec": "Size",
+              "sort": "2",
+              "attribute_name": "Size"
+            },
+            {
+              "attr_val_order_spec_id": "123",
+              "attr_val_id": "124",
+              "attribute_id": "4",
+              "order_spec_option_id": "16",
+              "order_spec_code": "SIDE",
+              "order_spec_value": "Outside and Inside",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Printed Side",
+              "sort": "5",
+              "attribute_name": "Printed Side"
+            },
+            {
+              "attr_val_order_spec_id": "92",
+              "attr_val_id": "94",
+              "attribute_id": "5",
+              "order_spec_option_id": "0",
+              "order_spec_code": "QTY",
+              "order_spec_value": "500",
+              "custom_flag": "n",
+              "allow_reorder_flag": null,
+              "order_spec": "Quantity",
+              "sort": "7",
+              "attribute_name": "Quantity"
+            },
+            {
+              "attr_val_order_spec_id": "133",
+              "attr_val_id": "133",
+              "attribute_id": "7",
+              "order_spec_option_id": "28",
+              "order_spec_code": "FOLD",
+              "order_spec_value": "Tri-Fold/Letter Fold",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Folding",
+              "sort": "21",
+              "attribute_name": "Folding"
+            },
+            {
+              "attr_val_order_spec_id": "128",
+              "attr_val_id": "127",
+              "attribute_id": "6",
+              "order_spec_option_id": "34",
+              "order_spec_code": "TA",
+              "order_spec_value": "3 Business Days",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Turnaround",
+              "sort": "41",
+              "attribute_name": "Turnaround"
+            },
+            {
+              "attr_val_order_spec_id": "36454",
+              "attr_val_id": "1",
+              "attribute_id": "1",
+              "order_spec_option_id": "1018",
+              "order_spec_code": "FCOAT",
+              "order_spec_value": "Gloss",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Front Coating",
+              "sort": "1053",
+              "attribute_name": "Paper"
+            },
+            {
+              "attr_val_order_spec_id": "36455",
+              "attr_val_id": "1",
+              "attribute_id": "1",
+              "order_spec_option_id": "1021",
+              "order_spec_code": "BCOAT",
+              "order_spec_value": "Gloss",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Back Coating",
+              "sort": "1055",
+              "attribute_name": "Paper"
+            },
+            {
+              "attr_val_order_spec_id": "36453",
+              "attr_val_id": "1",
+              "attribute_id": "1",
+              "order_spec_option_id": "7456",
+              "order_spec_code": "SUBST",
+              "order_spec_value": "100 lb Paper",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Substrate",
+              "sort": "1431",
+              "attribute_name": "Paper"
+            }
+          ],
+          "display_specs": [
+            {
+              "attribute_id": "3",
+              "attribute_name": "Size (before folding)",
+              "attr_value": "8.5\" x 11\"",
+              "sort": "1",
+              "prod_attr_val_id": "143",
+              "order_spec_codes": [
+                "SZ"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "1",
+              "attribute_name": "Paper Type",
+              "attr_value": "100 lb. Paper Gloss",
+              "sort": "2",
+              "prod_attr_val_id": "147",
+              "order_spec_codes": [
+                "SUBST",
+                "FCOAT",
+                "BCOAT"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "7",
+              "attribute_name": "Folding",
+              "attr_value": "Tri-Fold/Letter Fold",
+              "sort": "3",
+              "prod_attr_val_id": "153",
+              "order_spec_codes": [
+                "FOLD"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "4",
+              "attribute_name": "Printed Side",
+              "attr_value": "Outside and Inside",
+              "sort": "4",
+              "prod_attr_val_id": "165",
+              "order_spec_codes": [
+                "SIDE"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "5",
+              "attribute_name": "Quantity",
+              "attr_value": "500",
+              "sort": "5",
+              "prod_attr_val_id": "169",
+              "order_spec_codes": [
+                "QTY"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "400",
+              "attribute_name": "Bundling",
+              "attr_value": "None",
+              "sort": "6",
+              "prod_attr_val_id": "68456",
+              "order_spec_codes": [],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "16",
+              "attribute_name": "Tabbing",
+              "attr_value": "None",
+              "sort": "8",
+              "prod_attr_val_id": "194516",
+              "order_spec_codes": [],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "6",
+              "attribute_name": "Printing Time",
+              "attr_value": "3 Business Days",
+              "sort": "9",
+              "prod_attr_val_id": "199",
+              "order_spec_codes": [
+                "TA"
+              ],
+              "hide_to_customer_flag": "n"
+            }
+          ],
+          "allow_reorder_flag": "y",
+          "cpo": 800,
+          "cpp": 0.18,
+          "non_stndrd_mup": 8,
+          "qpi": 251,
+          "sht_height": 40,
+          "sht_height_d": 18,
+          "cut_qty": 1000,
+          "sht_width": 28,
+          "sht_width_d": 12,
+          "wtpi": 0.00022,
+          "cpp_d": 0.05,
+          "lead_time": 2,
+          "wpanel": 3,
+          "no_sd": 2,
+          "max_to": 3,
+          "min_to": 3,
+          "disc_pct_d": 30,
+          "flat_area": "93.5000000000000000",
+          "flat_area_sq_ft": "0.6493055555555555",
+          "finished_width": "8.5",
+          "finished_height": "11",
+          "finished_area": "93.5000000000000000",
+          "finished_area_sq_ft": "0.6493055555555555",
+          "markup": 5,
+          "no_sht": 1,
+          "qty_per_group": 1,
+          "no_groups": 500,
+          "sets_per_pad": 1,
+          "weight_factors": [],
+          "material_factors": [],
+          "factors": {
+            "product_markup": -10,
+            "width": "8.5",
+            "height": "11",
+            "cpo": 800,
+            "cpp": 0.18,
+            "non_stndrd_mup": 8,
+            "qpi": 251,
+            "sht_height": 40,
+            "sht_height_d": 18,
+            "cut_qty": 1000,
+            "sht_width": 28,
+            "sht_width_d": 12,
+            "wtpi": 0.00022,
+            "cpp_d": 0.05,
+            "lead_time": 2,
+            "wpanel": 3,
+            "no_sd": 2,
+            "qty": 500,
+            "max_to": 3,
+            "min_to": 3,
+            "disc_pct_d": 30,
+            "flat_area": "93.5000000000000000",
+            "flat_area_sq_ft": "0.6493055555555555",
+            "finished_width": "8.5",
+            "finished_height": "11",
+            "finished_area": "93.5000000000000000",
+            "finished_area_sq_ft": "0.6493055555555555",
+            "markup": 5,
+            "no_sht": 1,
+            "qty_per_group": 1,
+            "no_groups": 500,
+            "sets_per_pad": 1,
+            "weight_factors": [],
+            "material_factors": []
+          },
+          "folded_width": 8.5,
+          "folded_height": 3.6666666666666665,
+          "folded_sheet_qty": 3,
+          "weight": 10.285,
+          "bln_custom_size": false,
+          "bln_custom_qty": false,
+          "calc_version": 2,
+          "price_data": {
+            "attr1": "147",
+            "attr3": "143",
+            "attr4": "165",
+            "attr5": "169",
+            "attr6": "199",
+            "attr7": "153",
+            "attr16": "194516",
+            "attr400": "68456",
+            "product_id": "4",
+            "addon_attributes_limit": [],
+            "get_shipping_base_price": true
+          },
+          "shipping_base_price": "224.25",
+          "addon_attrs": [],
+          "available_turnaround_options": [],
+          "cached_data": false,
+          "cached_price": false,
+          "cached": false,
+          "use_local_memcache": true,
+          "response_milliseconds": "17.51"
+        }
+      }
+    ]
+  },
+  "diecut_stickers": {
+    "discovered": {
+      "uprinting": {
+        "url": "https://www.uprinting.com/die-cut-stickers.html",
+        "title": "Die-Cut Stickers – Custom Logo Sticker Printing | UPrinting",
+        "selects": [
+          {
+            "name": "",
+            "id": "review_sort",
+            "options": [
+              {
+                "v": "high",
+                "t": "Highest to Lowest"
+              },
+              {
+                "v": "new",
+                "t": "Newest to Oldest"
+              },
+              {
+                "v": "old",
+                "t": "Oldest to Newest"
+              },
+              {
+                "v": "low",
+                "t": "Lowest to Highest"
+              }
+            ]
+          }
+        ],
+        "apiCalls": [
+          {
+            "url": "https://calculator.digitalroom.com/v1/getData/55",
+            "status": 200,
+            "bodySnip": "{\"product_id\":\"55\",\"parent_product_id\":\"0\",\"product_code\":\"cutToSizeSticker\",\"product_item_id\":\"403\",\"product_name\":\"Stickers\",\"dynamic_size\":\"c\",\"start_width\":\"2\",\"end_width\":\"12\",\"start_height\":\"2\",\"end_height\":\"12\",\"start_depth\":\"0\",\"end_depth\":\"0\",\"start_qty\":\"0\",\"end_qty\":\"0\",\"account_type_code"
+          },
+          {
+            "url": "https://calculator.digitalroom.com/v1/getEasyMapping/55",
+            "status": 200,
+            "bodySnip": "{\"data\":[{\"attr_val_code\":\"circle\",\"product_id\":\"55\",\"product_code\":\"cutToSizeSticker\",\"product_name\":\"Stickers\",\"attribute_id\":\"10\",\"attribute_code\":\"dieCutType\",\"attribute_name\":\"Shape\",\"product_attribute_name\":\"\",\"prod_attr_val_id\":\"60261\",\"attr_value\":\"Circle\"},{\"attr_val_code\":\"oval\",\"product_i"
+          },
+          {
+            "url": "https://calculator.digitalroom.com/v1/computePrice",
+            "status": 200,
+            "bodySnip": "{\"price_source\":\"GRID_STACK\",\"orig_price\":56.61,\"total_price\":\"56.61\",\"price\":\"56.61\",\"product_markup\":0,\"product_markdown\":0,\"min_markup\":0,\"has_markdown\":0,\"exceeded_pricing_threshold\":\"n\",\"unit_price\":\"0.5661\",\"in_stock_flag\":\"y\",\"shipping_computation_type_id\":\"1\",\"shipping_grid_stack_id\":null,\"p"
+          }
+        ]
+      },
+      "stickermule": {
+        "url": "https://www.stickermule.com/",
+        "title": "Sticker Mule | Custom printing that kicks ass",
+        "schemas": [
+          {
+            "@context": "http://schema.org/",
+            "@id": "https://fast.wistia.net/embed/iframe/1zm67lm807",
+            "@type": "VideoObject",
+            "duration": "PT1M15S",
+            "name": "How to order custom stickers",
+            "thumbnailUrl": "https://embed-ssl.wistia.com/deliveries/448b20a0879d4d720936b79c773eb29e.jpg?image_crop_resized=640x360",
+            "embedUrl": "https://fast.wistia.net/embed/iframe/1zm67lm807",
+            "uploadDate": "2016-12-05T19:40:01.000Z",
+            "description": "Sticker Mule makes it fast and easy to order custom stickers, magnets, labels, and more.",
+            "contentUrl": "https://embed-ssl.wistia.com/deliveries/de2c3137cf071352664876f4abdb5812398d53e9.m3u8",
+            "transcript": "Aaron just launched his new startup. He's ordering a bunch of custom stickers for an upcoming event. Jess sells handmade products online. She's getting custom labels to make her packaging beautiful.\n\nAnd Brian's a designer. He wants the best quality transfer stickers for the hand lettering project he's working on. They're all using Sticker Mule. Why?\n\nWell first of all, it's really easy. You just pick the custom product you want, then select a size, and quantity. Aaron uploads a high resolution image of his design, Jess uploads a photo of her hand-drawn logo, and Brian uploads a vector image of his lettering. Each gets a proof within a few hours.\n\nThey can approve the proof, or request changes until they're happy. And with Sticker Mule's quick turnaround and free shipping, they all get their orders super fast. Aaron's stickers are a hit at the event, and give his new users a way to show off their support. Jess' new packaging helps her earn some five star reviews and more sales.\n\nAnd Brian's transfer stickers are exactly how he wanted them, and how his client wanted them. Guess who just landed two more projects. For the highest quality custom stickers, magnets, labels, and more, the best companies, do it yourselfers, and designers use Sticker Mule. Start your order today and find out why.",
+            "potentialAction": {
+              "@type": "SeekToAction",
+              "target": "https://www.stickermule.com/?wtime={seek_to_second_number}",
+              "startOffset-input": "required name=seek_to_second_number"
+            }
+          }
+        ],
+        "priceEls": [],
+        "bodySnip": "Skip to main contentSticker Mule and our third-party partners use cookies and other tools to collect information you provide as well as your interaction with our websites for performance improvement, analytics, and to assist in our marketing efforts. By clicking \"Agree\" or \"Manage Settings\", you consent to the use of cookies and other tools as described in our Privacy Policy in accordance with your settings, and you accept our Terms of Service. Please see our Privacy Policy for more information "
+      }
+    },
+    "prices": [
+      {
+        "competitor": "UPrinting",
+        "source": "intercepted",
+        "data": {
+          "price_source": "GRID_STACK",
+          "orig_price": 56.61,
+          "total_price": "56.61",
+          "price": "56.61",
+          "product_markup": 0,
+          "product_markdown": 0,
+          "min_markup": 0,
+          "has_markdown": 0,
+          "exceeded_pricing_threshold": "n",
+          "unit_price": "0.5661",
+          "in_stock_flag": "y",
+          "shipping_computation_type_id": "1",
+          "shipping_grid_stack_id": null,
+          "product_id": "55",
+          "item_name": "Stickers",
+          "pricing_system": "OFF",
+          "account_type_code": "DIGI",
+          "turnaround": 3,
+          "max_turnaround": 3,
+          "qty": 100,
+          "sheet_qty": 1,
+          "page_qty": 1,
+          "maximum_order_quantity": 0,
+          "width": 2,
+          "height": 2,
+          "spine_width": 0,
+          "stock_attr_val_id": "53941",
+          "stake": 0,
+          "sku": null,
+          "is_digital": 2,
+          "is_lfp": 0,
+          "has_mailing": 0,
+          "order_specs": [
+            {
+              "attr_val_order_spec_id": "29122",
+              "attr_val_id": "5313",
+              "attribute_id": "3",
+              "order_spec_option_id": "0",
+              "order_spec_code": "SZ",
+              "order_spec_value": "Custom",
+              "custom_flag": "n",
+              "allow_reorder_flag": null,
+              "order_spec": "Size",
+              "sort": "2",
+              "attribute_name": "Size"
+            },
+            {
+              "attr_val_order_spec_id": "125",
+              "attr_val_id": "87",
+              "attribute_id": "4",
+              "order_spec_option_id": "13",
+              "order_spec_code": "SIDE",
+              "order_spec_value": "Front Only",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Printed Side",
+              "sort": "5",
+              "attribute_name": "Printed Side"
+            },
+            {
+              "attr_val_order_spec_id": "88",
+              "attr_val_id": "90",
+              "attribute_id": "5",
+              "order_spec_option_id": "0",
+              "order_spec_code": "QTY",
+              "order_spec_value": "100",
+              "custom_flag": "n",
+              "allow_reorder_flag": null,
+              "order_spec": "Quantity",
+              "sort": "7",
+              "attribute_name": "Quantity"
+            },
+            {
+              "attr_val_order_spec_id": "32326",
+              "attr_val_id": "53949",
+              "attribute_id": "1381",
+              "order_spec_option_id": "7628",
+              "order_spec_code": "DIECUT",
+              "order_spec_value": "Individual Laser Thru-Cut",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Die-Cutting",
+              "sort": "17",
+              "attribute_name": "Die-cutting"
+            },
+            {
+              "attr_val_order_spec_id": "21355",
+              "attr_val_id": "43174",
+              "attribute_id": "10",
+              "order_spec_option_id": "1189",
+              "order_spec_code": "SHAPE",
+              "order_spec_value": "Custom",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Shape",
+              "sort": "33",
+              "attribute_name": "Shape"
+            },
+            {
+              "attr_val_order_spec_id": "128",
+              "attr_val_id": "127",
+              "attribute_id": "6",
+              "order_spec_option_id": "34",
+              "order_spec_code": "TA",
+              "order_spec_value": "3 Business Days",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Turnaround",
+              "sort": "41",
+              "attribute_name": "Turnaround"
+            },
+            {
+              "order_spec_option_id": 0,
+              "order_spec_code": "WD",
+              "order_spec_value": "2",
+              "order_spec": "Flat Width",
+              "sort": "79"
+            },
+            {
+              "order_spec_option_id": 0,
+              "order_spec_code": "HT",
+              "order_spec_value": "2",
+              "order_spec": "Flat Height",
+              "sort": "85"
+            },
+            {
+              "attr_val_order_spec_id": "21354",
+              "attr_val_id": "43174",
+              "attribute_id": "10",
+              "order_spec_option_id": "1213",
+              "order_spec_code": "PRF",
+              "order_spec_value": "Yes",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Proof Required",
+              "sort": "1082",
+              "attribute_name": "Shape"
+            },
+            {
+              "attr_val_order_spec_id": "35313",
+              "attr_val_id": "53941",
+              "attribute_id": "1",
+              "order_spec_option_id": "8465",
+              "order_spec_code": "FLAM",
+              "order_spec_value": "Gloss Outdoor",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Front Lamination",
+              "sort": "1405",
+              "attribute_name": "Paper"
+            },
+            {
+              "attr_val_order_spec_id": "35314",
+              "attr_val_id": "53941",
+              "attribute_id": "1",
+              "order_spec_option_id": "8398",
+              "order_spec_code": "BLAM",
+              "order_spec_value": "None",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Back Lamination",
+              "sort": "1406",
+              "attribute_name": "Paper"
+            },
+            {
+              "attr_val_order_spec_id": "34946",
+              "attr_val_id": "53941",
+              "attribute_id": "1",
+              "order_spec_option_id": "8165",
+              "order_spec_code": "SUBST",
+              "order_spec_value": "White BOPP Label - RP",
+              "custom_flag": "n",
+              "allow_reorder_flag": "y",
+              "order_spec": "Substrate",
+              "sort": "1431",
+              "attribute_name": "Paper"
+            }
+          ],
+          "display_specs": [
+            {
+              "attribute_id": "10",
+              "attribute_name": "Shape",
+              "attr_value": "Custom",
+              "sort": "1",
+              "prod_attr_val_id": "861975",
+              "order_spec_codes": [
+                "PRF",
+                "SHAPE"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "3",
+              "attribute_name": "Size",
+              "attr_value": "Custom Size",
+              "sort": "2",
+              "prod_attr_val_id": "1355567",
+              "order_spec_codes": [
+                "SZ"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "prod_attr_val_id": 0,
+              "attribute_id": "247",
+              "attribute_name": "Width (Inches)",
+              "attr_value": "2",
+              "sort": "3",
+              "order_spec_codes": [
+                "WD"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "prod_attr_val_id": 0,
+              "attribute_id": "248",
+              "attribute_name": "Height (Inches)",
+              "attr_value": "2",
+              "sort": "4",
+              "order_spec_codes": [
+                "HT"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "1",
+              "attribute_name": "Material",
+              "attr_value": "Gloss White Outdoor BOPP",
+              "sort": "5",
+              "prod_attr_val_id": "1723312",
+              "order_spec_codes": [
+                "SUBST",
+                "FLAM",
+                "BLAM"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "4",
+              "attribute_name": "Printed Side",
+              "attr_value": "Front Only",
+              "sort": "8",
+              "prod_attr_val_id": "2384",
+              "order_spec_codes": [
+                "SIDE"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "5",
+              "attribute_name": "Quantity",
+              "attr_value": "100",
+              "sort": "9",
+              "prod_attr_val_id": "15569",
+              "order_spec_codes": [
+                "QTY"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "1381",
+              "attribute_name": "Die-cutting",
+              "attr_value": "Individual Laser Thru-Cut",
+              "sort": "10",
+              "prod_attr_val_id": "1723313",
+              "order_spec_codes": [
+                "DIECUT"
+              ],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "400",
+              "attribute_name": "Bundling",
+              "attr_value": "None",
+              "sort": "11",
+              "prod_attr_val_id": "119070",
+              "order_spec_codes": [],
+              "hide_to_customer_flag": "n"
+            },
+            {
+              "attribute_id": "6",
+              "attribute_name": "Printing Time",
+              "attr_value": "3 Business Days",
+              "sort": "13",
+              "prod_attr_val_id": "140229",
+              "order_spec_codes": [
+                "TA"
+              ],
+              "hide_to_customer_flag": "n"
+            }
+          ],
+          "allow_reorder_flag": "y",
+          "lead_time": 7,
+          "markup_amt": 63.75,
+          "markup_amt_digital": 63.75,
+          "qpi": 88,
+          "sht_height": 12.5,
+          "sht_height_d": 12.5,
+          "sht_width": 18,
+          "sht_width_d": 18,
+          "wtpi": 0.00040486,
+          "no_sd": 1,
+          "disc_pct_d": 10,
+          "max_to": 3,
+          "min_to": 3,
+          "flat_area": "4.0000000000000000",
+          "flat_area_sq_ft": "0.0277777777777777",
+          "finished_width": 2,
+          "finished_height": 2,
+          "finished_area": "4.0000000000000000",
+          "finished_area_sq_ft": "0.0277777777777777",
+          "markup": 280,
+          "markup_digital": 280,
+          "disc_pct": 10,
+          "no_sht": 1,
+          "qty_per_group": 1,
+          "no_groups": 100,
+          "sets_per_pad": 1,
+          "weight_factors": [],
+          "material_factors": [],
+          "factors": {
+            "width": 2,
+            "height": 2,
+            "lead_time": 7,
+            "markup_amt": 63.75,
+            "markup_amt_digital": 63.75,
+            "is_digital": 2,
+            "qpi": 88,
+            "sht_height": 12.5,
+            "sht_height_d": 12.5,
+            "sht_width": 18,
+            "sht_width_d": 18,
+            "wtpi": 0.00040486,
+            "no_sd": 1,
+            "qty": 100,
+            "disc_pct_d": 10,
+            "max_to": 3,
+            "min_to": 3,
+            "flat_area": "4.0000000000000000",
+            "flat_area_sq_ft": "0.0277777777777777",
+            "finished_width": 2,
+            "finished_height": 2,
+            "finished_area": "4.0000000000000000",
+            "finished_area_sq_ft": "0.0277777777777777",
+            "markup": 280,
+            "markup_digital": 280,
+            "disc_pct": 10,
+            "no_sht": 1,
+            "qty_per_group": 1,
+            "no_groups": 100,
+            "sets_per_pad": 1,
+            "weight_factors": [],
+            "material_factors": []
+          },
+          "weight": 0.161944,
+          "bln_custom_size": false,
+          "bln_custom_qty": false,
+          "calc_version": 2,
+          "price_data": {
+            "attr1": "1723312",
+            "attr3": "1355567",
+            "attr4": "2384",
+            "attr5": "15569",
+            "attr6": "140229",
+            "attr10": "861975",
+            "attr247": "2",
+            "attr248": "2",
+            "attr400": "119070",
+            "attr1381": 1723313,
+            "product_id": "55",
+            "addon_attributes_limit": [],
+            "get_shipping_base_price": true,
+            "width": 2,
+            "height": 2
+          },
+          "shipping_base_price": "56.61",
+          "addon_attrs": [],
+          "available_turnaround_options": [],
+          "cached_data": false,
+          "cached_price": false,
+          "cached": false,
+          "use_local_memcache": false,
+          "response_milliseconds": "1,461"
+        }
+      },
+      {
+        "competitor": "Sticker Mule",
+        "product_type": "diecut_stickers",
+        "note": "Upload-first product — no price in JSON-LD or meta",
+        "raw": []
+      }
+    ]
+  },
+  "errors": []
+}

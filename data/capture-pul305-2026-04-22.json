@@ -1,0 +1,318 @@
+{
+  "run_date": "2026-04-22T09:44:59.531Z",
+  "uprinting_bc": {
+    "attr_ids": null,
+    "prices": [],
+    "errors": [],
+    "page_info": {
+      "selects": [],
+      "qtyItems": [],
+      "attrEls": [],
+      "attrMap": {},
+      "allIntercepted": []
+    }
+  },
+  "uprinting_flyers": {
+    "attr_ids": null,
+    "prices": [],
+    "errors": [],
+    "url_discovered": null,
+    "all_intercepted": []
+  },
+  "axiom_flyers": {
+    "url_found": "https://axiomprint.com/product/tri-fold-brochure-1001",
+    "prices": [
+      {
+        "competitor": "Axiom Print",
+        "product_type": "flyers_postcards",
+        "spec": {
+          "qty": "100# Gloss Text",
+          "size": "4\"×6\"",
+          "note": "default page state"
+        },
+        "total_price": 80.55,
+        "url": "https://axiomprint.com/product/tri-fold-brochure-1001",
+        "captured_at": "2026-04-22T09:46:18.714Z"
+      }
+    ],
+    "errors": [],
+    "nav_links": [
+      {
+        "text": "Order Now",
+        "href": "https://axiomprint.com/product/tri-fold-brochure-1001"
+      },
+      {
+        "text": "Order Now",
+        "href": "https://axiomprint.com/product/eddm-postcards-718"
+      }
+    ],
+    "page_state": {
+      "url": "https://axiomprint.com/product/tri-fold-brochure-1001",
+      "title": "Tri Fold Brochure Printing | Custom Trifold Brochures Online | AxiomPrint",
+      "antSelectCount": 6,
+      "antSelectValues": [
+        "100# Gloss Text",
+        "11\" x 8.5\"  (Most Popular)",
+        "Front and Back",
+        "Glossy, 2 Sides",
+        "Tri-Fold",
+        "50"
+      ],
+      "priceText": [
+        "Estimated Ready:Wed, Apr 29 - 5:00PMTotal:$80.55$1.61 each",
+        "Total:$80.55$1.61 each",
+        "$80.55$1.61 each",
+        "$80.55"
+      ],
+      "nextDataSnip": "{\"props\":{\"pageProps\":{\"data\":{\"id\":1001,\"product_category_id\":118,\"title\":\"Trifold Brochures\",\"url\":\"tri-fold-brochure-1001\",\"image\":\"https://axiomprint.s3.us-west-1.amazonaws.com/ProductImages/1001/originals/2026-03-25T09-47-59-852Z-trifoldbrochure.jpg\",\"thumbnail\":\"\",\"type\":\"custom\",\"finishing\":\"\",\"file_prep\":\"\",\"turnaround_and_shipping\":\"\",\"about_banner_printing\":\"\",\"active\":1,\"visible\":1,\"instagram_hashtag\":\"\",\"limit_square_fit\":null,\"open_advanced_options\":0,\"created\":\"2017-12-30 13:49:13\""
+    },
+    "available_qty_options": [
+      "100# Gloss Text",
+      "70# Uncoated Text",
+      "100# Gloss Cover",
+      "100# Uncoated Cover"
+    ],
+    "api_calls": [
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2FStep-and-Repeat-Banner-711-267.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF��\u0000\u0000WEBPVP8 ��\u0000\u0000\u0010�\u0001�\u0001*X\u0002�\u0001\u0000\u0000\u0000%��+�c?�\t\u000f����-;�Ƴ��\u000f�\u001bQ|�b\u000bɬ��w�S$�&2�'y������E��п������Q�\na\u001d���\b������o��\u0010>\t鋂]���l\u001c��/�~2�y�y���V��K������~N�����\u0001ѷC}�{�yg��տ���k���K����ʯ�ߚ�{�~��?���{�/�\u000f�_���"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2Fscratch-off-cards-940-4.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF�\u0012\u0001\u0000WEBPVP8 �\u0012\u0001\u0000\u0010�\u0001�\u0001*X\u0002�\u0001\u0000\u0000\u0000%7x�n���\u001e\u0002������\u000f��\\�/�oa�\u001f柼\u001fm�\t�������\u001f\u001d�������֏>��\u0001�w�Sݏ��:����������>����?���\u001f��L�5�������\r�W�?�_�?����m�����\u0017���oy��?����\u0013���o�\u001f����~�~���g�+�;���\u001f������"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2Fbook-dust-jacket-1037-3.png&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF��\u0000\u0000WEBPVP8 ��\u0000\u0000p�\u0001�\u0001*X\u0002�\u0001\u0000\u0000\u0000%��n�P}�\t_���Ͽ������[\u001f�9������������!_�����賝DK\n�\u001f�7͹�\u001eb��?�^��{A7���ׇ��������G��ʥ=�w�\u000f�\u001f�����S�S��Q]=�G�Wߗǿ6�\u001d�����/��������+�\u0003���?�\u001f�~\u0000�&�����g�/�?������\u0005�O�����o�"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2Fevent-badge-3-690.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF�7\u0001\u0000WEBPVP8 z7\u0001\u0000�\u001e\u0002�\u0001*X\u0002�\u0001\u0000\u0000\u0000%��'*�|\u001a<��U�?ds���?n��?d�\u0013�g������~�{M�W�ϳ��\u001fN�3�����K�/8���ª\u001e�{#~\u0018���Aމ�?����\u0011ɿ����6�\u0006�\u000fB��\u001eQ��\u001d3�w�/�\u001f��1?f:m`�\u0002���\u000fMO�s��~�������7�\u0007������Χ�U�Ӗ���?���?��z���3�o"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2FCandle-Dust-Cover-No-Hole-733.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF��\u0000\u0000WEBPVP8 ��\u0000\u0000\u0010�\u0002�\u0001*X\u0002�\u0001\u0000\u0000\u0000%���A���XO\u0004:O%�\r��iǰ\u0006�3�\n/���`\u0001�8�q��?�{bx\u0003L����n$���w�7�\u0005�\u0007�?�_�?���zm�'�����?�`=a:�8��~~Ē�4����=\u001bx��ϐ�\u001f�G����\b�\u000f�����@|��\u0007�����~X���}���Ͽ�ҟ��~�}\u0016~������;�G���?h"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2FRoll-Label-2-335.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF��\u0000\u0000WEBPVP8 ��\u0000\u0000��\u0001�\u0001*X\u0002�\u0001\u0000\u0000\u0000%��!��;�\u001e��_���C���zM�\u001e����-�_�n\u0012Z���� \rϡ��twr>|HWH䳙|/�\u0003���/ o(�������7�����\\�{o�\u0017Ɵ0?@/�z>�a�����_��\u000e��]\u000f�\u000fF�g}���O�cn7�\u0007���\r���\u001f�O�����]�\u0017��?���\u0015�\u001b���\u001f����K�\u000f��O"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2Ftri-fold-brochures-1001-2.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF�\t\u0001\u0000WEBPVP8 �\t\u0001\u0000� \u0002�\u0001*X\u0002�\u0001\u0000\u0000\u0000%��F�'�3F���tq��l��3��*K�\u001a��rF�~G���\u0003���\u000f\u0010o\n�\u001e�]�m�\u0017��G�\u0003\u001e�_�y��n�;�w҇�;��\u0006�N�%�\u000f���'��?�o�o�\u001f�����C�#�O����������?�?t_+�\u000f�����_�����k���\u0007�����u�����\u000f����\u001f����c�"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fnewapi.axiomprint.com%2Fuploads%2Fvinyl-banner-2-163.jpg&w=3840&q=100",
+        "status": 200,
+        "body": "RIFF��\u0000\u0000WEBPVP8 ��\u0000\u0000p�\u0001�\u0001*X\u0002�\u0001\u0000\u0000\u0000%���?l�\u0013\u000f�e����GD<\bq f\u0000��?�\u0004��ݼ���\u0013��ȋ�|ͽ&�\"�W\u0019���\u0000�\f����з�9�ߔF���O����\u001f(�W���3�n���{�/�_��\u0016�����?�����n���+�?�T���/�������>���k�w�#��?�?�~��\u0001��-�������_����L��"
+      },
+      {
+        "url": "https://www.facebook.com/tr/?id=342245932048826&ev=PageView&dl=https%3A%2F%2Faxiomprint.com%2F&rl=&if=false&ts=1776851162076&sw=1440&sh=900&v=2.9.303&r=stable&ec=0&o=12318&fbp=fb.1.1776851162070.240850002377374339&hmd=ea6f474b237db0d2f5706ad4&cs_est=true&ler=empty&pmd[title]=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&pmd[locale]=en&pmd[description]=AxiomPrint%2C%20Inc%20offers%20over%20300%20easy%20to%20order%20online%20printing%20products%20%26%20custom%20printing%20solutions.%20We%20offer%20quality%20printing%20and%20fast%20turnarounds.%20Our%20services%20include%20wide%20format%20printing%2C%20labels%2C%20packaging%2C%20commercial%20printing%2C%20promo%20products%20and%20fulfillment.&pmd[keywords]=printing%2Cbusiness%20card%2Ccatalog%2Cmailing%2Cpaper%20printing%2Crush%2Ccompany%2Cservices%2Clos%20angeles%2Clabels%2Cpackaging&plt=872.6000000238419&it=1776851161920&coo=false&expv2[0]=pl0&expv2[1]=el2&expv2[2]=bc1&expv2[3]=ra2&expv2[4]=rp2&expv2[5]=ct2&expv2[6]=hf0&rqm=GET",
+        "status": 200,
+        "body": ""
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-01-44-071z-b%27cards--standardbusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFFDp\u0000\u0000WEBPVP8 8p\u0000\u0000�+\u0001�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���Wf>��������D��4��\u0001#��\u0015����J��nV�l·��\u0003��Gi���^��\\�������/��Gz7�W���n�\u0001�������_߿�����\u0013�w�O�\u0007�/��\u001f߿��q���\u0007������\u001f�=�-���+���?�������\u001f�����3���\u0003�/��K/`o�?`O���"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-17-223z-b%27cardsplasticb%27card.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�=\u0000\u0000WEBPVP8 �=\u0000\u0000��\u0000�\u0001*�\u0002o\u0001\u0000\u0000\u0000%����x\u0003ۖ��K@�T�?A�7�%@yJ��\u001f˿�;�\u0007y�~���;�'�\u0003�����\u001fu_���\u001e�?SW~\u0000?�����\u001e�\u0000�q�����:�����\t�c���w���\u000f�{��\u0019����\u001f�F�����W�\u001d��c�O�?j�����\u0003�����]����o�#�/�Ͽ����}�C�o���\u0014���_�"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-02-53-067z-b%27cardsluxuryb%27cards.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�c\u0000\u0000WEBPVP8 �c\u0000\u0000P�\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%�.�����8�뒖���f����^%�KHk��I\t��&�����[\u0002���\u000f&��t/�\u0018\u0007�\u001e½����G�]m�����\u000fۯ�v���{߿������\u000f�ݿn���������\u000f��x��?�{�\u000e�3������_��4��>��s�C(�������\u000f���\u001f��=����\u0002�����\u0017�'��b\u000f�o`?�?"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-28-656z-b%27cards--specialshapebusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�3\u0000\u0000WEBPVP8 �3\u0000\u0000��\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���n���0\u0018\u0018\f\u0001���\u000b+�Wߊ�K2\u0003�O�;�C���\u0017>������:]X��~�v������3�_�~/���\u0017�����>M���?�^a�\u0014�w�?�_�\u001f��������?\n}A���\u0017�;�?��O�����j��^�\u001e������_�/�_�_b�\u000f�;�'�_���?\"��?��8������"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851162098&cv=11&fst=1776851162098&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=11&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/767834039/?random=1776851162213&cv=11&fst=1776851162213&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115616986~115938466~115938468~117266400~118463262&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=7&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851162424&cv=11&fst=1776851162424&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=11&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/767834039/?random=1776851162213&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115616986~115938466~115938468~117266400~118463262&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=7&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfXYihX7VLiKAHwMWd-pGJL9tB3XR-QZLHwouucOJw1KCKy2xe2Cy3hcFeUzSbxeFE1bJ8MMAn0p7joocp5a8B6FBd64mMoz7Ur3E-PnVFK9JDZbtxx3NTjBCv88br9CQXBhOba2QPMU0WvJu3gGDvegr3NEdW8e9Pak3ayYDWb9KIZa3ZIs3rLrqQS6Te89VtCVzVyzs-TKg3Nc3pCpkoawnvn6UMSceI9-9o2fA0n2EvDA_rAB7rak1GOrYz-CDXVy4xxfQEUOX3F8idIIgEn0T&random=79332033&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851162424&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=11&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfQMH0MBsGb2TO9-KDriTom03j4S0ieqcb0bbX04r-7gPCNcOxcux8_Mo8bb2ihnFvLrgfOMrTqXzwfTLZetvwfjOWhhJsAbSxZ8swf0zdrYRzU2QUHvVo8uyAt2Y45oMPv7B-JQcQe9F1E6fzJg2wcf1sAFaHH_y7YrzMFqY66taBGqX6hra-1QUze4u8cQll2beb7V1xx74eH1d2ZRrBcf2llGe-YV4b4GxFer3dj-nzhO03eKy-KIoIyPwcF8GvPjvNgz2KDuIt-VEqPlrpsvX&random=1140754902&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851162098&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2F&rcb=11&frm=0&tiba=Online%20Printing%20Services%2C%20Print%20Management%2C%20Custom%20Print%20Solutions%20by%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQSyAEABaugfakn2wFZOJJK5aTI9AOj0ToN2KhcTp-UrbxKq-KUtJD-jhZBwCNpVaB1KFOIFJpzae_dqFfgldF9Q52XdBt-GylxKYJ1mfxBhAfDt3v_tCYVES3Qj8nWPVBaFw3Eab0S59ujn_Vtpu8T1O65U2mroIYPpbTF5RPl1FHBq06awQH2SkKSmiTL3XqClFkN5-kbA_XGWsecmU3yAXR0cL3eYKQjksijP8-ZdOlAvZkiOmkHDz5momn_8MB7MjBpaCHxLat3sQ&random=180121426&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://axiomprint.com/product/flyers-printing-102",
+        "status": 200,
+        "body": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width\"/><title>Online Printing in Los Angeles, Same Day Rush Printing in LA</title><script id=\"c"
+      },
+      {
+        "url": "https://axiomprint.com/_next/static/chunks/pages/product/%5Bslug%5D-4c08cc18bb80c7b9.js",
+        "status": 200,
+        "body": "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2915],{37607:function(o,n,e){(window.__NEXT_P=window.__NEXT_P||[]).push([\"/product/[slug]\",function(){return e(27005)}])},98060:function(o,n,e)"
+      },
+      {
+        "url": "https://px.ads.linkedin.com/attribution_trigger?pid=3030114&time=1776851165320&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102",
+        "status": 200,
+        "body": "{}"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/767834039/?random=1776851165388&cv=11&fst=1776851165388&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115616985~115938465~115938469~117266401~118128923~118463262&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=9&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://www.facebook.com/tr/?id=342245932048826&ev=PageView&dl=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rl=&if=false&ts=1776851165412&sw=1440&sh=900&v=2.9.303&r=stable&ec=0&o=12318&fbp=fb.1.1776851162070.240850002377374339&hmd=32f47e47f972ee3f2fe2bbc5&cs_est=true&ler=empty&pmd[title]=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&pmd[locale]=en&plt=101.30000001192093&it=1776851165323&coo=false&expv2[0]=pl1&expv2[1]=el2&expv2[2]=bc1&expv2[3]=ra2&expv2[4]=rp2&expv2[5]=im1&expv2[6]=hf0&rqm=GET",
+        "status": 200,
+        "body": ""
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851165403&cv=11&fst=1776851165403&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938465~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=7&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851165422&cv=11&fst=1776851165422&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938465~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=7&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/767834039/?random=1776851165388&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115616985~115938465~115938469~117266401~118128923~118463262&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=9&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfUtn2MZCXLNHgUcD0BHDknH9zafueTDNB86Vi6bocU50HXKcvEswGzHCGogmpTBfU3vds5BOcIxbuVRxrCLU79vn2cdtRNqt_Zq_AOFkHPcMeavS0Iq5GdiPCUmxAda7lNYAy9MDtxgnGoPQQIlbjqoK0ARaVvby1r2h-Ez5woYcJO2FnMHdWSb2W0e__PO-0Tmj2UlJeRfmZ4hWtaiMptkQJGaGJZsd08K5yu-9__UtoJLjHc2m4tFZOQHG1Y_EbyjoaYz2LYcZvWw9EOPCMYSD&random=2472079822&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851165403&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938465~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=7&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfXqwVKO3yWx_erIUZXncwb_67zFqhZ1KMghQH3YQWImw3Ah8-dlMMvMJKiG_hTyZbHXKwxifvzU9XxM8WgjjUyA1fNZ9Hh4vXJF1YrcuXl7IrdwrthXKyZXVFuG5dXna6cExILV2k32FYTo0MQnhrdwABvxljgznbr-CJk6aaoLM9AtGs6RBSfh-xY-_N15IjH2T7IHzDmhL2m2MjUw2kqLXxoEqbdZuGTk_ptpL7jVlqmCM6hZ8RtirWIlM77ZPju3OwW4ANgBKfS0WxYD4F1rf&random=1096785788&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851165422&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938465~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&rcb=7&frm=0&tiba=Online%20Printing%20in%20Los%20Angeles%2C%20Same%20Day%20Rush%20Printing%20in%20LA&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfYssgPvleRczA3Gd3oJsBxqRXPte94cbc-iLuGbC6rygx1S-ID-iluaHv-c8itEx4SfWsxeiALiBtgmZEHBtIdwd0-ULu0QWMPI2cWEaO9Vt6ZMhqKGqg4A5EDL1S3DXlrZ5wW3JxwfbsWYffYTTw19OdvBXpIPCsovtXuAxnjnh6SKDZB-p-lmY5OGRmQSibTdhoQCK7Ia26Np9Ftw95IrW9So_Lm084D-Papgaw2XMDr2FgFNSgo1AlUlfuyQeeHS0TS0_vtFyzSp3VFnDNpUD&random=3576090384&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://px4.ads.linkedin.com/collect?v=2&fmt=js&pid=3030114&time=1776851165320&li_adsId=9cd45fb4-c999-4336-988a-b8137c38cfcc&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Fflyers-printing-102&e_ipv6=AQKwlxyvHOiP_wAAAZ20lSC3oCrvPczCaiSaGRoqANycHnv46cS4QKGUegsa52dYsz1ckiNF_NLiebg6WIwt3qvCk7NNpfF1",
+        "status": 200,
+        "body": ""
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-01-44-071z-b%27cards--standardbusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFFDp\u0000\u0000WEBPVP8 8p\u0000\u0000�+\u0001�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���Wf>��������D��4��\u0001#��\u0015����J��nV�l·��\u0003��Gi���^��\\�������/��Gz7�W���n�\u0001�������_߿�����\u0013�w�O�\u0007�/��\u001f߿��q���\u0007������\u001f�=�-���+���?�������\u001f�����3���\u0003�/��K/`o�?`O���"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-02-53-067z-b%27cardsluxuryb%27cards.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�c\u0000\u0000WEBPVP8 �c\u0000\u0000P�\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%�.�����8�뒖���f����^%�KHk��I\t��&�����[\u0002���\u000f&��t/�\u0018\u0007�\u001e½����G�]m�����\u000fۯ�v���{߿������\u000f�ݿn���������\u000f��x��?�{�\u000e�3������_��4��>��s�C(�������\u000f���\u001f��=����\u0002�����\u0017�'��b\u000f�o`?�?"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-17-223z-b%27cardsplasticb%27card.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�=\u0000\u0000WEBPVP8 �=\u0000\u0000��\u0000�\u0001*�\u0002o\u0001\u0000\u0000\u0000%����x\u0003ۖ��K@�T�?A�7�%@yJ��\u001f˿�;�\u0007y�~���;�'�\u0003�����\u001fu_���\u001e�?SW~\u0000?�����\u001e�\u0000�q�����:�����\t�c���w���\u000f�{��\u0019����\u001f�F�����W�\u001d��c�O�?j�����\u0003�����]����o�#�/�Ͽ����}�C�o���\u0014���_�"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-28-656z-b%27cards--specialshapebusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�3\u0000\u0000WEBPVP8 �3\u0000\u0000��\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���n���0\u0018\u0018\f\u0001���\u000b+�Wߊ�K2\u0003�O�;�C���\u0017>������:]X��~�v������3�_�~/���\u0017�����>M���?�^a�\u0014�w�?�_�\u001f��������?\n}A���\u0017�;�?��O�����j��^�\u001e������_�/�_�_b�\u000f�;�'�_���?\"��?��8������"
+      },
+      {
+        "url": "https://axiomprint.com/product/tri-fold-brochure-1001",
+        "status": 200,
+        "body": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width\"/><script id=\"config\" type=\"application/ld+json\">{\"@context\":\"https://schema.org/\",\"@type\""
+      },
+      {
+        "url": "https://axiomprint.com/_next/static/chunks/pages/product/%5Bslug%5D-4c08cc18bb80c7b9.js",
+        "status": 200,
+        "body": "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2915],{37607:function(o,n,e){(window.__NEXT_P=window.__NEXT_P||[]).push([\"/product/[slug]\",function(){return e(27005)}])},98060:function(o,n,e)"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/767834039/?random=1776851170511&cv=11&fst=1776851170511&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115938466~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=0&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851170523&cv=11&fst=1776851170523&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401~117384405&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=9&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://px.ads.linkedin.com/attribution_trigger?pid=3030114&time=1776851170460&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001",
+        "status": 200,
+        "body": "{}"
+      },
+      {
+        "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/11159427946/?random=1776851170544&cv=11&fst=1776851170544&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401~117384405&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=9&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=4",
+        "status": 200,
+        "body": "(function(){var s = {};(function(){var k=typeof Object.defineProperties==\"function\"?Object.defineProperty:function(a,d,b){if(a==Array.prototype||a==Object.prototype)return a;a[d]=b.value;return a};fun"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/767834039/?random=1776851170511&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64k0h2v9107850670z89244620175za20gzb9244620175zd9244620175xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=0~115938466~115938469~117266401~118128923&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=0&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfcSl7i2X6VrH9YYtoavDikAqDSikyxWNC_QObRxMxox117thUoBmpaU4axgHXK1wRvM6xCbT4fW-FoV2Q4lmmz8y9cqfPP5N5N-QZFdNo7kXyMqveirz8szQFNK9HxWb1iZy-VIIaF83PV0lHCOdQUBWGNkdKiyAmlhsKWNK_Guobg9E4vDPqbzxv0HvWxfplJRCO_1zDgezJASqPqK9p9nL9b6EUwSmIJ-XxkpU_9-U08gMwFRXOhgalu4Pz3Gnvr26FsTVl_bldEErzyKLT7xl&random=4270085285&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851170544&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=detect_user&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401~117384405&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=9&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Ddetect_user%3Bevent_category%3DHotjar%3Bevent_label%3D5dacee88%3Bnon_interaction%3Dtrue&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfUc_7-RbRLfOHM3kf7xQczGgGQy3J3sHUESSK1Fd0X-jJ3jfM9nOIMErdMjsccd8Idkb-HWyVfQ-CEdi0xXNSzYWO0mSmH7x91nqAX_uoT7wcUdysSUzoG5ZYA38txfCBxl5AcJYsSgaa2RUyHB8PYsr9KRBVN1ClRkKuMrK6_vJBxEcy2GidF3y0JsIVzIMCRqFcV9diKB56k1uiquE9Ghns_h_sg2bve-HY1RqDrSva5LqHAcbio-IQx4ciWjMwKOrJDYHJMF6V929IWL8lmBz&random=4216945910&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://www.google.com/pagead/1p-user-list/11159427946/?random=1776851170523&cv=11&fst=1776848400000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be64h1za200xec&gcd=13l3l3l3l2l1&dma=0&tag_exp=0~115938466~115938468~117266401~117384405&u_w=1440&u_h=900&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&rcb=9&frm=0&tiba=Tri%20Fold%20Brochure%20Printing%20%7C%20Custom%20Trifold%20Brochures%20Online%20%7C%20AxiomPrint&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=411201520.1776851162&uaa=x86&uab=64&uafvl=HeadlessChrome%3B147.0.7727.15%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.15&uamb=0&uam=&uap=macOS&uapv=10.15.7&uaw=0&data=event%3Dgtag.config&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1gEABaugfYDyKnnDk-QIxUvP56Lso0ZBQIkXI1D85gFpO_MZ5GWXRaNXYjkn8G0lkbiJfqpO3jHKEQPf6s42lVAG7IaLyGj9IRXvMRyxnYHLE9F1ulk1eZEYrB6kHQdzmGUh6yCgTwlRa0gL-dHrxwyLDkVQbwU8my0Xv_qbcS60cdlZ17IgqOMJa6Z8wCsKkftSSZjI_9ubZ9OC19D-bK-EdCytR6gfQEbYUEflsvmcCgBFzNHGtxN2lRUkzVA0xdj-FcrwhaH9OumePzxh7wrza5A0Qv4K&random=1362234586&rmt_tld=0&ipr=y",
+        "status": 200,
+        "body": "GIF89a\u0001\u0000\u0001\u0000�\u0000\u0000\u0000\u0000\u0000���!�\u0004\u0001\u0000\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0001D\u0000;"
+      },
+      {
+        "url": "https://px4.ads.linkedin.com/collect?v=2&fmt=js&pid=3030114&time=1776851170460&li_adsId=9cd45fb4-c999-4336-988a-b8137c38cfcc&url=https%3A%2F%2Faxiomprint.com%2Fproduct%2Ftri-fold-brochure-1001&e_ipv6=AQIPdd1btkE2nQAAAZ20lTTQfEqAmWn_avXQJ-ui69uTYjzTArPlXj-yqZRyYGBEVOWy4UVNX_jvJXh9A1o73L64Hbk2cMt7",
+        "status": 200,
+        "body": ""
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-01-44-071z-b%27cards--standardbusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFFDp\u0000\u0000WEBPVP8 8p\u0000\u0000�+\u0001�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���Wf>��������D��4��\u0001#��\u0015����J��nV�l·��\u0003��Gi���^��\\�������/��Gz7�W���n�\u0001�������_߿�����\u0013�w�O�\u0007�/��\u001f߿��q���\u0007������\u001f�=�-���+���?�������\u001f�����3���\u0003�/��K/`o�?`O���"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-02-53-067z-b%27cardsluxuryb%27cards.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�c\u0000\u0000WEBPVP8 �c\u0000\u0000P�\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%�.�����8�뒖���f����^%�KHk��I\t��&�����[\u0002���\u000f&��t/�\u0018\u0007�\u001e½����G�]m�����\u000fۯ�v���{߿������\u000f�ݿn���������\u000f��x��?�{�\u000e�3������_��4��>��s�C(�������\u000f���\u001f��=����\u0002�����\u0017�'��b\u000f�o`?�?"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-17-223z-b%27cardsplasticb%27card.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�=\u0000\u0000WEBPVP8 �=\u0000\u0000��\u0000�\u0001*�\u0002o\u0001\u0000\u0000\u0000%����x\u0003ۖ��K@�T�?A�7�%@yJ��\u001f˿�;�\u0007y�~���;�'�\u0003�����\u001fu_���\u001e�?SW~\u0000?�����\u001e�\u0000�q�����:�����\t�c���w���\u000f�{��\u0019����\u001f�F�����W�\u001d��c�O�?j�����\u0003�����]����o�#�/�Ͽ����}�C�o���\u0014���_�"
+      },
+      {
+        "url": "https://axiomprint.com/_next/image?url=https%3A%2F%2Fwebsite.workroomapp.com%2Fapi%2Fv1%2Fuploads%2Fgallery%2F2025-05-29t17-03-28-656z-b%27cards--specialshapebusinesscard.jpg&w=640&q=100",
+        "status": 200,
+        "body": "RIFF�3\u0000\u0000WEBPVP8 �3\u0000\u0000��\u0000�\u0001*�\u0002s\u0001\u0000\u0000\u0000%���n���0\u0018\u0018\f\u0001���\u000b+�Wߊ�K2\u0003�O�;�C���\u0017>������:]X��~�v������3�_�~/���\u0017�����>M���?�^a�\u0014�w�?�_�\u001f��������?\n}A���\u0017�;�?��O�����j��^�\u001e������_�/�_�_b�\u000f�;�'�_���?\"��?��8������"
+      }
+    ]
+  }
+}
