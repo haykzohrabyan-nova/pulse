@@ -2,7 +2,8 @@
 
 **Project:** Pulse Production Management System  
 **Supabase project domain:** pulse.bazaar-admin.com  
-**Generated:** 2026-04-27 (PRI-236)
+**Generated:** 2026-04-27 (PRI-236)  
+**Updated:** 2026-04-27 (PRI-247 — vendor purchasing intelligence; PRI-238 — auth user seed)
 
 ---
 
@@ -24,6 +25,12 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 |------|---------|
 | `migrations/001_initial_schema.sql` | Enums, all 20 tables, indexes, updated_at triggers, auth trigger |
 | `migrations/002_rls_policies.sql` | Enable RLS + all row-level security policies + realtime publication |
+| `migrations/003_add_qc_role.sql` | Add david_review / QC role |
+| `migrations/004_add_order_specs.sql` | Add order specs columns |
+| `migrations/005_r2_file_tracking.sql` | R2 file tracking extension |
+| `migrations/006_vendor_purchasing_intelligence.sql` | **PRI-247** — Vendor master, material catalog, price records, receiving; extends purchase_orders + purchase_order_items |
+| `migrations/007_vendor_purchasing_rls.sql` | **PRI-247** — RLS policies for vendor purchasing tables |
+| `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed all 21 Pulse team members into auth.users (temp password `Pulse2026!`); fixes qc-failed enum bug from 003 |
 | `rollback/001_rollback.sql` | Full teardown — drops everything in safe order |
 | `seed.sql` | Reference data: 20 machines, 18 workflow templates, 33 materials, 4 config keys |
 
@@ -81,8 +88,14 @@ materials
   └── inventory (material_id, per facility)
         └── inventory_usage (inventory_id, order_id)
 
-purchase_orders
-  └── purchase_order_items (po_id, material_id)
+vendors
+  ├── vendor_materials (vendor_id)
+  │     └── vendor_material_prices (vendor_material_id)
+  └── receiving_records (vendor_id)
+
+purchase_orders (vendor_id → vendors)
+  └── purchase_order_items (po_id, material_id, vendor_material_id → vendor_materials)
+        └── receiving_records (po_id, po_item_id, vendor_material_id)
 
 invoices (order_id, customer_id)
   └── invoice_line_items (invoice_id)
@@ -242,13 +255,123 @@ Supabase managed Postgres includes daily automated backups (Point-in-Time Recove
 
 ---
 
+## Vendor Purchasing Intelligence Tables (PRI-247)
+
+Added via migrations 006 + 007. Separate from the production/order flow — Pulse is the source of truth for all vendor/material/price data.
+
+### `vendors`
+Vendor master. One row per vendor relationship. `vendor_key` is the stable slug.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| vendor_key | TEXT UNIQUE | Stable slug: "derprosa", "nobelus" |
+| name | TEXT | Full legal name |
+| dba_name | TEXT | Trade name / DBA |
+| account_number | TEXT | Our account # with vendor |
+| contact_name | TEXT | Primary contact(s) |
+| contact_email | TEXT | |
+| payment_terms | TEXT | "Net 30", "Credit Card on ship date" |
+| freight_notes | TEXT | Delivery/freight terms |
+| categories_supplied | TEXT | What they sell us |
+| risk_flags | TEXT | Tariff exposure, single-source risk, etc. |
+| source_docs | TEXT | Raw source references |
+| active | BOOL | Soft-disable for ex-vendors |
+
+### `vendor_materials`
+Canonical material catalog per vendor. Clean `material_name` only — no price or code in the name.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| vendor_id | UUID FK | → vendors |
+| item_code | TEXT | Vendor SKU (null if not assigned) |
+| material_name | TEXT | **Clean display name only** (no price/code mixing) |
+| category | TEXT | "Lamination Films", "Label Films", etc. |
+| subcategory | TEXT | "Thermal Press Overlamination", etc. |
+| width_in | NUMERIC | Roll width in inches (key spec for rolls) |
+| length_ft | TEXT | Roll length string ("5000 or 10000") |
+| gauge_mil | NUMERIC | Thickness in mils |
+| uom | TEXT | Unit of measure for pricing ("$/MSI") |
+
+**Dedup indexes:**
+- `UNIQUE(vendor_id, item_code, width_in, gauge_mil)` when item_code is meaningful
+- `UNIQUE(vendor_id, material_name, width_in, gauge_mil)` when no item_code
+
+### `vendor_material_prices`
+Price records per material. Multiple prices allowed (different dates, volume brackets).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| vendor_material_id | UUID FK | → vendor_materials |
+| price_raw | NUMERIC | Price as quoted/invoiced |
+| price_per_msi | NUMERIC | Normalized $/MSI |
+| price_per_roll | NUMERIC | $/roll |
+| price_per_lb | NUMERIC | $/lb |
+| price_per_m_sheets | NUMERIC | $/M sheets |
+| tariff_surcharge_pct | NUMERIC | Tariff % (e.g. 4.5) |
+| effective_date | TEXT | "Aug 2025" |
+| expiration_date | TEXT | Quote expiry |
+| invoice_source | TEXT | Primary source doc |
+| source_refs | JSONB | Array of all source docs (dedup audit trail) |
+| source_confidence | source_confidence | confirmed / quoted / estimated / gap |
+| price_tier_label | TEXT | Volume tier ("500-1799 MSI bracket") |
+| is_current | BOOL | false = historical/superseded |
+
+**Dedup index:** `UNIQUE(vendor_material_id, price_raw, effective_date, price_tier_label)`
+
+### `receiving_records`
+Goods actually received — against a PO or standalone.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| po_id | UUID FK | → purchase_orders (nullable) |
+| po_item_id | UUID FK | → purchase_order_items (nullable) |
+| vendor_id | UUID FK | → vendors |
+| vendor_material_id | UUID FK | → vendor_materials |
+| quantity_received | NUMERIC | |
+| unit_cost_actual | NUMERIC | Actual invoiced price |
+| status | receiving_status | pending / partial / complete / rejected / returned |
+| invoice_number | TEXT | Vendor invoice number |
+| facility | facility | Which facility received |
+
+### `vw_vendor_price_comparison` (view)
+Flat join of vendor + material + price for comparison queries.
+Filter `is_current = TRUE` for live prices.
+Example: `SELECT * FROM vw_vendor_price_comparison WHERE material_name ILIKE '%white bopp%' AND is_current = TRUE ORDER BY price_per_msi;`
+
+### Import Script
+`print-production-system/v2/import-vendor-pricing.js`
+
+**Run:**
+```bash
+# Report only (no DB writes):
+npm run import:vendors:report
+
+# Dry run (validates, no writes):
+SUPABASE_URL=... SUPABASE_SERVICE_KEY=... npm run import:vendors:dry
+
+# Full import:
+SUPABASE_URL=... SUPABASE_SERVICE_KEY=... npm run import:vendors
+```
+
+**Canonicalization results (2026-04-27):**
+- 17 vendors (16 from JSON master + 1 FlexCon from CSV enrichment)
+- 86 canonical vendor_materials (from 90 CSV rows — 4 rows collapsed into multi-price records)
+- 90 vendor_material_prices (some materials have multiple price tiers/dates)
+- 0 duplicate price merges needed
+
+---
+
 ## Known Gaps (to address in follow-up tickets)
 
 | Gap | Tracked In |
 |-----|-----------|
-| Auth integration (Supabase Auth flows, invite flow) | PRI-238 |
+| QC person TBD — `qc@bazaar-admin.com` seeded as "QC Inspector" placeholder | Hayk to confirm and update display_name |
 | Migrate existing IndexedDB data to Postgres | PRI-239 |
 | Edge Functions for R2 presigned URLs | Follow-up D2 ticket |
 | Supabase Vault setup for secrets | PRI-235 |
 | Staging environment provisioning | PRI-235 |
 | Realtime subscription client implementation | PRI-239+ |
+| PO/receiving UI — Pulse Admin purchasing screens | PRI-247 follow-up |
+| Price comparison UI — filter by material/vendor/specs | PRI-247 follow-up |
+| Vendor invite + onboarding email flow | PRI-247 follow-up |
+| Historical PO backfill (link existing POs to vendor_id) | PRI-247 follow-up |
