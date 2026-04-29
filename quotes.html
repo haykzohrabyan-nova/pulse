@@ -1217,91 +1217,7 @@ function closeSendModal() {
   renderQuoteList();
 }
 
-function convertToOrder() {
-  loadQuotes();
-  const qt = _quotes.find(x => x.quoteId === _editingQuoteId);
-  if (!qt) { saveQuote('approved'); return; }
-  if (!qt.customer) { alert('Enter a customer name before converting.'); return; }
-  if (!confirm(`Convert ${qt.quoteId} to an Order? An Order record will be created inheriting all quote details.`)) return;
-
-  // Extract base number from Q-##### or generate a new one
-  const match = qt.quoteId.match(/^Q-(\d+)$/);
-  const baseNum = match ? match[1] : String(getNextNumber());
-  const orderId = `O-${baseNum}`;
-
-  // Mark quote as converted
-  const idx = _quotes.findIndex(x => x.quoteId === qt.quoteId);
-  _quotes[idx].status = 'converted';
-  _quotes[idx].convertedAt = new Date().toISOString();
-  _quotes[idx].orderId = orderId;
-  saveQuotes();
-
-  // Create order record
-  const order = {
-    orderId,
-    baseNumber: baseNum,
-    fromQuoteId: qt.quoteId,
-    customer: qt.customer,
-    email: qt.email || '',
-    phone: qt.phone || '',
-    rep: qt.rep || '',
-    company: qt.company || '',
-    facility: qt.facility || '',
-    due: qt.due || '',
-    notes: qt.notes || '',
-    internal: qt.internal || '',
-    lineItems: qt.lineItems || [],
-    discount: qt.discount || 0,
-    total: qt.total || 0,
-    addons: qt.addons || {},
-    applicationContainerType: qt.applicationContainerType || null,
-    applicationQty: qt.applicationQty || null,
-    applicationFee: qt.applicationFee || null,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
-  orders.unshift(order);
-  localStorage.setItem('pulse_orders', JSON.stringify(orders));
-
-  alert(`✅ Order ${orderId} created from ${qt.quoteId}.`);
-  showTab('orders');
-}
-
-function createJobTicketFromOrder(orderId) {
-  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
-  const order = orders.find(x => x.orderId === orderId);
-  if (!order) return;
-  if (!confirm(`Create Job Ticket from Order ${orderId}?`)) return;
-
-  const baseNum = order.baseNumber || orderId.replace('O-', '');
-  const jtId = `JT-${baseNum}`;
-
-  const idx = orders.findIndex(x => x.orderId === orderId);
-  orders[idx].status = 'converted';
-  orders[idx].convertedAt = new Date().toISOString();
-  orders[idx].jobTicketId = jtId;
-  localStorage.setItem('pulse_orders', JSON.stringify(orders));
-
-  const li = order.lineItems?.[0] || {};
-  const params = new URLSearchParams({
-    customer: order.customer,
-    rep: order.rep || '',
-    facility: order.facility || '',
-    due: order.due || '',
-    product: li.product || '',
-    material: li.material || '',
-    qty: li.qty || '',
-    fromOrder: order.orderId,
-    jobTicketId: jtId,
-  });
-  if (order.applicationContainerType) params.set('applicationContainerType', order.applicationContainerType);
-  if (order.applicationQty) params.set('applicationQty', order.applicationQty);
-  if (order.applicationFee) params.set('applicationFee', order.applicationFee);
-  if (order.company) params.set('company', order.company);
-  window.location.href = `job-ticket.html?${params.toString()}`;
-}
+// convertToOrder() and createJobTicketFromOrder() moved to Gate 2/3 script block at bottom of file.
 
 function renderOrdersList() {
   let orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
@@ -1331,6 +1247,366 @@ function renderOrdersList() {
       </div>`;
 }
 </script>
+<!-- ══════════════════════════════════════════════════════════
+     Phase 3 — Gate 2: Deal → Order (requires written approval + payment)
+     ══════════════════════════════════════════════════════════ -->
+<div id="gate2Modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:26px;max-width:480px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,0.25);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+      <h3 style="margin:0;font-size:18px;font-weight:800;">⛔ Gate 2 — Convert Quote to Order</h3>
+      <button onclick="closeGate2Modal()" style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1;color:#6b7280;">×</button>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Per Pulse spec: no quote converts to an order without written approval + payment confirmation. Fill all fields to proceed.</p>
+
+    <!-- Gate 2 missing fields (populated by JS) -->
+    <div id="gate2Warnings" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:16px;color:#b91c1c;font-size:13px;"></div>
+
+    <!-- Approval method -->
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:6px;">Customer Approval Method *</label>
+      <div style="display:flex;flex-direction:column;gap:6px;" id="gate2ApprovalOptions">
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="gate2ApprovalMethod" value="click_approve" onchange="gate2OnApprovalChange()" style="margin-top:2px;">
+          <div><strong>Click-Approve</strong> — customer clicked approve on proof link</div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="gate2ApprovalMethod" value="written_reply" onchange="gate2OnApprovalChange()" style="margin-top:2px;">
+          <div><strong>Written Reply</strong> — email / text approval from customer</div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="gate2ApprovalMethod" value="jm_recorded" onchange="gate2OnApprovalChange()" style="margin-top:2px;">
+          <div><strong>JM-Recorded</strong> — phone/in-person approval, recorded with note below</div>
+        </label>
+      </div>
+    </div>
+
+    <!-- JM note (required for jm_recorded) -->
+    <div id="gate2NoteRow" style="display:none;margin-bottom:14px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Approval Note * (required for JM-recorded)</label>
+      <textarea id="gate2ApprovalNote" rows="2" placeholder="e.g. Customer approved via phone call at 2:15pm — Gary" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;"></textarea>
+    </div>
+
+    <!-- Payment / deposit -->
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="gate2PaymentConfirmed" style="width:16px;height:16px;">
+        <div>
+          <strong>Payment / deposit confirmed</strong>
+          <div style="font-size:11px;color:#6b7280;margin-top:1px;">Check to confirm payment or required deposit has been collected and recorded</div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Deadline feasibility -->
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="gate2DeadlineFeasible" style="width:16px;height:16px;">
+        <div>
+          <strong>Production deadline confirmed feasible</strong>
+          <div style="font-size:11px;color:#6b7280;margin-top:1px;">Deadline has been verified with production (or this is standard lead time)</div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Artwork status for this job -->
+    <div style="margin-bottom:18px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Artwork Status *</label>
+      <select id="gate2ArtworkStatus" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+        <option value="">— Select artwork status —</option>
+        <option value="has_artwork">Customer has final artwork ready</option>
+        <option value="artwork_coming">Artwork coming from customer</option>
+        <option value="need_design">Need Bazaar design team</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeGate2Modal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="gate2ConfirmBtn" onclick="confirmGate2()" style="padding:8px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">✓ Confirm &amp; Create Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     Phase 3 — Gate 3: Order → Job Ticket (require complete packet)
+     ══════════════════════════════════════════════════════════ -->
+<div id="gate3Modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:26px;max-width:460px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+      <h3 style="margin:0;font-size:18px;font-weight:800;">📦 Gate 3 — Create Job Ticket</h3>
+      <button onclick="closeGate3Modal()" style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1;color:#6b7280;">×</button>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Confirm this closed-order packet is complete before handing off to production.</p>
+
+    <!-- Gate 3 missing fields -->
+    <div id="gate3Warnings" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:14px;color:#b91c1c;font-size:13px;"></div>
+
+    <!-- Artwork status confirmation -->
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Artwork Status *</label>
+      <select id="gate3ArtworkStatus" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+        <option value="">— Confirm artwork status —</option>
+        <option value="present">Files present in Pulse (attached or linked)</option>
+        <option value="pending_customer">Awaiting from customer — missing-file task created</option>
+        <option value="need_design">Needs designer — design task will be created</option>
+      </select>
+    </div>
+
+    <!-- Shipping preference -->
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Shipping / Pickup *</label>
+      <select id="gate3ShippingPref" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+        <option value="">— Select delivery method —</option>
+        <option value="ship_ups">Ship — UPS</option>
+        <option value="ship_fedex">Ship — FedEx</option>
+        <option value="ship_usps">Ship — USPS</option>
+        <option value="pickup_16th">Pickup — 16th Street</option>
+        <option value="pickup_boyd">Pickup — Boyd Street</option>
+      </select>
+    </div>
+
+    <!-- Special instructions -->
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Special Instructions</label>
+      <textarea id="gate3SpecialNotes" rows="2" placeholder="Rush notes, packaging instructions, customer contacts, anything non-standard…"
+        style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeGate3Modal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="gate3ConfirmBtn" onclick="confirmGate3()" style="padding:8px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">🎫 Create Job Ticket</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Phase 3: Gate 2 — Deal → Order ───────────────────────────────────────────
+let _gate2QuoteId = null;
+
+function convertToOrder() {
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === _editingQuoteId);
+  if (!qt) { saveQuote('approved'); return; }
+  if (!qt.customer) { alert('Enter a customer name before converting.'); return; }
+
+  // Check packet completeness upfront
+  const warnings = [];
+  if (!qt.due) warnings.push('Due date not set');
+  if (!(qt.lineItems && qt.lineItems.length && qt.lineItems[0].product)) warnings.push('Product not specified');
+  if (!(qt.email || qt.phone)) warnings.push('Customer contact (email or phone) missing');
+  if (!qt.total) warnings.push('Total / pricing not set');
+
+  const warnEl = document.getElementById('gate2Warnings');
+  if (warnings.length) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `<strong>Missing from quote:</strong><ul style="margin:6px 0 0 14px;">${warnings.map(w=>`<li>${w}</li>`).join('')}</ul>`;
+  } else {
+    warnEl.style.display = 'none';
+  }
+
+  // Reset gate form
+  document.querySelectorAll('input[name="gate2ApprovalMethod"]').forEach(r => r.checked = false);
+  document.getElementById('gate2ApprovalNote').value = '';
+  document.getElementById('gate2PaymentConfirmed').checked = false;
+  document.getElementById('gate2DeadlineFeasible').checked = false;
+  document.getElementById('gate2ArtworkStatus').value = '';
+  document.getElementById('gate2NoteRow').style.display = 'none';
+
+  _gate2QuoteId = _editingQuoteId;
+  document.getElementById('gate2Modal').style.display = 'flex';
+}
+
+function gate2OnApprovalChange() {
+  const method = document.querySelector('input[name="gate2ApprovalMethod"]:checked')?.value;
+  document.getElementById('gate2NoteRow').style.display = method === 'jm_recorded' ? 'block' : 'none';
+}
+
+function closeGate2Modal() {
+  document.getElementById('gate2Modal').style.display = 'none';
+  _gate2QuoteId = null;
+}
+
+function confirmGate2() {
+  const method = document.querySelector('input[name="gate2ApprovalMethod"]:checked')?.value;
+  const note = document.getElementById('gate2ApprovalNote').value.trim();
+  const paymentOk = document.getElementById('gate2PaymentConfirmed').checked;
+  const deadlineOk = document.getElementById('gate2DeadlineFeasible').checked;
+  const artwork = document.getElementById('gate2ArtworkStatus').value;
+
+  const errors = [];
+  if (!method) errors.push('Select a customer approval method');
+  if (method === 'jm_recorded' && !note) errors.push('Approval note required for JM-recorded approval');
+  if (!paymentOk) errors.push('Confirm payment / deposit collected');
+  if (!deadlineOk) errors.push('Confirm production deadline feasibility');
+  if (!artwork) errors.push('Select artwork status');
+
+  const warnEl = document.getElementById('gate2Warnings');
+  if (errors.length) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `<strong>⛔ Cannot create order — complete all fields:</strong><ul style="margin:6px 0 0 14px;">${errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    return;
+  }
+  warnEl.style.display = 'none';
+
+  // All gate checks passed — create the order
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === _gate2QuoteId);
+  if (!qt) { closeGate2Modal(); return; }
+
+  const match = qt.quoteId.match(/^Q-(\d+)$/);
+  const baseNum = match ? match[1] : String(getNextNumber());
+  const orderId = `O-${baseNum}`;
+
+  const idx = _quotes.findIndex(x => x.quoteId === qt.quoteId);
+  _quotes[idx].status = 'converted';
+  _quotes[idx].convertedAt = new Date().toISOString();
+  _quotes[idx].orderId = orderId;
+  saveQuotes();
+
+  const order = {
+    orderId,
+    baseNumber: baseNum,
+    fromQuoteId: qt.quoteId,
+    customer: qt.customer,
+    email: qt.email || '',
+    phone: qt.phone || '',
+    rep: qt.rep || '',
+    company: qt.company || '',
+    facility: qt.facility || '',
+    due: qt.due || '',
+    notes: qt.notes || '',
+    internal: qt.internal || '',
+    lineItems: qt.lineItems || [],
+    discount: qt.discount || 0,
+    total: qt.total || 0,
+    addons: qt.addons || {},
+    applicationContainerType: qt.applicationContainerType || null,
+    applicationQty: qt.applicationQty || null,
+    applicationFee: qt.applicationFee || null,
+    status: 'confirmed',
+    // Gate 2 fields
+    approvalMethod: method,
+    approvalNote: note || '',
+    approvalRecordedAt: new Date().toISOString(),
+    artworkStatus: artwork,
+    paymentConfirmed: true,
+    deadlineFeasibilityConfirmed: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  orders.unshift(order);
+  localStorage.setItem('pulse_orders', JSON.stringify(orders));
+
+  closeGate2Modal();
+  showTab('orders');
+  if (typeof showPageToast === 'function') showPageToast(`✅ Order ${orderId} created — approval recorded.`, 'success');
+  else alert(`✅ Order ${orderId} created from ${qt.quoteId}. Approval: ${method}.`);
+}
+
+// ── Phase 3: Gate 3 — Order → Job Ticket ─────────────────────────────────────
+let _gate3OrderId = null;
+
+function createJobTicketFromOrder(orderId) {
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  const order = orders.find(x => x.orderId === orderId);
+  if (!order) return;
+
+  // Check Gate 3 packet completeness
+  const warnings = [];
+  if (!order.due) warnings.push('Due date not set on order');
+  if (!(order.lineItems && order.lineItems.length && order.lineItems[0].product)) warnings.push('Product not specified');
+  if (!order.customer) warnings.push('Customer name missing');
+
+  const warnEl = document.getElementById('gate3Warnings');
+  if (warnings.length) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `<strong>Missing from order packet:</strong><ul style="margin:6px 0 0 14px;">${warnings.map(w=>`<li>${w}</li>`).join('')}</ul>`;
+  } else {
+    warnEl.style.display = 'none';
+  }
+
+  // Pre-fill artwork status from order if available
+  document.getElementById('gate3ArtworkStatus').value = order.artworkStatus ? mapArtworkStatus(order.artworkStatus) : '';
+  document.getElementById('gate3ShippingPref').value = '';
+  document.getElementById('gate3SpecialNotes').value = order.internal || '';
+
+  _gate3OrderId = orderId;
+  document.getElementById('gate3Modal').style.display = 'flex';
+}
+
+function mapArtworkStatus(s) {
+  if (s === 'has_artwork') return 'present';
+  if (s === 'artwork_coming') return 'pending_customer';
+  if (s === 'need_design') return 'need_design';
+  return '';
+}
+
+function closeGate3Modal() {
+  document.getElementById('gate3Modal').style.display = 'none';
+  _gate3OrderId = null;
+}
+
+function confirmGate3() {
+  const artworkStatus = document.getElementById('gate3ArtworkStatus').value;
+  const shippingPref = document.getElementById('gate3ShippingPref').value;
+
+  const errors = [];
+  if (!artworkStatus) errors.push('Artwork status required — confirm files are present or a missing-file task is created');
+  if (!shippingPref) errors.push('Shipping / pickup preference required');
+
+  const warnEl = document.getElementById('gate3Warnings');
+  if (errors.length) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `<strong>⛔ Complete the packet before creating the job ticket:</strong><ul style="margin:6px 0 0 14px;">${errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    return;
+  }
+  warnEl.style.display = 'none';
+
+  const orders = JSON.parse(localStorage.getItem('pulse_orders') || '[]');
+  const orderId = _gate3OrderId;
+  const order = orders.find(x => x.orderId === orderId);
+  if (!order) { closeGate3Modal(); return; }
+
+  const baseNum = order.baseNumber || orderId.replace('O-', '');
+  const jtId = `JT-${baseNum}`;
+
+  const idx = orders.findIndex(x => x.orderId === orderId);
+  orders[idx].status = 'converted';
+  orders[idx].convertedAt = new Date().toISOString();
+  orders[idx].jobTicketId = jtId;
+  orders[idx].artworkStatusFinal = artworkStatus;
+  orders[idx].shippingPref = shippingPref;
+  orders[idx].gate3Notes = document.getElementById('gate3SpecialNotes').value.trim();
+  localStorage.setItem('pulse_orders', JSON.stringify(orders));
+
+  closeGate3Modal();
+
+  const li = order.lineItems?.[0] || {};
+  const params = new URLSearchParams({
+    customer: order.customer,
+    rep: order.rep || '',
+    facility: order.facility || '',
+    due: order.due || '',
+    product: li.product || '',
+    material: li.material || '',
+    qty: li.qty || '',
+    fromOrder: order.orderId,
+    jobTicketId: jtId,
+    artworkStatus,
+    shippingPref,
+  });
+  if (order.applicationContainerType) params.set('applicationContainerType', order.applicationContainerType);
+  if (order.applicationQty) params.set('applicationQty', order.applicationQty);
+  if (order.applicationFee) params.set('applicationFee', order.applicationFee);
+  if (order.company) params.set('company', order.company);
+  window.location.href = `job-ticket.html?${params.toString()}`;
+}
+
+// Close gate modals on overlay click
+document.getElementById('gate2Modal').addEventListener('click', function(e){ if(e.target===this) closeGate2Modal(); });
+document.getElementById('gate3Modal').addEventListener('click', function(e){ if(e.target===this) closeGate3Modal(); });
+</script>
+
 <script src="pulse-benchmark.js"></script>
 </body>
 </html>
