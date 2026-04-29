@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipping — Bazaar Print</title>
+  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <script src="auth.js?v=20260429-PRI262"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Stats bar -->
+<div id="statsBar" class="ship-stats-bar"></div>
+
+<!-- Main layout: 3 columns -->
+<div class="ship-layout">
+
+  <!-- LEFT: Ready to Ship -->
+  <div class="ship-panel ship-left">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">✅ Ready to Ship</div>
+      <div class="panel-hdr-sub" id="leftCount">—</div>
+    </div>
+    <input type="text" id="leftSearch" class="panel-search" placeholder="Search order # or customer…" oninput="renderLeft()">
+    <div id="leftList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+
+  <!-- CENTER: Action Panel -->
+  <div class="ship-panel ship-center">
+    <div id="centerPlaceholder" class="center-placeholder">
+      <div class="placeholder-icon">🚚</div>
+      <div class="placeholder-text">Select an order to ship or process pickup</div>
+      <div class="placeholder-sub">Orders in <strong>Ready to Ship</strong> appear on the left</div>
+    </div>
+
+    <div id="centerForm" style="display:none;">
+      <div class="center-order-banner" id="centerBanner"></div>
+
+      <!-- Mode toggle: Ship vs Pickup -->
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-btn active" id="modeShip" onclick="setMode('ship')">🚚 Ship It</button>
+        <button class="mode-btn" id="modePickup" onclick="setMode('pickup')">🏪 Customer Pickup</button>
+      </div>
+
+      <!-- Shipping form -->
+      <div id="shipForm" class="action-form">
+        <div class="field-group">
+          <label>Carrier *</label>
+          <select id="carrier">
+            <option value="">— Select Carrier —</option>
+            <option value="UPS">UPS</option>
+            <option value="FedEx">FedEx</option>
+            <option value="USPS">USPS</option>
+            <option value="DHL">DHL</option>
+            <option value="OnTrac">OnTrac</option>
+            <option value="LSO">LSO</option>
+            <option value="Local Delivery">Local Delivery</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Tracking Number</label>
+          <input type="text" id="trackingNumber" placeholder="e.g. 1Z999AA10123456784" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label>Ship Date</label>
+          <input type="date" id="shipDate">
+        </div>
+        <div class="field-group">
+          <label>Shipped By</label>
+          <input type="text" id="shippedBy" placeholder="Your name">
+        </div>
+        <div class="field-group">
+          <label>Shipping Address</label>
+          <textarea id="shipAddress" rows="2" placeholder="Customer shipping address (optional)"></textarea>
+        </div>
+        <div class="field-group">
+          <label>Notes</label>
+          <textarea id="shipNotes" rows="2" placeholder="Any shipping notes…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-full" id="submitShipBtn" onclick="submitShip()">🚚 Mark as Shipped</button>
+      </div>
+
+      <!-- Pickup form -->
+      <div id="pickupForm" class="action-form" style="display:none;">
+        <div class="field-group">
+          <label>Pickup Contact</label>
+          <input type="text" id="pickupContact" placeholder="Who is picking up?">
+        </div>
+        <div class="field-group">
+          <label>Expected Pickup Date</label>
+          <input type="date" id="pickupDate">
+        </div>
+        <div class="field-group">
+          <label>Ready-for-Pickup By</label>
+          <input type="text" id="pickupBy" placeholder="Your name">
+        </div>
+        <div class="field-group">
+          <label>Notes</label>
+          <textarea id="pickupNotes" rows="2" placeholder="Parking, location, instructions…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-full" id="submitPickupBtn" onclick="submitPickup()">📦 Move to Waiting Pickup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: In Transit + Waiting Pickup -->
+  <div class="ship-panel ship-right">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">📬 In Transit &amp; Pickup</div>
+      <div class="panel-hdr-sub" id="rightCount">—</div>
+    </div>
+    <div class="right-tabs">
+      <button class="rtab active" data-rtab="transit" onclick="setRightTab('transit')">🚚 In Transit</button>
+      <button class="rtab" data-rtab="pickup" onclick="setRightTab('pickup')">📦 Waiting Pickup</button>
+      <button class="rtab" data-rtab="received" onclick="setRightTab('received')">✔️ Received</button>
+    </div>
+    <input type="text" id="rightSearch" class="panel-search" placeholder="Search…" oninput="renderRight()">
+    <div id="rightList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+
+</div>
+
+<!-- Receive Modal -->
+<div id="receiveModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>✔️ Mark as Received</h3>
+      <button class="btn" onclick="closeReceiveModal()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div id="receiveOrderInfo" style="padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="field-group">
+        <label>Received Date</label>
+        <input type="date" id="receivedDate">
+      </div>
+      <div class="field-group">
+        <label>Received / Confirmed By</label>
+        <input type="text" id="receivedBy" placeholder="Customer name or staff">
+      </div>
+      <div class="field-group">
+        <label>Post-Sale Notes</label>
+        <textarea id="receivedNotes" rows="3" placeholder="Any follow-up needed? Customer feedback, reorder info…"></textarea>
+      </div>
+      <div style="margin-top:4px;">
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="createFollowUpTask" style="width:16px;height:16px;">
+          Create follow-up task for Account Manager
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="submitReceive()">✔️ Confirm Received</button>
+        <button class="btn" onclick="closeReceiveModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pickup Complete Modal -->
+<div id="pickupCompleteModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>🏪 Confirm Pickup</h3>
+      <button class="btn" onclick="closePickupCompleteModal()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div id="pickupCompleteOrderInfo" style="padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="field-group">
+        <label>Pickup Date/Time</label>
+        <input type="date" id="pickupCompletedDate">
+      </div>
+      <div class="field-group">
+        <label>Picked Up By (Customer)</label>
+        <input type="text" id="pickupCompletedBy" placeholder="Customer name">
+      </div>
+      <div class="field-group">
+        <label>Staff Who Handed Off</label>
+        <input type="text" id="pickupHandoffBy" placeholder="Staff name">
+      </div>
+      <div class="field-group">
+        <label>Notes</label>
+        <textarea id="pickupCompleteNotes" rows="2" placeholder="Any notes…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="submitPickupComplete()">✔️ Confirm Pickup Complete</button>
+        <button class="btn" onclick="closePickupCompleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  injectThemeCSS();
+  document.getElementById('nav').innerHTML = renderNav('shipping');
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: '🚚 Shipping' }]);
+  initAuth('shipping');
+
+  document.getElementById('page-styles').textContent = `
+    /* ── Layout ── */
+    .ship-stats-bar {
+      display: flex; gap: 16px; padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card); flex-wrap: wrap;
+    }
+    .ship-stat {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 6px 14px; border-radius: var(--radius); cursor: pointer;
+      border: 1px solid transparent; transition: all 0.15s;
+    }
+    .ship-stat:hover { background: var(--card-hover); }
+    .ship-stat.active { background: var(--accent); border-color: var(--accent); }
+    .ship-stat.active .ship-stat-val,
+    .ship-stat.active .ship-stat-lbl { color: #fff !important; }
+    .ship-stat-val { font-size: 22px; font-weight: 700; color: var(--text); }
+    .ship-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .ship-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      height: calc(100vh - 130px);
+      overflow: hidden;
+    }
+
+    /* ── Panels ── */
+    .ship-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .ship-panel:last-child { border-right: none; }
+    .panel-hdr {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .panel-hdr-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .panel-hdr-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .panel-search {
+      margin: 8px 10px; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 12px; outline: none; background: var(--bg);
+      color: var(--text);
+    }
+    .panel-search:focus { border-color: var(--accent); }
+    .panel-list {
+      flex: 1; overflow-y: auto; padding: 4px 8px 8px;
+    }
+    .panel-empty {
+      padding: 32px 16px; text-align: center;
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    /* ── Left panel cards ── */
+    .ready-card {
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 6px; cursor: pointer;
+      background: var(--card); transition: all 0.12s;
+    }
+    .ready-card:hover { border-color: var(--accent); background: var(--card-hover); }
+    .ready-card.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    .ready-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .ready-card-order { font-size: 13px; font-weight: 700; color: var(--text); }
+    .ready-card-meta { font-size: 11px; color: var(--text-muted); }
+    .ready-card-customer { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .ready-card-product { font-size: 11px; color: var(--text-muted); }
+    .ready-card-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .chip { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+    .chip-rush { background: #fee2e2; color: #dc2626; }
+    .chip-line { background: #eff6ff; color: #1d4ed8; }
+    .chip-overdue { background: #fef2f2; color: #b91c1c; }
+    .chip-qc { background: #f0fdf4; color: #15803d; }
+
+    /* ── Center panel ── */
+    .ship-center { background: var(--bg); }
+    .center-placeholder {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--text-muted); gap: 8px; padding: 40px;
+    }
+    .placeholder-icon { font-size: 48px; }
+    .placeholder-text { font-size: 15px; font-weight: 600; text-align: center; color: var(--text); }
+    .placeholder-sub { font-size: 12px; text-align: center; }
+    #centerForm { padding: 16px; overflow-y: auto; flex: 1; }
+    .center-order-banner {
+      padding: 14px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    .banner-order { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .banner-detail { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+    .banner-detail strong { color: var(--text); }
+    .mode-toggle { display: flex; gap: 6px; margin-bottom: 16px; }
+    .mode-btn {
+      flex: 1; padding: 9px 0; border: 2px solid var(--border);
+      border-radius: 8px; background: var(--card); cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .mode-btn.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .action-form { display: flex; flex-direction: column; gap: 12px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+    .field-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .field-group input, .field-group select, .field-group textarea {
+      padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; background: var(--bg); color: var(--text); outline: none;
+    }
+    .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
+    .btn-full { width: 100%; margin-top: 4px; }
+
+    /* ── Right panel ── */
+    .right-tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .rtab {
+      flex: 1; padding: 8px 4px; border: none; border-bottom: 2px solid transparent;
+      background: none; font-size: 11px; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .rtab.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+    /* ── Right panel cards ── */
+    .ship-card {
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 6px;
+      background: var(--card);
+    }
+    .ship-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .ship-card-order { font-size: 13px; font-weight: 700; }
+    .ship-card-date { font-size: 10px; color: var(--text-muted); }
+    .ship-card-customer { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .ship-card-meta { font-size: 11px; color: var(--text-muted); }
+    .ship-card-tracking {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 6px; padding: 5px 8px;
+      background: var(--bg); border-radius: 5px;
+      font-size: 11px; font-weight: 600;
+    }
+    .tracking-link { color: var(--accent); text-decoration: none; }
+    .tracking-link:hover { text-decoration: underline; }
+    .ship-card-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .btn-xs {
+      padding: 4px 10px; font-size: 11px; border: 1px solid var(--border);
+      border-radius: 5px; background: var(--bg); color: var(--text);
+      cursor: pointer; font-weight: 600; transition: all 0.12s;
+    }
+    .btn-xs:hover { background: var(--card-hover); }
+    .btn-xs-primary { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .btn-xs-primary:hover { background: #dbeafe; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 1000; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--card); border-radius: 12px;
+      padding: 0; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; }
+  `;
+
+  // ── State ──────────────────────────────────────────────────
+  let allOrders = [];
+  let selectedDbId = null;
+  let selectedOrder = null;
+  let currentMode = 'ship'; // 'ship' | 'pickup'
+  let rightTab = 'transit'; // 'transit' | 'pickup' | 'received'
+  let receiveTargetDbId = null;
+  let receiveTargetOrder = null;
+  let pickupCompleteDbId = null;
+  let pickupCompleteOrder = null;
+
+  // ── Load ──────────────────────────────────────────────────
+  async function load() {
+    try {
+      allOrders = await getAllOrders();
+    } catch (e) {
+      allOrders = [];
+    }
+    renderStats();
+    renderLeft();
+    renderRight();
+    // Default today's ship date
+    document.getElementById('shipDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('receivedDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupCompletedDate').value = new Date().toISOString().split('T')[0];
+  }
+
+  window.addEventListener('DOMContentLoaded', load);
+  onDBUpdate(() => load());
+
+  // ── Stats ─────────────────────────────────────────────────
+  function renderStats() {
+    const readyToShip = allOrders.filter(o => o.status === 'ready-to-ship').length;
+    const inTransit   = allOrders.filter(o => o.status === 'shipped').length;
+    const waitPickup  = allOrders.filter(o => o.status === 'waiting-pickup').length;
+    const received    = allOrders.filter(o => ['received','completed'].includes(o.status)).length;
+    const today = new Date().toISOString().split('T')[0];
+    const shippedToday = allOrders.filter(o => o.status === 'shipped' && o.shippedAt && o.shippedAt.startsWith(today)).length;
+
+    document.getElementById('statsBar').innerHTML = [
+      { val: readyToShip, lbl: 'Ready to Ship', color: '#16a34a' },
+      { val: shippedToday, lbl: 'Shipped Today', color: '#2563eb' },
+      { val: inTransit,   lbl: 'In Transit',    color: '#2563eb' },
+      { val: waitPickup,  lbl: 'Waiting Pickup', color: '#d97706' },
+      { val: received,    lbl: 'Received (all)', color: '#6b7280' },
+    ].map(s => `
+      <div class="ship-stat">
+        <span class="ship-stat-val" style="color:${s.color};">${s.val}</span>
+        <span class="ship-stat-lbl">${s.lbl}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Left Panel ────────────────────────────────────────────
+  function renderLeft() {
+    const q = (document.getElementById('leftSearch')?.value || '').toLowerCase().trim();
+    const orders = allOrders
+      .filter(o => o.status === 'ready-to-ship')
+      .filter(o => !q || (o.orderId + ' ' + o.customerName + ' ' + o.productType).toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (a.isRush && !b.isRush) return -1;
+        if (!a.isRush && b.isRush) return 1;
+        return (a.dueDate || '') < (b.dueDate || '') ? -1 : 1;
+      });
+
+    document.getElementById('leftCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('leftList');
+    if (!orders.length) {
+      container.innerHTML = '<div class="panel-empty">No orders ready to ship</div>';
+      return;
+    }
+    container.innerHTML = orders.map(o => {
+      const today = new Date().toISOString().split('T')[0];
+      const overdue = o.dueDate && o.dueDate < today;
+      const line = getProductionLine(o);
+      const lineColor = { '6k': '#2563eb', '15k': '#7c3aed', 'boyd': '#d97706' }[line] || '#6b7280';
+      return `
+        <div class="ready-card${o.id === selectedDbId ? ' selected' : ''}" onclick="selectOrder('${o.id}')">
+          <div class="ready-card-top">
+            <span class="ready-card-order">#${escHtml(o.orderId)}</span>
+            <span class="ready-card-meta">${o.dueDate ? 'Due: ' + o.dueDate : ''}</span>
+          </div>
+          <div class="ready-card-customer">${escHtml(o.customerName || 'Unknown Customer')}</div>
+          <div class="ready-card-product">${escHtml(o.productType || '')}${o.quantity ? ' × ' + escHtml(String(o.quantity)) : ''}</div>
+          <div class="ready-card-chips">
+            ${o.isRush ? '<span class="chip chip-rush">🔥 Rush</span>' : ''}
+            <span class="chip chip-line" style="background:rgba(0,0,0,0.05);color:${lineColor};">${line?.toUpperCase()}</span>
+            ${overdue ? '<span class="chip chip-overdue">⚠️ Overdue</span>' : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Select Order ──────────────────────────────────────────
+  function selectOrder(dbId) {
+    selectedDbId = dbId;
+    selectedOrder = allOrders.find(o => o.id === dbId);
+    if (!selectedOrder) return;
+
+    renderLeft(); // re-highlight
+
+    // Build banner
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = selectedOrder.dueDate && selectedOrder.dueDate < today;
+    document.getElementById('centerBanner').innerHTML = `
+      <div class="banner-order">#${escHtml(selectedOrder.orderId)} — ${escHtml(selectedOrder.customerName || '—')}</div>
+      <div class="banner-detail">
+        <strong>Product:</strong> ${escHtml(selectedOrder.productType || '—')} &nbsp;
+        <strong>Qty:</strong> ${escHtml(String(selectedOrder.quantity || '—'))} &nbsp;
+        ${selectedOrder.dueDate ? `<strong>Due:</strong> <span style="color:${overdue ? '#dc2626' : 'inherit'}">${selectedOrder.dueDate}${overdue ? ' ⚠️ Overdue' : ''}</span>` : ''}
+        ${selectedOrder.isRush ? '&nbsp; <span style="color:#dc2626;font-weight:700;">🔥 Rush</span>' : ''}
+      </div>
+      ${selectedOrder.customerEmail ? `<div class="banner-detail"><strong>Email:</strong> ${escHtml(selectedOrder.customerEmail)}</div>` : ''}
+      ${selectedOrder.customerPhone ? `<div class="banner-detail"><strong>Phone:</strong> ${escHtml(selectedOrder.customerPhone)}</div>` : ''}
+    `;
+
+    document.getElementById('centerPlaceholder').style.display = 'none';
+    document.getElementById('centerForm').style.display = 'block';
+    setMode(currentMode);
+  }
+
+  // ── Mode Toggle ───────────────────────────────────────────
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('modeShip').classList.toggle('active', mode === 'ship');
+    document.getElementById('modePickup').classList.toggle('active', mode === 'pickup');
+    document.getElementById('shipForm').style.display   = mode === 'ship'   ? 'flex' : 'none';
+    document.getElementById('pickupForm').style.display = mode === 'pickup' ? 'flex' : 'none';
+  }
+
+  // ── Submit Ship ───────────────────────────────────────────
+  async function submitShip() {
+    if (!selectedOrder) return;
+    const carrier = document.getElementById('carrier').value;
+    if (!carrier) { showPageToast('Please select a carrier.', 'warning'); return; }
+    const trackingNumber = document.getElementById('trackingNumber').value.trim();
+    const shipDate = document.getElementById('shipDate').value || new Date().toISOString().split('T')[0];
+    const shippedBy = document.getElementById('shippedBy').value.trim();
+    const shipAddress = document.getElementById('shipAddress').value.trim();
+    const notes = document.getElementById('shipNotes').value.trim();
+
+    const btn = document.getElementById('submitShipBtn');
+    btn.disabled = true;
+    btn.textContent = 'Shipping…';
+
+    try {
+      await updateOrder(selectedDbId, {
+        status: 'shipped',
+        carrier,
+        trackingNumber: trackingNumber || null,
+        shipDate,
+        shippedAt: new Date().toISOString(),
+        shippedBy: shippedBy || null,
+        shippingAddress: shipAddress || null,
+        shippingNotes: notes || null,
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'shipped',
+        message: `Shipped via ${carrier}${trackingNumber ? ' — Tracking: ' + trackingNumber : ''}${shippedBy ? ' by ' + shippedBy : ''}`,
+        by: shippedBy || 'Shipping Dept'
+      });
+      showPageToast(`✅ Order #${selectedOrder.orderId} marked as Shipped via ${carrier}`, 'success', 5000);
+      selectedDbId = null;
+      selectedOrder = null;
+      document.getElementById('centerPlaceholder').style.display = 'flex';
+      document.getElementById('centerForm').style.display = 'none';
+      clearShipForm();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🚚 Mark as Shipped';
+    }
+  }
+
+  function clearShipForm() {
+    document.getElementById('carrier').value = '';
+    document.getElementById('trackingNumber').value = '';
+    document.getElementById('shipDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('shippedBy').value = '';
+    document.getElementById('shipAddress').value = '';
+    document.getElementById('shipNotes').value = '';
+  }
+
+  // ── Submit Pickup Queue ───────────────────────────────────
+  async function submitPickup() {
+    if (!selectedOrder) return;
+    const contact = document.getElementById('pickupContact').value.trim();
+    const pickupDate = document.getElementById('pickupDate').value;
+    const pickupBy = document.getElementById('pickupBy').value.trim();
+    const notes = document.getElementById('pickupNotes').value.trim();
+
+    const btn = document.getElementById('submitPickupBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      await updateOrder(selectedDbId, {
+        status: 'waiting-pickup',
+        pickupContact: contact || null,
+        pickupExpectedDate: pickupDate || null,
+        pickupReadyBy: pickupBy || null,
+        pickupNotes: notes || null,
+        waitingPickupAt: new Date().toISOString(),
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'waiting-pickup',
+        message: `Moved to Waiting Pickup${contact ? ' — Contact: ' + contact : ''}${pickupDate ? ', expected ' + pickupDate : ''}${pickupBy ? ' by ' + pickupBy : ''}`,
+        by: pickupBy || 'Shipping Dept'
+      });
+      showPageToast(`📦 Order #${selectedOrder.orderId} is now Waiting Pickup`, 'success', 5000);
+      selectedDbId = null;
+      selectedOrder = null;
+      document.getElementById('centerPlaceholder').style.display = 'flex';
+      document.getElementById('centerForm').style.display = 'none';
+      clearPickupForm();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📦 Move to Waiting Pickup';
+    }
+  }
+
+  function clearPickupForm() {
+    document.getElementById('pickupContact').value = '';
+    document.getElementById('pickupDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupBy').value = '';
+    document.getElementById('pickupNotes').value = '';
+  }
+
+  // ── Right Panel ───────────────────────────────────────────
+  function setRightTab(tab) {
+    rightTab = tab;
+    document.querySelectorAll('.rtab').forEach(b => b.classList.toggle('active', b.dataset.rtab === tab));
+    renderRight();
+  }
+
+  function renderRight() {
+    const q = (document.getElementById('rightSearch')?.value || '').toLowerCase().trim();
+    let orders = [];
+    if (rightTab === 'transit') {
+      orders = allOrders.filter(o => o.status === 'shipped');
+    } else if (rightTab === 'pickup') {
+      orders = allOrders.filter(o => o.status === 'waiting-pickup');
+    } else {
+      orders = allOrders.filter(o => ['received','completed'].includes(o.status))
+        .sort((a, b) => (b.receivedAt || b.completedAt || '') > (a.receivedAt || a.completedAt || '') ? 1 : -1)
+        .slice(0, 50);
+    }
+    if (q) {
+      orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber||'')).toLowerCase().includes(q));
+    }
+
+    document.getElementById('rightCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('rightList');
+    if (!orders.length) {
+      container.innerHTML = `<div class="panel-empty">${rightTab === 'transit' ? 'No orders in transit' : rightTab === 'pickup' ? 'No orders waiting pickup' : 'No received orders'}</div>`;
+      return;
+    }
+    container.innerHTML = orders.map(o => renderShipCard(o)).join('');
+  }
+
+  function getTrackingUrl(carrier, trackingNumber) {
+    if (!trackingNumber) return null;
+    const tn = encodeURIComponent(trackingNumber);
+    const map = {
+      'UPS':   `https://www.ups.com/track?tracknum=${tn}`,
+      'FedEx': `https://www.fedex.com/fedextrack/?trknbr=${tn}`,
+      'USPS':  `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`,
+      'DHL':   `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${tn}`,
+      'OnTrac': `https://www.ontrac.com/trackingdetail.asp?tracking=${tn}`,
+    };
+    return map[carrier] || null;
+  }
+
+  function renderShipCard(o) {
+    const trackUrl = getTrackingUrl(o.carrier, o.trackingNumber);
+    const dateStr = o.shippedAt ? new Date(o.shippedAt).toLocaleDateString() : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '');
+
+    let actionsHtml = '';
+    if (o.status === 'shipped') {
+      actionsHtml = `
+        <button class="btn-xs btn-xs-primary" onclick="openReceiveModal('${o.id}')">✔️ Mark Received</button>
+        <button class="btn-xs" onclick="copyTracking('${escHtml(o.trackingNumber || '')}')">📋 Copy Tracking</button>
+      `;
+    } else if (o.status === 'waiting-pickup') {
+      actionsHtml = `
+        <button class="btn-xs btn-xs-primary" onclick="openPickupCompleteModal('${o.id}')">🏪 Confirm Pickup</button>
+      `;
+    }
+
+    return `
+      <div class="ship-card">
+        <div class="ship-card-top">
+          <span class="ship-card-order">#${escHtml(o.orderId)}</span>
+          <span class="ship-card-date">${dateStr}</span>
+        </div>
+        <div class="ship-card-customer">${escHtml(o.customerName || '—')}</div>
+        <div class="ship-card-meta">${escHtml(o.productType || '')}${o.quantity ? ' × ' + o.quantity : ''}</div>
+        ${o.carrier ? `
+          <div class="ship-card-tracking">
+            <span>${escHtml(o.carrier)}</span>
+            ${o.trackingNumber
+              ? (trackUrl
+                ? `<a href="${trackUrl}" target="_blank" rel="noopener" class="tracking-link">${escHtml(o.trackingNumber)}</a>`
+                : `<span>${escHtml(o.trackingNumber)}</span>`)
+              : '<span style="color:var(--text-muted);">No tracking #</span>'}
+          </div>
+        ` : ''}
+        ${o.pickupContact ? `<div class="ship-card-meta" style="margin-top:4px;">Contact: ${escHtml(o.pickupContact)}</div>` : ''}
+        ${o.status === 'received' || o.status === 'completed' ? `<div class="ship-card-meta" style="margin-top:4px;color:#16a34a;">✔️ Received ${o.receivedAt ? new Date(o.receivedAt).toLocaleDateString() : ''}</div>` : ''}
+        <div class="ship-card-actions">${actionsHtml}</div>
+      </div>`;
+  }
+
+  function copyTracking(trackingNumber) {
+    if (!trackingNumber) { showPageToast('No tracking number to copy.', 'warning'); return; }
+    navigator.clipboard.writeText(trackingNumber).then(() => showPageToast('Tracking number copied.', 'success', 2000));
+  }
+
+  // ── Receive Modal ─────────────────────────────────────────
+  function openReceiveModal(dbId) {
+    receiveTargetDbId = dbId;
+    receiveTargetOrder = allOrders.find(o => o.id === dbId);
+    if (!receiveTargetOrder) return;
+    document.getElementById('receiveOrderInfo').innerHTML = `
+      <strong>#${escHtml(receiveTargetOrder.orderId)}</strong> — ${escHtml(receiveTargetOrder.customerName || '—')}<br>
+      ${escHtml(receiveTargetOrder.productType || '')} × ${escHtml(String(receiveTargetOrder.quantity || '—'))}<br>
+      ${receiveTargetOrder.carrier ? `Carrier: <strong>${escHtml(receiveTargetOrder.carrier)}</strong>` : ''}
+      ${receiveTargetOrder.trackingNumber ? ` — Tracking: <strong>${escHtml(receiveTargetOrder.trackingNumber)}</strong>` : ''}
+    `;
+    document.getElementById('receivedDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('receivedBy').value = '';
+    document.getElementById('receivedNotes').value = '';
+    document.getElementById('createFollowUpTask').checked = false;
+    document.getElementById('receiveModal').classList.remove('hidden');
+  }
+
+  function closeReceiveModal() {
+    document.getElementById('receiveModal').classList.add('hidden');
+    receiveTargetDbId = null;
+    receiveTargetOrder = null;
+  }
+
+  async function submitReceive() {
+    if (!receiveTargetOrder) return;
+    const receivedDate = document.getElementById('receivedDate').value || new Date().toISOString().split('T')[0];
+    const receivedBy = document.getElementById('receivedBy').value.trim();
+    const notes = document.getElementById('receivedNotes').value.trim();
+    const createFollowUp = document.getElementById('createFollowUpTask').checked;
+
+    try {
+      await updateOrder(receiveTargetDbId, {
+        status: 'received',
+        receivedAt: new Date(receivedDate).toISOString(),
+        receivedBy: receivedBy || null,
+        receivedNotes: notes || null,
+        completedAt: new Date().toISOString(),
+      });
+      await addActivity({
+        orderId: receiveTargetOrder.orderId,
+        type: 'received',
+        message: `Order received${receivedBy ? ' by ' + receivedBy : ''}${notes ? '. Notes: ' + notes : ''}${createFollowUp ? ' — Follow-up task created for AM.' : ''}`,
+        by: receivedBy || 'Shipping Dept'
+      });
+      showPageToast(`✔️ Order #${receiveTargetOrder.orderId} marked as Received`, 'success', 5000);
+      closeReceiveModal();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    }
+  }
+
+  // ── Pickup Complete Modal ─────────────────────────────────
+  function openPickupCompleteModal(dbId) {
+    pickupCompleteDbId = dbId;
+    pickupCompleteOrder = allOrders.find(o => o.id === dbId);
+    if (!pickupCompleteOrder) return;
+    document.getElementById('pickupCompleteOrderInfo').innerHTML = `
+      <strong>#${escHtml(pickupCompleteOrder.orderId)}</strong> — ${escHtml(pickupCompleteOrder.customerName || '—')}<br>
+      ${escHtml(pickupCompleteOrder.productType || '')} × ${escHtml(String(pickupCompleteOrder.quantity || '—'))}<br>
+      ${pickupCompleteOrder.pickupContact ? `Contact: <strong>${escHtml(pickupCompleteOrder.pickupContact)}</strong>` : ''}
+    `;
+    document.getElementById('pickupCompletedDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupCompletedBy').value = pickupCompleteOrder.pickupContact || '';
+    document.getElementById('pickupHandoffBy').value = '';
+    document.getElementById('pickupCompleteNotes').value = '';
+    document.getElementById('pickupCompleteModal').classList.remove('hidden');
+  }
+
+  function closePickupCompleteModal() {
+    document.getElementById('pickupCompleteModal').classList.add('hidden');
+    pickupCompleteDbId = null;
+    pickupCompleteOrder = null;
+  }
+
+  async function submitPickupComplete() {
+    if (!pickupCompleteOrder) return;
+    const pickedUpBy = document.getElementById('pickupCompletedBy').value.trim();
+    const handoffBy = document.getElementById('pickupHandoffBy').value.trim();
+    const notes = document.getElementById('pickupCompleteNotes').value.trim();
+
+    try {
+      await updateOrder(pickupCompleteDbId, {
+        status: 'received',
+        receivedAt: new Date().toISOString(),
+        receivedBy: pickedUpBy || null,
+        receivedNotes: notes || null,
+        completedAt: new Date().toISOString(),
+        pickupCompletedBy: pickedUpBy || null,
+        pickupHandoffBy: handoffBy || null,
+      });
+      await addActivity({
+        orderId: pickupCompleteOrder.orderId,
+        type: 'received',
+        message: `Customer pickup complete${pickedUpBy ? ' — Picked up by: ' + pickedUpBy : ''}${handoffBy ? ', handed off by: ' + handoffBy : ''}${notes ? '. Notes: ' + notes : ''}`,
+        by: handoffBy || pickedUpBy || 'Shipping Dept'
+      });
+      showPageToast(`✔️ Order #${pickupCompleteOrder.orderId} pickup confirmed`, 'success', 5000);
+      closePickupCompleteModal();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>

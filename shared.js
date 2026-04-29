@@ -2752,6 +2752,7 @@ function renderNav(activePage) {
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
     { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },
+    { id: 'shipping',           label: '\uD83D\uDE9A Shipping',            href: 'shipping.html',            access: 'production' },
     { id: 'application-dept',   label: '\uD83C\uDFF7\uFE0F Application',  href: 'application-dept.html',    access: 'production' },
     { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
     { id: 'leads',              label: '\uD83D\uDCCB Leads',              href: 'leads.html',               access: 'all' },

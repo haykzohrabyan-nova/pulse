@@ -38,6 +38,9 @@
   </div>
 </div>
 
+<!-- No-orphan lead alert banner -->
+<div id="orphanBanner" style="display:none;"></div>
+
 <!-- Status pipeline tabs -->
 <div class="status-tabs">
   <button class="stab active" data-status="all" onclick="setStatusFilter('all')">All</button>
@@ -243,6 +246,15 @@ document.getElementById('page-styles').textContent = `
   .score-btn.warm.active { background:#d97706; border-color:#d97706; }
   .score-btn.cool.active { background:#0891b2; border-color:#0891b2; }
 
+  /* Orphan banner */
+  .orphan-banner { margin:0; padding:8px 24px; display:flex; flex-direction:column; gap:4px; background:#fffbeb; border-bottom:1px solid #fcd34d; }
+  .orphan-item { display:flex; align-items:flex-start; gap:10px; padding:8px 12px; border-radius:8px; font-size:13px; }
+  .orphan-critical { background:#fee2e2; border:1px solid #fca5a5; }
+  .orphan-warn { background:#fef3c7; border:1px solid #fcd34d; }
+  .orphan-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .orphan-btn { margin-left:8px; padding:3px 10px; background:#fff; border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; }
+  .orphan-btn:hover { background:var(--card-hover); }
+
   .lead-list-container { padding:16px 24px; display:flex; flex-direction:column; gap:8px; }
 
   .lead-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; cursor:pointer; transition:all 0.15s; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
@@ -386,8 +398,58 @@ function getFiltered() {
   });
 }
 
+// ── Orphan Banner ──────────────────────────────────────────
+// Rule: "no-orphan lead" — leads in 'new' with no follow-up date set,
+// OR any lead whose next_action_date is overdue by >0 days.
+function renderOrphanBanner() {
+  const today = new Date().toISOString().split('T')[0];
+  const active = leads.filter(l => !['lost','routed'].includes(l.status));
+
+  // Uncontacted new leads (no follow-up date at all)
+  const uncontacted = active.filter(l => l.status === 'new' && !l.next_action_date);
+
+  // Hot/warm leads overdue for follow-up
+  const overdueHot = active.filter(l =>
+    ['hot','warm'].includes(l.score) &&
+    l.next_action_date && l.next_action_date < today &&
+    !['lost','routed','nurture'].includes(l.status)
+  );
+
+  const banner = document.getElementById('orphanBanner');
+  if (!banner) return;
+
+  const parts = [];
+  if (uncontacted.length) {
+    parts.push(`
+      <div class="orphan-item orphan-critical">
+        <span class="orphan-icon">🚨</span>
+        <span><strong>${uncontacted.length} new lead${uncontacted.length > 1 ? 's' : ''} with no follow-up scheduled</strong> — assign a rep and set a follow-up date
+          <button class="orphan-btn" onclick="setStatusFilter('new')">View New Leads</button>
+        </span>
+      </div>`);
+  }
+  if (overdueHot.length) {
+    parts.push(`
+      <div class="orphan-item orphan-warn">
+        <span class="orphan-icon">⚠️</span>
+        <span><strong>${overdueHot.length} hot/warm lead${overdueHot.length > 1 ? 's' : ''} overdue for follow-up</strong> — check the overdue items below
+          <button class="orphan-btn" onclick="setScoreFilter('hot')">View Hot Leads</button>
+        </span>
+      </div>`);
+  }
+
+  if (parts.length) {
+    banner.style.display = 'block';
+    banner.innerHTML = `<div class="orphan-banner">${parts.join('')}</div>`;
+  } else {
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+  }
+}
+
 // ── Render ─────────────────────────────────────────────────
 function renderLeads() {
+  renderOrphanBanner();
   const filtered = getFiltered();
   const container = document.getElementById('leadList');
   if (!filtered.length) {
