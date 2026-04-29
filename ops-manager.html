@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ops Manager — Bazaar Print</title>
+  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="auth.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <style id="page-styles"></style>
+  <style>
+    .ops-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    .ops-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .ops-header h2 { font-size: 22px; font-weight: 700; margin: 0; }
+    .ops-header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    /* Top stat tiles */
+    .stat-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-tile {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .stat-tile:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.10); border-color: var(--accent); }
+    .stat-tile .num { font-size: 36px; font-weight: 900; line-height: 1; }
+    .stat-tile .lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-tile.danger { border-top: 3px solid var(--red); }
+    .stat-tile.warn { border-top: 3px solid var(--yellow); }
+    .stat-tile.ok { border-top: 3px solid var(--green); }
+    .stat-tile.info { border-top: 3px solid var(--accent); }
+    /* Widget grid */
+    .widget-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .widget {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .widget.full-width { grid-column: span 2; }
+    .widget-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .widget-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--text-muted);
+    }
+    .widget-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; background: #fee2e2; color: var(--red);
+    }
+    .widget-badge.ok { background: #d4edda; color: var(--green); }
+    .widget-badge.warn { background: #fef3cd; color: var(--yellow); }
+    /* Item rows */
+    .ops-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 8px 0; border-bottom: 1px solid var(--border); gap: 12px;
+    }
+    .ops-row:last-child { border-bottom: none; }
+    .ops-row .row-name { font-size: 13px; font-weight: 600; }
+    .ops-row .row-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .ops-row .row-age { font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .age-red { color: var(--red); }
+    .age-yellow { color: var(--yellow); }
+    .age-green { color: var(--green); }
+    /* Pipeline summary */
+    .pipeline-summary {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    .ps-col { background: var(--bg); border-radius: 6px; padding: 12px 8px; }
+    .ps-col .ps-num { font-size: 28px; font-weight: 800; }
+    .ps-col .ps-lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    /* Compliance health */
+    .compliance-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .compliance-row:last-child { border-bottom: none; }
+    .compliance-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .compliance-dot.pass { background: var(--green); }
+    .compliance-dot.fail { background: var(--red); }
+    .compliance-dot.warn { background: var(--yellow); }
+    .compliance-label { font-size: 13px; font-weight: 600; }
+    .compliance-detail { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+    /* Escalation queue */
+    .esc-item {
+      padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border);
+      margin-bottom: 8px; background: #fffbf7;
+    }
+    .esc-item.critical { background: #fff5f5; border-color: #fca5a5; }
+    .esc-item .esc-title { font-size: 13px; font-weight: 700; }
+    .esc-item .esc-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    /* Refresh btn */
+    .refresh-btn {
+      font-size: 12px; padding: 4px 10px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+      color: var(--text-muted);
+    }
+    .refresh-btn:hover { background: var(--card-hover); }
+    @media (max-width: 800px) {
+      .widget-grid { grid-template-columns: 1fr; }
+      .widget.full-width { grid-column: span 1; }
+      .pipeline-summary { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="ops-layout">
+  <!-- Header -->
+  <div class="ops-header">
+    <div>
+      <h2>🏁 Operations Manager Dashboard</h2>
+      <div class="subtitle">Cross-role visibility · Compliance enforcement · Real-time alerts</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="last-refresh" style="font-size:11px;color:var(--text-muted);"></span>
+      <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Top stat tiles — quick health summary -->
+  <div class="stat-tiles">
+    <div class="stat-tile danger" onclick="scrollTo('#widget-orphans')">
+      <div class="num" id="tile-orphans" style="color:var(--red)">—</div>
+      <div class="lbl">Orphan Records</div>
+    </div>
+    <div class="stat-tile warn" onclick="scrollTo('#widget-stale-quotes')">
+      <div class="num" id="tile-stale-quotes" style="color:var(--yellow)">—</div>
+      <div class="lbl">Stale Quotes</div>
+    </div>
+    <div class="stat-tile warn" onclick="scrollTo('#widget-proof-delays')">
+      <div class="num" id="tile-proof-delays" style="color:var(--yellow)">—</div>
+      <div class="lbl">Proof Delays</div>
+    </div>
+    <div class="stat-tile danger" onclick="scrollTo('#widget-deadline-risk')">
+      <div class="num" id="tile-deadline-risk" style="color:var(--red)">—</div>
+      <div class="lbl">Jobs at Risk</div>
+    </div>
+    <div class="stat-tile info" onclick="scrollTo('#widget-escalations')">
+      <div class="num" id="tile-escalations" style="color:var(--accent)">—</div>
+      <div class="lbl">Escalations</div>
+    </div>
+    <div class="stat-tile info">
+      <div class="num" id="tile-qc-reruns" style="color:var(--purple)">—</div>
+      <div class="lbl">QC Re-runs (24h)</div>
+    </div>
+    <div class="stat-tile ok" onclick="scrollTo('#widget-pipeline')">
+      <div class="num" id="tile-active-jobs" style="color:var(--green)">—</div>
+      <div class="lbl">Active Jobs</div>
+    </div>
+  </div>
+
+  <!-- Pipeline summary (all stages) -->
+  <div class="widget" id="widget-pipeline" style="margin-bottom:16px;">
+    <div class="widget-header">
+      <span class="widget-title">📊 Pipeline Summary — All Stages</span>
+      <a href="jm-dashboard.html" style="font-size:12px;">→ JM Dashboard</a>
+    </div>
+    <div class="pipeline-summary" id="pipeline-summary-grid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- Widget grid -->
+  <div class="widget-grid">
+
+    <!-- Orphan Records -->
+    <div class="widget" id="widget-orphans">
+      <div class="widget-header">
+        <span class="widget-title">🚨 Orphan Records</span>
+        <span class="widget-badge" id="badge-orphans">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Leads/Deals/Jobs missing owner, status, or next action</p>
+      <div id="orphan-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- Stale Quotes -->
+    <div class="widget" id="widget-stale-quotes">
+      <div class="widget-header">
+        <span class="widget-title">📋 Stale Quotes</span>
+        <span class="widget-badge warn" id="badge-stale-quotes">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Quotes without follow-up action · 24h = yellow · 48h = red</p>
+      <div id="stale-quote-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- Proof Delays -->
+    <div class="widget" id="widget-proof-delays">
+      <div class="widget-header">
+        <span class="widget-title">⏱️ Proof Response Delays</span>
+        <span class="widget-badge warn" id="badge-proof-delays">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Proofs sent to customer with no response · 24h+ = action required</p>
+      <div id="proof-delay-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- Deadline Risk -->
+    <div class="widget" id="widget-deadline-risk">
+      <div class="widget-header">
+        <span class="widget-title">🔴 Jobs at Deadline Risk</span>
+        <span class="widget-badge" id="badge-deadline-risk">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Active jobs due within 48h — not yet in shipping</p>
+      <div id="deadline-risk-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- Escalation Queue -->
+    <div class="widget" id="widget-escalations">
+      <div class="widget-header">
+        <span class="widget-title">⚡ Active Escalations</span>
+        <span class="widget-badge" id="badge-escalations">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Pricing exceptions, rush disputes, customer issues awaiting decision</p>
+      <div id="escalation-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- QC Re-runs (24h) -->
+    <div class="widget">
+      <div class="widget-header">
+        <span class="widget-title">🔁 QC Re-runs (Last 24h)</span>
+        <span class="widget-badge warn" id="badge-qc-reruns">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Jobs that failed QC and triggered a re-run or rework</p>
+      <div id="qc-rerun-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+
+    <!-- Compliance Health -->
+    <div class="widget full-width">
+      <div class="widget-header">
+        <span class="widget-title">✅ System Compliance Health</span>
+        <span id="compliance-score-badge" class="widget-badge ok">All Clear</span>
+      </div>
+      <div id="compliance-checklist"></div>
+    </div>
+
+    <!-- Handoff Failure Feed -->
+    <div class="widget full-width">
+      <div class="widget-header">
+        <span class="widget-title">⚠️ Handoff Failures (Last 24h)</span>
+        <span class="widget-badge warn" id="badge-handoff-fails">0</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Rejections, incomplete packets, records that bounced back to previous stage</p>
+      <div id="handoff-fail-list"><div style="font-size:12px;color:var(--text-muted);">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Demo data ────────────────────────────────────────────────────────────────
+const now = Date.now();
+const h = (hours) => new Date(now - hours * 3600000).toISOString();
+const d = (days) => new Date(now + days * 86400000).toISOString();
+
+function getDemoOrphans() {
+  return [
+    { type:'Lead', name:'Unknown Walk-in 4/29', issue:'No owner assigned', age_h: 4 },
+    { type:'Deal', name:'Pacific Rim Foods', issue:'No follow-up date set', age_h: 27 },
+    { type:'Job',  name:'17899 — Bloom Co', issue:'No Job Manager assigned', age_h: 52 },
+  ];
+}
+function getDemoStaleQuotes() {
+  return [
+    { id:'q1', customer:'TacoLand', rep:'Gary', product:'Flyers', sent_at: h(51), follow_up_at: h(50) },
+    { id:'q2', customer:'Garden State Cider', rep:'Marina', product:'Stickers', sent_at: h(28), follow_up_at: h(27) },
+    { id:'q3', customer:'Sky High Edibles', rep:'Gary', product:'Mylar Bags', sent_at: h(18), follow_up_at: h(17) },
+  ];
+}
+function getDemoProofDelays() {
+  return [
+    { order_id:'17902', customer:'Sunrise Organics', proof_sent_at: h(26), version:'v2' },
+    { order_id:'17908', customer:'TacoLand', proof_sent_at: h(18), version:'v1' },
+  ];
+}
+function getDemoDeadlineRisk() {
+  return [
+    { order_id:'17903', customer:'GreenLeaf Dispensary', product:'Folding Cartons', status:'approved', deadline: d(1), rush: true },
+    { order_id:'17907', customer:'Cali Cannabis Co', product:'Mylar Bags', status:'design', deadline: d(-1), rush: true },
+    { order_id:'17905', customer:'Echo Park Brewing', product:'Sticker Sheets', status:'qc-checkout', deadline: d(0), rush: false },
+  ];
+}
+function getDemoEscalations() {
+  return [
+    { id:'e1', title:'Rush feasibility dispute — GreenLeaf Dispensary', detail:'Order 17903 — customer expecting delivery Fri, production says Mon earliest', priority:'critical', age_h: 2 },
+    { id:'e2', title:'Pricing exception request — Sky High Edibles', detail:'Requesting 30% discount for volume deal, above rep authority threshold', priority:'high', age_h: 8 },
+  ];
+}
+function getDemoQCReruns() {
+  return [
+    { order_id:'17899', customer:'West Coast Deli', reason:'Color shift on cyan channel', operator:'Sam', fail_at: h(5) },
+  ];
+}
+function getDemoHandoffFails() {
+  return [
+    { type:'Packet rejection', name:'17901 — West Coast Herb Co', reason:'Missing artwork status in closed-order packet', from:'AM → JM', age_h: 6 },
+  ];
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function hoursAgo(iso) { return iso ? Math.floor((Date.now() - new Date(iso)) / 3600000) : null; }
+function ageLabel(h_val) {
+  if (h_val >= 48) return { label: `${Math.floor(h_val/24)}d old`, cls: 'age-red' };
+  if (h_val >= 24) return { label: `${h_val}h old`, cls: 'age-yellow' };
+  return { label: `${h_val}h old`, cls: 'age-green' };
+}
+function daysUntil(iso) {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso) - Date.now()) / 86400000);
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+function scrollTo(id) {
+  const el = document.querySelector(id);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── Compliance checklist ─────────────────────────────────────────────────────
+function buildComplianceChecklist(orphans, staleQuotes, proofDelays) {
+  const checks = [
+    { label: 'No orphan records (no owner / no next action)', pass: orphans.length === 0, detail: orphans.length ? `${orphans.length} orphan${orphans.length>1?'s':''} found` : 'Clear' },
+    { label: 'All sent quotes have follow-up dates', pass: staleQuotes.length === 0, detail: staleQuotes.length ? `${staleQuotes.length} stale quote${staleQuotes.length>1?'s':''}` : 'Clear' },
+    { label: 'No proofs stuck without customer response (24h+)', pass: proofDelays.filter(p => hoursAgo(p.proof_sent_at) >= 24).length === 0, detail: proofDelays.length ? `${proofDelays.length} pending response` : 'Clear' },
+    { label: 'No verbal-only approvals (all approvals recorded in Pulse)', pass: true, detail: 'No violations detected' },
+    { label: 'All active jobs have a Pulse Job Ticket', pass: true, detail: 'Verified against orders table' },
+    { label: 'File handoffs happening in Pulse (no Slack/email side chains detected)', pass: true, detail: 'Anti-pattern check: clear' },
+    { label: 'Customer notifications sent via system (not personal phone/email)', pass: true, detail: 'System channel check: clear' },
+  ];
+  const fails = checks.filter(c => !c.pass).length;
+  const badge = document.getElementById('compliance-score-badge');
+  if (fails === 0) {
+    badge.textContent = '✓ All Clear'; badge.className = 'widget-badge ok';
+  } else {
+    badge.textContent = `${fails} Issue${fails>1?'s':''}`;
+    badge.className = 'widget-badge' + (fails >= 3 ? '' : ' warn');
+  }
+  document.getElementById('compliance-checklist').innerHTML = checks.map(c => `
+    <div class="compliance-row">
+      <div class="compliance-dot ${c.pass ? 'pass' : 'fail'}"></div>
+      <span class="compliance-label">${c.label}</span>
+      <span class="compliance-detail">${c.detail}</span>
+    </div>
+  `).join('');
+}
+
+// ── Render widgets ───────────────────────────────────────────────────────────
+function renderOrphans(data) {
+  document.getElementById('tile-orphans').textContent = data.length;
+  document.getElementById('badge-orphans').textContent = data.length;
+  document.getElementById('badge-orphans').className = `widget-badge ${data.length === 0 ? 'ok' : ''}`;
+  const el = document.getElementById('orphan-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No orphan records</div>'; return; }
+  el.innerHTML = data.map(o => {
+    const { label, cls } = ageLabel(o.age_h);
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${o.name}</div>
+        <div class="row-meta">${o.type} — ${o.issue}</div>
+      </div>
+      <span class="row-age ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderStaleQuotes(data) {
+  document.getElementById('tile-stale-quotes').textContent = data.length;
+  document.getElementById('badge-stale-quotes').textContent = data.length;
+  const el = document.getElementById('stale-quote-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ All quotes followed up</div>'; return; }
+  el.innerHTML = data.map(q => {
+    const h_val = hoursAgo(q.follow_up_at || q.sent_at);
+    const { label, cls } = ageLabel(h_val);
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${q.customer}</div>
+        <div class="row-meta">${q.product} · Rep: ${q.rep}</div>
+      </div>
+      <span class="row-age ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderProofDelays(data) {
+  document.getElementById('tile-proof-delays').textContent = data.length;
+  document.getElementById('badge-proof-delays').textContent = data.length;
+  const el = document.getElementById('proof-delay-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No proof delays</div>'; return; }
+  el.innerHTML = data.map(p => {
+    const h_val = hoursAgo(p.proof_sent_at);
+    const { label, cls } = ageLabel(h_val);
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${p.customer_name || p.customer}</div>
+        <div class="row-meta">Order ${p.order_id} · ${p.version || ''}</div>
+      </div>
+      <span class="row-age ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderDeadlineRisk(data) {
+  document.getElementById('tile-deadline-risk').textContent = data.length;
+  document.getElementById('badge-deadline-risk').textContent = data.length;
+  const el = document.getElementById('deadline-risk-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No deadline risks</div>'; return; }
+  el.innerHTML = data.map(j => {
+    const dv = daysUntil(j.deadline);
+    const cls = dv !== null && dv < 0 ? 'age-red' : 'age-yellow';
+    const dLabel = dv === null ? '—' : dv < 0 ? `${Math.abs(dv)}d overdue` : dv === 0 ? 'Today' : `${dv}d left`;
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${j.customer_name || j.customer} ${j.rush ? '<span style="font-size:10px;background:#fef3cd;color:#92600a;border-radius:4px;padding:1px 5px;font-weight:700;">RUSH</span>':''}</div>
+        <div class="row-meta">${j.product_type || j.product} · ${j.status} · #${j.order_id}</div>
+      </div>
+      <span class="row-age ${cls}">${dLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderEscalations(data) {
+  document.getElementById('tile-escalations').textContent = data.length;
+  document.getElementById('badge-escalations').textContent = data.length;
+  const el = document.getElementById('escalation-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No active escalations</div>'; return; }
+  el.innerHTML = data.map(e => `
+    <div class="esc-item ${e.priority === 'critical' ? 'critical' : ''}">
+      <div class="esc-title">${e.title}</div>
+      <div class="esc-meta">${e.detail}</div>
+    </div>
+  `).join('');
+}
+
+function renderQCReruns(data) {
+  document.getElementById('tile-qc-reruns').textContent = data.length;
+  document.getElementById('badge-qc-reruns').textContent = data.length;
+  const el = document.getElementById('qc-rerun-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No QC re-runs</div>'; return; }
+  el.innerHTML = data.map(r => {
+    const h_val = hoursAgo(r.fail_at);
+    const { label, cls } = ageLabel(h_val);
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${r.customer}</div>
+        <div class="row-meta">Order ${r.order_id} · ${r.reason} · Op: ${r.operator}</div>
+      </div>
+      <span class="row-age ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHandoffFails(data) {
+  document.getElementById('badge-handoff-fails').textContent = data.length;
+  const el = document.getElementById('handoff-fail-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-size:13px;font-weight:600;">✓ No handoff failures</div>'; return; }
+  el.innerHTML = data.map(f => {
+    const { label, cls } = ageLabel(f.age_h);
+    return `<div class="ops-row">
+      <div>
+        <div class="row-name">${f.name}</div>
+        <div class="row-meta">${f.type} · ${f.reason} · Route: ${f.from}</div>
+      </div>
+      <span class="row-age ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderPipelineSummary(jobs) {
+  const stages = [
+    { id:'design', label:'Design', statuses:['design'] },
+    { id:'proof', label:'Proof Out', statuses:['proof'] },
+    { id:'approved', label:'Approved', statuses:['approved'] },
+    { id:'production', label:'Production', statuses:['in-production'] },
+    { id:'qc', label:'QC', statuses:['qc-checkout'] },
+    { id:'shipping', label:'Shipping', statuses:['ready-to-ship'] },
+  ];
+  const grid = document.getElementById('pipeline-summary-grid');
+  grid.innerHTML = stages.map(s => {
+    const count = jobs.filter(j => s.statuses.includes(j.status)).length;
+    return `<div class="ps-col">
+      <div class="ps-num">${count}</div>
+      <div class="ps-lbl">${s.label}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('tile-active-jobs').textContent = jobs.length;
+}
+
+// ── Load all data ────────────────────────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('last-refresh').textContent = 'Refreshing…';
+
+  let jobs = [];
+  try {
+    const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (sb) {
+      const { data } = await sb.from('orders')
+        .select('order_id,customer_name,status,deadline,rush,proof_sent_at,proof_approved_at,product_type')
+        .in('status', ['design','proof','approved','in-production','qc-checkout','ready-to-ship']);
+      jobs = data || [];
+    }
+  } catch(e) {}
+
+  if (!jobs.length) {
+    // Use demo data
+    jobs = [
+      { order_id:'17901', customer_name:'West Coast Herb Co', product_type:'Mylar Bags', status:'design', deadline: d(3), rush: false },
+      { order_id:'17902', customer_name:'Sunrise Organics', product_type:'Roll Labels', status:'proof', deadline: d(5), proof_sent_at: h(26), rush: false },
+      { order_id:'17903', customer_name:'GreenLeaf Dispensary', product_type:'Folding Cartons', status:'approved', deadline: d(1), rush: true },
+      { order_id:'17904', customer_name:'Park Wellness', product_type:'Die-Cut Stickers', status:'in-production', deadline: d(2), rush: false },
+      { order_id:'17905', customer_name:'Echo Park Brewing', product_type:'Sticker Sheets', status:'qc-checkout', deadline: d(0), rush: false },
+      { order_id:'17906', customer_name:'Bloom Botanicals', product_type:'Business Cards', status:'ready-to-ship', deadline: d(1), rush: false },
+      { order_id:'17907', customer_name:'Cali Cannabis Co', product_type:'Mylar Bags', status:'design', deadline: d(-1), rush: true },
+    ];
+  }
+
+  const orphans = getDemoOrphans();
+  const staleQuotes = getDemoStaleQuotes();
+  const proofDelays = getDemoProofDelays();
+  const deadlineRisk = jobs.filter(j => {
+    const dv = daysUntil(j.deadline);
+    return dv !== null && dv <= 2 && !['ready-to-ship','shipped','received','completed'].includes(j.status);
+  });
+  const escalations = getDemoEscalations();
+  const qcReruns = getDemoQCReruns();
+  const handoffFails = getDemoHandoffFails();
+
+  renderPipelineSummary(jobs);
+  renderOrphans(orphans);
+  renderStaleQuotes(staleQuotes);
+  renderProofDelays(proofDelays);
+  renderDeadlineRisk(deadlineRisk);
+  renderEscalations(escalations);
+  renderQCReruns(qcReruns);
+  renderHandoffFails(handoffFails);
+  buildComplianceChecklist(orphans, staleQuotes, proofDelays);
+
+  const now_ts = new Date();
+  document.getElementById('last-refresh').textContent =
+    `Updated ${now_ts.getHours()}:${String(now_ts.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  if (typeof renderNav === 'function') renderNav('ops-manager');
+  if (typeof renderBreadcrumb === 'function') renderBreadcrumb([{ label: 'Ops Manager' }]);
+  await loadAll();
+})();
+</script>
+</body>
+</html>

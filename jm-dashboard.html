@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Manager — Bazaar Print</title>
+  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="auth.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <style id="page-styles"></style>
+  <style>
+    .jm-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    /* ── Left sidebar ── */
+    .jm-sidebar { display: flex; flex-direction: column; gap: 12px; }
+    .sidebar-widget {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .sidebar-widget h4 {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .alert-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-count {
+      font-size: 22px; font-weight: 800; line-height: 1;
+    }
+    .alert-count.red { color: var(--red); }
+    .alert-count.yellow { color: var(--yellow); }
+    .alert-count.green { color: var(--green); }
+    .alert-count.blue { color: var(--accent); }
+    .stat-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-box {
+      background: var(--bg); border-radius: 6px; padding: 10px 12px; text-align: center;
+    }
+    .stat-box .num { font-size: 24px; font-weight: 800; }
+    .stat-box .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    /* Packet queue */
+    .packet-item {
+      padding: 8px 10px; border-radius: 6px; background: #fff8ed;
+      border: 1px solid #fed7aa; margin-bottom: 6px; cursor: pointer; transition: box-shadow 0.15s;
+    }
+    .packet-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
+    .packet-item .pname { font-weight: 600; font-size: 13px; }
+    .packet-item .pmeta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .packet-item .page { font-size: 11px; color: var(--yellow); font-weight: 700; margin-top: 3px; }
+    /* ── Pipeline main area ── */
+    .jm-pipeline { overflow-x: auto; }
+    .pipeline-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .pipeline-header h2 { font-size: 20px; font-weight: 700; }
+    .pipeline-board {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(190px, 1fr));
+      gap: 10px;
+      min-width: 1100px;
+    }
+    .pipeline-col {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 10px;
+    }
+    .col-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .col-count {
+      font-size: 11px; font-weight: 700; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px;
+      color: var(--text-muted);
+    }
+    /* Stage colors */
+    .col-design .col-title { color: var(--accent); }
+    .col-proof .col-title { color: var(--purple); }
+    .col-approved .col-title { color: var(--green); }
+    .col-production .col-title { color: #c2410c; }
+    .col-qc .col-title { color: var(--yellow); }
+    .col-shipping .col-title { color: var(--text-muted); }
+    /* Job card */
+    .job-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .job-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.12); border-color: var(--accent); }
+    .job-card.risk-red { border-left: 3px solid var(--red); }
+    .job-card.risk-yellow { border-left: 3px solid var(--yellow); }
+    .job-card .jc-id { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.3px; }
+    .job-card .jc-cust { font-size: 13px; font-weight: 700; margin: 2px 0; }
+    .job-card .jc-prod { font-size: 11px; color: var(--text-muted); }
+    .job-card .jc-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 6px;
+    }
+    .jc-due { font-size: 11px; }
+    .jc-due.overdue { color: var(--red); font-weight: 700; }
+    .jc-due.soon { color: var(--yellow); font-weight: 600; }
+    .jc-due.ok { color: var(--green); }
+    .proof-timer {
+      font-size: 10px; background: #ede9fe; color: #6d28d9;
+      border-radius: 10px; padding: 2px 7px; font-weight: 600;
+    }
+    .proof-timer.overdue { background: #fee2e2; color: var(--red); }
+    .col-empty {
+      text-align: center; padding: 24px 8px; color: var(--text-muted);
+      font-size: 12px;
+    }
+    /* Job detail modal */
+    .jm-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .jm-modal-overlay.active { display: flex; }
+    .jm-modal {
+      background: var(--card); border-radius: 10px;
+      width: 560px; max-width: 95vw; max-height: 85vh;
+      overflow-y: auto; padding: 24px; position: relative;
+    }
+    .jm-modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .jm-modal .close-btn {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none; font-size: 20px; cursor: pointer;
+      color: var(--text-muted); line-height: 1;
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .detail-field label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--text-muted); display: block; margin-bottom: 3px; }
+    .detail-field span { font-size: 14px; font-weight: 600; }
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    /* Stage advance btn */
+    .stage-btn {
+      padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 6px;
+      border: none; cursor: pointer;
+    }
+    .stage-btn.advance { background: var(--accent); color: #fff; }
+    .stage-btn.advance:hover { background: #1d4ed8; }
+    /* Gate validation */
+    .gate-warning {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px;
+      padding: 10px 12px; margin-top: 12px; font-size: 13px; color: #c2410c;
+    }
+    .gate-warning ul { margin: 6px 0 0 16px; }
+    @media (max-width: 900px) {
+      .jm-layout { grid-template-columns: 1fr; }
+      .pipeline-board { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="jm-layout">
+  <!-- LEFT SIDEBAR -->
+  <aside class="jm-sidebar">
+
+    <!-- Summary stats -->
+    <div class="sidebar-widget">
+      <h4>📊 Today's Overview</h4>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="num blue" id="stat-active-jobs">—</div>
+          <div class="lbl">Active Jobs</div>
+        </div>
+        <div class="stat-box">
+          <div class="num red" id="stat-at-risk">—</div>
+          <div class="lbl">At Risk</div>
+        </div>
+        <div class="stat-box">
+          <div class="num yellow" id="stat-proofs-out">—</div>
+          <div class="lbl">Proofs Out</div>
+        </div>
+        <div class="stat-box">
+          <div class="num green" id="stat-ready-approve">—</div>
+          <div class="lbl">Ship-Ready</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert: Packets waiting review -->
+    <div class="sidebar-widget">
+      <h4>📥 Inbound Packets</h4>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Won deals needing Job Ticket</p>
+      <div id="packet-list"><div class="col-empty">No packets waiting</div></div>
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;" onclick="showNewJobModal()">+ Create Job from Packet</button>
+    </div>
+
+    <!-- Alert: Proofs overdue -->
+    <div class="sidebar-widget">
+      <h4>⏱️ Proof Response Timers</h4>
+      <div id="proof-timer-list"><div style="font-size:12px;color:var(--text-muted);">No proofs awaiting response</div></div>
+    </div>
+
+    <!-- Alert: Deadline risk -->
+    <div class="sidebar-widget">
+      <h4>🚨 Deadline Risk</h4>
+      <div id="deadline-risk-list"><div style="font-size:12px;color:var(--text-muted);">No imminent deadlines</div></div>
+    </div>
+
+    <!-- Designer queue depth -->
+    <div class="sidebar-widget">
+      <h4>🎨 Designer Queue</h4>
+      <div id="designer-queue-widget">
+        <div class="alert-item">
+          <span>Active tasks</span>
+          <span class="alert-count blue" id="dq-active">—</span>
+        </div>
+        <div class="alert-item">
+          <span>Revisions waiting</span>
+          <span class="alert-count yellow" id="dq-revisions">—</span>
+        </div>
+        <div class="alert-item">
+          <span>Overdue first proof</span>
+          <span class="alert-count red" id="dq-overdue">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN PIPELINE BOARD -->
+  <main>
+    <div class="pipeline-header">
+      <div>
+        <h2>🎫 Job Manager Pipeline</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:2px;">Track every job from packet to shipment</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="jm-search" placeholder="Search jobs..." oninput="renderPipeline()"
+          style="padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:13px;width:180px;">
+        <button class="btn btn-primary" onclick="showNewJobModal()">+ New Job Ticket</button>
+      </div>
+    </div>
+
+    <div class="pipeline-board" id="pipeline-board">
+      <!-- Columns rendered by JS -->
+    </div>
+  </main>
+</div>
+
+<!-- Job Detail Modal -->
+<div class="jm-modal-overlay" id="jobDetailModal">
+  <div class="jm-modal">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="modal-title">Job Details</h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+let jobs = [];
+let activeJob = null;
+
+const STAGES = [
+  { id: 'design',     label: '🎨 Design',      col: 'col-design',      statuses: ['design'] },
+  { id: 'proof',      label: '📋 Proof Out',   col: 'col-proof',       statuses: ['proof'] },
+  { id: 'approved',   label: '✅ Approved',    col: 'col-approved',    statuses: ['approved'] },
+  { id: 'production', label: '⚙️ Production',  col: 'col-production',  statuses: ['in-production'] },
+  { id: 'qc',         label: '🔍 QC',          col: 'col-qc',          statuses: ['qc-checkout'] },
+  { id: 'shipping',   label: '🚚 Shipping',    col: 'col-shipping',    statuses: ['ready-to-ship'] }
+];
+
+// ── Demo data (fallback when Supabase not connected) ─────────────────────────
+function getDemoJobs() {
+  const now = Date.now();
+  const d = (offset) => new Date(now + offset * 86400000).toISOString();
+  return [
+    { id:'j1', order_id:'17901', customer_name:'West Coast Herb Co', product_type:'Mylar Bags 1000ct', status:'design',
+      deadline: d(3), proof_sent_at:null, assigned_designer:'Alex',
+      specs:'10"x14" matte + custom print', notes:'Customer has artwork', rush: false },
+    { id:'j2', order_id:'17902', customer_name:'Sunrise Organics', product_type:'Roll Labels 5000ct', status:'proof',
+      deadline: d(5), proof_sent_at: new Date(now - 26*3600000).toISOString(), assigned_designer:'Alex',
+      specs:'4"x6" BOPP gloss', notes:'v2 sent 4/27', rush: false },
+    { id:'j3', order_id:'17903', customer_name:'GreenLeaf Dispensary', product_type:'Folding Cartons 2500ct', status:'approved',
+      deadline: d(1), proof_sent_at: new Date(now - 48*3600000).toISOString(),
+      proof_approved_at: new Date(now - 12*3600000).toISOString(),
+      specs:'4"x4"x1" spot UV custom die', notes:'RUSH order', rush: true },
+    { id:'j4', order_id:'17904', customer_name:'Park Wellness', product_type:'Die-Cut Stickers 500ct', status:'in-production',
+      deadline: d(2), proof_approved_at: new Date(now - 24*3600000).toISOString(),
+      specs:'Circle 3" gloss laminate', notes:'', rush: false },
+    { id:'j5', order_id:'17905', customer_name:'Echo Park Brewing', product_type:'Sticker Sheets 200ct', status:'qc-checkout',
+      deadline: d(0), specs:'8.5"x11" matte', notes:'Completed this morning', rush: false },
+    { id:'j6', order_id:'17906', customer_name:'Bloom Botanicals', product_type:'Business Cards 500ct', status:'ready-to-ship',
+      deadline: d(1), specs:'3.5"x2" soft touch', notes:'Pickup order — customer coming 4/30', rush: false },
+    { id:'j7', order_id:'17907', customer_name:'Cali Cannabis Co', product_type:'Mylar Bags 5000ct', status:'design',
+      deadline: d(-1), proof_sent_at: null,
+      specs:'6"x9" matte + child-resistant', notes:'Overdue! Customer waiting.', rush: true },
+    { id:'j8', order_id:'17908', customer_name:'TacoLand', product_type:'Flyers 1000ct', status:'proof',
+      deadline: d(7), proof_sent_at: new Date(now - 18*3600000).toISOString(),
+      specs:'5.5"x8.5" full-color', notes:'v1 sent', rush: false },
+  ];
+}
+
+// ── Inbound packets (won deals not yet converted to jobs) ───────────────────
+function getDemoPackets() {
+  const now = Date.now();
+  return [
+    { id:'p1', customer_name:'Jungle Juice LA', product_type:'Roll Labels 3000ct', won_at: new Date(now - 3*3600000).toISOString(), rep:'Gary' },
+    { id:'p2', customer_name:'Mango Bay Co', product_type:'Folding Cartons 1000ct', won_at: new Date(now - 28*3600000).toISOString(), rep:'Marina' },
+  ];
+}
+
+// ── Load data ────────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const sb = getSupabaseClient ? getSupabaseClient() : null;
+    if (!sb) { jobs = getDemoJobs(); return; }
+    const { data, error } = await sb
+      .from('orders')
+      .select('order_id, customer_name, status, facility, created_at, deadline, rush, notes, assigned_designer, product_type, proof_sent_at, proof_approved_at, specs')
+      .in('status', ['design','proof','approved','in-production','qc-checkout','ready-to-ship'])
+      .order('deadline', { ascending: true });
+    if (error) throw error;
+    jobs = data || [];
+  } catch(e) {
+    console.warn('JM loadData:', e);
+    jobs = getDemoJobs();
+  }
+}
+
+// ── Date helpers ─────────────────────────────────────────────────────────────
+function daysUntil(iso) {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso) - Date.now()) / 86400000);
+}
+function hoursAgo(iso) {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso)) / 3600000);
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+
+// ── Compute stats ────────────────────────────────────────────────────────────
+function computeStats() {
+  const atRisk = jobs.filter(j => {
+    const d = daysUntil(j.deadline);
+    return d !== null && d <= 2 && !['ready-to-ship','shipped','received','completed'].includes(j.status);
+  });
+  const proofsOut = jobs.filter(j => j.status === 'proof' && j.proof_sent_at && !j.proof_approved_at);
+  const shipReady = jobs.filter(j => j.status === 'ready-to-ship');
+
+  document.getElementById('stat-active-jobs').textContent = jobs.length;
+  document.getElementById('stat-at-risk').textContent = atRisk.length;
+  document.getElementById('stat-proofs-out').textContent = proofsOut.length;
+  document.getElementById('stat-ready-approve').textContent = shipReady.length;
+
+  // Designer queue depth
+  const designJobs = jobs.filter(j => j.status === 'design');
+  const revisions = jobs.filter(j => j.status === 'proof' && j.revision_count > 0);
+  const overdueDesign = designJobs.filter(j => daysUntil(j.deadline) !== null && daysUntil(j.deadline) < 2);
+  document.getElementById('dq-active').textContent = designJobs.length;
+  document.getElementById('dq-revisions').textContent = revisions.length;
+  document.getElementById('dq-overdue').textContent = overdueDesign.length;
+}
+
+// ── Sidebar: proof timers ────────────────────────────────────────────────────
+function renderProofTimers() {
+  const proofsOut = jobs.filter(j => j.status === 'proof' && j.proof_sent_at && !j.proof_approved_at);
+  const el = document.getElementById('proof-timer-list');
+  if (!proofsOut.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No proofs awaiting response</div>';
+    return;
+  }
+  el.innerHTML = proofsOut.map(j => {
+    const h = hoursAgo(j.proof_sent_at);
+    const cls = h >= 24 ? 'overdue' : '';
+    const label = h >= 48 ? `⚠️ ${h}h — URGENT` : h >= 24 ? `${h}h — follow up` : `${h}h`;
+    return `<div class="alert-item" style="cursor:pointer;" onclick="openJob('${j.id}')">
+      <span style="font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.customer_name}</span>
+      <span class="proof-timer ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Sidebar: deadline risk ───────────────────────────────────────────────────
+function renderDeadlineRisk() {
+  const atRisk = jobs
+    .filter(j => {
+      const d = daysUntil(j.deadline);
+      return d !== null && d <= 2 && !['ready-to-ship','shipped','received','completed'].includes(j.status);
+    })
+    .sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+  const el = document.getElementById('deadline-risk-list');
+  if (!atRisk.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">All clear</div>';
+    return;
+  }
+  el.innerHTML = atRisk.map(j => {
+    const d = daysUntil(j.deadline);
+    const cls = d < 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--yellow);font-weight:600;';
+    const label = d < 0 ? `${Math.abs(d)}d overdue` : d === 0 ? 'Today' : `${d}d left`;
+    return `<div class="alert-item" style="cursor:pointer;" onclick="openJob('${j.id}')">
+      <span style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.customer_name}</span>
+      <span style="font-size:11px;${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Sidebar: inbound packets ─────────────────────────────────────────────────
+function renderPackets() {
+  const packets = getDemoPackets();
+  const el = document.getElementById('packet-list');
+  if (!packets.length) {
+    el.innerHTML = '<div class="col-empty">No packets waiting</div>';
+    return;
+  }
+  el.innerHTML = packets.map(p => {
+    const h = hoursAgo(p.won_at);
+    const age = h >= 24 ? `⚠️ ${h}h — review now` : `${h}h ago`;
+    const ageStyle = h >= 24 ? 'color:var(--red);' : 'color:var(--yellow);';
+    return `<div class="packet-item" onclick="showNewJobModal('${p.id}')">
+      <div class="pname">${p.customer_name}</div>
+      <div class="pmeta">${p.product_type} · Rep: ${p.rep}</div>
+      <div class="page" style="${ageStyle}">${age}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Pipeline board ───────────────────────────────────────────────────────────
+function getStageJobs(stage) {
+  const q = (document.getElementById('jm-search')?.value || '').toLowerCase().trim();
+  return jobs.filter(j => {
+    if (!stage.statuses.includes(j.status)) return false;
+    if (q && !(j.customer_name+' '+j.order_id+' '+j.product_type).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b) => {
+    // Rush first, then deadline
+    if (a.rush && !b.rush) return -1;
+    if (!a.rush && b.rush) return 1;
+    if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+    return 0;
+  });
+}
+
+function riskClass(j) {
+  const d = daysUntil(j.deadline);
+  if (d === null) return '';
+  if (d < 0) return 'risk-red';
+  if (d <= 2) return 'risk-yellow';
+  return '';
+}
+
+function renderJobCard(j) {
+  const d = daysUntil(j.deadline);
+  let dueCls = 'ok', dueLabel = fmtDate(j.deadline);
+  if (d !== null) {
+    if (d < 0) { dueCls = 'overdue'; dueLabel = `${Math.abs(d)}d overdue`; }
+    else if (d === 0) { dueCls = 'soon'; dueLabel = 'Due today'; }
+    else if (d === 1) { dueCls = 'soon'; dueLabel = 'Due tomorrow'; }
+    else dueLabel = `Due ${fmtDate(j.deadline)}`;
+  }
+  let proofBadge = '';
+  if (j.status === 'proof' && j.proof_sent_at && !j.proof_approved_at) {
+    const h = hoursAgo(j.proof_sent_at);
+    const cls = h >= 24 ? 'overdue' : '';
+    proofBadge = `<span class="proof-timer ${cls}">${h}h out</span>`;
+  }
+  const rushBadge = j.rush ? `<span style="font-size:10px;background:#fef3cd;color:#92600a;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">RUSH</span>` : '';
+  return `
+    <div class="job-card ${riskClass(j)}" onclick="openJob('${j.id || j.order_id}')">
+      <div class="jc-id">${j.order_id}${rushBadge}</div>
+      <div class="jc-cust">${j.customer_name}</div>
+      <div class="jc-prod">${j.product_type || '—'}</div>
+      <div class="jc-meta">
+        <span class="jc-due ${dueCls}">${dueLabel}</span>
+        ${proofBadge}
+      </div>
+    </div>`;
+}
+
+function renderPipeline() {
+  const board = document.getElementById('pipeline-board');
+  board.innerHTML = STAGES.map(stage => {
+    const stageJobs = getStageJobs(stage);
+    return `
+      <div class="pipeline-col ${stage.col}">
+        <div class="col-header">
+          <span class="col-title">${stage.label}</span>
+          <span class="col-count">${stageJobs.length}</span>
+        </div>
+        ${stageJobs.length
+          ? stageJobs.map(j => renderJobCard(j)).join('')
+          : `<div class="col-empty">Empty</div>`
+        }
+      </div>`;
+  }).join('');
+}
+
+// ── Job detail modal ─────────────────────────────────────────────────────────
+function openJob(id) {
+  const j = jobs.find(j => (j.id === id || j.order_id === id));
+  if (!j) return;
+  activeJob = j;
+  document.getElementById('modal-title').textContent = `${j.order_id} — ${j.customer_name}`;
+  const d = daysUntil(j.deadline);
+  const dueColor = d !== null && d < 0 ? 'var(--red)' : d !== null && d <= 2 ? 'var(--yellow)' : 'var(--green)';
+  const stageLabel = STAGES.find(s => s.statuses.includes(j.status))?.label || j.status;
+  const proofInfo = j.proof_sent_at
+    ? `<p style="font-size:13px;margin-top:4px;">Proof sent: <b>${fmtDate(j.proof_sent_at)}</b> (${hoursAgo(j.proof_sent_at)}h ago)${j.proof_approved_at ? ' — <span style="color:var(--green)">Approved</span>' : ' — <span style="color:var(--yellow)">Awaiting response</span>'}</p>`
+    : '';
+  const canAdvance = canAdvanceStage(j);
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-field"><label>Stage</label><span>${stageLabel}</span></div>
+      <div class="detail-field"><label>Deadline</label><span style="color:${dueColor}">${fmtDate(j.deadline)}${d !== null ? ` (${d < 0 ? Math.abs(d)+'d overdue' : d+'d left'})` : ''}</span></div>
+      <div class="detail-field"><label>Product</label><span>${j.product_type || '—'}</span></div>
+      <div class="detail-field"><label>Rush</label><span>${j.rush ? '🔴 Yes' : 'No'}</span></div>
+      <div class="detail-field" style="grid-column:span 2;"><label>Specs</label><span>${j.specs || '—'}</span></div>
+      <div class="detail-field" style="grid-column:span 2;"><label>Notes</label><span>${j.notes || '—'}</span></div>
+    </div>
+    ${proofInfo}
+    ${canAdvance.ok
+      ? `<div class="action-row">
+          <button class="stage-btn advance" onclick="advanceStage()">Advance → ${canAdvance.nextLabel}</button>
+          <button class="btn" onclick="closeModal()">Close</button>
+        </div>`
+      : `<div class="gate-warning">
+          <strong>⛔ Stage gate — cannot advance yet</strong>
+          <ul>${canAdvance.missing.map(m => `<li>${m}</li>`).join('')}</ul>
+        </div>
+        <div class="action-row"><button class="btn" onclick="closeModal()">Close</button></div>`
+    }
+  `;
+  document.getElementById('jobDetailModal').classList.add('active');
+}
+
+// ── Phase 3: Stage gate logic ────────────────────────────────────────────────
+function canAdvanceStage(j) {
+  const gates = {
+    'design': {
+      next: 'proof', nextLabel: 'Proof Out',
+      checks: [
+        [!!j.assigned_designer, 'Designer must be assigned'],
+        // Designer must have uploaded proof — in real flow, check proof_versions table
+      ]
+    },
+    'proof': {
+      next: 'approved', nextLabel: 'Production',
+      checks: [
+        [!!j.proof_sent_at, 'Proof must be sent to customer'],
+        [!!j.proof_approved_at, 'Customer approval must be recorded (click-approve or JM-recorded)'],
+      ]
+    },
+    'approved': {
+      next: 'in-production', nextLabel: 'Production',
+      checks: [
+        [!!j.proof_approved_at, 'Approved version must be locked'],
+      ]
+    },
+    'in-production': {
+      next: 'qc-checkout', nextLabel: 'QC',
+      checks: [
+        // Production operator marks done — handled in operator terminal
+      ]
+    },
+    'qc-checkout': {
+      next: 'ready-to-ship', nextLabel: 'Shipping',
+      checks: [
+        // QC must pass — handled in qc-checkout page
+      ]
+    },
+    'ready-to-ship': {
+      next: 'shipped', nextLabel: 'Shipped',
+      checks: [
+        // Shipping must enter tracking — handled in shipping page
+      ]
+    }
+  };
+  const gate = gates[j.status];
+  if (!gate) return { ok: false, missing: ['No gate defined for this stage'], nextLabel: '' };
+  const missing = gate.checks.filter(([pass]) => !pass).map(([, msg]) => msg);
+  return { ok: missing.length === 0, missing, nextLabel: gate.nextLabel, next: gate.next };
+}
+
+function advanceStage() {
+  if (!activeJob) return;
+  const { ok, next } = canAdvanceStage(activeJob);
+  if (!ok) return;
+  // In production: PATCH order status via Supabase
+  activeJob.status = next;
+  closeModal();
+  renderPipeline();
+  computeStats();
+  renderProofTimers();
+  renderDeadlineRisk();
+  showPageToast(`Job ${activeJob.order_id} advanced to ${next}`, 'success');
+}
+
+function closeModal() {
+  document.getElementById('jobDetailModal').classList.remove('active');
+  activeJob = null;
+}
+
+// ── New job modal (stub) ─────────────────────────────────────────────────────
+function showNewJobModal(packetId) {
+  // Route to job-ticket.html to create new job
+  window.location.href = 'job-ticket.html';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  if (typeof renderNav === 'function') renderNav('jm-dashboard');
+  if (typeof renderBreadcrumb === 'function') renderBreadcrumb([{ label: 'Job Manager' }]);
+  await loadData();
+  computeStats();
+  renderPackets();
+  renderProofTimers();
+  renderDeadlineRisk();
+  renderPipeline();
+})();
+
+// Close modal on overlay click
+document.getElementById('jobDetailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>

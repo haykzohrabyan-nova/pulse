@@ -198,6 +198,9 @@
       <button class="btn btn-sm" onclick="closeModal('convertModal')">✕</button>
     </div>
     <div class="modal-body">
+      <!-- Phase 3 Gate 1 warning -->
+      <div id="cv_gate_warning" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:14px;color:#b91c1c;font-size:13px;"></div>
+
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Creating a Deal for this lead. The lead will be marked as "Routed" and linked to the new deal.</p>
       <div class="field">
         <label>Quoted Price</label>
@@ -213,7 +216,7 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button class="btn" onclick="closeModal('convertModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmConvert()">Convert to Deal</button>
+        <button class="btn btn-primary" id="cv_convert_btn" onclick="confirmConvert()">Convert to Deal</button>
       </div>
     </div>
   </div>
@@ -721,11 +724,43 @@ async function saveLead() {
   }
 }
 
+// ── Phase 3: Gate 1 — Lead → Deal qualification check ──────
+function checkLeadGate1(lead) {
+  const missing = [];
+  if (!lead.product_type) missing.push('Product type not specified');
+  if (!lead.quantity) missing.push('Quantity not specified');
+  if (!lead.artwork_status) missing.push('Artwork status not set (have / coming / need design)');
+  if (!lead.source) missing.push('Source channel not recorded');
+  if (!lead.phone && !lead.email) missing.push('Contact info missing (phone or email required)');
+  if (!lead.next_action) missing.push('Next action not set');
+  if (!lead.next_action_date) missing.push('Next action date not set');
+  if (!['qualified','routed'].includes(lead.status)) missing.push('Lead must be Qualified before converting to Deal');
+  return missing;
+}
+
 // ── Convert to Deal ─────────────────────────────────────────
 let convertLeadId = null;
 
 function showConvertModal(leadId) {
   convertLeadId = leadId;
+  const lead = leads.find(l => l.id === leadId);
+
+  // Phase 3 Gate 1 — show any missing required fields before allowing conversion
+  const gateWarningEl = document.getElementById('cv_gate_warning');
+  if (lead) {
+    const missing = checkLeadGate1(lead);
+    if (missing.length) {
+      gateWarningEl.style.display = 'block';
+      gateWarningEl.innerHTML = `<strong>⛔ Gate 1 — Qualification packet incomplete</strong>
+        <p style="margin:6px 0 4px;font-size:12px;">Fix these before converting to a Deal:</p>
+        <ul style="margin:0 0 0 16px;font-size:12px;">${missing.map(m => `<li>${m}</li>`).join('')}</ul>`;
+      document.getElementById('cv_convert_btn').disabled = true;
+    } else {
+      gateWarningEl.style.display = 'none';
+      document.getElementById('cv_convert_btn').disabled = false;
+    }
+  }
+
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('cv_followUpDate').value = tomorrow;
   document.getElementById('cv_price').value = '';
@@ -736,6 +771,16 @@ function showConvertModal(leadId) {
 async function confirmConvert() {
   const followUpDate = document.getElementById('cv_followUpDate').value;
   if (!followUpDate) { showPageToast('Follow-up date is required.', 'error'); return; }
+
+  // Re-check gate before committing
+  const lead = leads.find(l => l.id === convertLeadId);
+  if (lead) {
+    const missing = checkLeadGate1(lead);
+    if (missing.length) {
+      showPageToast('Complete the qualification packet before converting.', 'error');
+      return;
+    }
+  }
 
   const lead = leads.find(l => l.id === convertLeadId);
   if (!lead) return;
