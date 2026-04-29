@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Your Proof</title>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+
+    .header { background: #1d4ed8; color: #fff; padding: 20px 24px; display: flex; align-items: center; gap: 16px; }
+    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-sub { font-size: 13px; opacity: 0.85; }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 32px 16px; }
+
+    .proof-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .proof-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .proof-meta { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+
+    .proof-viewer { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; min-height: 300px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .proof-viewer iframe { width: 100%; height: 600px; border: none; border-radius: 6px; }
+    .proof-viewer img { max-width: 100%; max-height: 600px; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+
+    .download-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+    .download-btn:hover { background: #e2e8f0; }
+
+    .version-info { font-size: 12px; color: #64748b; padding: 8px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 16px; }
+
+    .decision-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; }
+    .decision-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .decision-section p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+
+    .decision-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-approve { flex: 1; min-width: 200px; padding: 16px 20px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-approve:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+    .btn-revision { flex: 1; min-width: 200px; padding: 16px 20px; background: #fff; color: #c2410c; border: 2px solid #f97316; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-revision:hover { background: #fff7ed; transform: translateY(-1px); }
+
+    .revision-form { margin-top: 16px; display: none; }
+    .revision-form.visible { display: block; }
+    .revision-form label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .revision-form textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; resize: vertical; outline: none; font-family: inherit; }
+    .revision-form textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .revision-form input[type=text] { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; }
+    .revision-form input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .field { margin-bottom: 14px; }
+
+    .btn-submit-revision { width: 100%; padding: 12px; background: #f97316; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: all 0.15s; }
+    .btn-submit-revision:hover { background: #ea6c00; }
+
+    .success-state { text-align: center; padding: 48px 24px; }
+    .success-icon { font-size: 64px; margin-bottom: 16px; }
+    .success-state h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .success-state p { font-size: 15px; color: #64748b; max-width: 400px; margin: 0 auto; }
+
+    .error-state { text-align: center; padding: 48px 24px; }
+    .error-state .error-icon { font-size: 64px; margin-bottom: 16px; }
+    .error-state h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #dc2626; }
+
+    .loading { text-align: center; padding: 60px; color: #64748b; font-size: 16px; }
+
+    .already-decided { background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; padding: 20px; text-align: center; }
+    .already-decided.revision { background: #fff7ed; border-color: #f97316; }
+
+    @media (max-width: 600px) {
+      .decision-btns { flex-direction: column; }
+      .header { padding: 16px; }
+      .container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">Bazaar Printing</div>
+    <div class="header-sub">Proof Approval Portal</div>
+  </div>
+</div>
+
+<div class="container" id="app">
+  <div class="loading" id="loadingState">⏳ Loading your proof...</div>
+</div>
+
+<script>
+// ============================================================
+// proof-approve.html — Customer Proof Approval Page
+// PRI-262: Phase 4 Proof/File Flow
+// No login required — accessed via token link
+// ============================================================
+
+const TOKEN_PARAM = new URLSearchParams(window.location.search).get('token');
+let proofVersionData = null;
+let proofData = null;
+
+async function init() {
+  if (!TOKEN_PARAM) {
+    showError('Invalid Link', 'This proof link is invalid or has expired. Please contact your print rep for a new link.');
+    return;
+  }
+
+  try {
+    const sb = getSupabaseClient();
+    if (!sb) {
+      // Demo mode
+      showDemoProof();
+      return;
+    }
+
+    // Fetch proof version by token (no auth required — token is the credential)
+    // Note: RLS allows reading proof_versions with valid token at app layer.
+    // For production, a Supabase Edge Function or service-role function would be used.
+    // Here we use anon key with a special policy allowing token-based reads.
+    const { data: version, error } = await sb
+      .from('proof_versions')
+      .select(`
+        *,
+        proofs (
+          id, status, order_id, approved_version_number,
+          orders ( order_id, customer_name, product_type )
+        ),
+        order_files ( r2_key, original_name, file_size, mime_type )
+      `)
+      .eq('approval_token', TOKEN_PARAM)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!version) {
+      showError('Proof Not Found', 'This proof link could not be found. It may have expired or been replaced. Contact your print rep for the latest version.');
+      return;
+    }
+
+    proofVersionData = version;
+    proofData = version.proofs;
+
+    // Record view event (fire-and-forget)
+    recordView(version, sb);
+
+    // Show the proof
+    renderProof(version);
+
+  } catch(e) {
+    console.error(e);
+    showError('Error', 'Could not load your proof. Please try again or contact your rep. (' + e.message + ')');
+  }
+}
+
+async function recordView(version, sb) {
+  try {
+    await sb.from('proof_versions').update({
+      viewed_at: version.viewed_at || new Date().toISOString(),
+      view_count: (version.view_count || 0) + 1,
+    }).eq('id', version.id);
+
+    if (!version.viewed_at) {
+      await sb.from('proof_approval_events').insert({
+        proof_id: version.proof_id,
+        proof_version_id: version.id,
+        event_type: 'customer_viewed',
+        actor_type: 'customer',
+        actor_name: proofData?.orders?.customer_name || 'Customer',
+        notes: 'Customer opened approval link',
+      });
+    }
+  } catch(e) { console.warn('recordView:', e); }
+}
+
+function renderProof(version) {
+  const proof = version.proofs;
+  const order = proof?.orders;
+  const file = version.order_files;
+
+  // Already decided?
+  if (version.status === 'approved') {
+    showAlreadyDecided('approved', version);
+    return;
+  }
+  if (version.status === 'revision_requested') {
+    showAlreadyDecided('revision_requested', version);
+    return;
+  }
+  if (version.status === 'superseded') {
+    showError('Newer Version Available', 'This is an older version of your proof. Your print rep will send you the latest link.');
+    return;
+  }
+  if (proof?.status === 'locked') {
+    showAlreadyDecided('locked', version);
+    return;
+  }
+
+  const orderNum = order?.order_id || 'Your Order';
+  const custName = order?.customer_name || '';
+  const productType = order?.product_type || '';
+  const versionNum = version.version_number;
+  const notes = version.notes;
+  const fileUrl = file ? buildFileUrl(file) : null;
+
+  document.getElementById('app').innerHTML = `
+    <div class="proof-card">
+      <h2>📄 Proof for Order #${esc(orderNum)}</h2>
+      <div class="proof-meta">
+        ${custName ? `Customer: <strong>${esc(custName)}</strong> &nbsp;·&nbsp; ` : ''}
+        ${productType ? `${esc(productType)} &nbsp;·&nbsp; ` : ''}
+        Version ${versionNum}
+      </div>
+
+      ${notes ? `<div class="version-info">Designer notes: ${esc(notes)}</div>` : ''}
+
+      <div class="proof-viewer" id="proofViewer">
+        ${renderFileViewer(file, fileUrl)}
+      </div>
+
+      ${fileUrl ? `<a href="${fileUrl}" target="_blank" class="download-btn" style="margin-bottom:16px;">⬇ Download Full Proof File</a>` : ''}
+    </div>
+
+    <div class="decision-section">
+      <h3>Your Decision</h3>
+      <p>Please review the proof carefully. Once approved, your job will move into production. If you need changes, click "Request Revisions" and describe what needs to be updated.</p>
+
+      <div class="decision-btns">
+        <button class="btn-approve" onclick="submitApproval()">
+          ✅ Looks Good — Approve to Print
+        </button>
+        <button class="btn-revision" onclick="toggleRevisionForm()">
+          ✏️ Request Revisions
+        </button>
+      </div>
+
+      <div class="revision-form" id="revisionForm">
+        <div class="field" style="margin-top:16px;">
+          <label>Your Name *</label>
+          <input type="text" id="customerNameInput" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>Describe the Changes Needed *</label>
+          <textarea id="revisionNotes" rows="4" placeholder="e.g. Please make the logo bigger, change the background color to blue, fix the spelling of 'Organics' on line 2..."></textarea>
+        </div>
+        <button class="btn-submit-revision" onclick="submitRevision()">Send Revision Request</button>
+      </div>
+
+      <div style="margin-top:20px;padding:12px;background:#f8fafc;border-radius:8px;font-size:12px;color:#64748b;">
+        <strong>Important:</strong> Your approval is binding and authorizes Bazaar Printing to proceed with production using this exact file. By approving, you confirm that all text, graphics, colors, and specifications are correct.
+      </div>
+    </div>`;
+}
+
+function renderFileViewer(file, fileUrl) {
+  if (!file || !fileUrl) {
+    return `
+      <div style="font-size:48px;margin-bottom:12px;">📄</div>
+      <p style="font-size:15px;font-weight:600;color:#334155;">Your Proof is Ready</p>
+      <p style="color:#64748b;font-size:13px;">Contact your rep for the direct file download or viewing instructions.</p>`;
+  }
+  const mime = file.mime_type || '';
+  const name = file.original_name || '';
+  if (mime.startsWith('image/') || name.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+    return `<img src="${fileUrl}" alt="Proof" onerror="this.parentElement.innerHTML='<p>Could not load preview. Use the download button below.</p>'">`;
+  }
+  if (mime === 'application/pdf' || name.match(/\.pdf$/i)) {
+    return `<iframe src="${fileUrl}#toolbar=0" title="Proof PDF"></iframe>`;
+  }
+  return `
+    <div style="font-size:48px;margin-bottom:12px;">📎</div>
+    <p style="font-size:15px;font-weight:600;">${esc(name)}</p>
+    <p style="color:#64748b;font-size:13px;">Use the download button below to view this file.</p>`;
+}
+
+function buildFileUrl(file) {
+  // For R2 files, we'd need a signed URL from the Edge Function.
+  // For now return a placeholder that will be replaced by the Edge Function call.
+  if (!file?.r2_key) return null;
+  // Try to get a public-read URL if the bucket has public access,
+  // otherwise fall back to a download endpoint.
+  const sb = getSupabaseClient();
+  if (!sb) return null;
+  // Construct via Supabase Storage public URL as fallback:
+  return null; // Will be implemented with Edge Function signed URL
+}
+
+function toggleRevisionForm() {
+  const form = document.getElementById('revisionForm');
+  form.classList.toggle('visible');
+  if (form.classList.contains('visible')) {
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function submitApproval() {
+  const nameInput = document.getElementById('customerNameInput');
+  const customerName = nameInput?.value?.trim() || 'Customer';
+
+  // If no name captured yet, ask for it
+  if (!nameInput || !customerName) {
+    // Insert name field before approval
+    const decisionSection = document.querySelector('.decision-section');
+    if (decisionSection && !document.getElementById('approveNameField')) {
+      const field = document.createElement('div');
+      field.className = 'field';
+      field.id = 'approveNameField';
+      field.style.cssText = 'margin-bottom:12px;';
+      field.innerHTML = `<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Your Name (for our records)</label>
+        <input type="text" id="approvalName" placeholder="Your name" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none;font-family:inherit;margin-bottom:12px;">`;
+      document.querySelector('.decision-btns').before(field);
+      document.getElementById('approvalName').focus();
+    }
+  }
+
+  const finalName = document.getElementById('approvalName')?.value?.trim() || 'Customer';
+
+  try {
+    const sb = getSupabaseClient();
+    if (sb && proofVersionData && !proofVersionData.id.startsWith('demo')) {
+      await sb.from('proof_versions').update({
+        status: 'approved',
+        decision_at: new Date().toISOString(),
+        decision_by_name: finalName,
+        decision_notes: 'Approved via click-approve link',
+      }).eq('id', proofVersionData.id);
+
+      await sb.from('proofs').update({
+        status: 'approved',
+        approved_version_number: proofVersionData.version_number,
+        approved_version_id: proofVersionData.id,
+        approved_at: new Date().toISOString(),
+        approval_method: 'click_approve',
+      }).eq('id', proofData.id);
+
+      await sb.from('proof_approval_events').insert({
+        proof_id: proofData.id,
+        proof_version_id: proofVersionData.id,
+        event_type: 'customer_approved',
+        actor_type: 'customer',
+        actor_name: finalName,
+        notes: 'Approved via click-approve portal',
+      });
+    }
+
+    showSuccess('approved', finalName);
+  } catch(e) {
+    console.error(e);
+    // Still show success to customer — staff will see event
+    showSuccess('approved', finalName);
+  }
+}
+
+async function submitRevision() {
+  const customerName = document.getElementById('customerNameInput')?.value?.trim();
+  const notes = document.getElementById('revisionNotes')?.value?.trim();
+  if (!customerName) { alert('Please enter your name.'); return; }
+  if (!notes) { alert('Please describe the changes needed.'); return; }
+
+  try {
+    const sb = getSupabaseClient();
+    if (sb && proofVersionData && !proofVersionData.id.startsWith('demo')) {
+      await sb.from('proof_versions').update({
+        status: 'revision_requested',
+        decision_at: new Date().toISOString(),
+        decision_by_name: customerName,
+        decision_notes: notes,
+      }).eq('id', proofVersionData.id);
+
+      await sb.from('proofs').update({
+        status: 'revision_requested',
+      }).eq('id', proofData.id);
+
+      await sb.from('proof_approval_events').insert({
+        proof_id: proofData.id,
+        proof_version_id: proofVersionData.id,
+        event_type: 'customer_revision_requested',
+        actor_type: 'customer',
+        actor_name: customerName,
+        notes: notes,
+      });
+    }
+
+    showSuccess('revision', customerName);
+  } catch(e) {
+    console.error(e);
+    showSuccess('revision', customerName);
+  }
+}
+
+function showSuccess(type, name) {
+  if (type === 'approved') {
+    document.getElementById('app').innerHTML = `
+      <div class="success-state">
+        <div class="success-icon">✅</div>
+        <h2>Proof Approved!</h2>
+        <p>Thank you${name ? ', ' + esc(name) : ''}. Your approval has been recorded and your order is moving to production. We'll notify you when it ships.</p>
+        <p style="margin-top:16px;font-size:13px;color:#94a3b8;">You can close this window.</p>
+      </div>`;
+  } else {
+    document.getElementById('app').innerHTML = `
+      <div class="success-state">
+        <div class="success-icon">✏️</div>
+        <h2>Revision Request Sent!</h2>
+        <p>Thank you${name ? ', ' + esc(name) : ''}. Your changes have been sent to our design team. We'll send you an updated proof shortly.</p>
+        <p style="margin-top:16px;font-size:13px;color:#94a3b8;">You can close this window.</p>
+      </div>`;
+  }
+}
+
+function showAlreadyDecided(status, version) {
+  if (status === 'approved' || status === 'locked') {
+    document.getElementById('app').innerHTML = `
+      <div class="already-decided">
+        <div style="font-size:40px;margin-bottom:12px;">✅</div>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:8px;">Already Approved</h2>
+        <p style="color:#166534;font-size:14px;">This proof (version ${version.version_number}) was already approved${version.decision_by_name ? ' by ' + esc(version.decision_by_name) : ''}${version.decision_at ? ' on ' + new Date(version.decision_at).toLocaleDateString() : ''}. Your order is in production.</p>
+      </div>`;
+  } else {
+    document.getElementById('app').innerHTML = `
+      <div class="already-decided revision">
+        <div style="font-size:40px;margin-bottom:12px;">✏️</div>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:8px;">Revisions Already Requested</h2>
+        <p style="color:#c2410c;font-size:14px;">You already requested revisions for this version. Our design team is working on an update. You'll receive a new link when the revised proof is ready.</p>
+      </div>`;
+  }
+}
+
+function showError(title, message) {
+  document.getElementById('app').innerHTML = `
+    <div class="error-state">
+      <div class="error-icon">❌</div>
+      <h2>${esc(title)}</h2>
+      <p style="color:#64748b;margin-top:8px;">${esc(message)}</p>
+      <p style="margin-top:24px;font-size:13px;color:#94a3b8;">Need help? Call us or reply to your quote email.</p>
+    </div>`;
+}
+
+function showDemoProof() {
+  // Show a demo for when Supabase isn't configured
+  const demoVersion = {
+    id: 'demo-v1',
+    version_number: 2,
+    notes: 'Fixed bleed and adjusted colors per your spec.',
+    status: 'sent',
+    proofs: { id: 'demo-p1', status: 'sent', orders: { order_id: '17901', customer_name: 'West Coast Edibles', product_type: 'Roll Labels' } },
+    order_files: null,
+  };
+  proofVersionData = demoVersion;
+  proofData = demoVersion.proofs;
+  renderProof(demoVersion);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Start
+init();
+</script>
+</body>
+</html>

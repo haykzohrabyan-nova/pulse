@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proofs — Bazaar Print</title>
+  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <script src="auth.js?v=20260429-PRI262"></script>
+  <script src="r2-client.js?v=20260429-PRI262"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Header -->
+<div class="proofs-header">
+  <div class="proofs-header-left">
+    <h2>🖼️ Proofs</h2>
+    <p>Manage proof versions, send customer approval links, and lock approved files for production.</p>
+  </div>
+  <div class="proofs-header-right">
+    <input type="text" id="searchInput" placeholder="🔍 Search order # or customer..." oninput="filterProofs()" class="search-input">
+    <button class="btn btn-primary" onclick="showNewProofModal()">+ New Proof Thread</button>
+  </div>
+</div>
+
+<!-- Status filter tabs -->
+<div class="status-tabs">
+  <button class="stab active" data-status="all" onclick="setStatusFilter('all')">All</button>
+  <button class="stab" data-status="awaiting_upload" onclick="setStatusFilter('awaiting_upload')">⏳ Awaiting Upload</button>
+  <button class="stab" data-status="draft" onclick="setStatusFilter('draft')">📄 Draft</button>
+  <button class="stab" data-status="sent" onclick="setStatusFilter('sent')">📤 Sent</button>
+  <button class="stab" data-status="revision_requested" onclick="setStatusFilter('revision_requested')">✏️ Revision Requested</button>
+  <button class="stab" data-status="approved" onclick="setStatusFilter('approved')">✅ Approved</button>
+  <button class="stab" data-status="locked" onclick="setStatusFilter('locked')">🔒 Locked</button>
+</div>
+
+<!-- Proof list -->
+<div id="proofList" class="proof-list-container"></div>
+
+<!-- ===== PROOF DETAIL PANEL ===== -->
+<div id="proofPanel" class="proof-panel hidden">
+  <div class="panel-header">
+    <div>
+      <h3 id="panelTitle"></h3>
+      <span id="panelMeta" style="font-size:12px;color:var(--text-muted);"></span>
+    </div>
+    <button class="btn" onclick="closePanel()">✕ Close</button>
+  </div>
+
+  <!-- Version history -->
+  <div class="panel-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h4 style="margin:0;">Version History</h4>
+      <button class="btn btn-primary btn-sm" id="uploadVersionBtn" onclick="showUploadVersionModal()">+ Upload New Version</button>
+    </div>
+    <div id="versionList"></div>
+  </div>
+
+  <!-- Approval actions -->
+  <div class="panel-section" id="approvalSection">
+    <h4>Approval Actions</h4>
+    <div id="approvalActions"></div>
+  </div>
+
+  <!-- Event log -->
+  <div class="panel-section">
+    <h4>Audit Log</h4>
+    <div id="eventLog" style="max-height:220px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- New Proof Thread Modal -->
+<div id="newProofModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>New Proof Thread</h3>
+      <button class="btn btn-sm" onclick="closeModal('newProofModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Order / Job Number *</label>
+        <input type="text" id="np_orderId" placeholder="e.g. 17901" list="orderSuggestions">
+        <datalist id="orderSuggestions"></datalist>
+      </div>
+      <div class="field">
+        <label>Customer Name</label>
+        <input type="text" id="np_customerName" placeholder="Auto-filled from order" readonly>
+      </div>
+      <div class="field">
+        <label>Job Manager</label>
+        <select id="np_jmId">
+          <option value="">— Select JM —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea id="np_notes" rows="2" placeholder="Any notes about this proof thread..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('newProofModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createProofThread()">Create Proof Thread</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Version Modal -->
+<div id="uploadVersionModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="uploadModalTitle">Upload Proof Version</h3>
+      <button class="btn btn-sm" onclick="closeModal('uploadVersionModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="uploadDropZone" class="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onFileDrop(event)" onclick="document.getElementById('proofFileInput').click()">
+        <div class="drop-zone-content">
+          <div style="font-size:40px;margin-bottom:8px;">📄</div>
+          <p>Drop proof file here or <strong>click to browse</strong></p>
+          <p style="font-size:12px;color:var(--text-muted);">PDF, AI, EPS, PNG, JPG, PSD — up to 5GB</p>
+        </div>
+        <div id="selectedFileInfo" style="display:none;" class="selected-file-info"></div>
+      </div>
+      <input type="file" id="proofFileInput" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg,.psd,.tif,.tiff" style="display:none;" onchange="onFileSelected(event)">
+
+      <div id="uploadProgress" class="upload-progress hidden">
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressLabel">Uploading...</span>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>Designer Notes (shown to JM)</label>
+        <textarea id="uv_notes" rows="2" placeholder="What changed in this version? Any questions for JM?"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('uploadVersionModal')">Cancel</button>
+        <button class="btn btn-primary" id="uploadSubmitBtn" onclick="uploadProofVersion()">Upload Version</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Send to Customer Modal -->
+<div id="sendLinkModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Send Proof to Customer</h3>
+      <button class="btn btn-sm" onclick="closeModal('sendLinkModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+        Copying this link and sending it to the customer. <strong>Never use personal email or WhatsApp</strong> — use the company email or SMS platform.
+      </p>
+      <div class="field">
+        <label>Customer Approval Link</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="customerLinkInput" readonly style="flex:1;font-size:12px;background:#f9fafb;">
+          <button class="btn btn-sm btn-primary" onclick="copyCustomerLink()">📋 Copy</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Delivery Method</label>
+        <select id="sl_method">
+          <option value="email">Email (via company system)</option>
+          <option value="sms">SMS (via company system)</option>
+          <option value="text_link">Text Link (Slack/in-person share)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sent To (email or phone)</label>
+        <input type="text" id="sl_sentTo" placeholder="customer@email.com or +1-xxx...">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('sendLinkModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmSendLink()">Mark as Sent</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JM Log Approval Modal -->
+<div id="jmApprovalModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="jmApprovalTitle">Log Customer Approval</h3>
+      <button class="btn btn-sm" onclick="closeModal('jmApprovalModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="jmApprovalWarning" class="warning-box">
+        ⚠️ Only use this when the customer approved by phone/in-person and you are logging on their behalf. Do NOT use instead of the click-approve link.
+      </div>
+      <div class="field">
+        <label>Decision *</label>
+        <select id="jm_decision">
+          <option value="approved">✅ Customer Approved</option>
+          <option value="revision_requested">✏️ Customer Requested Revisions</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Customer Name *</label>
+        <input type="text" id="jm_customerName" placeholder="Who approved?">
+      </div>
+      <div class="field">
+        <label>Notes / Reason * (required for JM-logged decisions)</label>
+        <textarea id="jm_notes" rows="3" placeholder="e.g. 'Customer called at 2:30pm, approved v3. No changes needed.'"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('jmApprovalModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitJMDecision()">Log Decision</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lock Confirmation Modal -->
+<div id="lockModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>🔒 Lock Proof for Production</h3>
+      <button class="btn btn-sm" onclick="closeModal('lockModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;">Locking this proof means:</p>
+      <ul style="font-size:13px;margin:8px 0 16px 0;padding-left:20px;line-height:1.8;">
+        <li>No new proof versions can be uploaded</li>
+        <li>The approved file is routed to production through Pulse only</li>
+        <li>This action is recorded in the audit log</li>
+      </ul>
+      <p style="font-size:13px;font-weight:600;">Are you sure you want to lock version <span id="lockVersionLabel"></span>?</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('lockModal')">Cancel</button>
+        <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626;" onclick="confirmLock()">🔒 Lock for Production</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// proofs.html — Phase 4 Proof/File Flow
+// PRI-262: Pulse MVP
+// ============================================================
+
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('proofs');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: '🖼️ Proofs' }]);
+initAuth('proofs');
+
+// ── Styles ────────────────────────────────────────────────────
+document.getElementById('page-styles').textContent = `
+  .proofs-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 20px 24px 12px; border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;
+  }
+  .proofs-header h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+  .proofs-header p { margin: 0; font-size: 13px; color: var(--text-muted); }
+  .proofs-header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .search-input { padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; width: 260px; outline: none; }
+
+  .status-tabs { display: flex; gap: 4px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .stab { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-muted); transition: all 0.15s; }
+  .stab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .proof-list-container { padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .proof-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: all 0.15s; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .proof-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
+  .proof-card.status-awaiting_upload { border-left: 4px solid #f59e0b; }
+  .proof-card.status-draft { border-left: 4px solid #6b7280; }
+  .proof-card.status-sent { border-left: 4px solid #3b82f6; }
+  .proof-card.status-revision_requested { border-left: 4px solid #f97316; }
+  .proof-card.status-approved { border-left: 4px solid #16a34a; }
+  .proof-card.status-locked { border-left: 4px solid #7c3aed; }
+  .proof-card-title { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .proof-card-sub { font-size: 12px; color: var(--text-muted); }
+  .proof-card-right { text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .badge-awaiting_upload { background: #fef3c7; color: #92400e; }
+  .badge-draft { background: #f3f4f6; color: #374151; }
+  .badge-sent { background: #dbeafe; color: #1e40af; }
+  .badge-revision_requested { background: #ffedd5; color: #9a3412; }
+  .badge-approved { background: #dcfce7; color: #166534; }
+  .badge-locked { background: #ede9fe; color: #5b21b6; }
+
+  .version-badge { font-size: 11px; background: var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+
+  /* Panel */
+  .proof-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 520px; background: var(--bg); border-left: 2px solid var(--border); box-shadow: -4px 0 20px rgba(0,0,0,0.12); z-index: 100; overflow-y: auto; display: flex; flex-direction: column; }
+  .proof-panel.hidden { display: none; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10; }
+  .panel-header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+  .panel-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .panel-section h4 { margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+  /* Version card */
+  .version-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .version-card.current { border-color: var(--accent); }
+  .version-card.approved { border-color: #16a34a; background: #f0fdf4; }
+  .version-card.locked { border-color: #7c3aed; background: #f5f3ff; }
+  .version-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .version-title { font-weight: 700; font-size: 14px; }
+  .version-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .version-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* Drop zone */
+  .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: #eff6ff; }
+  .drop-zone-content p { margin: 4px 0; font-size: 14px; color: var(--text-muted); }
+  .selected-file-info { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #16a34a; border-radius: var(--radius); font-size: 13px; color: #166534; }
+
+  /* Upload progress */
+  .upload-progress { margin-top: 10px; }
+  .upload-progress.hidden { display: none; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; width: 0%; }
+
+  /* Event log */
+  .event-row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .event-row:last-child { border-bottom: none; }
+  .event-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 4px; flex-shrink: 0; }
+  .event-time { color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--bg); border-radius: var(--radius); padding: 0; max-height: 90vh; overflow-y: auto; width: 100%; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+  .modal-body { padding: 20px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg); color: var(--text); box-sizing: border-box; }
+  .field textarea { resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.10); }
+
+  .warning-box { background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 14px; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { margin: 0 0 8px; font-size: 18px; color: var(--text); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+`;
+
+// ── State ──────────────────────────────────────────────────
+let proofs = [];
+let currentProofId = null;
+let currentVersionId = null;
+let selectedFile = null;
+let statusFilter = 'all';
+let orders = [];
+let currentUser = null;
+
+// ── Init ───────────────────────────────────────────────────
+async function onAuthReady(user) {
+  currentUser = user;
+  await Promise.all([loadOrders(), loadProofs()]);
+  populateJMSelect();
+  renderProofList();
+}
+
+// Wire auth callback
+if (typeof window !== 'undefined') {
+  window.__pulseAuthCallback = onAuthReady;
+}
+
+async function loadOrders() {
+  try {
+    const sb = getSupabaseClient();
+    if (!sb) { orders = getLocalOrders(); return; }
+    const { data, error } = await sb
+      .from('orders')
+      .select('id, order_id, customer_name, status')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (!error && data) {
+      orders = data;
+      const dl = document.getElementById('orderSuggestions');
+      if (dl) {
+        dl.innerHTML = orders.map(o =>
+          `<option value="${escHtml(o.order_id)}">${escHtml(o.order_id)} — ${escHtml(o.customer_name)}</option>`
+        ).join('');
+      }
+    }
+  } catch(e) { console.warn('loadOrders:', e); }
+}
+
+function getLocalOrders() {
+  // Fallback to IndexedDB orders if Supabase not configured
+  return [];
+}
+
+async function loadProofs() {
+  try {
+    const sb = getSupabaseClient();
+    if (!sb) {
+      proofs = getLocalDemoProofs();
+      return;
+    }
+    const { data, error } = await sb
+      .from('proofs')
+      .select(`
+        *,
+        proof_versions (
+          id, version_number, notes, status, approval_token,
+          link_sent_at, link_sent_method, link_sent_to,
+          viewed_at, view_count, decision_at, decision_by_name, decision_notes,
+          created_at, uploaded_by,
+          order_files ( id, original_name, file_size, r2_key )
+        ),
+        proof_approval_events ( * ),
+        orders ( order_id, customer_name, status )
+      `)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    proofs = (data || []).map(p => ({
+      ...p,
+      proof_versions: (p.proof_versions || []).sort((a, b) => a.version_number - b.version_number),
+    }));
+  } catch(e) {
+    console.warn('loadProofs:', e);
+    proofs = getLocalDemoProofs();
+  }
+}
+
+// Demo data for when Supabase isn't configured
+function getLocalDemoProofs() {
+  return [
+    {
+      id: 'demo-1',
+      order_id: 'demo-order-1',
+      status: 'sent',
+      current_version_number: 2,
+      created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+      orders: { order_id: '17901', customer_name: 'West Coast Edibles' },
+      proof_versions: [
+        { id: 'v1', version_number: 1, notes: 'Initial proof', status: 'superseded', created_at: new Date(Date.now() - 3 * 86400000).toISOString(), decision_by_name: '', decision_notes: 'Too much bleed on left edge' },
+        { id: 'v2', version_number: 2, notes: 'Fixed bleed, adjusted colors per spec', status: 'sent', approval_token: 'demo-token-abc123', link_sent_at: new Date(Date.now() - 86400000).toISOString(), viewed_at: new Date(Date.now() - 3600000).toISOString(), view_count: 3, created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
+      ],
+      proof_approval_events: [
+        { id: 'e1', event_type: 'version_uploaded', actor_type: 'staff', actor_name: 'Carlos (Designer)', created_at: new Date(Date.now() - 3 * 86400000).toISOString() },
+        { id: 'e2', event_type: 'link_sent', actor_type: 'staff', actor_name: 'Marina (JM)', created_at: new Date(Date.now() - 86400000).toISOString(), notes: 'Sent via email' },
+        { id: 'e3', event_type: 'customer_viewed', actor_type: 'customer', actor_name: 'West Coast Edibles', created_at: new Date(Date.now() - 3600000).toISOString() },
+      ],
+    },
+    {
+      id: 'demo-2',
+      order_id: 'demo-order-2',
+      status: 'awaiting_upload',
+      current_version_number: 0,
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      orders: { order_id: '17902', customer_name: 'Green Leaf Co' },
+      proof_versions: [],
+      proof_approval_events: [],
+    },
+    {
+      id: 'demo-3',
+      order_id: 'demo-order-3',
+      status: 'approved',
+      current_version_number: 1,
+      approved_version_number: 1,
+      approved_at: new Date(Date.now() - 7200000).toISOString(),
+      approval_method: 'click_approve',
+      created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+      orders: { order_id: '17899', customer_name: 'Sunrise Organics' },
+      proof_versions: [
+        { id: 'v3', version_number: 1, notes: 'First draft', status: 'approved', decision_at: new Date(Date.now() - 7200000).toISOString(), decision_by_name: 'Sarah (customer)', created_at: new Date(Date.now() - 5 * 86400000).toISOString() },
+      ],
+      proof_approval_events: [
+        { id: 'e4', event_type: 'version_uploaded', actor_type: 'staff', actor_name: 'Alex (Designer)', created_at: new Date(Date.now() - 5 * 86400000).toISOString() },
+        { id: 'e5', event_type: 'customer_approved', actor_type: 'customer', actor_name: 'Sarah (customer)', created_at: new Date(Date.now() - 7200000).toISOString() },
+      ],
+    },
+  ];
+}
+
+function populateJMSelect() {
+  // Will be populated from profiles with role 'account_manager' or 'supervisor'
+}
+
+// ── Filters ────────────────────────────────────────────────
+function setStatusFilter(status) {
+  statusFilter = status;
+  document.querySelectorAll('.stab').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === status);
+  });
+  renderProofList();
+}
+
+function filterProofs() {
+  renderProofList();
+}
+
+function getFilteredProofs() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+  return proofs.filter(p => {
+    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+    if (q) {
+      const orderNum = (p.orders?.order_id || '').toLowerCase();
+      const custName = (p.orders?.customer_name || '').toLowerCase();
+      if (!orderNum.includes(q) && !custName.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Render proof list ──────────────────────────────────────
+function renderProofList() {
+  const filtered = getFilteredProofs();
+  const container = document.getElementById('proofList');
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🖼️</div>
+        <h3>No proofs found</h3>
+        <p>Create a new proof thread or adjust your filters.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(p => renderProofCard(p)).join('');
+}
+
+function renderProofCard(p) {
+  const orderNum = p.orders?.order_id || 'Unknown';
+  const custName = p.orders?.customer_name || '';
+  const versionCount = p.proof_versions?.length || 0;
+  const latestVersion = p.proof_versions?.[versionCount - 1];
+  const statusLabel = proofStatusLabel(p.status);
+  const age = timeAgo(p.created_at);
+
+  let versionInfo = versionCount === 0
+    ? '<span style="color:var(--text-muted);font-size:11px;">No versions yet</span>'
+    : `<span class="version-badge">v${p.current_version_number} — ${versionCount} version${versionCount !== 1 ? 's' : ''}</span>`;
+
+  let customerAction = '';
+  if (p.status === 'sent' && latestVersion?.viewed_at) {
+    customerAction = `<span style="font-size:11px;color:#16a34a;">👁 Viewed ${timeAgo(latestVersion.viewed_at)}</span>`;
+  } else if (p.status === 'sent') {
+    customerAction = `<span style="font-size:11px;color:var(--text-muted);">Awaiting view</span>`;
+  }
+
+  return `
+    <div class="proof-card status-${p.status}" onclick="openProof('${p.id}')">
+      <div>
+        <div class="proof-card-title">Order #${escHtml(orderNum)} — ${escHtml(custName)}</div>
+        <div class="proof-card-sub">Started ${age} &nbsp;·&nbsp; ${escHtml(p.orders?.status || '')} ${customerAction}</div>
+      </div>
+      <div class="proof-card-right">
+        <span class="status-badge badge-${p.status}">${statusLabel}</span>
+        ${versionInfo}
+      </div>
+    </div>`;
+}
+
+function proofStatusLabel(s) {
+  const map = {
+    awaiting_upload: '⏳ Awaiting Upload',
+    draft: '📄 Draft',
+    sent: '📤 Sent to Customer',
+    revision_requested: '✏️ Revision Requested',
+    approved: '✅ Approved',
+    locked: '🔒 Locked',
+  };
+  return map[s] || s;
+}
+
+// ── Proof Panel ────────────────────────────────────────────
+function openProof(proofId) {
+  currentProofId = proofId;
+  const p = proofs.find(x => x.id === proofId);
+  if (!p) return;
+
+  const panel = document.getElementById('proofPanel');
+  const orderNum = p.orders?.order_id || 'Unknown';
+  const custName = p.orders?.customer_name || '';
+
+  document.getElementById('panelTitle').textContent = `Order #${orderNum} — ${custName}`;
+  document.getElementById('panelMeta').textContent =
+    `Status: ${proofStatusLabel(p.status)} · ${(p.proof_versions || []).length} version(s)`;
+
+  renderVersionList(p);
+  renderApprovalActions(p);
+  renderEventLog(p);
+
+  panel.classList.remove('hidden');
+}
+
+function closePanel() {
+  document.getElementById('proofPanel').classList.add('hidden');
+  currentProofId = null;
+}
+
+function renderVersionList(p) {
+  const container = document.getElementById('versionList');
+  const versions = p.proof_versions || [];
+
+  // Lock upload button if proof is locked
+  const uploadBtn = document.getElementById('uploadVersionBtn');
+  if (uploadBtn) uploadBtn.disabled = p.status === 'locked';
+
+  if (!versions.length) {
+    container.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">No versions uploaded yet. Upload v1 to start the proof process.</p>`;
+    return;
+  }
+
+  // Show newest first
+  const sorted = [...versions].sort((a, b) => b.version_number - a.version_number);
+  container.innerHTML = sorted.map(v => renderVersionCard(v, p)).join('');
+}
+
+function renderVersionCard(v, p) {
+  const isCurrent = v.version_number === p.current_version_number;
+  const isApproved = v.version_number === p.approved_version_number;
+  const isLocked = p.status === 'locked' && isApproved;
+  const fileInfo = v.order_files ? `📎 ${escHtml(v.order_files.original_name || v.order_files.r2_key || 'File')}` : '📎 File';
+
+  let cardClass = 'version-card';
+  if (isLocked) cardClass += ' locked';
+  else if (isApproved) cardClass += ' approved';
+  else if (isCurrent) cardClass += ' current';
+
+  let decisionBadge = '';
+  if (v.status === 'approved') decisionBadge = `<span class="status-badge badge-approved">✅ Approved</span>`;
+  else if (v.status === 'locked') decisionBadge = `<span class="status-badge badge-locked">🔒 Locked</span>`;
+  else if (v.status === 'revision_requested') decisionBadge = `<span class="status-badge badge-revision_requested">✏️ Revision Requested</span>`;
+  else if (v.status === 'sent') decisionBadge = `<span class="status-badge badge-sent">📤 Sent</span>`;
+  else if (v.status === 'superseded') decisionBadge = `<span class="status-badge" style="background:#f3f4f6;color:#6b7280;">Superseded</span>`;
+  else decisionBadge = `<span class="status-badge badge-draft">📄 Draft</span>`;
+
+  let viewInfo = '';
+  if (v.viewed_at) viewInfo = `<span style="font-size:11px;color:#16a34a;">👁 Viewed ${v.view_count > 1 ? v.view_count + 'x, ' : ''}${timeAgo(v.viewed_at)}</span>`;
+
+  let actions = '';
+  const isLiveProof = p.status !== 'locked';
+  if (isLiveProof && isCurrent) {
+    if (v.status === 'draft') {
+      actions += `<button class="btn btn-sm btn-primary" onclick="showSendLinkModal('${v.id}','${v.approval_token || ''}',event)">📤 Send to Customer</button>`;
+    }
+    if (v.status === 'sent' || v.status === 'viewed') {
+      actions += `<button class="btn btn-sm" onclick="showSendLinkModal('${v.id}','${v.approval_token || ''}',event)">🔗 Resend Link</button>`;
+      actions += `<button class="btn btn-sm" style="background:#e0fdf4;border-color:#16a34a;color:#166534;" onclick="showJMApprovalModal('${v.id}','approved',event)">✅ Log Approval</button>`;
+      actions += `<button class="btn btn-sm" style="background:#fff7ed;border-color:#f97316;color:#c2410c;" onclick="showJMApprovalModal('${v.id}','revision_requested',event)">✏️ Log Revision</button>`;
+    }
+  }
+  if (isApproved && p.status === 'approved' && !isLocked) {
+    actions += `<button class="btn btn-sm" style="background:#ede9fe;border-color:#7c3aed;color:#5b21b6;" onclick="showLockModal('${v.id}','${v.version_number}',event)">🔒 Lock for Production</button>`;
+  }
+  if (v.order_files?.r2_key) {
+    actions += `<button class="btn btn-sm" onclick="downloadVersion('${v.id}',event)">⬇ Download</button>`;
+  }
+
+  return `
+    <div class="${cardClass}">
+      <div class="version-header">
+        <div>
+          <div class="version-title">Version ${v.version_number}${isCurrent && !isApproved ? ' <span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:8px;vertical-align:middle;">Current</span>' : ''}</div>
+          <div class="version-meta">${fileInfo} · Uploaded ${timeAgo(v.created_at)} ${viewInfo}</div>
+          ${v.notes ? `<div style="font-size:12px;color:var(--text);margin-top:4px;">Notes: ${escHtml(v.notes)}</div>` : ''}
+          ${v.decision_notes ? `<div style="font-size:12px;color:#c2410c;margin-top:4px;">Customer notes: ${escHtml(v.decision_notes)}</div>` : ''}
+        </div>
+        ${decisionBadge}
+      </div>
+      ${actions ? `<div class="version-actions">${actions}</div>` : ''}
+    </div>`;
+}
+
+function renderApprovalActions(p) {
+  const container = document.getElementById('approvalSection');
+  if (p.status === 'locked') {
+    container.innerHTML = `
+      <h4>Approval Actions</h4>
+      <div style="background:#f5f3ff;border:1px solid #7c3aed;border-radius:var(--radius);padding:12px;font-size:13px;color:#5b21b6;">
+        🔒 This proof is locked for production. Version ${p.approved_version_number} was approved
+        ${p.approved_at ? ' on ' + formatDate(p.approved_at) : ''}
+        via ${formatApprovalMethod(p.approval_method)}.
+      </div>`;
+    return;
+  }
+  if (p.status === 'approved') {
+    container.innerHTML = `
+      <h4>Approval Actions</h4>
+      <div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:var(--radius);padding:12px;font-size:13px;color:#166534;margin-bottom:10px;">
+        ✅ Version ${p.approved_version_number} approved ${p.approved_at ? timeAgo(p.approved_at) : ''} via ${formatApprovalMethod(p.approval_method)}.
+      </div>
+      <button class="btn" style="background:#ede9fe;border-color:#7c3aed;color:#5b21b6;" onclick="showLockModal('${p.approved_version_id}','${p.approved_version_number}',event)">🔒 Lock for Production</button>`;
+    return;
+  }
+  // Otherwise show reminder
+  container.innerHTML = `
+    <h4>Approval Actions</h4>
+    <p style="font-size:12px;color:var(--text-muted);">
+      Use the version actions above to send the proof link to the customer, or log an in-person approval.
+      <br><br><strong>Rule:</strong> All approvals must be recorded in Pulse — no verbal-only approvals accepted.
+    </p>`;
+}
+
+function renderEventLog(p) {
+  const container = document.getElementById('eventLog');
+  const events = (p.proof_approval_events || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  if (!events.length) {
+    container.innerHTML = `<p style="color:var(--text-muted);font-size:12px;">No events yet.</p>`;
+    return;
+  }
+  container.innerHTML = events.map(e => `
+    <div class="event-row">
+      <div class="event-dot"></div>
+      <div style="flex:1;">
+        <span style="font-weight:600;">${formatEventType(e.event_type)}</span>
+        ${e.actor_name ? ` by ${escHtml(e.actor_name)}` : ''}
+        ${e.notes ? ` — ${escHtml(e.notes)}` : ''}
+      </div>
+      <span class="event-time">${timeAgo(e.created_at)}</span>
+    </div>`).join('');
+}
+
+function formatEventType(t) {
+  const map = {
+    version_uploaded: '📤 Version Uploaded',
+    link_sent: '🔗 Link Sent',
+    customer_viewed: '👁 Customer Viewed',
+    customer_approved: '✅ Customer Approved',
+    customer_revision_requested: '✏️ Customer Requested Revisions',
+    jm_approved: '✅ JM Logged Approval',
+    jm_revision_noted: '✏️ JM Logged Revision Request',
+    proof_locked: '🔒 Proof Locked',
+    proof_unlocked: '🔓 Proof Unlocked',
+  };
+  return map[t] || t;
+}
+
+function formatApprovalMethod(m) {
+  if (!m) return 'unknown';
+  const map = { click_approve: 'Customer Click-Approve', email_reply: 'Email Reply', jm_logged: 'JM-Logged' };
+  return map[m] || m;
+}
+
+// ── New Proof Thread ────────────────────────────────────────
+function showNewProofModal() {
+  document.getElementById('np_orderId').value = '';
+  document.getElementById('np_customerName').value = '';
+  document.getElementById('np_notes').value = '';
+  showModal('newProofModal');
+}
+
+document.getElementById('np_orderId')?.addEventListener('input', function() {
+  const val = this.value.trim();
+  const order = orders.find(o => o.order_id === val);
+  if (order) {
+    document.getElementById('np_customerName').value = order.customer_name;
+  } else {
+    document.getElementById('np_customerName').value = '';
+  }
+});
+
+async function createProofThread() {
+  const orderIdInput = document.getElementById('np_orderId').value.trim();
+  if (!orderIdInput) { showPageToast('Order number is required.', 'error'); return; }
+
+  try {
+    const sb = getSupabaseClient();
+    if (!sb) {
+      // Demo mode
+      const demo = {
+        id: 'demo-' + Date.now(),
+        status: 'awaiting_upload',
+        current_version_number: 0,
+        created_at: new Date().toISOString(),
+        orders: { order_id: orderIdInput, customer_name: document.getElementById('np_customerName').value || 'Customer' },
+        proof_versions: [],
+        proof_approval_events: [],
+      };
+      proofs.unshift(demo);
+      closeModal('newProofModal');
+      renderProofList();
+      showPageToast('Proof thread created (demo mode — connect Supabase to persist).', 'info');
+      return;
+    }
+
+    // Find order UUID
+    const order = orders.find(o => o.order_id === orderIdInput);
+    if (!order) { showPageToast('Order not found. Check the order number.', 'error'); return; }
+
+    const { data, error } = await sb.from('proofs').insert({
+      order_id: order.id,
+      job_manager_id: document.getElementById('np_jmId').value || null,
+      status: 'awaiting_upload',
+      created_by: currentUser?.id || null,
+    }).select().single();
+
+    if (error) throw error;
+    closeModal('newProofModal');
+    await loadProofs();
+    renderProofList();
+    showPageToast('Proof thread created.', 'success');
+    openProof(data.id);
+  } catch(e) {
+    showPageToast('Error creating proof thread: ' + e.message, 'error');
+  }
+}
+
+// ── Upload Version ──────────────────────────────────────────
+function showUploadVersionModal() {
+  selectedFile = null;
+  document.getElementById('proofFileInput').value = '';
+  document.getElementById('selectedFileInfo').style.display = 'none';
+  document.getElementById('uploadDropZone').querySelector('.drop-zone-content').style.display = '';
+  document.getElementById('uv_notes').value = '';
+  document.getElementById('uploadProgress').classList.add('hidden');
+  document.getElementById('uploadSubmitBtn').disabled = false;
+  showModal('uploadVersionModal');
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadDropZone').classList.add('dragover');
+}
+
+function onDragLeave(e) {
+  document.getElementById('uploadDropZone').classList.remove('dragover');
+}
+
+function onFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadDropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setSelectedFile(file);
+}
+
+function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (file) setSelectedFile(file);
+}
+
+function setSelectedFile(file) {
+  selectedFile = file;
+  const info = document.getElementById('selectedFileInfo');
+  const content = document.getElementById('uploadDropZone').querySelector('.drop-zone-content');
+  content.style.display = 'none';
+  info.style.display = 'flex';
+  info.innerHTML = `✅ <strong>${escHtml(file.name)}</strong> &nbsp;(${formatFileSize(file.size)})`;
+}
+
+async function uploadProofVersion() {
+  if (!selectedFile) { showPageToast('Please select a file.', 'error'); return; }
+  if (!currentProofId) return;
+
+  const proof = proofs.find(p => p.id === currentProofId);
+  if (!proof) return;
+
+  const nextVersion = (proof.current_version_number || 0) + 1;
+  const notes = document.getElementById('uv_notes').value.trim();
+
+  document.getElementById('uploadSubmitBtn').disabled = true;
+
+  try {
+    const sb = getSupabaseClient();
+
+    if (!sb) {
+      // Demo mode
+      const newVersion = {
+        id: 'v' + Date.now(),
+        version_number: nextVersion,
+        notes,
+        status: 'draft',
+        approval_token: 'demo-token-' + Date.now(),
+        created_at: new Date().toISOString(),
+        order_files: { original_name: selectedFile.name, file_size: selectedFile.size },
+      };
+      proof.proof_versions.push(newVersion);
+      proof.current_version_number = nextVersion;
+      proof.current_version_id = newVersion.id;
+      if (proof.status === 'awaiting_upload') proof.status = 'draft';
+      closeModal('uploadVersionModal');
+      openProof(currentProofId);
+      renderProofList();
+      showPageToast(`Version ${nextVersion} uploaded (demo mode).`, 'success');
+      return;
+    }
+
+    // Show progress
+    document.getElementById('uploadProgress').classList.remove('hidden');
+
+    // Find real order ID from proof
+    const { data: proofData } = await sb.from('proofs').select('order_id').eq('id', currentProofId).single();
+    if (!proofData) throw new Error('Proof not found');
+
+    // Upload file to R2 via existing r2-client
+    let fileId = null;
+    if (typeof uploadFile === 'function') {
+      const result = await uploadFile({
+        supabaseClient: sb,
+        orderId: proofData.order_id,
+        file: selectedFile,
+        category: 'proof',
+        onProgress: (pct) => {
+          document.getElementById('progressFill').style.width = pct + '%';
+          document.getElementById('progressLabel').textContent = `Uploading... ${pct}%`;
+        },
+      });
+      fileId = result.fileId;
+    }
+
+    // Insert proof_version record
+    const { data: versionData, error: verErr } = await sb.from('proof_versions').insert({
+      proof_id: currentProofId,
+      version_number: nextVersion,
+      notes,
+      status: 'draft',
+      file_id: fileId,
+      uploaded_by: currentUser?.id || null,
+    }).select().single();
+    if (verErr) throw verErr;
+
+    // Update proof status + current version
+    const { error: proofErr } = await sb.from('proofs').update({
+      status: proof.status === 'awaiting_upload' ? 'draft' : proof.status,
+      current_version_number: nextVersion,
+      current_version_id: versionData.id,
+    }).eq('id', currentProofId);
+    if (proofErr) throw proofErr;
+
+    // Log event
+    await sb.from('proof_approval_events').insert({
+      proof_id: currentProofId,
+      proof_version_id: versionData.id,
+      event_type: 'version_uploaded',
+      actor_type: 'staff',
+      actor_staff_id: currentUser?.id || null,
+      actor_name: currentUser?.email || 'Staff',
+      notes: `Version ${nextVersion} uploaded`,
+    });
+
+    closeModal('uploadVersionModal');
+    await loadProofs();
+    renderProofList();
+    openProof(currentProofId);
+    showPageToast(`Version ${nextVersion} uploaded successfully.`, 'success');
+  } catch(e) {
+    showPageToast('Upload failed: ' + e.message, 'error');
+    document.getElementById('uploadSubmitBtn').disabled = false;
+  }
+}
+
+// ── Send to Customer ────────────────────────────────────────
+let sendingVersionId = null;
+let sendingToken = null;
+
+function showSendLinkModal(versionId, token, e) {
+  if (e) e.stopPropagation();
+  sendingVersionId = versionId;
+  sendingToken = token;
+
+  const baseUrl = window.location.origin + window.location.pathname.replace('proofs.html', '');
+  const link = `${baseUrl}proof-approve.html?token=${token}`;
+  document.getElementById('customerLinkInput').value = link;
+  document.getElementById('sl_sentTo').value = '';
+  showModal('sendLinkModal');
+}
+
+function copyCustomerLink() {
+  const input = document.getElementById('customerLinkInput');
+  navigator.clipboard.writeText(input.value).then(() => {
+    showPageToast('Link copied to clipboard!', 'success', 2500);
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    showPageToast('Link copied.', 'success', 2500);
+  });
+}
+
+async function confirmSendLink() {
+  const method = document.getElementById('sl_method').value;
+  const sentTo = document.getElementById('sl_sentTo').value.trim();
+
+  try {
+    const sb = getSupabaseClient();
+    if (sb && sendingVersionId && sendingVersionId.startsWith('demo-')) {
+      // demo mode handled below
+    }
+    if (sb && sendingVersionId && !sendingVersionId.startsWith('demo-')) {
+      await sb.from('proof_versions').update({
+        status: 'sent',
+        link_sent_at: new Date().toISOString(),
+        link_sent_method: method,
+        link_sent_to: sentTo,
+      }).eq('id', sendingVersionId);
+
+      // Set proof status to sent
+      await sb.from('proofs').update({ status: 'sent' }).eq('id', currentProofId);
+
+      await sb.from('proof_approval_events').insert({
+        proof_id: currentProofId,
+        proof_version_id: sendingVersionId,
+        event_type: 'link_sent',
+        actor_type: 'staff',
+        actor_staff_id: currentUser?.id || null,
+        actor_name: currentUser?.email || 'Staff',
+        notes: `Sent via ${method}${sentTo ? ' to ' + sentTo : ''}`,
+      });
+
+      await loadProofs();
+    } else {
+      // Demo
+      const proof = proofs.find(p => p.id === currentProofId);
+      if (proof) {
+        proof.status = 'sent';
+        const ver = proof.proof_versions.find(v => v.id === sendingVersionId);
+        if (ver) { ver.status = 'sent'; ver.link_sent_at = new Date().toISOString(); }
+      }
+    }
+
+    closeModal('sendLinkModal');
+    renderProofList();
+    if (currentProofId) openProof(currentProofId);
+    showPageToast('Proof marked as sent. Customer link is ready.', 'success');
+  } catch(e) {
+    showPageToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ── JM Log Decision ─────────────────────────────────────────
+let jmVersionId = null;
+let jmDecisionPreset = null;
+
+function showJMApprovalModal(versionId, preset, e) {
+  if (e) e.stopPropagation();
+  jmVersionId = versionId;
+  jmDecisionPreset = preset;
+  document.getElementById('jm_decision').value = preset || 'approved';
+  document.getElementById('jm_customerName').value = '';
+  document.getElementById('jm_notes').value = '';
+  const title = preset === 'approved' ? 'Log Customer Approval (JM)' : 'Log Revision Request (JM)';
+  document.getElementById('jmApprovalTitle').textContent = title;
+  showModal('jmApprovalModal');
+}
+
+async function submitJMDecision() {
+  const decision = document.getElementById('jm_decision').value;
+  const customerName = document.getElementById('jm_customerName').value.trim();
+  const notes = document.getElementById('jm_notes').value.trim();
+
+  if (!customerName) { showPageToast('Customer name is required.', 'error'); return; }
+  if (!notes) { showPageToast('Notes are required for JM-logged decisions.', 'error'); return; }
+
+  try {
+    const sb = getSupabaseClient();
+    const proof = proofs.find(p => p.id === currentProofId);
+
+    if (sb && jmVersionId && !jmVersionId.startsWith('v')) {
+      // Real Supabase update
+      const versionStatus = decision === 'approved' ? 'approved' : 'revision_requested';
+      await sb.from('proof_versions').update({
+        status: versionStatus,
+        decision_at: new Date().toISOString(),
+        decision_by_name: `JM: ${customerName}`,
+        decision_notes: notes,
+      }).eq('id', jmVersionId);
+
+      const proofStatus = decision === 'approved' ? 'approved' : 'revision_requested';
+      const proofUpdate = { status: proofStatus };
+      if (decision === 'approved') {
+        // Find version number
+        const ver = proof?.proof_versions.find(v => v.id === jmVersionId);
+        proofUpdate.approved_version_number = ver?.version_number;
+        proofUpdate.approved_version_id = jmVersionId;
+        proofUpdate.approved_at = new Date().toISOString();
+        proofUpdate.approval_method = 'jm_logged';
+      }
+      await sb.from('proofs').update(proofUpdate).eq('id', currentProofId);
+
+      await sb.from('proof_approval_events').insert({
+        proof_id: currentProofId,
+        proof_version_id: jmVersionId,
+        event_type: decision === 'approved' ? 'jm_approved' : 'jm_revision_noted',
+        actor_type: 'staff',
+        actor_staff_id: currentUser?.id || null,
+        actor_name: currentUser?.email || 'Staff',
+        notes: `Customer: ${customerName}. Notes: ${notes}`,
+      });
+
+      await loadProofs();
+    } else {
+      // Demo
+      if (proof) {
+        if (decision === 'approved') {
+          proof.status = 'approved';
+          const ver = proof.proof_versions.find(v => v.id === jmVersionId);
+          if (ver) {
+            ver.status = 'approved';
+            ver.decision_at = new Date().toISOString();
+            ver.decision_by_name = `JM: ${customerName}`;
+            ver.decision_notes = notes;
+            proof.approved_version_number = ver.version_number;
+            proof.approved_at = new Date().toISOString();
+            proof.approval_method = 'jm_logged';
+          }
+        } else {
+          proof.status = 'revision_requested';
+        }
+        proof.proof_approval_events.push({
+          id: 'e' + Date.now(),
+          event_type: decision === 'approved' ? 'jm_approved' : 'jm_revision_noted',
+          actor_type: 'staff',
+          actor_name: currentUser?.email || 'Staff',
+          notes: `Customer: ${customerName}. Notes: ${notes}`,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    closeModal('jmApprovalModal');
+    renderProofList();
+    if (currentProofId) openProof(currentProofId);
+    const msg = decision === 'approved'
+      ? '✅ Approval logged. Ready to lock for production.'
+      : '✏️ Revision request logged.';
+    showPageToast(msg, decision === 'approved' ? 'success' : 'info');
+  } catch(e) {
+    showPageToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ── Lock for Production ─────────────────────────────────────
+let lockVersionIdPending = null;
+let lockVersionNumPending = null;
+
+function showLockModal(versionId, versionNum, e) {
+  if (e) e.stopPropagation();
+  lockVersionIdPending = versionId;
+  lockVersionNumPending = versionNum;
+  document.getElementById('lockVersionLabel').textContent = `v${versionNum}`;
+  showModal('lockModal');
+}
+
+async function confirmLock() {
+  try {
+    const sb = getSupabaseClient();
+    const proof = proofs.find(p => p.id === currentProofId);
+
+    if (sb && lockVersionIdPending && !lockVersionIdPending.startsWith('v')) {
+      await sb.from('proof_versions').update({ status: 'locked' }).eq('id', lockVersionIdPending);
+      await sb.from('proofs').update({
+        status: 'locked',
+        locked_at: new Date().toISOString(),
+        locked_by: currentUser?.id || null,
+      }).eq('id', currentProofId);
+
+      await sb.from('proof_approval_events').insert({
+        proof_id: currentProofId,
+        proof_version_id: lockVersionIdPending,
+        event_type: 'proof_locked',
+        actor_type: 'staff',
+        actor_staff_id: currentUser?.id || null,
+        actor_name: currentUser?.email || 'Staff',
+        notes: `Version ${lockVersionNumPending} locked for production`,
+      });
+
+      await loadProofs();
+    } else {
+      // Demo
+      if (proof) {
+        proof.status = 'locked';
+        proof.locked_at = new Date().toISOString();
+        const ver = proof.proof_versions.find(v => v.id === lockVersionIdPending);
+        if (ver) ver.status = 'locked';
+      }
+    }
+
+    closeModal('lockModal');
+    renderProofList();
+    if (currentProofId) openProof(currentProofId);
+    showPageToast('🔒 Proof locked for production. File routed through Pulse only.', 'success');
+  } catch(e) {
+    showPageToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ── Download ────────────────────────────────────────────────
+async function downloadVersion(versionId, e) {
+  if (e) e.stopPropagation();
+  try {
+    const sb = getSupabaseClient();
+    if (!sb || typeof downloadFile !== 'function') {
+      showPageToast('Download requires Supabase connection.', 'warning'); return;
+    }
+    // Get file_id from version
+    const { data: ver } = await sb.from('proof_versions').select('file_id').eq('id', versionId).single();
+    if (!ver?.file_id) { showPageToast('No file attached to this version.', 'error'); return; }
+    const { blobUrl, filename } = await downloadFile({ supabaseClient: sb, fileId: ver.file_id });
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 2000);
+  } catch(e) {
+    showPageToast('Download error: ' + e.message, 'error');
+  }
+}
+
+// ── Modal helpers ───────────────────────────────────────────
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.add('hidden');
+  });
+});
+
+// ── Utility ─────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatDate(iso);
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '?';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// ── Auth callback wiring ────────────────────────────────────
+// initAuth calls onAuthReady when Supabase session is ready.
+// For pages without Supabase config, load demo data directly.
+document.addEventListener('DOMContentLoaded', () => {
+  // If auth doesn't call back (no Supabase config), show demo data
+  setTimeout(() => {
+    if (!proofs.length) {
+      proofs = getLocalDemoProofs();
+      renderProofList();
+    }
+  }, 2000);
+});
+</script>
+</body>
+</html>

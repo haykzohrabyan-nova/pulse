@@ -2754,6 +2754,8 @@ function renderNav(activePage) {
     { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },
     { id: 'application-dept',   label: '\uD83C\uDFF7\uFE0F Application',  href: 'application-dept.html',    access: 'production' },
     { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
+    { id: 'leads',              label: '\uD83D\uDCCB Leads',              href: 'leads.html',               access: 'all' },
+    { id: 'proofs',             label: '\uD83D\uDDBC\uFE0F Proofs',             href: 'proofs.html',              access: 'all' },
     { id: 'instagram-leads',    label: '\uD83D\uDCF8 Instagram',           href: 'instagram-leads.html',     access: 'all' },
     { id: 'machine-issues',     label: '\uD83D\uDD27 Machines',           href: 'machine-issues.html',      access: 'production' },
     { id: 'admin',              label: '\u2699\uFE0F Admin',              href: 'admin.html',               access: 'admin' },

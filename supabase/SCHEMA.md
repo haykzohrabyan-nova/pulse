@@ -3,7 +3,7 @@
 **Project:** Pulse Production Management System  
 **Supabase project domain:** pulse.bazaar-admin.com  
 **Generated:** 2026-04-27 (PRI-236)  
-**Updated:** 2026-04-27 (PRI-247 — vendor purchasing intelligence; PRI-238 — auth user seed)
+**Updated:** 2026-04-29 (PRI-262 — Pulse MVP Phase 1+4: workflow objects, proofs, leads)
 
 ---
 
@@ -28,6 +28,11 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 | `migrations/003_add_qc_role.sql` | Add david_review / QC role |
 | `migrations/004_add_order_specs.sql` | Add order specs columns |
 | `migrations/005_r2_file_tracking.sql` | R2 file tracking extension |
+| `migrations/006_vendor_purchasing_intelligence.sql` | **PRI-247** — Vendor master, material catalog, price records, receiving |
+| `migrations/007_vendor_purchasing_rls.sql` | **PRI-247** — RLS policies for vendor purchasing tables |
+| `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed 21 team members into auth.users |
+| `migrations/009_instagram_leads.sql` | **PRI-256** — Instagram leads pipeline table |
+| `migrations/010_workflow_objects.sql` | **PRI-262** — Phase 1+4: leads, deals, design_tasks, proofs, proof_versions, proof_approval_events, shipping_tasks, post_sale_tasks |
 | `migrations/006_vendor_purchasing_intelligence.sql` | **PRI-247** — Vendor master, material catalog, price records, receiving; extends purchase_orders + purchase_order_items |
 | `migrations/007_vendor_purchasing_rls.sql` | **PRI-247** — RLS policies for vendor purchasing tables |
 | `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed all 21 Pulse team members into auth.users (temp password `Pulse2026!`); fixes qc-failed enum bug from 003 |

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads — Bazaar Print</title>
+  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <script src="auth.js?v=20260429-PRI262"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Header -->
+<div class="leads-header">
+  <div>
+    <h2>📋 Leads</h2>
+    <p>All inbound inquiries across every channel — walk-in, phone, email, Instagram, referrals.</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="searchInput" placeholder="🔍 Search name, company..." oninput="renderLeads()" class="search-input">
+    <select id="repFilter" onchange="renderLeads()" class="filter-select">
+      <option value="">All Reps</option>
+    </select>
+    <select id="sourceFilter" onchange="renderLeads()" class="filter-select">
+      <option value="">All Sources</option>
+      <option value="walk_in">Walk-In</option>
+      <option value="phone">Phone</option>
+      <option value="email">Email</option>
+      <option value="instagram">Instagram</option>
+      <option value="website">Website</option>
+      <option value="referral">Referral</option>
+      <option value="repeat">Repeat Customer</option>
+    </select>
+    <button class="btn btn-primary" onclick="showNewLeadModal()">+ New Lead</button>
+  </div>
+</div>
+
+<!-- Status pipeline tabs -->
+<div class="status-tabs">
+  <button class="stab active" data-status="all" onclick="setStatusFilter('all')">All</button>
+  <button class="stab" data-status="new" onclick="setStatusFilter('new')">🆕 New</button>
+  <button class="stab" data-status="qualifying" onclick="setStatusFilter('qualifying')">🔍 Qualifying</button>
+  <button class="stab" data-status="qualified" onclick="setStatusFilter('qualified')">✅ Qualified</button>
+  <button class="stab" data-status="routed" onclick="setStatusFilter('routed')">➡️ Routed to AM</button>
+  <button class="stab" data-status="nurture" onclick="setStatusFilter('nurture')">🌱 Nurture</button>
+  <button class="stab" data-status="lost" onclick="setStatusFilter('lost')">✗ Lost</button>
+</div>
+
+<!-- Score filter -->
+<div style="display:flex;gap:6px;padding:8px 24px;border-bottom:1px solid var(--border);">
+  <span style="font-size:12px;color:var(--text-muted);align-self:center;">Score:</span>
+  <button class="score-btn active" data-score="all" onclick="setScoreFilter('all')">All</button>
+  <button class="score-btn hot" data-score="hot" onclick="setScoreFilter('hot')">🔥 Hot</button>
+  <button class="score-btn warm" data-score="warm" onclick="setScoreFilter('warm')">☀️ Warm</button>
+  <button class="score-btn cool" data-score="cool" onclick="setScoreFilter('cool')">❄️ Cool</button>
+</div>
+
+<!-- Lead list -->
+<div id="leadList" class="lead-list-container"></div>
+
+<!-- ===== LEAD DETAIL SIDE PANEL ===== -->
+<div id="leadPanel" class="lead-panel hidden">
+  <div class="panel-header">
+    <div>
+      <h3 id="panelName" style="margin:0;font-size:17px;font-weight:700;"></h3>
+      <span id="panelCompany" style="font-size:12px;color:var(--text-muted);"></span>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-sm btn-primary" onclick="showEditLeadModal()">Edit</button>
+      <button class="btn btn-sm" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+
+<!-- ===== NEW/EDIT LEAD MODAL ===== -->
+<div id="leadModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h3 id="leadModalTitle">New Lead</h3>
+      <button class="btn btn-sm" onclick="closeModal('leadModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Name *</label>
+          <input type="text" id="lf_name" placeholder="Contact name">
+        </div>
+        <div class="field">
+          <label>Company</label>
+          <input type="text" id="lf_company" placeholder="Company name">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="lf_email" placeholder="email@example.com">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="lf_phone" placeholder="(xxx) xxx-xxxx">
+        </div>
+        <div class="field">
+          <label>Source *</label>
+          <select id="lf_source">
+            <option value="walk_in">Walk-In</option>
+            <option value="phone">Phone</option>
+            <option value="email">Email</option>
+            <option value="instagram">Instagram</option>
+            <option value="website">Website</option>
+            <option value="referral">Referral</option>
+            <option value="repeat">Repeat Customer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Source Detail</label>
+          <input type="text" id="lf_sourceDetail" placeholder="e.g. IG @handle, walk-in 4/29">
+        </div>
+        <div class="field">
+          <label>Product Type</label>
+          <input type="text" id="lf_productType" placeholder="e.g. Roll Labels, Folding Cartons">
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="text" id="lf_quantity" placeholder="e.g. 1000 units">
+        </div>
+      </div>
+      <div class="field">
+        <label>Specs / Notes</label>
+        <textarea id="lf_specs" rows="2" placeholder="Size, substrate, special requirements..."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Score</label>
+          <select id="lf_score">
+            <option value="hot">🔥 Hot</option>
+            <option value="warm" selected>☀️ Warm</option>
+            <option value="cool">❄️ Cool</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="lf_status">
+            <option value="new">🆕 New</option>
+            <option value="qualifying">🔍 Qualifying</option>
+            <option value="qualified">✅ Qualified</option>
+            <option value="routed">➡️ Routed to AM</option>
+            <option value="nurture">🌱 Nurture</option>
+            <option value="lost">✗ Lost</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Urgency</label>
+          <input type="text" id="lf_urgency" placeholder="e.g. Rush — needs by 5/5">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Artwork Status</label>
+          <select id="lf_artworkStatus">
+            <option value="">Unknown</option>
+            <option value="has artwork">Has Artwork</option>
+            <option value="needs design">Needs Design</option>
+            <option value="uploading">Uploading</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Next Action Date</label>
+          <input type="date" id="lf_nextActionDate">
+        </div>
+      </div>
+      <div class="field">
+        <label>Next Action</label>
+        <input type="text" id="lf_nextAction" placeholder="e.g. Send quote by EOD, Follow up Thursday">
+      </div>
+      <div class="field">
+        <label>Rep Notes</label>
+        <textarea id="lf_repNotes" rows="2" placeholder="Internal notes — not visible to customer"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('leadModal')">Cancel</button>
+        <button class="btn btn-primary" id="leadSaveBtn" onclick="saveLead()">Save Lead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Convert to Deal Modal -->
+<div id="convertModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Convert Lead to Deal</h3>
+      <button class="btn btn-sm" onclick="closeModal('convertModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Creating a Deal for this lead. The lead will be marked as "Routed" and linked to the new deal.</p>
+      <div class="field">
+        <label>Quoted Price</label>
+        <input type="number" id="cv_price" placeholder="0.00" step="0.01">
+      </div>
+      <div class="field">
+        <label>Follow-Up Date * (required)</label>
+        <input type="date" id="cv_followUpDate">
+      </div>
+      <div class="field">
+        <label>Internal Notes</label>
+        <textarea id="cv_notes" rows="2" placeholder="Notes for the deal..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" onclick="closeModal('convertModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmConvert()">Convert to Deal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// leads.html — Phase 1 Lead Management
+// PRI-262: Pulse MVP
+// ============================================================
+
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('leads');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: '📋 Leads' }]);
+initAuth('leads');
+
+// ── Styles ─────────────────────────────────────────────────
+document.getElementById('page-styles').textContent = `
+  .leads-header { display:flex; justify-content:space-between; align-items:flex-start; padding:20px 24px 12px; border-bottom:1px solid var(--border); gap:16px; flex-wrap:wrap; }
+  .leads-header h2 { margin:0 0 4px; font-size:22px; font-weight:700; }
+  .leads-header p { margin:0; font-size:13px; color:var(--text-muted); }
+  .search-input { padding:7px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; width:220px; outline:none; }
+  .filter-select { padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--text); outline:none; }
+  .status-tabs { display:flex; gap:4px; padding:10px 24px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .stab { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:var(--card); cursor:pointer; font-size:12px; font-weight:500; color:var(--text-muted); transition:all 0.15s; }
+  .stab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .score-btn { padding:5px 12px; border:1px solid var(--border); border-radius:16px; background:var(--card); cursor:pointer; font-size:12px; font-weight:500; transition:all 0.15s; }
+  .score-btn.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+  .score-btn.hot.active { background:#dc2626; border-color:#dc2626; }
+  .score-btn.warm.active { background:#d97706; border-color:#d97706; }
+  .score-btn.cool.active { background:#0891b2; border-color:#0891b2; }
+
+  .lead-list-container { padding:16px 24px; display:flex; flex-direction:column; gap:8px; }
+
+  .lead-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; cursor:pointer; transition:all 0.15s; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
+  .lead-card:hover { box-shadow:0 3px 12px rgba(0,0,0,0.10); transform:translateY(-1px); }
+  .lead-score-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .score-hot { background:#dc2626; }
+  .score-warm { background:#d97706; }
+  .score-cool { background:#0891b2; }
+  .lead-card-main { }
+  .lead-name { font-weight:700; font-size:14px; margin-bottom:2px; }
+  .lead-sub { font-size:12px; color:var(--text-muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .lead-card-right { text-align:right; display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+
+  .status-pip { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+  .pip-new { background:#dbeafe; color:#1e40af; }
+  .pip-qualifying { background:#fef3c7; color:#92400e; }
+  .pip-qualified { background:#dcfce7; color:#166534; }
+  .pip-routed { background:#ede9fe; color:#5b21b6; }
+  .pip-nurture { background:#e0f2fe; color:#0369a1; }
+  .pip-lost { background:#f3f4f6; color:#6b7280; }
+
+  .source-tag { font-size:10px; padding:2px 7px; border-radius:8px; background:var(--border); color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+
+  .next-action-chip { font-size:11px; color:#d97706; }
+  .overdue-chip { font-size:11px; color:#dc2626; font-weight:700; }
+
+  /* Panel */
+  .lead-panel { position:fixed; right:0; top:0; bottom:0; width:480px; background:var(--bg); border-left:2px solid var(--border); box-shadow:-4px 0 20px rgba(0,0,0,0.12); z-index:100; overflow-y:auto; display:flex; flex-direction:column; }
+  .lead-panel.hidden { display:none; }
+  .panel-header { display:flex; justify-content:space-between; align-items:flex-start; padding:16px 20px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:10; }
+  .panel-body { padding:20px; display:flex; flex-direction:column; gap:16px; }
+
+  .detail-section { }
+  .detail-section h4 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin:0 0 10px; }
+  .detail-row { display:flex; gap:8px; font-size:13px; margin-bottom:6px; }
+  .detail-label { color:var(--text-muted); width:110px; flex-shrink:0; }
+  .detail-val { font-weight:500; flex:1; }
+
+  .status-change-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .status-change-btn { padding:5px 12px; border:1px solid var(--border); border-radius:16px; font-size:12px; cursor:pointer; background:var(--card); transition:all 0.15s; }
+  .status-change-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .status-change-btn.current { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200; }
+  .modal-overlay.hidden { display:none; }
+  .modal { background:var(--bg); border-radius:var(--radius); max-height:90vh; overflow-y:auto; width:100%; }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .modal-header h3 { margin:0; font-size:16px; font-weight:700; }
+  .modal-body { padding:20px; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
+  .field input, .field select, .field textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--text); box-sizing:border-box; }
+  .field textarea { resize:vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,0.10); }
+
+  .empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
+  .empty-state .empty-icon { font-size:48px; margin-bottom:16px; }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+`;
+
+// ── State ──────────────────────────────────────────────────
+let leads = [];
+let currentLeadId = null;
+let editingLeadId = null;
+let statusFilter = 'all';
+let scoreFilter = 'all';
+let currentUser = null;
+
+// ── Init ───────────────────────────────────────────────────
+async function onAuthReady(user) {
+  currentUser = user;
+  await loadLeads();
+  renderLeads();
+  populateRepFilter();
+}
+
+if (typeof window !== 'undefined') {
+  window.__pulseAuthCallback = onAuthReady;
+}
+
+async function loadLeads() {
+  try {
+    const sb = getSupabaseClient();
+    if (!sb) { leads = getDemoLeads(); return; }
+
+    const { data, error } = await sb
+      .from('leads')
+      .select('*, profiles!leads_assigned_rep_fkey(id, display_name)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    leads = data || [];
+  } catch(e) {
+    console.warn('loadLeads:', e);
+    leads = getDemoLeads();
+  }
+}
+
+function getDemoLeads() {
+  return [
+    { id: 'demo-1', name: 'Maria Garcia', company: 'West Coast Herb Co', email: 'maria@wchc.com', phone: '(213) 555-0101', source: 'instagram', source_detail: '@westcoastherbco', product_type: 'Mylar Bags', quantity: '1000', specs: '10"x14", matte, custom print', score: 'hot', status: 'qualifying', urgency: 'Needs by May 15', artwork_status: 'has artwork', rep_notes: 'Great prospect, been messaging on IG for 2 weeks', next_action: 'Send quote today', next_action_date: new Date().toISOString().split('T')[0], created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
+    { id: 'demo-2', name: 'James Chen', company: 'Sunrise Organics', email: 'jchen@sunriseorganics.com', phone: '(323) 555-0202', source: 'walk_in', source_detail: 'Walk-in 4/28', product_type: 'Roll Labels', quantity: '5000', specs: '4"x6" BOPP gloss', score: 'warm', status: 'qualified', urgency: '', artwork_status: 'needs design', rep_notes: 'Walked in with samples from competitor. Price sensitive.', next_action: 'Follow up with design quote', next_action_date: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0], created_at: new Date(Date.now() - 86400000).toISOString() },
+    { id: 'demo-3', name: 'Sarah Kim', company: '', email: 'sarah.kim@gmail.com', phone: '(310) 555-0303', source: 'phone', source_detail: '', product_type: 'Business Cards', quantity: '500', specs: 'Standard 3.5"x2"', score: 'cool', status: 'new', urgency: 'No rush', artwork_status: '', rep_notes: '', next_action: 'Qualify and send pricing', next_action_date: '', created_at: new Date(Date.now() - 3600000).toISOString() },
+    { id: 'demo-4', name: 'Tony Rodriguez', company: 'GreenLeaf Dispensary', email: 'tony@greenleaf.com', phone: '(818) 555-0404', source: 'referral', source_detail: 'Referred by West Coast Herb Co', product_type: 'Folding Cartons', quantity: '2500', specs: '4"x4"x1" box, spot UV, custom die', score: 'hot', status: 'routed', urgency: 'Rush — needs by 5/10', artwork_status: 'has artwork', rep_notes: 'High-value customer, treated as VIP', next_action: 'Gary to follow up today', next_action_date: new Date().toISOString().split('T')[0], created_at: new Date(Date.now() - 5 * 86400000).toISOString() },
+    { id: 'demo-5', name: 'Lisa Park', company: 'Park Wellness', email: '', phone: '(562) 555-0505', source: 'email', source_detail: '', product_type: 'Sticker Sheets', quantity: '200', specs: '', score: 'cool', status: 'nurture', urgency: '', artwork_status: 'needs design', rep_notes: 'Small order, not ready to buy yet. Follow up Q3.', next_action: 'Re-engage in 60 days', next_action_date: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0], created_at: new Date(Date.now() - 14 * 86400000).toISOString() },
+  ];
+}
+
+function populateRepFilter() {
+  // Will be populated from profiles when Supabase connected
+}
+
+// ── Filters ────────────────────────────────────────────────
+function setStatusFilter(status) {
+  statusFilter = status;
+  document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  renderLeads();
+}
+
+function setScoreFilter(score) {
+  scoreFilter = score;
+  document.querySelectorAll('.score-btn').forEach(b => b.classList.toggle('active', b.dataset.score === score));
+  renderLeads();
+}
+
+function getFiltered() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+  const rep = document.getElementById('repFilter')?.value || '';
+  const source = document.getElementById('sourceFilter')?.value || '';
+  return leads.filter(l => {
+    if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+    if (scoreFilter !== 'all' && l.score !== scoreFilter) return false;
+    if (rep && l.assigned_rep !== rep) return false;
+    if (source && l.source !== source) return false;
+    if (q) {
+      const t = (l.name + ' ' + l.company + ' ' + l.email + ' ' + l.product_type).toLowerCase();
+      if (!t.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Render ─────────────────────────────────────────────────
+function renderLeads() {
+  const filtered = getFiltered();
+  const container = document.getElementById('leadList');
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No leads found</h3><p>Try adjusting your filters or add a new lead.</p></div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(l => renderLeadCard(l)).join('');
+}
+
+function renderLeadCard(l) {
+  const today = new Date().toISOString().split('T')[0];
+  let nextActionHtml = '';
+  if (l.next_action_date) {
+    const overdue = l.next_action_date < today;
+    nextActionHtml = overdue
+      ? `<span class="overdue-chip">⚠️ Overdue: ${escHtml(l.next_action || 'Follow up')}</span>`
+      : `<span class="next-action-chip">📅 ${escHtml(l.next_action || 'Follow up')} by ${l.next_action_date}</span>`;
+  }
+
+  return `
+    <div class="lead-card" onclick="openLead('${l.id}')">
+      <div class="lead-score-dot score-${l.score}"></div>
+      <div class="lead-card-main">
+        <div class="lead-name">${escHtml(l.name)}${l.company ? ` <span style="font-weight:400;color:var(--text-muted);">— ${escHtml(l.company)}</span>` : ''}</div>
+        <div class="lead-sub">
+          <span class="source-tag">${sourceLabel(l.source)}</span>
+          ${l.product_type ? `<span>📦 ${escHtml(l.product_type)}${l.quantity ? ' × ' + escHtml(l.quantity) : ''}</span>` : ''}
+          ${l.urgency ? `<span style="color:#c2410c;">⚡ ${escHtml(l.urgency)}</span>` : ''}
+          ${nextActionHtml}
+        </div>
+      </div>
+      <div class="lead-card-right">
+        <span class="status-pip pip-${l.status}">${statusLabel(l.status)}</span>
+        <span style="font-size:10px;color:var(--text-muted);">${timeAgo(l.created_at)}</span>
+      </div>
+    </div>`;
+}
+
+function sourceLabel(s) {
+  const map = { walk_in: 'Walk-In', phone: 'Phone', email: 'Email', instagram: 'Instagram', website: 'Website', referral: 'Referral', repeat: 'Repeat', other: 'Other' };
+  return map[s] || s;
+}
+
+function statusLabel(s) {
+  const map = { new: '🆕 New', qualifying: '🔍 Qualifying', qualified: '✅ Qualified', routed: '➡️ Routed', nurture: '🌱 Nurture', lost: '✗ Lost' };
+  return map[s] || s;
+}
+
+// ── Lead Panel ──────────────────────────────────────────────
+function openLead(id) {
+  currentLeadId = id;
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+
+  document.getElementById('panelName').textContent = l.name;
+  document.getElementById('panelCompany').textContent = l.company || '';
+
+  const today = new Date().toISOString().split('T')[0];
+  const overdueNext = l.next_action_date && l.next_action_date < today;
+
+  document.getElementById('panelBody').innerHTML = `
+    <!-- Status pipeline -->
+    <div class="detail-section">
+      <h4>Pipeline Stage</h4>
+      <div class="status-change-row">
+        ${['new','qualifying','qualified','routed','nurture','lost'].map(s => `
+          <button class="status-change-btn ${l.status === s ? 'current' : ''}" onclick="updateLeadStatus('${l.id}','${s}')">${statusLabel(s)}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Score -->
+    <div class="detail-section">
+      <h4>Score</h4>
+      <div style="display:flex;gap:6px;">
+        ${['hot','warm','cool'].map(sc => `
+          <button class="status-change-btn ${l.score === sc ? 'current' : ''}" onclick="updateLeadScore('${l.id}','${sc}')">${sc === 'hot' ? '🔥' : sc === 'warm' ? '☀️' : '❄️'} ${sc.charAt(0).toUpperCase()+sc.slice(1)}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Contact info -->
+    <div class="detail-section">
+      <h4>Contact</h4>
+      ${l.email ? `<div class="detail-row"><span class="detail-label">Email</span><span class="detail-val"><a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a></span></div>` : ''}
+      ${l.phone ? `<div class="detail-row"><span class="detail-label">Phone</span><span class="detail-val"><a href="tel:${escHtml(l.phone)}">${escHtml(l.phone)}</a></span></div>` : ''}
+      <div class="detail-row"><span class="detail-label">Source</span><span class="detail-val">${sourceLabel(l.source)}${l.source_detail ? ' — ' + escHtml(l.source_detail) : ''}</span></div>
+    </div>
+
+    <!-- Product interest -->
+    <div class="detail-section">
+      <h4>Product Interest</h4>
+      ${l.product_type ? `<div class="detail-row"><span class="detail-label">Product</span><span class="detail-val">${escHtml(l.product_type)}</span></div>` : ''}
+      ${l.quantity ? `<div class="detail-row"><span class="detail-label">Quantity</span><span class="detail-val">${escHtml(l.quantity)}</span></div>` : ''}
+      ${l.specs ? `<div class="detail-row"><span class="detail-label">Specs</span><span class="detail-val">${escHtml(l.specs)}</span></div>` : ''}
+      ${l.urgency ? `<div class="detail-row"><span class="detail-label">Urgency</span><span class="detail-val" style="color:#c2410c;">${escHtml(l.urgency)}</span></div>` : ''}
+      ${l.artwork_status ? `<div class="detail-row"><span class="detail-label">Artwork</span><span class="detail-val">${escHtml(l.artwork_status)}</span></div>` : ''}
+    </div>
+
+    <!-- Next action -->
+    <div class="detail-section">
+      <h4>Next Action</h4>
+      ${l.next_action ? `<div class="detail-row"><span class="detail-label">Action</span><span class="detail-val ${overdueNext ? 'overdue-chip' : ''}">${overdueNext ? '⚠️ OVERDUE: ' : ''}${escHtml(l.next_action)}</span></div>` : ''}
+      ${l.next_action_date ? `<div class="detail-row"><span class="detail-label">Date</span><span class="detail-val">${l.next_action_date}</span></div>` : ''}
+    </div>
+
+    <!-- Rep notes -->
+    ${l.rep_notes ? `
+    <div class="detail-section">
+      <h4>Rep Notes</h4>
+      <p style="font-size:13px;color:var(--text);line-height:1.5;">${escHtml(l.rep_notes)}</p>
+    </div>` : ''}
+
+    <!-- Actions -->
+    <div class="detail-section">
+      <h4>Actions</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-primary" onclick="showConvertModal('${l.id}')">⇒ Convert to Deal</button>
+        ${l.email ? `<a href="mailto:${escHtml(l.email)}" class="btn btn-sm">📧 Email</a>` : ''}
+        ${l.phone ? `<a href="tel:${escHtml(l.phone)}" class="btn btn-sm">📞 Call</a>` : ''}
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);padding-top:4px;">Lead created ${timeAgo(l.created_at)}</div>`;
+
+  document.getElementById('leadPanel').classList.remove('hidden');
+}
+
+function closePanel() {
+  document.getElementById('leadPanel').classList.add('hidden');
+  currentLeadId = null;
+}
+
+async function updateLeadStatus(id, newStatus) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  const old = lead.status;
+  lead.status = newStatus;
+  try {
+    const sb = getSupabaseClient();
+    if (sb && !id.startsWith('demo')) {
+      await sb.from('leads').update({ status: newStatus }).eq('id', id);
+    }
+  } catch(e) { lead.status = old; }
+  renderLeads();
+  openLead(id);
+  showPageToast(`Lead moved to ${statusLabel(newStatus)}.`, 'success');
+}
+
+async function updateLeadScore(id, newScore) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  lead.score = newScore;
+  try {
+    const sb = getSupabaseClient();
+    if (sb && !id.startsWith('demo')) {
+      await sb.from('leads').update({ score: newScore }).eq('id', id);
+    }
+  } catch(e) {}
+  renderLeads();
+  openLead(id);
+}
+
+// ── New/Edit Lead Modal ─────────────────────────────────────
+function showNewLeadModal() {
+  editingLeadId = null;
+  document.getElementById('leadModalTitle').textContent = 'New Lead';
+  clearLeadForm();
+  // Set default next action date to tomorrow
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('lf_nextActionDate').value = tomorrow;
+  showModal('leadModal');
+}
+
+function showEditLeadModal() {
+  if (!currentLeadId) return;
+  const l = leads.find(x => x.id === currentLeadId);
+  if (!l) return;
+  editingLeadId = currentLeadId;
+  document.getElementById('leadModalTitle').textContent = 'Edit Lead';
+  document.getElementById('lf_name').value = l.name || '';
+  document.getElementById('lf_company').value = l.company || '';
+  document.getElementById('lf_email').value = l.email || '';
+  document.getElementById('lf_phone').value = l.phone || '';
+  document.getElementById('lf_source').value = l.source || 'other';
+  document.getElementById('lf_sourceDetail').value = l.source_detail || '';
+  document.getElementById('lf_productType').value = l.product_type || '';
+  document.getElementById('lf_quantity').value = l.quantity || '';
+  document.getElementById('lf_specs').value = l.specs || '';
+  document.getElementById('lf_score').value = l.score || 'warm';
+  document.getElementById('lf_status').value = l.status || 'new';
+  document.getElementById('lf_urgency').value = l.urgency || '';
+  document.getElementById('lf_artworkStatus').value = l.artwork_status || '';
+  document.getElementById('lf_nextActionDate').value = l.next_action_date || '';
+  document.getElementById('lf_nextAction').value = l.next_action || '';
+  document.getElementById('lf_repNotes').value = l.rep_notes || '';
+  showModal('leadModal');
+}
+
+function clearLeadForm() {
+  ['lf_name','lf_company','lf_email','lf_phone','lf_sourceDetail','lf_productType','lf_quantity','lf_specs','lf_urgency','lf_nextAction','lf_repNotes','lf_nextActionDate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('lf_source').value = 'walk_in';
+  document.getElementById('lf_score').value = 'warm';
+  document.getElementById('lf_status').value = 'new';
+  document.getElementById('lf_artworkStatus').value = '';
+}
+
+async function saveLead() {
+  const name = document.getElementById('lf_name').value.trim();
+  if (!name) { showPageToast('Name is required.', 'error'); return; }
+
+  const payload = {
+    name,
+    company: document.getElementById('lf_company').value.trim(),
+    email: document.getElementById('lf_email').value.trim(),
+    phone: document.getElementById('lf_phone').value.trim(),
+    source: document.getElementById('lf_source').value,
+    source_detail: document.getElementById('lf_sourceDetail').value.trim(),
+    product_type: document.getElementById('lf_productType').value.trim(),
+    quantity: document.getElementById('lf_quantity').value.trim(),
+    specs: document.getElementById('lf_specs').value.trim(),
+    score: document.getElementById('lf_score').value,
+    status: document.getElementById('lf_status').value,
+    urgency: document.getElementById('lf_urgency').value.trim(),
+    artwork_status: document.getElementById('lf_artworkStatus').value,
+    next_action_date: document.getElementById('lf_nextActionDate').value || null,
+    next_action: document.getElementById('lf_nextAction').value.trim(),
+    rep_notes: document.getElementById('lf_repNotes').value.trim(),
+  };
+
+  try {
+    document.getElementById('leadSaveBtn').disabled = true;
+    const sb = getSupabaseClient();
+
+    if (editingLeadId) {
+      // Update
+      const lead = leads.find(l => l.id === editingLeadId);
+      if (lead) Object.assign(lead, payload);
+      if (sb && !editingLeadId.startsWith('demo')) {
+        await sb.from('leads').update(payload).eq('id', editingLeadId);
+      }
+      closeModal('leadModal');
+      renderLeads();
+      if (currentLeadId === editingLeadId) openLead(editingLeadId);
+      showPageToast('Lead updated.', 'success');
+    } else {
+      // Create
+      if (sb) {
+        const { data, error } = await sb.from('leads').insert({
+          ...payload,
+          created_by: currentUser?.id || null,
+        }).select().single();
+        if (error) throw error;
+        leads.unshift(data);
+      } else {
+        const demo = { id: 'demo-' + Date.now(), ...payload, created_at: new Date().toISOString() };
+        leads.unshift(demo);
+      }
+      closeModal('leadModal');
+      renderLeads();
+      showPageToast('Lead added.', 'success');
+    }
+  } catch(e) {
+    showPageToast('Error saving lead: ' + e.message, 'error');
+  } finally {
+    document.getElementById('leadSaveBtn').disabled = false;
+  }
+}
+
+// ── Convert to Deal ─────────────────────────────────────────
+let convertLeadId = null;
+
+function showConvertModal(leadId) {
+  convertLeadId = leadId;
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('cv_followUpDate').value = tomorrow;
+  document.getElementById('cv_price').value = '';
+  document.getElementById('cv_notes').value = '';
+  showModal('convertModal');
+}
+
+async function confirmConvert() {
+  const followUpDate = document.getElementById('cv_followUpDate').value;
+  if (!followUpDate) { showPageToast('Follow-up date is required.', 'error'); return; }
+
+  const lead = leads.find(l => l.id === convertLeadId);
+  if (!lead) return;
+
+  try {
+    const sb = getSupabaseClient();
+    if (sb && !convertLeadId.startsWith('demo')) {
+      const { data: deal, error } = await sb.from('deals').insert({
+        customer_name: lead.name,
+        customer_email: lead.email,
+        customer_phone: lead.phone,
+        company: lead.company,
+        product_type: lead.product_type,
+        specs: lead.specs,
+        artwork_status: lead.artwork_status,
+        quoted_price: parseFloat(document.getElementById('cv_price').value) || null,
+        follow_up_date: followUpDate,
+        internal_notes: document.getElementById('cv_notes').value.trim(),
+        lead_id: convertLeadId,
+        status: 'draft',
+        created_by: currentUser?.id || null,
+      }).select().single();
+      if (error) throw error;
+
+      await sb.from('leads').update({ status: 'routed', deal_id: deal.id }).eq('id', convertLeadId);
+      lead.status = 'routed';
+    } else {
+      lead.status = 'routed';
+    }
+
+    closeModal('convertModal');
+    closePanel();
+    renderLeads();
+    showPageToast('✅ Lead converted to Deal. Find it in Quotes.', 'success');
+  } catch(e) {
+    showPageToast('Error converting lead: ' + e.message, 'error');
+  }
+}
+
+// ── Modal/utility helpers ───────────────────────────────────
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+});
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+// Fallback for no-Supabase load
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    if (!leads.length) {
+      leads = getDemoLeads();
+      renderLeads();
+    }
+  }, 2000);
+});
+</script>
+</body>
+</html>
