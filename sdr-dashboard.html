@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDR Inbox — Bazaar Print</title>
+  <script src="shared.js?v=20260430-PRI262"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260430-PRI262"></script>
+  <script src="auth.js?v=20260430-PRI262"></script>
+  <style id="page-styles"></style>
+  <style>
+    .sdr-layout { max-width: 1400px; margin: 0 auto; padding: 20px 16px; }
+    .sdr-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+    .sdr-header h2 { font-size: 22px; font-weight: 700; margin: 0 0 2px; }
+    .sdr-header .subtitle { font-size: 13px; color: var(--text-muted); }
+
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .stat-tile.danger { border-top: 3px solid var(--red); }
+    .stat-tile.warn { border-top: 3px solid var(--yellow); }
+    .stat-tile.ok { border-top: 3px solid var(--green); }
+    .stat-tile.info { border-top: 3px solid var(--accent); }
+    .stat-tile .num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .stat-tile .lbl { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .alert-bar { padding: 10px 14px; border-radius: var(--radius); background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .alert-bar.warn { background: #fef3cd; border-color: #fcd34d; color: #92400e; }
+    .alert-bar.ok { background: #d4edda; border-color: #86efac; color: #166534; }
+
+    .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+    @media (max-width: 1000px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .panel-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .panel-title .count-badge { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; color: var(--text); }
+
+    /* Queue */
+    .queue-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .queue-tab { padding: 6px 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .queue-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .queue-item { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg); cursor: pointer; transition: box-shadow 0.15s; }
+    .queue-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .queue-item.orphan { background: #fff5f5; border-color: #fca5a5; }
+    .queue-item.uncontacted { background: #fffbeb; border-color: #fcd34d; }
+    .qi-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .qi-name { font-weight: 700; font-size: 14px; }
+    .qi-company { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .qi-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
+    .qi-tag { padding: 2px 7px; border-radius: 6px; background: var(--border); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .qi-score { padding: 2px 7px; border-radius: 6px; font-weight: 700; }
+    .qi-score.hot { background: #fee2e2; color: #b91c1c; }
+    .qi-score.warm { background: #fef3cd; color: #92400e; }
+    .qi-score.cool { background: #dbeafe; color: #1e40af; }
+    .qi-age { font-size: 11px; color: var(--text-muted); }
+    .qi-age.overdue { color: var(--red); font-weight: 700; }
+
+    /* Source breakdown */
+    .source-list { display: flex; flex-direction: column; gap: 6px; }
+    .source-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .source-row:last-child { border-bottom: none; }
+    .source-bar { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; margin: 0 12px; overflow: hidden; }
+    .source-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+    /* SLA */
+    .sla-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .sla-row:last-child { border-bottom: none; }
+    .sla-row .sla-label { font-size: 12px; color: var(--text-muted); }
+    .sla-row .sla-val { font-size: 18px; font-weight: 800; }
+    .sla-row .sla-val.ok { color: var(--green); }
+    .sla-row .sla-val.warn { color: var(--yellow); }
+    .sla-row .sla-val.bad { color: var(--red); }
+
+    /* Quick action panel */
+    .qa-modal { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; display: none; }
+    .qa-modal.active { display: block; }
+    .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .qa-field { display: flex; flex-direction: column; gap: 4px; }
+    .qa-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+    .qa-field input, .qa-field select, .qa-field textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; }
+    .qa-field textarea { resize: vertical; min-height: 60px; }
+
+    .score-pick { display: flex; gap: 6px; }
+    .score-pick button { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); cursor: pointer; font-size: 13px; font-weight: 600; }
+    .score-pick button.pick-hot.active { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
+    .score-pick button.pick-warm.active { background: #fef3cd; border-color: #d97706; color: #92400e; }
+    .score-pick button.pick-cool.active { background: #dbeafe; border-color: #2563eb; color: #1e40af; }
+
+    .action-bar { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+    .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="sdr-layout">
+  <div class="sdr-header">
+    <div>
+      <h2>🎯 SDR Inbox — Lead Triage</h2>
+      <div class="subtitle">Qualify inbound leads · Route to AM · No leads left orphaned</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="last-refresh" style="font-size:11px;color:var(--text-muted);"></span>
+      <button class="btn" onclick="loadAll()">↻ Refresh</button>
+      <button class="btn btn-primary" onclick="window.location.href='leads.html'">+ New Lead</button>
+    </div>
+  </div>
+
+  <!-- No-orphan banner -->
+  <div id="orphan-banner-host"></div>
+
+  <!-- Top stat tiles -->
+  <div class="stat-tiles">
+    <div class="stat-tile info"><div class="num" id="tile-new" style="color:var(--accent)">—</div><div class="lbl">New (Untouched)</div></div>
+    <div class="stat-tile warn"><div class="num" id="tile-qualifying" style="color:#d97706">—</div><div class="lbl">Qualifying</div></div>
+    <div class="stat-tile ok"><div class="num" id="tile-qualified" style="color:var(--green)">—</div><div class="lbl">Qualified · Ready to Route</div></div>
+    <div class="stat-tile danger"><div class="num" id="tile-overdue" style="color:var(--red)">—</div><div class="lbl">Overdue (>24h)</div></div>
+    <div class="stat-tile info"><div class="num" id="tile-today" style="color:#7c3aed">—</div><div class="lbl">New Today</div></div>
+    <div class="stat-tile ok"><div class="num" id="tile-routed" style="color:var(--green)">—</div><div class="lbl">Routed Today</div></div>
+  </div>
+
+  <!-- Quick-qualify modal (inline panel) -->
+  <div id="qa-modal" class="qa-modal">
+    <h3 id="qa-title" style="margin:0 0 12px;font-size:16px;font-weight:700;">Qualify Lead</h3>
+    <div id="qa-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
+
+    <div class="qa-field" style="margin-bottom:12px;">
+      <label>Score</label>
+      <div class="score-pick">
+        <button class="pick-hot" onclick="setQaScore('hot')">🔥 Hot</button>
+        <button class="pick-warm" onclick="setQaScore('warm')">☀️ Warm</button>
+        <button class="pick-cool" onclick="setQaScore('cool')">❄️ Cool</button>
+      </div>
+    </div>
+
+    <div class="qa-grid">
+      <div class="qa-field">
+        <label>Product Type</label>
+        <input id="qa-product" type="text" placeholder="e.g. Roll Labels">
+      </div>
+      <div class="qa-field">
+        <label>Quantity</label>
+        <input id="qa-quantity" type="text" placeholder="e.g. 1000">
+      </div>
+      <div class="qa-field">
+        <label>Artwork Status</label>
+        <select id="qa-artwork">
+          <option value="">—</option>
+          <option value="has artwork">Has Artwork</option>
+          <option value="needs design">Needs Design</option>
+          <option value="uploading">Uploading</option>
+        </select>
+      </div>
+      <div class="qa-field">
+        <label>Urgency</label>
+        <input id="qa-urgency" type="text" placeholder="e.g. Rush — needs by 5/5">
+      </div>
+      <div class="qa-field">
+        <label>Next Action</label>
+        <input id="qa-next-action" type="text" placeholder="e.g. Send to Gary for quote">
+      </div>
+      <div class="qa-field">
+        <label>Next Action Date</label>
+        <input id="qa-next-date" type="date">
+      </div>
+      <div class="qa-field">
+        <label>Route to Account Manager</label>
+        <select id="qa-route-to">
+          <option value="">— No routing yet —</option>
+          <option value="Gary Gharibyan">Gary Gharibyan</option>
+          <option value="Ernesto Flores">Ernesto Flores</option>
+          <option value="Bob Werner">Bob Werner</option>
+          <option value="Tiko">Tiko</option>
+        </select>
+      </div>
+      <div class="qa-field">
+        <label>Status After Save</label>
+        <select id="qa-status">
+          <option value="qualifying">🔍 Qualifying</option>
+          <option value="qualified">✅ Qualified</option>
+          <option value="routed">➡️ Routed to AM</option>
+          <option value="nurture">🌱 Nurture</option>
+          <option value="lost">✗ Lost</option>
+        </select>
+      </div>
+    </div>
+    <div class="qa-field" style="margin-bottom:12px;">
+      <label>SDR Notes</label>
+      <textarea id="qa-notes" placeholder="What did they say? Pain points, budget, timing, decision-maker..."></textarea>
+    </div>
+    <div class="action-bar">
+      <button class="btn" onclick="closeQa()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveQa()">💾 Save & Move</button>
+      <button class="btn btn-primary" onclick="saveAndRoute()" style="background:#16a34a;">📤 Save & Route to AM</button>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- LEFT: Queue -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>📥 Inbound Lead Queue</span>
+        <span class="count-badge" id="queue-count">0</span>
+      </div>
+
+      <div class="queue-controls">
+        <button class="queue-tab active" data-filter="all" onclick="setQueueFilter('all')">All Open</button>
+        <button class="queue-tab" data-filter="new" onclick="setQueueFilter('new')">🆕 New</button>
+        <button class="queue-tab" data-filter="qualifying" onclick="setQueueFilter('qualifying')">🔍 Qualifying</button>
+        <button class="queue-tab" data-filter="orphan" onclick="setQueueFilter('orphan')">🚨 Orphans</button>
+        <button class="queue-tab" data-filter="overdue" onclick="setQueueFilter('overdue')">⚠️ Overdue</button>
+      </div>
+
+      <div id="queue-list"></div>
+    </div>
+
+    <!-- RIGHT: Source breakdown + SLA -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="panel">
+        <div class="panel-title">
+          <span>📡 Source Breakdown — Today</span>
+          <span class="count-badge" id="sources-total">0 leads</span>
+        </div>
+        <div class="source-list" id="source-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>⏱️ SLA Tracker</span></div>
+        <div id="sla-list">
+          <div class="sla-row">
+            <span class="sla-label">Avg first response time</span>
+            <span class="sla-val" id="sla-avg-response">—</span>
+          </div>
+          <div class="sla-row">
+            <span class="sla-label">% leads contacted &lt; 1h</span>
+            <span class="sla-val" id="sla-lt-1h">—</span>
+          </div>
+          <div class="sla-row">
+            <span class="sla-label">% leads contacted &lt; 24h</span>
+            <span class="sla-val" id="sla-lt-24h">—</span>
+          </div>
+          <div class="sla-row">
+            <span class="sla-label">Untouched &gt; 24h (orphans)</span>
+            <span class="sla-val bad" id="sla-orphans">—</span>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Target: respond to every lead in &lt; 1h. No leads orphaned past 24h.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>🚀 Quick Actions</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-primary" onclick="window.location.href='leads.html'">📋 Open Full Leads Board</button>
+          <button class="btn" onclick="window.location.href='instagram-leads.html'">📸 Instagram Inbox</button>
+          <button class="btn" onclick="window.location.href='leads.html?action=new'">＋ Log Walk-In Lead</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Init ──────────────────────────────────────────────────────────────────
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('sdr-dashboard');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: '🎯 SDR Inbox' }]);
+initAuth('sdr-dashboard');
+
+let leads = [];
+let queueFilter = 'all';
+let qaLeadId = null;
+let qaScore = 'warm';
+
+// ── Demo data ─────────────────────────────────────────────────────────────
+function getDemoLeads() {
+  const now = Date.now();
+  const ago = (h) => new Date(now - h * 3600000).toISOString();
+  return [
+    { id:'demo-s1', name:'Maria Garcia', company:'West Coast Herb Co', email:'maria@wchc.com', phone:'(213) 555-0101', source:'instagram', source_detail:'@westcoastherbco DM', product_type:'Mylar Bags', quantity:'1000', score:'hot', status:'new', urgency:'Needs by May 15', created_at: ago(0.5), next_action:null, next_action_date:null, assigned_rep:null },
+    { id:'demo-s2', name:'James Chen', company:'Sunrise Organics', email:'jchen@sunriseorganics.com', phone:'(323) 555-0202', source:'walk_in', source_detail:'Walk-in 4/30', product_type:'Roll Labels', quantity:'5000', score:'warm', status:'qualifying', urgency:'', created_at: ago(2), next_action:'Send pricing tomorrow', next_action_date: new Date(now + 86400000).toISOString().split('T')[0], assigned_rep:null },
+    { id:'demo-s3', name:'Sarah Kim', company:'', email:'sarah.kim@gmail.com', phone:'(310) 555-0303', source:'phone', source_detail:'Cold call inbound', product_type:'Business Cards', quantity:'500', score:'cool', status:'new', urgency:'No rush', created_at: ago(0.2), next_action:null, next_action_date:null, assigned_rep:null },
+    { id:'demo-s4', name:'Tony Rodriguez', company:'GreenLeaf Dispensary', email:'tony@greenleaf.com', phone:'(818) 555-0404', source:'referral', source_detail:'Referred by WCHC', product_type:'Folding Cartons', quantity:'2500', score:'hot', status:'qualified', urgency:'Rush — needs by 5/10', created_at: ago(28), next_action:'Hand to Gary', next_action_date: new Date().toISOString().split('T')[0], assigned_rep:null },
+    { id:'demo-s5', name:'Lisa Park', company:'Park Wellness', email:'', phone:'(562) 555-0505', source:'email', source_detail:'Contact form', product_type:'Sticker Sheets', quantity:'200', score:'cool', status:'new', urgency:'', created_at: ago(30), next_action:null, next_action_date:null, assigned_rep:null },
+    { id:'demo-s6', name:'Kev Patel', company:'Patel Provisions', email:'kev@patelco.com', phone:'(213) 555-0707', source:'instagram', source_detail:'IG DM', product_type:'Pouches', quantity:'800', score:'warm', status:'qualifying', urgency:'Needs by 5/12', created_at: ago(8), next_action:'Get artwork', next_action_date: new Date(now + 2*86400000).toISOString().split('T')[0], assigned_rep:null },
+    { id:'demo-s7', name:'Ana Velasquez', company:'Velasquez Bakery', email:'ana@vbakery.com', phone:'(310) 555-0808', source:'website', source_detail:'Pricing form', product_type:'Custom Boxes', quantity:'500', score:'warm', status:'qualified', urgency:'', created_at: ago(4), next_action:'Route to Ernesto', next_action_date: new Date().toISOString().split('T')[0], assigned_rep:null },
+    { id:'demo-s8', name:'Marcus Lee', company:'High Tide Co', email:'marcus@hightide.co', phone:'', source:'phone', source_detail:'Cold call', product_type:'Stickers', quantity:'2000', score:'cool', status:'qualifying', urgency:'', created_at: ago(72), next_action:null, next_action_date:null, assigned_rep:null },
+  ];
+}
+
+async function loadAll() {
+  const lastEl = document.getElementById('last-refresh');
+  if (lastEl) lastEl.textContent = 'Refreshing…';
+  try {
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (sb) {
+      const { data, error } = await sb
+        .from('leads')
+        .select('*')
+        .in('status', ['new','qualifying','qualified','routed','nurture'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      leads = (data && data.length) ? data : getDemoLeads();
+    } else {
+      leads = getDemoLeads();
+    }
+  } catch(e) {
+    console.warn('SDR loadAll:', e);
+    leads = getDemoLeads();
+  }
+  renderTiles();
+  renderOrphanBanner();
+  renderQueue();
+  renderSources();
+  renderSLA();
+  const ts = new Date();
+  if (lastEl) lastEl.textContent = `Updated ${ts.getHours()}:${String(ts.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function hoursAgo(iso) { return iso ? Math.floor((Date.now() - new Date(iso)) / 3600000) : null; }
+function isToday(iso) {
+  if (!iso) return false;
+  const a = new Date(iso), b = new Date();
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function isOrphan(l) {
+  // Orphan = status 'new' AND no next_action_date AND no assigned rep AND >2h old
+  if (l.status !== 'new') return false;
+  if (l.next_action_date) return false;
+  if (l.assigned_rep) return false;
+  return hoursAgo(l.created_at) >= 2;
+}
+function isOverdue(l) {
+  if (['routed','lost'].includes(l.status)) return false;
+  return hoursAgo(l.created_at) >= 24 && !l.next_action_date;
+}
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function sourceLabel(s) {
+  const map = { walk_in:'Walk-In', phone:'Phone', email:'Email', instagram:'Instagram', website:'Website', referral:'Referral', repeat:'Repeat', other:'Other' };
+  return map[s] || s || 'Unknown';
+}
+
+// ── Tiles ────────────────────────────────────────────────────────────────
+function renderTiles() {
+  const newCount = leads.filter(l => l.status === 'new').length;
+  const qualifying = leads.filter(l => l.status === 'qualifying').length;
+  const qualified = leads.filter(l => l.status === 'qualified').length;
+  const overdue = leads.filter(isOverdue).length;
+  const today = leads.filter(l => isToday(l.created_at)).length;
+  const routedToday = leads.filter(l => l.status === 'routed' && isToday(l.routed_at || l.created_at)).length;
+
+  document.getElementById('tile-new').textContent = newCount;
+  document.getElementById('tile-qualifying').textContent = qualifying;
+  document.getElementById('tile-qualified').textContent = qualified;
+  document.getElementById('tile-overdue').textContent = overdue;
+  document.getElementById('tile-today').textContent = today;
+  document.getElementById('tile-routed').textContent = routedToday;
+}
+
+// ── Orphan banner ────────────────────────────────────────────────────────
+function renderOrphanBanner() {
+  const orphans = leads.filter(isOrphan);
+  const overdues = leads.filter(isOverdue);
+  const host = document.getElementById('orphan-banner-host');
+  const parts = [];
+  if (orphans.length) {
+    parts.push(`<div class="alert-bar"><span style="font-size:18px;">🚨</span><strong>${orphans.length} orphan lead${orphans.length>1?'s':''}</strong> — uncontacted with no follow-up scheduled. Triage now.</div>`);
+  }
+  if (overdues.length) {
+    parts.push(`<div class="alert-bar warn"><span style="font-size:18px;">⚠️</span><strong>${overdues.length} lead${overdues.length>1?'s':''} overdue</strong> — older than 24h with no action. Set next action or route immediately.</div>`);
+  }
+  if (!parts.length) {
+    parts.push(`<div class="alert-bar ok"><span style="font-size:18px;">✅</span>Inbox is clean — no orphan or overdue leads. Keep responding fast (target: under 1 hour).</div>`);
+  }
+  host.innerHTML = parts.join('');
+}
+
+// ── Queue ────────────────────────────────────────────────────────────────
+function setQueueFilter(f) {
+  queueFilter = f;
+  document.querySelectorAll('.queue-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderQueue();
+}
+
+function getQueueLeads() {
+  switch (queueFilter) {
+    case 'new': return leads.filter(l => l.status === 'new');
+    case 'qualifying': return leads.filter(l => l.status === 'qualifying');
+    case 'orphan': return leads.filter(isOrphan);
+    case 'overdue': return leads.filter(isOverdue);
+    default: return leads.filter(l => !['routed','lost'].includes(l.status));
+  }
+}
+
+function renderQueue() {
+  const list = getQueueLeads().sort((a,b) => {
+    const oa = isOrphan(a), ob = isOrphan(b);
+    if (oa !== ob) return oa ? -1 : 1;
+    const sa = a.score === 'hot' ? 0 : a.score === 'warm' ? 1 : 2;
+    const sb = b.score === 'hot' ? 0 : b.score === 'warm' ? 1 : 2;
+    if (sa !== sb) return sa - sb;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  document.getElementById('queue-count').textContent = list.length;
+
+  const el = document.getElementById('queue-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">No leads match this filter — nice work.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(l => {
+    const orphan = isOrphan(l);
+    const overdue = isOverdue(l);
+    const cls = orphan ? 'orphan' : (overdue ? 'uncontacted' : '');
+    const h = hoursAgo(l.created_at);
+    const ageLabel = h < 1 ? 'just now' : h < 24 ? `${h}h ago` : `${Math.floor(h/24)}d ago`;
+    const ageClass = h >= 24 ? 'overdue' : '';
+    return `
+      <div class="queue-item ${cls}" onclick="openQa('${l.id}')">
+        <div class="qi-header">
+          <div>
+            <div class="qi-name">${escHtml(l.name)}${l.company ? ` <span style="font-weight:400;color:var(--text-muted);">— ${escHtml(l.company)}</span>` : ''}</div>
+            <div class="qi-company">${l.email ? '✉ ' + escHtml(l.email) + ' · ' : ''}${l.phone ? '☎ ' + escHtml(l.phone) : ''}</div>
+            <div class="qi-meta">
+              <span class="qi-tag">${sourceLabel(l.source)}</span>
+              ${l.product_type ? `<span class="qi-tag" style="background:#eef2ff;color:#4338ca;">${escHtml(l.product_type)}${l.quantity ? ' × ' + escHtml(l.quantity) : ''}</span>` : ''}
+              ${l.score ? `<span class="qi-score ${l.score}">${l.score === 'hot' ? '🔥' : l.score === 'warm' ? '☀️' : '❄️'} ${l.score}</span>` : ''}
+              ${l.urgency ? `<span class="qi-tag" style="background:#fed7aa;color:#9a3412;">⚡ ${escHtml(l.urgency)}</span>` : ''}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="qi-age ${ageClass}">${ageLabel}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${l.status}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Source breakdown ─────────────────────────────────────────────────────
+function renderSources() {
+  const todayLeads = leads.filter(l => isToday(l.created_at));
+  document.getElementById('sources-total').textContent = `${todayLeads.length} leads`;
+  const counts = {};
+  todayLeads.forEach(l => { counts[l.source || 'other'] = (counts[l.source || 'other'] || 0) + 1; });
+  const max = Math.max(1, ...Object.values(counts));
+  const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  const el = document.getElementById('source-list');
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty-state">No leads logged yet today.</div>`;
+    return;
+  }
+  el.innerHTML = entries.map(([src, n]) => `
+    <div class="source-row">
+      <span style="min-width:110px;">${sourceLabel(src)}</span>
+      <div class="source-bar"><div class="source-bar-fill" style="width:${(n/max)*100}%;"></div></div>
+      <strong>${n}</strong>
+    </div>
+  `).join('');
+}
+
+// ── SLA Tracker ──────────────────────────────────────────────────────────
+function renderSLA() {
+  // For demo: response time = hours from created_at to first next_action_date set
+  const responded = leads.filter(l => l.next_action_date || l.status !== 'new');
+  const avgHrs = responded.length
+    ? Math.round(responded.reduce((sum, l) => sum + (hoursAgo(l.created_at) || 0), 0) / responded.length)
+    : null;
+  const lt1h = leads.filter(l => l.status !== 'new' && hoursAgo(l.created_at) < 1).length;
+  const lt24h = leads.filter(l => l.status !== 'new' && hoursAgo(l.created_at) < 24).length;
+  const orphans = leads.filter(isOrphan).length;
+
+  const pct1h = leads.length ? Math.round((lt1h / leads.length) * 100) : 0;
+  const pct24h = leads.length ? Math.round((lt24h / leads.length) * 100) : 0;
+
+  const avgEl = document.getElementById('sla-avg-response');
+  if (avgHrs === null) avgEl.textContent = '—';
+  else if (avgHrs < 1) avgEl.textContent = '<1h';
+  else avgEl.textContent = avgHrs + 'h';
+  avgEl.className = 'sla-val ' + (avgHrs === null ? '' : avgHrs <= 1 ? 'ok' : avgHrs <= 6 ? 'warn' : 'bad');
+
+  const e1 = document.getElementById('sla-lt-1h');
+  e1.textContent = pct1h + '%';
+  e1.className = 'sla-val ' + (pct1h >= 80 ? 'ok' : pct1h >= 50 ? 'warn' : 'bad');
+
+  const e24 = document.getElementById('sla-lt-24h');
+  e24.textContent = pct24h + '%';
+  e24.className = 'sla-val ' + (pct24h >= 95 ? 'ok' : pct24h >= 80 ? 'warn' : 'bad');
+
+  const eo = document.getElementById('sla-orphans');
+  eo.textContent = orphans;
+  eo.className = 'sla-val ' + (orphans === 0 ? 'ok' : 'bad');
+}
+
+// ── Quick-qualify panel ──────────────────────────────────────────────────
+function openQa(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  qaLeadId = id;
+  qaScore = l.score || 'warm';
+
+  document.getElementById('qa-title').textContent = `Qualify: ${l.name}${l.company ? ' — ' + l.company : ''}`;
+  document.getElementById('qa-summary').textContent = `${sourceLabel(l.source)} · ${l.email || ''} ${l.phone ? ' · ' + l.phone : ''} · created ${hoursAgo(l.created_at)}h ago`;
+
+  document.getElementById('qa-product').value = l.product_type || '';
+  document.getElementById('qa-quantity').value = l.quantity || '';
+  document.getElementById('qa-artwork').value = l.artwork_status || '';
+  document.getElementById('qa-urgency').value = l.urgency || '';
+  document.getElementById('qa-next-action').value = l.next_action || '';
+  document.getElementById('qa-next-date').value = l.next_action_date || (new Date(Date.now()+86400000)).toISOString().split('T')[0];
+  document.getElementById('qa-route-to').value = '';
+  document.getElementById('qa-status').value = l.status === 'new' ? 'qualifying' : l.status;
+  document.getElementById('qa-notes').value = l.rep_notes || '';
+
+  setQaScore(qaScore);
+  document.getElementById('qa-modal').classList.add('active');
+  document.getElementById('qa-modal').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function closeQa() {
+  document.getElementById('qa-modal').classList.remove('active');
+  qaLeadId = null;
+}
+
+function setQaScore(s) {
+  qaScore = s;
+  document.querySelectorAll('.score-pick button').forEach(b => b.classList.remove('active'));
+  document.querySelector('.score-pick .pick-' + s)?.classList.add('active');
+}
+
+async function saveQa() { return _saveQa(false); }
+async function saveAndRoute() {
+  // Auto-set status to routed if a rep is picked
+  const rep = document.getElementById('qa-route-to').value;
+  if (!rep) {
+    showPageToast('Pick an Account Manager to route to first.', 'error');
+    return;
+  }
+  document.getElementById('qa-status').value = 'routed';
+  return _saveQa(true);
+}
+
+async function _saveQa(forceRoute) {
+  if (!qaLeadId) return;
+  const lead = leads.find(l => l.id === qaLeadId);
+  if (!lead) return;
+
+  const updates = {
+    score: qaScore,
+    product_type: document.getElementById('qa-product').value.trim() || null,
+    quantity: document.getElementById('qa-quantity').value.trim() || null,
+    artwork_status: document.getElementById('qa-artwork').value || null,
+    urgency: document.getElementById('qa-urgency').value.trim() || null,
+    next_action: document.getElementById('qa-next-action').value.trim() || null,
+    next_action_date: document.getElementById('qa-next-date').value || null,
+    rep_notes: document.getElementById('qa-notes').value.trim() || null,
+    status: document.getElementById('qa-status').value,
+  };
+  const routeTo = document.getElementById('qa-route-to').value;
+  if (routeTo) {
+    updates.assigned_rep_name = routeTo;
+    if (forceRoute || updates.status === 'routed') {
+      updates.status = 'routed';
+      updates.routed_at = new Date().toISOString();
+    }
+  }
+
+  try {
+    Object.assign(lead, updates);
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (sb && !String(qaLeadId).startsWith('demo')) {
+      // Only persist columns that exist; assigned_rep_name may not — fallback gracefully
+      const dbPayload = { ...updates };
+      delete dbPayload.assigned_rep_name; // schema-safe
+      await sb.from('leads').update(dbPayload).eq('id', qaLeadId);
+    }
+    showPageToast(`Lead saved — status: ${updates.status}${routeTo ? ' → ' + routeTo : ''}`, 'success');
+    closeQa();
+    renderTiles();
+    renderOrphanBanner();
+    renderQueue();
+    renderSources();
+    renderSLA();
+  } catch(e) {
+    console.error('saveQa err', e);
+    showPageToast('Save failed: ' + (e.message || e), 'error');
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+window.__pulseAuthCallback = function() { loadAll(); };
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => { if (!leads.length) loadAll(); }, 1500);
+});
+</script>
+</body>
+</html>
