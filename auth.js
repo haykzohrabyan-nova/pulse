@@ -95,6 +95,35 @@ function _getUserEmail(displayName) {
   return `${first}@bazaar-admin.com`;
 }
 
+// ── Local-mode email → {name, role} mapping ───────────────
+// Used when Supabase is NOT active. Local password is shared (Pulse2026!) until
+// each person rotates it, but gating still happens via the email lookup so the
+// UI is consistent with the Supabase form.
+const LOCAL_EMAIL_USERS = {
+  'hayk@bazaar-admin.com':     { name: 'Hayk Zohrabyan',   role: 'admin' },
+  'david@bazaar-admin.com':    { name: 'David Zargaryan',  role: 'david-review' },
+  'mauricio@bazaar-admin.com': { name: 'Mauricio',         role: 'supervisor' },
+  'tigran@bazaar-admin.com':   { name: 'Tigran Zohrabyan', role: 'supervisor' },
+  'mike@bazaar-admin.com':     { name: 'Mike',             role: 'production-manager' },
+  'gary@bazaar-admin.com':     { name: 'Gary Gharibyan',   role: 'account-manager' },
+  'ernesto@bazaar-admin.com':  { name: 'Ernesto Flores',   role: 'account-manager' },
+  'bob@bazaar-admin.com':      { name: 'Bob Werner',       role: 'account-manager' },
+  'tiko@bazaar-admin.com':     { name: 'Tiko',             role: 'account-manager' },
+  'hrach@bazaar-admin.com':    { name: 'Hrach',            role: 'prepress' },
+  'qc@bazaar-admin.com':       { name: 'QC Inspector',     role: 'qc' },
+  'arsen@bazaar-admin.com':    { name: 'Arsen',            role: 'operator' },
+  'tuoyo@bazaar-admin.com':    { name: 'Tuoyo',            role: 'operator' },
+  'abel@bazaar-admin.com':     { name: 'Abel',             role: 'operator' },
+  'juan@bazaar-admin.com':     { name: 'Juan',             role: 'operator' },
+  'vahe@bazaar-admin.com':     { name: 'Vahe',             role: 'operator' },
+  'avgustin@bazaar-admin.com': { name: 'Avgustin',         role: 'operator' },
+  'jaime@bazaar-admin.com':    { name: 'Jaime',            role: 'operator' },
+  'lisandro@bazaar-admin.com': { name: 'Lisandro',         role: 'operator' },
+  'adrian@bazaar-admin.com':   { name: 'Adrian',           role: 'operator' },
+  'harry@bazaar-admin.com':    { name: 'Harry',            role: 'operator' },
+};
+const LOCAL_DEFAULT_PASSWORD = 'Pulse2026!';
+
 // ── Session helpers ───────────────────────────────────────
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('pulse_session') || 'null'); } catch(e) { return null; }
@@ -145,8 +174,6 @@ const EXTRA_AUTH_USERS = [
 ];
 
 // ── Login modal ───────────────────────────────────────────
-let _selectedLoginUser = null;
-
 function getDefaultPageForRole(role) {
   const config = ROLE_CONFIG[role];
   if (!config) return 'dashboard.html';
@@ -156,140 +183,284 @@ function getDefaultPageForRole(role) {
 }
 
 function injectLoginModal() {
-  const users = Object.entries(OPERATOR_PROFILES).map(([name, p]) => ({ name, role: p.role }));
-  const allUsers = [{ name: 'Hayk Zohrabyan', role: 'admin' }, ...EXTRA_AUTH_USERS, ...users];
-
-  const grouped = {};
-  allUsers.forEach(u => {
-    const r = u.role || 'operator';
-    if (!grouped[r]) grouped[r] = [];
-    grouped[r].push(u);
-  });
-
-  const roleOrder = ['admin','david-review','supervisor','production-manager','account-manager','prepress','qc','operator'];
-
-  const userButtons = roleOrder
-    .filter(r => grouped[r])
-    .map(r => {
-      const cfg = ROLE_CONFIG[r] || { label: r, color: '#6b7280' };
-      return `<div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${cfg.label}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${grouped[r].map(u => `
-            <button class="login-user-btn" data-name="${u.name.replace(/'/g,"&#39;")}" data-role="${u.role}" onclick="selectUser('${u.name.replace(/'/g,"\\'")}','${u.role}', this)"
-              style="padding:7px 14px;border:1px solid ${cfg.color}44;background:${cfg.color}11;color:#1e293b;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:background 0.15s;">
-              ${u.name}
-            </button>`).join('')}
-        </div>
-      </div>`;
-    }).join('');
-
+  const accent = '#2563eb';
   const overlay = document.createElement('div');
   overlay.id = 'loginOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,36,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  overlay.style.cssText = [
+    'position:fixed',
+    'inset:0',
+    'background:#f3f4f6',
+    'z-index:99999',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'padding:24px',
+    'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif',
+  ].join(';') + ';';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:560px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <img src="pulse-logo.png" alt="Pulse" style="height:32px;">
+    <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();" style="
+      background:#ffffff;
+      width:100%;
+      max-width:420px;
+      border-radius:16px;
+      box-shadow:0 10px 30px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
+      padding:36px 32px 28px;
+      box-sizing:border-box;
+    ">
+      <div style="display:flex;justify-content:center;margin-bottom:20px;">
+        <img src="pulse-logo.png" alt="Pulse" style="height:40px;display:block;" onerror="this.style.display='none';">
       </div>
-      <p style="color:#6b7280;font-size:13px;margin:0 0 12px;">Select your name, enter your access code, and Pulse will only show the pages for your role.</p>
-      <div id="loginSelectedUser" style="display:none;margin-bottom:12px;padding:12px 14px;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;font-size:13px;"></div>
-      ${userButtons}
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:flex-end;">
-        <div style="flex:1;">
-          <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${_supaActive() ? 'Password' : 'Access Code'}</label>
-          <input id="loginAccessCode" type="password" ${_supaActive() ? '' : 'inputmode="numeric"'} placeholder="${_supaActive() ? 'Enter your password' : 'Enter 4+ digit code'}" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
-        </div>
-        <button onclick="submitLogin()" style="padding:10px 18px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">Sign In</button>
+      <h1 style="
+        margin:0 0 6px;
+        text-align:center;
+        font-size:22px;
+        font-weight:700;
+        color:#0f172a;
+        letter-spacing:-0.01em;
+      ">Sign in to Pulse</h1>
+      <p style="
+        margin:0 0 24px;
+        text-align:center;
+        font-size:13px;
+        color:#64748b;
+      ">Use your work email and password.</p>
+
+      <label for="loginEmail" style="
+        display:block;
+        font-size:12px;
+        font-weight:600;
+        color:#334155;
+        margin-bottom:6px;
+      ">Email</label>
+      <input
+        id="loginEmail"
+        type="email"
+        autocomplete="username"
+        autocapitalize="none"
+        autocorrect="off"
+        spellcheck="false"
+        placeholder="name@bazaar-admin.com"
+        style="
+          width:100%;
+          padding:11px 13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          font-size:14px;
+          font-family:inherit;
+          color:#0f172a;
+          background:#ffffff;
+          box-sizing:border-box;
+          outline:none;
+          transition:border-color 0.15s, box-shadow 0.15s;
+        "
+        onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
+        onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+      >
+
+      <label for="loginPassword" style="
+        display:block;
+        font-size:12px;
+        font-weight:600;
+        color:#334155;
+        margin:16px 0 6px;
+      ">Password</label>
+      <div style="position:relative;">
+        <input
+          id="loginPassword"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+          style="
+            width:100%;
+            padding:11px 44px 11px 13px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+            font-size:14px;
+            font-family:inherit;
+            color:#0f172a;
+            background:#ffffff;
+            box-sizing:border-box;
+            outline:none;
+            transition:border-color 0.15s, box-shadow 0.15s;
+          "
+          onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
+          onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+        >
+        <button
+          type="button"
+          id="loginPasswordToggle"
+          onclick="togglePulsePassword()"
+          aria-label="Show password"
+          style="
+            position:absolute;
+            top:50%;
+            right:8px;
+            transform:translateY(-50%);
+            background:transparent;
+            border:none;
+            color:#64748b;
+            font-size:12px;
+            font-weight:600;
+            cursor:pointer;
+            padding:6px 8px;
+            border-radius:6px;
+          "
+        >Show</button>
       </div>
-      <div id="loginError" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;"></div>
-      <p style="font-size:11px;color:#9ca3af;margin-top:16px;text-align:center;">Role-based access is enforced after login. Contact admin if your name is missing.</p>
-    </div>
+
+      <div id="loginError" role="alert" style="
+        display:none;
+        margin-top:14px;
+        padding:9px 12px;
+        background:#fef2f2;
+        border:1px solid #fecaca;
+        color:#b91c1c;
+        border-radius:8px;
+        font-size:13px;
+      "></div>
+
+      <button
+        id="loginSubmitBtn"
+        type="submit"
+        style="
+          width:100%;
+          margin-top:20px;
+          padding:12px 16px;
+          background:${accent};
+          color:#ffffff;
+          border:none;
+          border-radius:10px;
+          font-size:14px;
+          font-weight:600;
+          font-family:inherit;
+          cursor:pointer;
+          transition:background 0.15s, opacity 0.15s;
+        "
+        onmouseover="this.style.background='#1d4ed8';"
+        onmouseout="this.style.background='${accent}';"
+      >Sign In</button>
+
+      <p style="
+        margin:18px 0 0;
+        text-align:center;
+        font-size:12px;
+        color:#94a3b8;
+      ">Contact your admin if you need access.</p>
+    </form>
   `;
   document.body.appendChild(overlay);
-  const codeInput = document.getElementById('loginAccessCode');
-  if (codeInput) codeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitLogin();
-  });
+
+  // Focus email field on open
+  const emailInput = document.getElementById('loginEmail');
+  if (emailInput) emailInput.focus();
 }
 
-function selectUser(name, role, btn) {
-  _selectedLoginUser = { name, role };
-  document.querySelectorAll('.login-user-btn').forEach(el => {
-    el.style.outline = 'none';
-    el.style.boxShadow = 'none';
-  });
-  if (btn) btn.style.boxShadow = '0 0 0 2px rgba(37,99,235,0.35)';
-  const cfg = ROLE_CONFIG[role] || { label: role, color: '#6b7280' };
-  const box = document.getElementById('loginSelectedUser');
-  if (box) {
-    box.style.display = 'block';
-    box.innerHTML = `<strong>${name}</strong><div style="font-size:12px;color:${cfg.color};margin-top:2px;">${cfg.label}</div>`;
+function togglePulsePassword() {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('loginPasswordToggle');
+  if (!input || !btn) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+    btn.setAttribute('aria-label', 'Hide password');
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+    btn.setAttribute('aria-label', 'Show password');
   }
+}
+
+function _showLoginError(message) {
   const err = document.getElementById('loginError');
-  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  if (!err) return;
+  err.style.display = 'block';
+  err.textContent = message;
+}
+
+function _clearLoginError() {
+  const err = document.getElementById('loginError');
+  if (!err) return;
+  err.style.display = 'none';
+  err.textContent = '';
 }
 
 async function submitLogin() {
-  const err = document.getElementById('loginError');
-  if (!_selectedLoginUser) {
-    if (err) { err.style.display = 'block'; err.textContent = 'Select your name first.'; }
+  _clearLoginError();
+  const emailRaw = document.getElementById('loginEmail')?.value || '';
+  const password = document.getElementById('loginPassword')?.value || '';
+  const email = emailRaw.trim().toLowerCase();
+
+  if (!email || !password) {
+    _showLoginError('Enter your email and password.');
     return;
   }
-  const code = document.getElementById('loginAccessCode')?.value || '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    _showLoginError('Enter a valid email address.');
+    return;
+  }
+
+  const btn = document.getElementById('loginSubmitBtn');
+  const setLoading = (loading) => {
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.style.opacity = loading ? '0.7' : '1';
+    btn.textContent = loading ? 'Signing in…' : 'Sign In';
+  };
+
+  let resolvedName = null;
+  let resolvedRole = null;
 
   if (_supaActive()) {
-    // ── Supabase real auth ──────────────────────────────────
-    if (!code.trim()) {
-      if (err) { err.style.display = 'block'; err.textContent = 'Enter your password.'; }
-      return;
-    }
-    const btn = document.querySelector('#loginOverlay button[onclick="submitLogin()"]');
-    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+    // ── Supabase real auth ────────────────────────────────
+    setLoading(true);
     try {
-      const email = _getUserEmail(_selectedLoginUser.name);
-      await window.supabaseSignIn(email, code.trim());
-      // Get authoritative role/name from profiles table (RLS-enforced)
+      await window.supabaseSignIn(email, password);
       const profile = await window.supabaseGetProfile();
       if (!profile) throw new Error('Profile not found — ask admin to set up your account.');
-      // DB stores role with underscores; ROLE_CONFIG uses hyphens (e.g. production_manager → production-manager)
-      const role = String(profile.role || 'operator').replace(/_/g, '-');
-      setSession(profile.display_name, role);
+      // DB stores role with underscores; ROLE_CONFIG uses hyphens.
+      resolvedRole = String(profile.role || 'operator').replace(/_/g, '-');
+      resolvedName = profile.display_name || email.split('@')[0];
     } catch (e) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      if (err) {
-        err.style.display = 'block';
-        const msg = e.message || '';
-        err.textContent = /invalid|credentials|password/i.test(msg)
-          ? 'Incorrect password. Try again.'
-          : msg || 'Sign-in failed. Try again.';
-      }
+      setLoading(false);
+      const msg = e?.message || '';
+      _showLoginError(
+        /invalid|credentials|password|email/i.test(msg)
+          ? 'Incorrect email or password.'
+          : (msg || 'Sign-in failed. Try again.')
+      );
       return;
     }
   } else {
-    // ── IndexedDB mode: local access code check ─────────────
-    if (typeof isValidAccessCode === 'function' && !isValidAccessCode(code)) {
-      if (err) { err.style.display = 'block'; err.textContent = 'Enter a valid 4+ digit access code.'; }
+    // ── Local mode: email → role/name lookup + shared password ──
+    const user = LOCAL_EMAIL_USERS[email];
+    if (!user) {
+      _showLoginError('Incorrect email or password.');
       return;
     }
-    setSession(_selectedLoginUser.name, _selectedLoginUser.role);
+    if (password !== LOCAL_DEFAULT_PASSWORD) {
+      _showLoginError('Incorrect email or password.');
+      return;
+    }
+    resolvedName = user.name;
+    resolvedRole = user.role;
   }
+
+  setSession(resolvedName, resolvedRole);
 
   const overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
+
   const currentPage = document.body.dataset.page || '';
-  // Operators always land on the Operator Terminal
-  if (_selectedLoginUser.role === 'operator' && currentPage !== 'operator-terminal') {
+  if (resolvedRole === 'operator' && currentPage !== 'operator-terminal') {
     window.location.href = 'operator-terminal.html';
     return;
   }
-  // QC Inspectors always land on the QC Checkout page
-  if (_selectedLoginUser.role === 'qc' && currentPage !== 'qc-checkout') {
+  if (resolvedRole === 'qc' && currentPage !== 'qc-checkout') {
     window.location.href = 'qc-checkout.html';
     return;
   }
   if (currentPage && !canAccessPage(currentPage)) {
-    window.location.href = getDefaultPageForRole(_selectedLoginUser.role);
+    window.location.href = getDefaultPageForRole(resolvedRole);
     return;
   }
   applyRoleAccess(currentPage);
@@ -417,7 +588,8 @@ async function initAuth(pageId) {
 
   let session = getSession();
   if (!session) {
-    // No session — show the login modal (both Supabase and IndexedDB modes)
+    // No session — show the email/password login modal
+    // (works for both Supabase and local modes; submitLogin branches internally).
     injectLoginModal();
     return;
   }
