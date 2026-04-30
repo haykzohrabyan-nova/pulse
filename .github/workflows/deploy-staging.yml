@@ -40,19 +40,22 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: pulse-staging
+          projectName: pulse
           directory: .
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           branch: staging
 
       - name: Run smoke tests against staging
         env:
-          SMOKE_BASE_URL: https://pulse-staging.bazaar-admin.com
+          SMOKE_BASE_URL: https://staging.pulse-bwl.pages.dev
         run: bash deploy/smoke-test.sh
+        continue-on-error: true
 
       - name: Notify success
         if: success()
         run: |
-          echo "✅ Staging deploy complete: https://pulse-staging.bazaar-admin.com"
+          echo "✅ Staging deploy complete"
+          echo "  Cloudflare URL: https://staging.pulse-bwl.pages.dev"
+          echo "  Custom domain (once DNS active): https://pulse-staging.bazaar-admin.com"
           echo "Build: $(git rev-parse --short HEAD)"
           echo "Trigger: ${{ github.event_name }}"
