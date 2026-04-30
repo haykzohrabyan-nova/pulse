@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Competitor Pricing Lookup</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel-2: #1c2330;
+    --border: #283142;
+    --text: #e6e9ef;
+    --muted: #8a93a4;
+    --accent: #4ea1ff;
+    --accent-2: #7b61ff;
+    --good: #2ecc71;
+    --warn: #f39c12;
+    --bad: #e74c3c;
+    --gold: #ffd95a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  header .meta {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 60px);
+  }
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 60px);
+    position: sticky;
+    top: 0;
+  }
+  .main {
+    padding: 16px 24px;
+    overflow-x: auto;
+  }
+  .section {
+    margin-bottom: 18px;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title .reset {
+    font-size: 11px;
+    text-transform: none;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .section-title .reset:hover { text-decoration: underline; }
+  .mode-toggle {
+    display: flex;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .mode-toggle button {
+    flex: 1;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .mode-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  select, input[type="search"], input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  select:focus, input:focus { outline: 1px solid var(--accent); }
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .checklist {
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  .checklist label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 3px 0;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .checklist label .count {
+    color: var(--muted);
+    font-size: 11px;
+    margin-left: auto;
+  }
+  .checklist input { width: auto; margin: 0; }
+  .pillrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pill {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .pill .x { margin-left: 6px; opacity: 0.7; }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .toolbar > * { flex: 0 0 auto; }
+  .toolbar .grow { flex: 1 1 auto; }
+  button.primary, button.ghost {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  button.ghost:hover { background: var(--border); }
+  .stats {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .stats b { color: var(--text); font-weight: 600; }
+  table.results {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.results th, table.results td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  table.results th {
+    background: var(--panel-2);
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  table.results th .sort-arrow { color: var(--accent); margin-left: 4px; }
+  table.results tbody tr:hover { background: rgba(78, 161, 255, 0.06); }
+  table.results td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .top-rank {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .top-rank.r1 { background: var(--gold); color: #1c1500; }
+  .top-rank.r2 { background: #c0c0c0; color: #1a1a1a; }
+  .top-rank.r3 { background: #cd7f32; color: #1f0f00; }
+  .vendor-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .pagination button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+  details summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+    user-select: none;
+  }
+  details[open] summary { color: var(--text); }
+  .specialty {
+    color: var(--gold);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .row-flex { display: flex; gap: 8px; }
+  .row-flex > * { flex: 1; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛒 Competitor Pricing Lookup</h1>
+  <div class="meta" id="meta">Loading…</div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="mode-toggle" role="tablist">
+      <button id="modeVendorBtn" class="active" type="button">By Competitor</button>
+      <button id="modeCrossBtn" type="button">Cross-Vendor</button>
+    </div>
+
+    <!-- VENDOR MODE -->
+    <div id="vendorMode">
+      <div class="section">
+        <div class="section-title">Competitor</div>
+        <select id="competitorSel">
+          <option value="">— Pick a competitor —</option>
+        </select>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          <span>Native Category</span>
+          <button class="reset" id="catResetBtn" type="button">reset</button>
+        </div>
+        <div id="vendorCategoryList" class="checklist" style="min-height:36px"></div>
+      </div>
+    </div>
+
+    <!-- CROSS-VENDOR MODE -->
+    <div id="crossMode" style="display:none">
+      <div class="section">
+        <div class="section-title">
+          <span>Product Type</span>
+          <button class="reset" id="typeResetBtn" type="button">reset</button>
+        </div>
+        <select id="productTypeSel">
+          <option value="">— All types —</option>
+        </select>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          <span>Competitors</span>
+          <button class="reset" id="compResetBtn" type="button">reset</button>
+        </div>
+        <div id="crossCompetitorList" class="checklist"></div>
+      </div>
+    </div>
+
+    <!-- CONTEXTUAL FILTERS -->
+    <div id="ctxFilters">
+      <div class="section">
+        <div class="section-title">
+          <span>Quantity</span>
+          <button class="reset" id="qtyResetBtn" type="button">reset</button>
+        </div>
+        <div class="row-flex">
+          <input type="number" id="qtyMin" placeholder="min" />
+          <input type="number" id="qtyMax" placeholder="max" />
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          <span>Size (W × H in)</span>
+          <button class="reset" id="sizeResetBtn" type="button">reset</button>
+        </div>
+        <div class="row-flex">
+          <input type="number" step="0.01" id="wMin" placeholder="W min" />
+          <input type="number" step="0.01" id="wMax" placeholder="W max" />
+        </div>
+        <div class="row-flex" style="margin-top:6px">
+          <input type="number" step="0.01" id="hMin" placeholder="H min" />
+          <input type="number" step="0.01" id="hMax" placeholder="H max" />
+        </div>
+      </div>
+      <div class="section" id="materialSection">
+        <div class="section-title">
+          <span>Material</span>
+          <button class="reset" id="matResetBtn" type="button">reset</button>
+        </div>
+        <div id="materialList" class="checklist"></div>
+      </div>
+      <div class="section" id="finishSection">
+        <div class="section-title">
+          <span>Finish</span>
+          <button class="reset" id="finResetBtn" type="button">reset</button>
+        </div>
+        <div id="finishList" class="checklist"></div>
+      </div>
+      <div class="section" id="lamSection">
+        <div class="section-title">
+          <span>Lamination</span>
+          <button class="reset" id="lamResetBtn" type="button">reset</button>
+        </div>
+        <div id="lamList" class="checklist"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Specialty Tags</div>
+        <div id="specialtyList" class="pillrow"></div>
+      </div>
+      <div class="section">
+        <button class="ghost" id="resetAllBtn" type="button" style="width:100%">Reset all filters</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <input type="search" id="searchBox" class="grow" placeholder="Free-text search (size, material, raw spec…)" />
+      <button class="ghost" id="exportCsvBtn" type="button">Export CSV</button>
+      <button class="ghost" id="compareBtn" type="button">Compare ▾</button>
+      <label style="display:flex;gap:6px;align-items:center;color:var(--muted);font-size:12px;margin:0">
+        <input type="checkbox" id="hideMinPriceBox" checked style="width:auto" />
+        Hide rows under $5 (placeholders)
+      </label>
+    </div>
+
+    <div class="stats" id="statsBar">
+      <span><b>0</b> matching rows</span>
+    </div>
+
+    <div id="tableWrap">
+      <table class="results" id="resultsTable">
+        <thead id="resultsHead"></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination">
+      <span id="pageInfo"></span>
+      <span>
+        <button id="prevPageBtn">‹ Prev</button>
+        <button id="nextPageBtn">Next ›</button>
+      </span>
+    </div>
+  </main>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────────────────
+const state = {
+  data: null,            // full payload
+  records: [],           // all records
+  mode: 'vendor',        // 'vendor' | 'cross'
+  competitor: '',
+  vendorCategories: new Set(), // selected categories in vendor mode
+  productType: '',
+  crossCompetitors: new Set(), // selected competitors in cross mode
+  qtyMin: null, qtyMax: null,
+  wMin: null, wMax: null, hMin: null, hMax: null,
+  materials: new Set(),
+  finishes: new Set(),
+  laminations: new Set(),
+  specialty: new Set(),
+  search: '',
+  sort: { col: 'tp', dir: 'asc' },
+  page: 0,
+  pageSize: 100,
+  hideMinPrice: true,
+  selectedRowIds: new Set(),
+  compareMode: false,
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+// Loader
+// ──────────────────────────────────────────────────────────────────────────
+async function load() {
+  const t0 = Date.now();
+  const r = await fetch('data/competitor-pricing-lookup-index.json');
+  const data = await r.json();
+  state.data = data;
+  state.records = data.records || [];
+  document.getElementById('meta').textContent =
+    `${state.records.length.toLocaleString()} rows · ${data.facets.competitors.length} competitors · loaded in ${Date.now() - t0}ms`;
+  initUI();
+  render();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// UI init
+// ──────────────────────────────────────────────────────────────────────────
+function initUI() {
+  // Competitor select (vendor mode)
+  const cs = document.getElementById('competitorSel');
+  for (const c of state.data.facets.competitors) {
+    const o = document.createElement('option');
+    o.value = c.value;
+    o.textContent = `${c.label} (${c.count.toLocaleString()})`;
+    cs.appendChild(o);
+  }
+  cs.addEventListener('change', () => {
+    state.competitor = cs.value;
+    state.vendorCategories.clear();
+    state.page = 0;
+    refreshVendorCategoryList();
+    refreshContextualFilters();
+    render();
+  });
+
+  // Product type select (cross mode)
+  const ts = document.getElementById('productTypeSel');
+  for (const t of state.data.facets.product_types_with_counts) {
+    const o = document.createElement('option');
+    o.value = t.value;
+    o.textContent = `${prettyType(t.value)} (${t.count.toLocaleString()})`;
+    ts.appendChild(o);
+  }
+  ts.addEventListener('change', () => {
+    state.productType = ts.value;
+    state.page = 0;
+    refreshContextualFilters();
+    render();
+  });
+
+  // Cross competitors checklist
+  buildCheckList(
+    document.getElementById('crossCompetitorList'),
+    state.data.facets.competitors.map(c => ({ value: c.value, label: c.label, count: c.count })),
+    state.crossCompetitors
+  );
+
+  // Mode toggle
+  document.getElementById('modeVendorBtn').onclick = () => setMode('vendor');
+  document.getElementById('modeCrossBtn').onclick = () => setMode('cross');
+
+  // Reset buttons
+  document.getElementById('catResetBtn').onclick = () => { state.vendorCategories.clear(); refreshVendorCategoryList(); render(); };
+  document.getElementById('typeResetBtn').onclick = () => { state.productType = ''; ts.value = ''; refreshContextualFilters(); render(); };
+  document.getElementById('compResetBtn').onclick = () => { state.crossCompetitors.clear(); refreshCrossCompetitorList(); render(); };
+  document.getElementById('qtyResetBtn').onclick = () => { state.qtyMin = null; state.qtyMax = null; document.getElementById('qtyMin').value = ''; document.getElementById('qtyMax').value = ''; render(); };
+  document.getElementById('sizeResetBtn').onclick = () => {
+    state.wMin = state.wMax = state.hMin = state.hMax = null;
+    ['wMin','wMax','hMin','hMax'].forEach(id => document.getElementById(id).value = '');
+    render();
+  };
+  document.getElementById('matResetBtn').onclick = () => { state.materials.clear(); refreshContextualFilters(); render(); };
+  document.getElementById('finResetBtn').onclick = () => { state.finishes.clear(); refreshContextualFilters(); render(); };
+  document.getElementById('lamResetBtn').onclick = () => { state.laminations.clear(); refreshContextualFilters(); render(); };
+  document.getElementById('resetAllBtn').onclick = resetAll;
+
+  // Numeric inputs
+  for (const id of ['qtyMin','qtyMax','wMin','wMax','hMin','hMax']) {
+    document.getElementById(id).addEventListener('input', () => {
+      const v = document.getElementById(id).value;
+      state[id] = v === '' ? null : Number(v);
+      state.page = 0;
+      render();
+    });
+  }
+
+  // Search
+  document.getElementById('searchBox').addEventListener('input', (e) => {
+    state.search = e.target.value.trim().toLowerCase();
+    state.page = 0;
+    render();
+  });
+
+  // Hide min price
+  document.getElementById('hideMinPriceBox').addEventListener('change', (e) => {
+    state.hideMinPrice = e.target.checked;
+    render();
+  });
+
+  // Pagination
+  document.getElementById('prevPageBtn').onclick = () => { state.page = Math.max(0, state.page - 1); render(); };
+  document.getElementById('nextPageBtn').onclick = () => { state.page++; render(); };
+
+  // Compare
+  document.getElementById('compareBtn').onclick = () => {
+    state.compareMode = !state.compareMode;
+    document.getElementById('compareBtn').textContent = state.compareMode ? 'Compare ▴ (' + state.selectedRowIds.size + ')' : 'Compare ▾';
+    render();
+  };
+
+  // CSV
+  document.getElementById('exportCsvBtn').onclick = exportCsv;
+
+  refreshContextualFilters();
+}
+
+function setMode(m) {
+  state.mode = m;
+  document.getElementById('modeVendorBtn').classList.toggle('active', m === 'vendor');
+  document.getElementById('modeCrossBtn').classList.toggle('active', m === 'cross');
+  document.getElementById('vendorMode').style.display = m === 'vendor' ? '' : 'none';
+  document.getElementById('crossMode').style.display = m === 'cross' ? '' : 'none';
+  state.page = 0;
+  refreshContextualFilters();
+  render();
+}
+
+function refreshVendorCategoryList() {
+  const c = state.competitor;
+  const host = document.getElementById('vendorCategoryList');
+  host.innerHTML = '';
+  if (!c) {
+    host.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px">Pick a competitor first.</div>';
+    return;
+  }
+  const cats = state.data.facets.competitor_categories_by_competitor[c] || [];
+  buildCheckList(host, cats.map(x => ({ value: x.value, label: x.value, count: x.count })), state.vendorCategories);
+}
+
+function refreshCrossCompetitorList() {
+  const host = document.getElementById('crossCompetitorList');
+  host.innerHTML = '';
+  buildCheckList(
+    host,
+    state.data.facets.competitors.map(c => ({ value: c.value, label: c.label, count: c.count })),
+    state.crossCompetitors
+  );
+}
+
+function buildCheckList(host, items, selectedSet) {
+  host.innerHTML = '';
+  for (const it of items) {
+    const lbl = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = it.value;
+    cb.checked = selectedSet.has(it.value);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedSet.add(it.value);
+      else selectedSet.delete(it.value);
+      state.page = 0;
+      render();
+    });
+    lbl.appendChild(cb);
+    const span = document.createElement('span');
+    span.textContent = it.label;
+    lbl.appendChild(span);
+    if (it.count != null) {
+      const ct = document.createElement('span');
+      ct.className = 'count';
+      ct.textContent = it.count.toLocaleString();
+      lbl.appendChild(ct);
+    }
+    host.appendChild(lbl);
+  }
+}
+
+// Refresh material/finish/lam list based on current filtered set
+function refreshContextualFilters() {
+  const subset = filterRecordsCore();
+  const matCounts = {}, finCounts = {}, lamCounts = {}, spCounts = {};
+  for (const r of subset) {
+    if (r.m) matCounts[r.m] = (matCounts[r.m] || 0) + 1;
+    if (r.fi) finCounts[r.fi] = (finCounts[r.fi] || 0) + 1;
+    if (r.la) lamCounts[r.la] = (lamCounts[r.la] || 0) + 1;
+    if (r.st) for (const t of r.st) spCounts[t] = (spCounts[t] || 0) + 1;
+  }
+  buildCheckList(
+    document.getElementById('materialList'),
+    Object.entries(matCounts).sort((a,b)=>b[1]-a[1]).slice(0,40).map(([v,n]) => ({value: v, label: v, count: n})),
+    state.materials
+  );
+  buildCheckList(
+    document.getElementById('finishList'),
+    Object.entries(finCounts).sort((a,b)=>b[1]-a[1]).slice(0,40).map(([v,n]) => ({value: v, label: v, count: n})),
+    state.finishes
+  );
+  buildCheckList(
+    document.getElementById('lamList'),
+    Object.entries(lamCounts).sort((a,b)=>b[1]-a[1]).slice(0,40).map(([v,n]) => ({value: v, label: v, count: n})),
+    state.laminations
+  );
+  // Specialty as pills
+  const spHost = document.getElementById('specialtyList');
+  spHost.innerHTML = '';
+  const tags = Object.entries(spCounts).sort((a,b) => b[1]-a[1]).slice(0,20);
+  for (const [tag, count] of tags) {
+    const p = document.createElement('span');
+    p.className = 'pill' + (state.specialty.has(tag) ? ' active' : '');
+    p.textContent = tag + ' (' + count + ')';
+    p.onclick = () => {
+      if (state.specialty.has(tag)) state.specialty.delete(tag);
+      else state.specialty.add(tag);
+      state.page = 0;
+      refreshContextualFilters();
+      render();
+    };
+    spHost.appendChild(p);
+  }
+  if (tags.length === 0) spHost.innerHTML = '<span style="color:var(--muted);font-size:11px">(no specialty rows in current set)</span>';
+}
+
+// Filter that does NOT apply contextual filters (used to refresh contextual filter lists)
+function filterRecordsCore() {
+  let out = state.records;
+  if (state.hideMinPrice) out = out.filter(r => r.tp >= 5);
+  if (state.mode === 'vendor') {
+    if (state.competitor) out = out.filter(r => r.c === state.competitor);
+    if (state.vendorCategories.size) out = out.filter(r => state.vendorCategories.has(r.cc));
+  } else {
+    if (state.productType) out = out.filter(r => r.t === state.productType);
+    if (state.crossCompetitors.size) out = out.filter(r => state.crossCompetitors.has(r.c));
+  }
+  if (state.qtyMin != null) out = out.filter(r => r.q >= state.qtyMin);
+  if (state.qtyMax != null) out = out.filter(r => r.q <= state.qtyMax);
+  if (state.wMin != null) out = out.filter(r => r.w != null && r.w >= state.wMin);
+  if (state.wMax != null) out = out.filter(r => r.w != null && r.w <= state.wMax);
+  if (state.hMin != null) out = out.filter(r => r.h != null && r.h >= state.hMin);
+  if (state.hMax != null) out = out.filter(r => r.h != null && r.h <= state.hMax);
+  return out;
+}
+
+// Apply ALL filters (for actual table)
+function filterRecords() {
+  let out = filterRecordsCore();
+  if (state.materials.size) out = out.filter(r => state.materials.has(r.m));
+  if (state.finishes.size) out = out.filter(r => state.finishes.has(r.fi));
+  if (state.laminations.size) out = out.filter(r => state.laminations.has(r.la));
+  if (state.specialty.size) out = out.filter(r => r.st && r.st.some(t => state.specialty.has(t)));
+  if (state.search) {
+    const q = state.search;
+    out = out.filter(r => {
+      const blob = [r.c, r.cc, r.t, r.m, r.fi, r.la, r.rs, r.w, r.h, r.q].join(' ').toLowerCase();
+      return blob.includes(q);
+    });
+  }
+  return out;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Columns — contextual based on current selection
+// ──────────────────────────────────────────────────────────────────────────
+function getColumns() {
+  // Decide which columns matter based on selected category/type
+  const categoryHint = (() => {
+    if (state.mode === 'vendor' && state.vendorCategories.size === 1) {
+      return Array.from(state.vendorCategories)[0].toLowerCase();
+    }
+    if (state.mode === 'cross' && state.productType) {
+      return state.productType.toLowerCase();
+    }
+    return '';
+  })();
+
+  const isLabel = /label|sticker/.test(categoryHint);
+  const isCard = /business_card|business cards|card/.test(categoryHint) && !/rack/.test(categoryHint);
+  const isPaper = /flyer|postcard|brochure|bookmark|rack|door|ticket|poster|shelf/.test(categoryHint);
+  const isPackaging = /carton|pouch|mailer|box/.test(categoryHint);
+
+  const base = [
+    { key: '__rank', label: '#', width: 32, align: 'left', render: (r, idx, all) => rankBadge(r, idx, all) },
+    { key: 'c', label: 'Vendor', render: r => `<span class="vendor-badge">${vendorLabel(r.c)}</span>` },
+    { key: 'cc', label: 'Category', render: r => `${escapeHtml(r.cc || '—')}${r.sp ? '<span class="specialty">★</span>' : ''}` },
+    { key: '__size', label: 'Size', sortKey: 'w', render: r => sizeLabel(r) },
+    { key: 'q', label: 'Qty', align: 'right', render: r => formatNum(r.q) },
+  ];
+
+  const cols = [...base];
+
+  if (isLabel || isCard || isPaper || isPackaging || !categoryHint) {
+    cols.push({ key: 'm', label: 'Material', render: r => escapeHtml(r.m || '—') });
+  }
+  if (isCard || isPaper) {
+    cols.push({ key: 'fi', label: 'Finish', render: r => escapeHtml(r.fi || '—') });
+  }
+  if (isLabel) {
+    cols.push({ key: 'la', label: 'Lamination', render: r => escapeHtml(r.la || '—') });
+  }
+  if (isPaper) {
+    cols.push({ key: 'cm', label: 'Color', render: r => escapeHtml(r.cm || '—') });
+  }
+  cols.push({ key: 'tp', label: 'Total $', align: 'right', render: r => '$' + r.tp.toFixed(2) });
+  cols.push({ key: 'up', label: 'Unit $', align: 'right', render: r => r.up != null ? '$' + r.up.toFixed(4) : '—' });
+  cols.push({ key: 'td', label: 'TAT (d)', align: 'right', render: r => r.td != null ? r.td : '—' });
+  cols.push({ key: 'dt', label: 'Captured', render: r => r.dt || '—' });
+  return cols;
+}
+
+function rankBadge(r, idx, all) {
+  // Rank by total price (cheapest = #1) within the visible page (sorted ascending by tp).
+  // We compute rank inline: top-3 rows on the current sorted/filtered set get the badge.
+  const tpRank = all.tpRankMap.get(r);
+  if (tpRank === 1) return '<span class="top-rank r1">1</span>';
+  if (tpRank === 2) return '<span class="top-rank r2">2</span>';
+  if (tpRank === 3) return '<span class="top-rank r3">3</span>';
+  return idx + 1 + (state.page * state.pageSize);
+}
+
+function vendorLabel(c) {
+  return (state.data && state.data.facets.competitor_display_map && state.data.facets.competitor_display_map[c]) || c;
+}
+
+function sizeLabel(r) {
+  if (r.w != null && r.h != null) return `${r.w}×${r.h}`;
+  return '—';
+}
+
+function prettyType(t) {
+  return (t || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatNum(n) { return n != null ? n.toLocaleString() : '—'; }
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────────────────
+function render() {
+  const filtered = filterRecords();
+  const cols = getColumns();
+  const sorted = sortRecords(filtered, state.sort.col, state.sort.dir);
+
+  // Top 3 cheapest by total_price for highlighting
+  const tpRankMap = new Map();
+  const byTp = [...filtered].sort((a, b) => a.tp - b.tp);
+  for (let i = 0; i < Math.min(3, byTp.length); i++) tpRankMap.set(byTp[i], i + 1);
+
+  // Stats
+  const stats = document.getElementById('statsBar');
+  const cheapest = filtered.length ? Math.min(...filtered.map(r => r.tp)) : null;
+  const median = filtered.length ? medianOf(filtered.map(r => r.tp)) : null;
+  stats.innerHTML = `
+    <span><b>${filtered.length.toLocaleString()}</b> matching rows</span>
+    ${cheapest != null ? `<span>Cheapest total: <b>$${cheapest.toFixed(2)}</b></span>` : ''}
+    ${median != null ? `<span>Median total: <b>$${median.toFixed(2)}</b></span>` : ''}
+    <span>${(state.mode === 'vendor' ? (state.competitor ? `Vendor: ${vendorLabel(state.competitor)}` : 'No vendor selected') : 'Cross-vendor mode')}</span>
+  `;
+
+  // Header
+  const head = document.getElementById('resultsHead');
+  head.innerHTML = '<tr>' + cols.map(c => {
+    const sk = c.sortKey || c.key;
+    const arrow = state.sort.col === sk ? `<span class="sort-arrow">${state.sort.dir === 'asc' ? '▲' : '▼'}</span>` : '';
+    return `<th data-sort="${sk}" style="text-align:${c.align||'left'}">${escapeHtml(c.label)}${arrow}</th>`;
+  }).join('') + '</tr>';
+  head.querySelectorAll('th[data-sort]').forEach(th => {
+    th.onclick = () => {
+      const sk = th.getAttribute('data-sort');
+      if (state.sort.col === sk) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+      else { state.sort.col = sk; state.sort.dir = 'asc'; }
+      render();
+    };
+  });
+
+  // Body
+  const body = document.getElementById('resultsBody');
+  if (filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="${cols.length}" class="empty">No rows match the current filters.</td></tr>`;
+  } else {
+    const start = state.page * state.pageSize;
+    const slice = sorted.slice(start, start + state.pageSize);
+    const all = { tpRankMap };
+    body.innerHTML = slice.map((r, i) => {
+      return '<tr>' + cols.map(c => {
+        const v = c.render ? c.render(r, i, all) : (r[c.key] ?? '—');
+        return `<td style="text-align:${c.align||'left'}">${v}</td>`;
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+  document.getElementById('pageInfo').textContent =
+    filtered.length === 0 ? '' : `Page ${state.page + 1} / ${totalPages} (${state.pageSize} per page)`;
+  document.getElementById('prevPageBtn').disabled = state.page === 0;
+  document.getElementById('nextPageBtn').disabled = state.page >= totalPages - 1;
+
+  // Refresh contextual filter facets too (count tags etc) — but only when not currently typing filter values
+  // (to avoid losing focus). Refresh deferred.
+  // We refresh only when materials/finishes/laminations may need new options:
+  if (!document.activeElement || !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) {
+    refreshContextualFilters();
+  }
+}
+
+function sortRecords(rows, col, dir) {
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return va.localeCompare(vb) * mult;
+    return (va - vb) * mult;
+  });
+}
+
+function medianOf(arr) {
+  const s = [...arr].sort((a,b) => a-b);
+  const n = s.length;
+  if (n === 0) return null;
+  if (n % 2) return s[(n-1)/2];
+  return (s[n/2 - 1] + s[n/2]) / 2;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Reset all
+// ──────────────────────────────────────────────────────────────────────────
+function resetAll() {
+  state.competitor = '';
+  state.vendorCategories.clear();
+  state.productType = '';
+  state.crossCompetitors.clear();
+  state.qtyMin = state.qtyMax = state.wMin = state.wMax = state.hMin = state.hMax = null;
+  state.materials.clear();
+  state.finishes.clear();
+  state.laminations.clear();
+  state.specialty.clear();
+  state.search = '';
+  state.page = 0;
+  document.getElementById('competitorSel').value = '';
+  document.getElementById('productTypeSel').value = '';
+  document.getElementById('searchBox').value = '';
+  ['qtyMin','qtyMax','wMin','wMax','hMin','hMax'].forEach(id => document.getElementById(id).value = '');
+  refreshVendorCategoryList();
+  refreshCrossCompetitorList();
+  refreshContextualFilters();
+  render();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// CSV Export
+// ──────────────────────────────────────────────────────────────────────────
+function exportCsv() {
+  const rows = filterRecords();
+  if (rows.length === 0) { alert('No rows to export.'); return; }
+  const cols = ['c','cc','t','w','h','sh','q','m','fi','la','cm','td','tp','up','dt','rs'];
+  const headers = ['competitor','category','product_type','width_in','height_in','shape','qty','material','finish','lamination','color','tat_days','total_price','unit_price','captured','raw_spec'];
+  const csvRows = [headers.join(',')];
+  for (const r of rows) {
+    csvRows.push(cols.map(c => csvEsc(r[c])).join(','));
+  }
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'competitor-pricing-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function csvEsc(v) {
+  if (v == null) return '';
+  const s = String(v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────────────────────────────────────
+load().catch(err => {
+  document.getElementById('meta').textContent = 'Failed to load: ' + err.message;
+  console.error(err);
+});
+</script>
+</body>
+</html>
