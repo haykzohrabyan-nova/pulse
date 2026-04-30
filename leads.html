@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leads — Bazaar Print</title>
-  <script src="shared.js?v=20260429-PRI262"></script>
+  <script src="shared.js?v=20260430-PRI262"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260429-PRI262"></script>
-  <script src="auth.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260430-PRI262"></script>
+  <script src="auth.js?v=20260430-PRI262"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -41,6 +41,13 @@
 
 <!-- No-orphan lead alert banner -->
 <div id="orphanBanner" style="display:none;"></div>
+
+<!-- View tabs: All / My Pipeline / Follow-Up Due -->
+<div class="view-tabs">
+  <button class="vtab active" data-view="all" onclick="setViewFilter('all')">📋 All Leads <span class="badge" id="vt-all-count">0</span></button>
+  <button class="vtab" data-view="mine" onclick="setViewFilter('mine')">👤 My Pipeline <span class="badge" id="vt-mine-count">0</span></button>
+  <button class="vtab urgent" data-view="due" onclick="setViewFilter('due')">🔥 Follow-Up Due <span class="badge" id="vt-due-count">0</span></button>
+</div>
 
 <!-- Status pipeline tabs -->
 <div class="status-tabs">
@@ -244,6 +251,18 @@ document.getElementById('page-styles').textContent = `
   .status-tabs { display:flex; gap:4px; padding:10px 24px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   .stab { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:var(--card); cursor:pointer; font-size:12px; font-weight:500; color:var(--text-muted); transition:all 0.15s; }
   .stab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  /* View tabs (All / My Pipeline / Follow-Up Due) */
+  .view-tabs { display:flex; gap:0; padding:0 24px; border-bottom:1px solid var(--border); background:var(--bg); }
+  .vtab { padding:12px 18px; background:transparent; border:none; border-bottom:3px solid transparent; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-muted); transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+  .vtab:hover { color:var(--text); }
+  .vtab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .vtab .badge { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
+  .vtab.active .badge { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .vtab.urgent .badge { background:#dc2626; color:#fff; border-color:#dc2626; }
+  .vtab.urgent.active { color:#dc2626; border-bottom-color:#dc2626; }
+  .pipeline-stage-group { margin-bottom:14px; }
+  .pipeline-stage-header { padding:8px 24px; background:var(--bg); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .lead-card.urgent-overdue { border-left:4px solid #dc2626; background:#fff5f5; }
   .score-btn { padding:5px 12px; border:1px solid var(--border); border-radius:16px; background:var(--card); cursor:pointer; font-size:12px; font-weight:500; transition:all 0.15s; }
   .score-btn.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
   .score-btn.hot.active { background:#dc2626; border-color:#dc2626; }
@@ -326,6 +345,7 @@ let currentLeadId = null;
 let editingLeadId = null;
 let statusFilter = 'all';
 let scoreFilter = 'all';
+let viewFilter = 'all'; // all | mine | due
 let currentUser = null;
 
 // ── Init ───────────────────────────────────────────────────
@@ -385,11 +405,51 @@ function setScoreFilter(score) {
   renderLeads();
 }
 
+function setViewFilter(view) {
+  viewFilter = view;
+  document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  renderLeads();
+}
+
+function matchesViewFilter(l) {
+  if (viewFilter === 'all') return true;
+  if (viewFilter === 'mine') {
+    if (!currentUser) return true;
+    const myName = (currentUser.name || '').toLowerCase();
+    const myId = currentUser.id;
+    const rep = (l.assigned_rep || '').toLowerCase();
+    return rep === myName || l.assigned_rep_id === myId || l.created_by === myId;
+  }
+  if (viewFilter === 'due') {
+    const today = new Date().toISOString().split('T')[0];
+    return l.next_action_date && l.next_action_date <= today &&
+           !['lost','routed'].includes(l.status);
+  }
+  return true;
+}
+
+function updateViewTabCounts() {
+  const today = new Date().toISOString().split('T')[0];
+  const all = leads.length;
+  const mine = currentUser ? leads.filter(l => {
+    const myName = (currentUser.name || '').toLowerCase();
+    return (l.assigned_rep || '').toLowerCase() === myName ||
+           l.assigned_rep_id === currentUser.id ||
+           l.created_by === currentUser.id;
+  }).length : 0;
+  const due = leads.filter(l => l.next_action_date && l.next_action_date <= today &&
+                                 !['lost','routed'].includes(l.status)).length;
+  const a = document.getElementById('vt-all-count'); if (a) a.textContent = all;
+  const m = document.getElementById('vt-mine-count'); if (m) m.textContent = mine;
+  const d = document.getElementById('vt-due-count'); if (d) d.textContent = due;
+}
+
 function getFiltered() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
   const rep = document.getElementById('repFilter')?.value || '';
   const source = document.getElementById('sourceFilter')?.value || '';
   return leads.filter(l => {
+    if (!matchesViewFilter(l)) return false;
     if (statusFilter !== 'all' && l.status !== statusFilter) return false;
     if (scoreFilter !== 'all' && l.score !== scoreFilter) return false;
     if (rep && l.assigned_rep !== rep) return false;
@@ -454,27 +514,58 @@ function renderOrphanBanner() {
 // ── Render ─────────────────────────────────────────────────
 function renderLeads() {
   renderOrphanBanner();
+  updateViewTabCounts();
   const filtered = getFiltered();
   const container = document.getElementById('leadList');
   if (!filtered.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No leads found</h3><p>Try adjusting your filters or add a new lead.</p></div>`;
+    const emptyMsg = viewFilter === 'mine' ? 'No leads assigned to you yet.'
+      : viewFilter === 'due' ? '🎉 No follow-ups due. You\'re caught up.'
+      : 'Try adjusting your filters or add a new lead.';
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No leads found</h3><p>${emptyMsg}</p></div>`;
     return;
   }
-  container.innerHTML = filtered.map(l => renderLeadCard(l)).join('');
+  if (viewFilter === 'mine') {
+    // Group by status stage
+    const stages = [
+      { id:'new', label:'🆕 New' },
+      { id:'qualifying', label:'🔍 Qualifying' },
+      { id:'qualified', label:'✅ Qualified' },
+      { id:'routed', label:'➡️ Routed to AM' },
+      { id:'nurture', label:'🌱 Nurture' },
+      { id:'lost', label:'✗ Lost' },
+    ];
+    const grouped = {};
+    stages.forEach(s => grouped[s.id] = []);
+    filtered.forEach(l => { if (grouped[l.status]) grouped[l.status].push(l); else (grouped['new'] = grouped['new'] || []).push(l); });
+    container.innerHTML = stages.filter(s => grouped[s.id].length).map(s => `
+      <div class="pipeline-stage-group">
+        <div class="pipeline-stage-header">
+          <span>${s.label}</span>
+          <span>${grouped[s.id].length}</span>
+        </div>
+        ${grouped[s.id].map(l => renderLeadCard(l, viewFilter === 'due')).join('')}
+      </div>
+    `).join('');
+  } else {
+    container.innerHTML = filtered.map(l => renderLeadCard(l, viewFilter === 'due')).join('');
+  }
 }
 
-function renderLeadCard(l) {
+function renderLeadCard(l, urgentMode) {
   const today = new Date().toISOString().split('T')[0];
   let nextActionHtml = '';
+  let urgentClass = '';
   if (l.next_action_date) {
     const overdue = l.next_action_date < today;
     nextActionHtml = overdue
       ? `<span class="overdue-chip">⚠️ Overdue: ${escHtml(l.next_action || 'Follow up')}</span>`
       : `<span class="next-action-chip">📅 ${escHtml(l.next_action || 'Follow up')} by ${l.next_action_date}</span>`;
+    if (urgentMode && overdue) urgentClass = ' urgent-overdue';
+    else if (urgentMode && l.next_action_date === today) urgentClass = ' urgent-overdue';
   }
 
   return `
-    <div class="lead-card" onclick="openLead('${l.id}')">
+    <div class="lead-card${urgentClass}" onclick="openLead('${l.id}')">
       <div class="lead-score-dot score-${l.score}"></div>
       <div class="lead-card-main">
         <div class="lead-name">${escHtml(l.name)}${l.company ? ` <span style="font-weight:400;color:var(--text-muted);">— ${escHtml(l.company)}</span>` : ''}</div>
@@ -775,16 +866,12 @@ async function confirmConvert() {
 
   // Re-check gate before committing
   const lead = leads.find(l => l.id === convertLeadId);
-  if (lead) {
-    const missing = checkLeadGate1(lead);
-    if (missing.length) {
-      showPageToast('Complete the qualification packet before converting.', 'error');
-      return;
-    }
-  }
-
-  const lead = leads.find(l => l.id === convertLeadId);
   if (!lead) return;
+  const missing = checkLeadGate1(lead);
+  if (missing.length) {
+    showPageToast('Complete the qualification packet before converting.', 'error');
+    return;
+  }
 
   try {
     const sb = getSupabaseClient();
