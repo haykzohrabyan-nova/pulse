@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260429-PRI262"></script>
-  <script src="auth.js?v=20260429-PRI262"></script>
+  <script src="shared.js?v=20260430-PRI262"></script>
+  <script src="auth.js?v=20260430-PRI262"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260429-PRI262"></script>
+  <script src="supabase-client.js?v=20260430-PRI262"></script>
   <style id="page-styles"></style>
   <style>
     .jm-layout {
@@ -239,6 +239,37 @@
         </div>
       </div>
     </div>
+
+    <!-- Closed-Order Packet Gate (red flags) -->
+    <div class="sidebar-widget">
+      <h4>🚧 Packet Gate Issues</h4>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Pending-confirmation orders missing proof or files</p>
+      <div id="packet-gate-list"><div style="font-size:12px;color:var(--text-muted);">No gate issues</div></div>
+    </div>
+
+    <!-- Proof Approval Tracker -->
+    <div class="sidebar-widget">
+      <h4>📝 Proof Approval Tracker</h4>
+      <div class="alert-item">
+        <span>Sent today</span>
+        <span class="alert-count blue" id="pat-sent">—</span>
+      </div>
+      <div class="alert-item">
+        <span>Approved today</span>
+        <span class="alert-count green" id="pat-approved">—</span>
+      </div>
+      <div class="alert-item">
+        <span>Awaiting response</span>
+        <span class="alert-count yellow" id="pat-pending">—</span>
+      </div>
+    </div>
+
+    <!-- Handoff Queue: approved + ready for prepress -->
+    <div class="sidebar-widget">
+      <h4>📤 Handoff to Prepress</h4>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Proof approved — ready to send to prepress</p>
+      <div id="handoff-queue-list"><div style="font-size:12px;color:var(--text-muted);">Queue empty</div></div>
+    </div>
   </aside>
 
   <!-- MAIN PIPELINE BOARD -->
@@ -379,6 +410,107 @@ function computeStats() {
   document.getElementById('dq-active').textContent = designJobs.length;
   document.getElementById('dq-revisions').textContent = revisions.length;
   document.getElementById('dq-overdue').textContent = overdueDesign.length;
+
+  // Proof Approval Tracker
+  const today = new Date().toISOString().split('T')[0];
+  const sentToday = jobs.filter(j => j.proof_sent_at && j.proof_sent_at.startsWith(today)).length;
+  const approvedToday = jobs.filter(j => j.proof_approved_at && j.proof_approved_at.startsWith(today)).length;
+  const pendingProof = proofsOut.length;
+  const ps = document.getElementById('pat-sent'); if (ps) ps.textContent = sentToday;
+  const pa = document.getElementById('pat-approved'); if (pa) pa.textContent = approvedToday;
+  const pp = document.getElementById('pat-pending'); if (pp) pp.textContent = pendingProof;
+}
+
+// ── Sidebar: Closed-Order Packet Gate ──────────────────────────────
+function renderPacketGate() {
+  // Orders pending-confirmation that are missing proof approval OR file confirmation
+  const issues = jobs.filter(j => {
+    const isPending = j.status === 'pending-confirmation' || j.status === 'pending_confirmation';
+    if (!isPending) return false;
+    const missingProof = !j.proof_approved_at;
+    const missingFiles = !j.files_confirmed && !j.artwork_received;
+    return missingProof || missingFiles;
+  });
+  const el = document.getElementById('packet-gate-list');
+  if (!el) return;
+  if (!issues.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No gate issues</div>';
+    return;
+  }
+  el.innerHTML = issues.map(j => {
+    const reasons = [];
+    if (!j.proof_approved_at) reasons.push('No proof approval');
+    if (!j.files_confirmed && !j.artwork_received) reasons.push('Files unconfirmed');
+    return `<div class="packet-item" style="background:#fee2e2;border-color:#fca5a5;" onclick="openJob('${j.id}')">
+      <div class="pname">${j.order_id} — ${j.customer_name}</div>
+      <div class="pmeta">${j.product_type || ''}</div>
+      <div class="page" style="color:#b91c1c;">⚠️ ${reasons.join(' · ')}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Sidebar: Handoff Queue ───────────────────────────────────────────
+function renderHandoffQueue() {
+  // Approved + not yet in prepress/production
+  const ready = jobs.filter(j => j.status === 'approved' && j.proof_approved_at);
+  const el = document.getElementById('handoff-queue-list');
+  if (!el) return;
+  if (!ready.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Queue empty</div>';
+    return;
+  }
+  el.innerHTML = ready.map(j => {
+    const rushBadge = j.rush ? ' <span style="background:#fef3cd;color:#92600a;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700;">RUSH</span>' : '';
+    return `<div class="packet-item" style="background:#f0fdf4;border-color:#86efac;">
+      <div class="pname" onclick="openJob('${j.id}')" style="cursor:pointer;">${j.order_id}${rushBadge}</div>
+      <div class="pmeta">${j.customer_name} · ${j.product_type || ''}</div>
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:6px;font-size:11px;padding:4px 8px;" onclick="sendToPrepress('${j.id}', event)">→ Send to Prepress</button>
+    </div>`;
+  }).join('');
+}
+
+async function sendToPrepress(jobId, e) {
+  if (e) e.stopPropagation();
+  const j = jobs.find(x => x.id === jobId);
+  if (!j) return;
+  // Optimistically advance
+  j.status = 'in-production';
+  j.handed_off_at = new Date().toISOString();
+  try {
+    if (typeof getSupabaseClient === 'function') {
+      const sb = getSupabaseClient();
+      if (sb && !String(jobId).startsWith('j') && !String(jobId).startsWith('demo')) {
+        await sb.from('orders').update({ status: 'in-production', handed_off_at: j.handed_off_at }).eq('id', jobId);
+      }
+    }
+  } catch(err) { console.warn('sendToPrepress', err); }
+  showPageToast(`${j.order_id} sent to prepress`, 'success');
+  computeStats(); renderPipeline(); renderHandoffQueue();
+}
+
+// ── Escalate to Ops Manager ──────────────────────────────────────────
+async function escalateJob() {
+  if (!activeJob) return;
+  const reason = prompt('Why are you escalating this to Ops? (brief reason)');
+  if (reason === null) return; // cancelled
+  activeJob.needs_ops_review = true;
+  activeJob.ops_escalation_reason = reason || 'Escalated by Job Manager';
+  activeJob.escalated_at = new Date().toISOString();
+  try {
+    if (typeof getSupabaseClient === 'function') {
+      const sb = getSupabaseClient();
+      if (sb && activeJob.id && !String(activeJob.id).startsWith('j') && !String(activeJob.id).startsWith('demo')) {
+        await sb.from('orders').update({
+          needs_ops_review: true,
+          ops_escalation_reason: activeJob.ops_escalation_reason,
+          escalated_at: activeJob.escalated_at
+        }).eq('id', activeJob.id);
+      }
+    }
+  } catch(err) { console.warn('escalateJob', err); }
+  showPageToast(`Job ${activeJob.order_id} escalated to Ops`, 'success');
+  closeModal();
+  computeStats(); renderPipeline();
 }
 
 // ── Sidebar: proof timers ────────────────────────────────────────────────────
@@ -537,16 +669,21 @@ function openJob(id) {
       <div class="detail-field" style="grid-column:span 2;"><label>Notes</label><span>${j.notes || '—'}</span></div>
     </div>
     ${proofInfo}
+    ${activeJob.needs_ops_review ? `<div style="margin-top:12px;padding:8px 12px;background:#fef3cd;border:1px solid #fcd34d;border-radius:6px;font-size:12px;color:#92400e;"><strong>⚠️ Escalated to Ops:</strong> ${activeJob.ops_escalation_reason || 'No reason given'}</div>` : ''}
     ${canAdvance.ok
       ? `<div class="action-row">
           <button class="stage-btn advance" onclick="advanceStage()">Advance → ${canAdvance.nextLabel}</button>
+          ${!activeJob.needs_ops_review ? `<button class="btn" style="background:#fef3cd;color:#92400e;border:1px solid #fcd34d;" onclick="escalateJob()">⚠️ Escalate to Ops</button>` : ''}
           <button class="btn" onclick="closeModal()">Close</button>
         </div>`
       : `<div class="gate-warning">
           <strong>⛔ Stage gate — cannot advance yet</strong>
           <ul>${canAdvance.missing.map(m => `<li>${m}</li>`).join('')}</ul>
         </div>
-        <div class="action-row"><button class="btn" onclick="closeModal()">Close</button></div>`
+        <div class="action-row">
+          ${!activeJob.needs_ops_review ? `<button class="btn" style="background:#fef3cd;color:#92400e;border:1px solid #fcd34d;" onclick="escalateJob()">⚠️ Escalate to Ops</button>` : ''}
+          <button class="btn" onclick="closeModal()">Close</button>
+        </div>`
     }
   `;
   document.getElementById('jobDetailModal').classList.add('active');
@@ -611,6 +748,8 @@ function advanceStage() {
   computeStats();
   renderProofTimers();
   renderDeadlineRisk();
+  renderPacketGate();
+  renderHandoffQueue();
   showPageToast(`Job ${activeJob.order_id} advanced to ${next}`, 'success');
 }
 
@@ -634,6 +773,8 @@ function showNewJobModal(packetId) {
   renderPackets();
   renderProofTimers();
   renderDeadlineRisk();
+  renderPacketGate();
+  renderHandoffQueue();
   renderPipeline();
 })();
 
