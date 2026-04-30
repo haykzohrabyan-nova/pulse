@@ -61,6 +61,15 @@ const ROLE_CONFIG = {
     canViewProduction: false,
     canViewOperator: true,
   },
+  designer: {
+    label: 'Designer',
+    color: '#8b5cf6',
+    pages: ['dashboard','job-ticket','proofs','leads'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+  },
   prepress: {
     label: 'Prepress',
     color: '#6b7280',
@@ -121,6 +130,10 @@ const LOCAL_EMAIL_USERS = {
   'lisandro@bazaar-admin.com': { name: 'Lisandro',         role: 'operator' },
   'adrian@bazaar-admin.com':   { name: 'Adrian',           role: 'operator' },
   'harry@bazaar-admin.com':    { name: 'Harry',            role: 'operator' },
+  'marianna@bazaar-admin.com': { name: 'Marianna',         role: 'designer' },
+  'harut@bazaar-admin.com':    { name: 'Harut',            role: 'designer' },
+  'taron@bazaar-admin.com':    { name: 'Taron',            role: 'designer' },
+  'chris@bazaar-admin.com':    { name: 'Chris',            role: 'designer' },
 };
 const LOCAL_DEFAULT_PASSWORD = 'Pulse2026!';
 
