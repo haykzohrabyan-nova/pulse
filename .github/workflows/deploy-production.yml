@@ -18,6 +18,10 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false   # Never cancel an in-flight production deploy
 
+permissions:
+  contents: write    # tag releases
+  deployments: write
+
 jobs:
   preflight:
     name: Preflight — staging smoke check
