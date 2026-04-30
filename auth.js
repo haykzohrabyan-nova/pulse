@@ -45,7 +45,7 @@ const ROLE_CONFIG = {
   'account-manager': {
     label: 'Account Manager',
     color: '#d97706',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','application-dept','rep-tasks','instagram-leads'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -64,7 +64,7 @@ const ROLE_CONFIG = {
   prepress: {
     label: 'Prepress',
     color: '#6b7280',
-    pages: ['dashboard','prepress'],
+    pages: ['dashboard','prepress','job-ticket'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -73,7 +73,7 @@ const ROLE_CONFIG = {
   qc: {
     label: 'QC Inspector',
     color: '#0d9488',
-    pages: ['dashboard','qc-checkout'],
+    pages: ['dashboard','qc-checkout','shipping'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
