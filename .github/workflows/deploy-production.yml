@@ -60,7 +60,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: pulse
+          # NOTE: 'pulse-production' is a separate CF Pages project from 'pulse'
+          # (which now serves staging only). See knowledge/pulse-staging-deploy-routing-fix-2026-04-30.md
+          projectName: pulse-production
           directory: .
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           branch: main
