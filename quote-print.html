@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quote</title>
+  <style>
+    /* ── Reset / Base ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #e5e7eb; }
+
+    /* ── Screen chrome ─────────────────────────────────────── */
+    .no-print {
+      padding: 14px 0;
+      text-align: center;
+      background: #1e3a5f;
+    }
+    .no-print button {
+      padding: 9px 22px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    .no-print .btn-print { background: #f5c842; color: #1a1a1a; }
+    .no-print .btn-print:hover { background: #e6b830; }
+    .no-print .btn-close  { background: rgba(255,255,255,0.15); color: #fff; }
+    .no-print .btn-close:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Print wrapper ─────────────────────────────────────── */
+    .print-wrapper {
+      max-width: 816px;       /* 8.5 in at 96 dpi */
+      margin: 24px auto 40px;
+      background: #fff;
+      padding: 52px 60px;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.14);
+      border-radius: 4px;
+    }
+
+    /* ── Header ────────────────────────────────────────────── */
+    .quote-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 36px;
+      padding-bottom: 22px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .logo-block img {
+      height: 52px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
+    }
+    .logo-text-fallback {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: #1e3a5f;
+    }
+    .quote-meta { text-align: right; }
+    .quote-meta .quote-num {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e3a5f;
+      letter-spacing: -0.3px;
+    }
+    .quote-meta .meta-row {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 5px;
+    }
+    .quote-meta .meta-row span { color: #374151; font-weight: 600; }
+
+    /* ── Customer block ─────────────────────────────────────── */
+    .customer-block {
+      margin-bottom: 30px;
+      padding: 16px 20px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+    .customer-block h4 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #9ca3af;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .customer-block .cust-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .customer-block .cust-detail {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.65;
+    }
+
+    /* ── Line items ─────────────────────────────────────────── */
+    table.line-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    table.line-items th {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6b7280;
+      padding: 8px 10px;
+      border-bottom: 2px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+    table.line-items th.r { text-align: right; }
+    table.line-items td {
+      padding: 11px 10px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+      color: #374151;
+      vertical-align: top;
+    }
+    table.line-items td.r {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    table.line-items tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Totals ─────────────────────────────────────────────── */
+    .totals-block {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-bottom: 28px;
+    }
+    .totals-row {
+      display: flex;
+      gap: 0;
+      width: 300px;
+      padding: 4px 0;
+      font-size: 13px;
+      color: #374151;
+    }
+    .totals-row .lbl {
+      flex: 1;
+      text-align: right;
+      padding-right: 16px;
+      color: #6b7280;
+    }
+    .totals-row .val {
+      width: 100px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .totals-row.grand-total {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111827;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 6px;
+    }
+
+    /* ── Customer notes ─────────────────────────────────────── */
+    .customer-notes {
+      margin-bottom: 28px;
+      padding: 14px 18px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.6;
+    }
+    .customer-notes h4 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #92400e;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    /* ── Terms ──────────────────────────────────────────────── */
+    .terms-block {
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #6b7280;
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .terms-block h4 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #374151;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .terms-block ul { padding-left: 18px; }
+    .terms-block ul li { margin-bottom: 4px; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .quote-footer {
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 11px;
+      color: #9ca3af;
+      gap: 24px;
+    }
+    .quote-footer .footer-col strong {
+      display: block;
+      color: #374151;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .quote-footer .footer-col.right { text-align: right; }
+
+    /* ── Company themes ─────────────────────────────────────── */
+    .theme-bazaar .quote-num,
+    .theme-bazaar .logo-text-fallback { color: #1e3a5f; }
+
+    .theme-pixel  .quote-num,
+    .theme-pixel  .logo-text-fallback { color: #1a1a2e; }
+    .theme-pixel  .no-print { background: #1a1a2e; }
+    .theme-pixel  .customer-block { background: #f8f8fc; border-color: #e0e0f0; }
+
+    /* ── Error / loading ────────────────────────────────────── */
+    .error-msg {
+      padding: 60px 20px;
+      text-align: center;
+      color: #dc2626;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── @media print ───────────────────────────────────────── */
+    @media print {
+      html, body { background: #fff !important; }
+      .no-print   { display: none !important; }
+      .print-wrapper {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+      @page { size: letter; margin: 0.65in 0.75in; }
+      table.line-items { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen-only toolbar — hidden when printing -->
+  <div class="no-print" id="screenControls">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ Close</button>
+  </div>
+
+  <div class="print-wrapper" id="printWrapper">
+    <div id="quoteContent"></div>
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────
+    function fmt(n) {
+      return '$' + Number(n || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d)) return '—';
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function addDays(iso, days) {
+      const d = new Date(iso || Date.now());
+      d.setDate(d.getDate() + days);
+      return d.toISOString();
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ── Company metadata ─────────────────────────────────────
+    const COMPANY_META = {
+      bazaar: {
+        name:        'Bazaar Printing',
+        theme:       'bazaar',
+        logoPng:     'branding/bazaar-logo.png',
+        address:     '1234 Industrial Blvd, Los Angeles, CA 90001',
+        phone:       '(213) 555-0100',
+        email:       'quotes@bazaarprinting.com',
+        website:     'bazaarprinting.com',
+        paymentNote: 'Make checks payable to Bazaar Printing Inc. ACH / wire details on request.',
+      },
+      pixel: {
+        name:        'PixelPress Print',
+        theme:       'pixel',
+        logoPng:     'branding/pixelpress-logo.png',
+        address:     '456 Press Way, Los Angeles, CA 90002',
+        phone:       '(213) 555-0200',
+        email:       'quotes@pixelpressprint.com',
+        website:     'pixelpressprint.com',
+        paymentNote: 'Make checks payable to PixelPress Print LLC. ACH / wire details on request.',
+      },
+    };
+
+    // ── Render ───────────────────────────────────────────────
+    function render(qt) {
+      const co = COMPANY_META[qt.company] || COMPANY_META.bazaar;
+
+      // Financials
+      const lineItems   = qt.lineItems || [];
+      const subtotal    = lineItems.reduce((s, li) => s + (li.subtotal != null ? li.subtotal : (li.pricePerUnit || 0) * (li.qty || 0)), 0);
+      const discountPct = parseFloat(qt.discount) || 0;
+      const discountAmt = discountPct > 0 ? subtotal * (discountPct / 100) : 0;
+      const afterDisc   = subtotal - discountAmt;
+      const taxRate     = parseFloat(qt.taxRate) || 0;
+      const taxAmt      = qt.taxExempt ? 0 : afterDisc * taxRate;
+      const total       = qt.total != null ? qt.total : (afterDisc + taxAmt);
+
+      // Dates
+      const quoteDate    = qt.createdAt || new Date().toISOString();
+      const validThrough = addDays(quoteDate, 30);
+
+      // Line item rows
+      const liRows = lineItems.length
+        ? lineItems.map(li => `
+            <tr>
+              <td>${esc(li.product || '—')}</td>
+              <td class="r">${Number(li.qty || 0).toLocaleString()}</td>
+              <td class="r">${fmt(li.pricePerUnit)}</td>
+              <td class="r">${fmt(li.subtotal != null ? li.subtotal : (li.pricePerUnit || 0) * (li.qty || 0))}</td>
+            </tr>`).join('')
+        : `<tr><td colspan="4" style="color:#9ca3af;font-style:italic;text-align:center;padding:24px;">No line items on this quote.</td></tr>`;
+
+      // Tax line
+      const taxLine = qt.taxExempt
+        ? `<div class="totals-row"><span class="lbl">Sales Tax</span><span class="val" style="font-size:11px;color:#6b7280;font-style:italic;">Tax exempt — seller permit on file</span></div>`
+        : `<div class="totals-row"><span class="lbl">Sales Tax (${(taxRate * 100).toFixed(2).replace(/\.?0+$/, '')}%)</span><span class="val">${fmt(taxAmt)}</span></div>`;
+
+      const html = `
+        <div class="quote-header">
+          <div class="logo-block">
+            <img
+              src="${esc(co.logoPng)}"
+              alt="${esc(co.name)}"
+              onerror="this.style.display='none';document.getElementById('logoFallback').style.display='';"
+            >
+            <div id="logoFallback" class="logo-text-fallback" style="display:none;">${esc(co.name)}</div>
+          </div>
+          <div class="quote-meta">
+            <div class="quote-num">#${esc(qt.quoteId)}</div>
+            <div class="meta-row">Quote Date: <span>${fmtDate(quoteDate)}</span></div>
+            <div class="meta-row">Valid Through: <span>${fmtDate(validThrough)}</span></div>
+            <div class="meta-row">Ref #: <span>${esc(qt.quoteId)}</span></div>
+          </div>
+        </div>
+
+        <div class="customer-block">
+          <h4>Prepared For</h4>
+          <div class="cust-name">${esc(qt.customer || '—')}</div>
+          <div class="cust-detail">
+            ${qt.facility ? esc(qt.facility) + '<br>' : ''}
+            ${qt.email ? esc(qt.email) : ''}${qt.email && qt.phone ? ' &nbsp;&middot;&nbsp; ' : ''}${qt.phone ? esc(qt.phone) : ''}
+          </div>
+        </div>
+
+        <table class="line-items">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="r">Qty</th>
+              <th class="r">Unit Price</th>
+              <th class="r">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>${liRows}</tbody>
+        </table>
+
+        <div class="totals-block">
+          <div class="totals-row"><span class="lbl">Subtotal</span><span class="val">${fmt(subtotal)}</span></div>
+          ${discountAmt > 0 ? `<div class="totals-row"><span class="lbl">Discount (${discountPct}%)</span><span class="val">&minus;${fmt(discountAmt)}</span></div>` : ''}
+          ${taxLine}
+          <div class="totals-row grand-total"><span class="lbl">Total</span><span class="val">${fmt(total)}</span></div>
+        </div>
+
+        ${qt.notes ? `<div class="customer-notes"><h4>Notes</h4>${esc(qt.notes)}</div>` : ''}
+
+        <div class="terms-block">
+          <h4>Terms &amp; Conditions</h4>
+          <ul>
+            <li>A <strong>50% deposit</strong> is required to initiate production. Remaining balance due upon completion.</li>
+            <li>Net-30 payment terms available for accounts with <strong>approved credit</strong> on file.</li>
+            <li><strong>Art approval required</strong> before production begins. Customer must approve digital proof within 48 hours or production may be delayed.</li>
+            <li>Prices are valid for <strong>30 days</strong> from quote date. Quote subject to change if materials, specifications, or quantities are modified.</li>
+            <li>Turnaround time begins upon receipt of deposit <em>and</em> approved artwork. Rush orders available at additional cost.</li>
+            <li>All sales final. Returns accepted only for manufacturing defects reported within 5 business days of delivery.</li>
+          </ul>
+        </div>
+
+        <div class="quote-footer">
+          <div class="footer-col">
+            <strong>${esc(co.name)}</strong>
+            ${esc(co.address)}<br>
+            ${esc(co.phone)} &nbsp;&middot;&nbsp; ${esc(co.email)}<br>
+            ${esc(co.website)}
+          </div>
+          <div class="footer-col right">
+            <strong>Payment</strong>
+            ${esc(co.paymentNote)}
+          </div>
+        </div>
+      `;
+
+      const wrapper = document.getElementById('printWrapper');
+      wrapper.className = 'print-wrapper theme-' + co.theme;
+      document.getElementById('quoteContent').innerHTML = html;
+
+      // Apply theme class to screen toolbar too
+      document.getElementById('screenControls').className = 'no-print theme-' + co.theme;
+
+      document.title = 'Quote ' + qt.quoteId + ' \u2014 ' + co.name;
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    (function init() {
+      const params  = new URLSearchParams(window.location.search);
+      const quoteId = params.get('quoteId');
+
+      if (!quoteId) {
+        document.getElementById('quoteContent').innerHTML =
+          '<div class="error-msg">No <code>quoteId</code> supplied in the URL.<br>Open this page from the Quotes list.</div>';
+        return;
+      }
+
+      let quotes;
+      try {
+        quotes = JSON.parse(localStorage.getItem('pulse_quotes') || '[]');
+      } catch (e) {
+        quotes = [];
+      }
+
+      const qt = quotes.find(q => q.quoteId === quoteId);
+      if (!qt) {
+        document.getElementById('quoteContent').innerHTML =
+          '<div class="error-msg">Quote <strong>' + quoteId + '</strong> not found.<br>' +
+          'Make sure you opened this link from the same browser where your quotes are stored.</div>';
+        return;
+      }
+
+      render(qt);
+    })();
+  </script>
+</body>
+</html>
