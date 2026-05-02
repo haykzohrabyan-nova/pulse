@@ -574,7 +574,10 @@ async function loadAll() {
     const navHtml = renderNav('ops-manager');
     if (navHtml) document.getElementById('nav').innerHTML = navHtml;
   }
-  if (typeof renderBreadcrumb === 'function') renderBreadcrumb([{ label: 'Ops Manager' }]);
+  if (typeof renderBreadcrumb === 'function') {
+    const crumbHtml = renderBreadcrumb([{ label: 'Ops Manager' }]);
+    if (crumbHtml) document.getElementById('breadcrumb').innerHTML = crumbHtml;
+  }
   await loadAll();
 })();
 </script>

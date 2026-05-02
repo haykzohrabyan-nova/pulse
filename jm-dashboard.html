@@ -770,7 +770,10 @@ function showNewJobModal(packetId) {
     const navHtml = renderNav('jm-dashboard');
     if (navHtml) document.getElementById('nav').innerHTML = navHtml;
   }
-  if (typeof renderBreadcrumb === 'function') renderBreadcrumb([{ label: 'Job Manager' }]);
+  if (typeof renderBreadcrumb === 'function') {
+    const crumbHtml = renderBreadcrumb([{ label: 'Job Manager' }]);
+    if (crumbHtml) document.getElementById('breadcrumb').innerHTML = crumbHtml;
+  }
   await loadData();
   computeStats();
   renderPackets();
