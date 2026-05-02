@@ -1345,6 +1345,1578 @@ const PRODUCT_TYPES = {
   }
 };
 
+// ── Packaging Catalog Seed Data (PUL-715) ─────────────────────
+// Source: product-catalog-v2.json — 68 SKUs built 2026-04-27
+// Used by seedPackagingCatalogIfEmpty() to populate IndexedDB on first load
+const PACKAGING_CATALOG_SEED = [
+  {
+    "sku": "210000000006",
+    "name": "1 Gram Bag",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.03,
+    "sell_price": 0.1,
+    "markup_pct": 233.3,
+    "tier_pricing": {
+      "qty_25": 0.1,
+      "qty_50": 0.092,
+      "qty_100": 0.085,
+      "qty_250": 0.08,
+      "qty_500": 0.075,
+      "qty_1000": 0.07,
+      "qty_5000": 0.062
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000153",
+    "name": "1 Gram Bag With Window",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.12,
+    "markup_pct": 140.0,
+    "tier_pricing": {
+      "qty_25": 0.12,
+      "qty_50": 0.1104,
+      "qty_100": 0.102,
+      "qty_250": 0.096,
+      "qty_500": 0.09,
+      "qty_1000": 0.084,
+      "qty_5000": 0.0744
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000007",
+    "name": "1 Ounce Bag Regular",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.08,
+    "sell_price": 0.3,
+    "markup_pct": 275.0,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000008",
+    "name": "1 Ounce Bag With Window",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.11,
+    "sell_price": 0.3,
+    "markup_pct": 172.7,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000012",
+    "name": "1 Ounce Laser Bag",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.1,
+    "sell_price": 0.3,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000013",
+    "name": "1/2 Gram Bag",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.02,
+    "sell_price": 0.1,
+    "markup_pct": 400.0,
+    "tier_pricing": {
+      "qty_25": 0.1,
+      "qty_50": 0.092,
+      "qty_100": 0.085,
+      "qty_250": 0.08,
+      "qty_500": 0.075,
+      "qty_1000": 0.07,
+      "qty_5000": 0.062
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000014",
+    "name": "1/2 Ounce Bag",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.08,
+    "sell_price": 0.2,
+    "markup_pct": 150.0,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000015",
+    "name": "1/2 Ounce Bag With Window",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.08,
+    "sell_price": 0.25,
+    "markup_pct": 212.5,
+    "tier_pricing": {
+      "qty_25": 0.25,
+      "qty_50": 0.23,
+      "qty_100": 0.2125,
+      "qty_250": 0.2,
+      "qty_500": 0.1875,
+      "qty_1000": 0.175,
+      "qty_5000": 0.155
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000026",
+    "name": "12x9 Exit Bag",
+    "category": "Bags",
+    "material": "Plastic/Mylar",
+    "production_method": "digital",
+    "default_cost": 0.21,
+    "sell_price": 0.8,
+    "markup_pct": 281.0,
+    "tier_pricing": {
+      "qty_25": 0.8,
+      "qty_50": 0.736,
+      "qty_100": 0.68,
+      "qty_250": 0.64,
+      "qty_500": 0.6,
+      "qty_1000": 0.56,
+      "qty_5000": 0.496
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000046",
+    "name": "4x5 1/8 Bags Square Corners",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.04,
+    "sell_price": 0.15,
+    "markup_pct": 275.0,
+    "tier_pricing": {
+      "qty_25": 0.15,
+      "qty_50": 0.138,
+      "qty_100": 0.1275,
+      "qty_250": 0.12,
+      "qty_500": 0.1125,
+      "qty_1000": 0.105,
+      "qty_5000": 0.093
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000044",
+    "name": "4x5 Bags Childproof",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.15,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.15,
+      "qty_50": 0.138,
+      "qty_100": 0.1275,
+      "qty_250": 0.12,
+      "qty_500": 0.1125,
+      "qty_1000": 0.105,
+      "qty_5000": 0.093
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000045",
+    "name": "4x5 Bags Round Corners",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.15,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.15,
+      "qty_50": 0.138,
+      "qty_100": 0.1275,
+      "qty_250": 0.12,
+      "qty_500": 0.1125,
+      "qty_1000": 0.105,
+      "qty_5000": 0.093
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000047",
+    "name": "4x5 Laser Bag",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.2,
+    "markup_pct": 300.0,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000048",
+    "name": "4x5 Matte Bag",
+    "category": "Bags",
+    "material": "Matte Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.15,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.15,
+      "qty_50": 0.138,
+      "qty_100": 0.1275,
+      "qty_250": 0.12,
+      "qty_500": 0.1125,
+      "qty_1000": 0.105,
+      "qty_5000": 0.093
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000049",
+    "name": "4x7 Laser Bags",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.06,
+    "sell_price": 0.2,
+    "markup_pct": 233.3,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000050",
+    "name": "5 inch Laser Round Bag",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.08,
+    "sell_price": 0.2,
+    "markup_pct": 150.0,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000054",
+    "name": "5x8 Laser Bags",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.07,
+    "sell_price": 0.2,
+    "markup_pct": 185.7,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000058",
+    "name": "7 Gram Bags Glossy Childproof 4x6",
+    "category": "Bags",
+    "material": "Glossy Mylar",
+    "production_method": "digital",
+    "default_cost": 0.07,
+    "sell_price": 0.2,
+    "markup_pct": 185.7,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000059",
+    "name": "7 Gram Laser Bags",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.2,
+    "markup_pct": 300.0,
+    "tier_pricing": {
+      "qty_25": 0.2,
+      "qty_50": 0.184,
+      "qty_100": 0.17,
+      "qty_250": 0.16,
+      "qty_500": 0.15,
+      "qty_1000": 0.14,
+      "qty_5000": 0.124
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000060",
+    "name": "7 Gram or 1/4 Bags",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.04,
+    "sell_price": 0.15,
+    "markup_pct": 275.0,
+    "tier_pricing": {
+      "qty_25": 0.15,
+      "qty_50": 0.138,
+      "qty_100": 0.1275,
+      "qty_250": 0.12,
+      "qty_500": 0.1125,
+      "qty_1000": 0.105,
+      "qty_5000": 0.093
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000062",
+    "name": "8x6 Exit Bag",
+    "category": "Bags",
+    "material": "Plastic/Mylar",
+    "production_method": "digital",
+    "default_cost": 0.09,
+    "sell_price": 0.5,
+    "markup_pct": 455.6,
+    "tier_pricing": {
+      "qty_25": 0.5,
+      "qty_50": 0.46,
+      "qty_100": 0.425,
+      "qty_250": 0.4,
+      "qty_500": 0.375,
+      "qty_1000": 0.35,
+      "qty_5000": 0.31
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000118",
+    "name": "Pound Bags",
+    "category": "Bags",
+    "material": "Mylar",
+    "production_method": "digital",
+    "default_cost": 0.45,
+    "sell_price": 1.0,
+    "markup_pct": 122.2,
+    "tier_pricing": {
+      "qty_25": 1.0,
+      "qty_50": 0.92,
+      "qty_100": 0.85,
+      "qty_250": 0.8,
+      "qty_500": 0.75,
+      "qty_1000": 0.7,
+      "qty_5000": 0.62
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000119",
+    "name": "Pound Bags Laser",
+    "category": "Bags",
+    "material": "Laser/Metallic Mylar",
+    "production_method": "digital",
+    "default_cost": 0.53,
+    "sell_price": 2.0,
+    "markup_pct": 277.4,
+    "tier_pricing": {
+      "qty_25": 2.0,
+      "qty_50": 1.84,
+      "qty_100": 1.7,
+      "qty_250": 1.6,
+      "qty_500": 1.5,
+      "qty_1000": 1.4,
+      "qty_5000": 1.24
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000011",
+    "name": "1 Ounce Glass Jars",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.15,
+    "sell_price": 0.5,
+    "markup_pct": 233.3,
+    "tier_pricing": {
+      "qty_25": 0.5,
+      "qty_50": 0.46,
+      "qty_100": 0.425,
+      "qty_250": 0.4,
+      "qty_500": 0.375,
+      "qty_1000": 0.35,
+      "qty_5000": 0.31
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000016",
+    "name": "10 Ounce Glass Jar - Clear",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.5,
+    "sell_price": 1.0,
+    "markup_pct": 100.0,
+    "tier_pricing": {
+      "qty_25": 1.0,
+      "qty_50": 0.92,
+      "qty_100": 0.85,
+      "qty_250": 0.8,
+      "qty_500": 0.75,
+      "qty_1000": 0.7,
+      "qty_5000": 0.62
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000155",
+    "name": "10 Ounce Plastic Jar",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.31,
+    "sell_price": 0.7,
+    "markup_pct": 125.8,
+    "tier_pricing": {
+      "qty_25": 0.7,
+      "qty_50": 0.644,
+      "qty_100": 0.595,
+      "qty_250": 0.56,
+      "qty_500": 0.525,
+      "qty_1000": 0.49,
+      "qty_5000": 0.434
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000140",
+    "name": "100ml UV Jar",
+    "category": "Jars",
+    "material": "UV Glass",
+    "production_method": "digital",
+    "default_cost": 1.2,
+    "sell_price": 3.2,
+    "markup_pct": 166.7,
+    "tier_pricing": {
+      "qty_25": 3.2,
+      "qty_50": 2.944,
+      "qty_100": 2.72,
+      "qty_250": 2.56,
+      "qty_500": 2.4,
+      "qty_1000": 2.24,
+      "qty_5000": 1.984
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000141",
+    "name": "150ml UV Jar",
+    "category": "Jars",
+    "material": "UV Glass",
+    "production_method": "digital",
+    "default_cost": 1.4,
+    "sell_price": 3.2,
+    "markup_pct": 128.6,
+    "tier_pricing": {
+      "qty_25": 3.2,
+      "qty_50": 2.944,
+      "qty_100": 2.72,
+      "qty_250": 2.56,
+      "qty_500": 2.4,
+      "qty_1000": 2.24,
+      "qty_5000": 1.984
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000027",
+    "name": "18 Ounce Glass Jar Clear",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.83,
+    "sell_price": 2.0,
+    "markup_pct": 141.0,
+    "tier_pricing": {
+      "qty_25": 2.0,
+      "qty_50": 1.84,
+      "qty_100": 1.7,
+      "qty_250": 1.6,
+      "qty_500": 1.5,
+      "qty_1000": 1.4,
+      "qty_5000": 1.24
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000148",
+    "name": "18 Ounce Plastic Jar",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.41,
+    "sell_price": 1.2,
+    "markup_pct": 192.7,
+    "tier_pricing": {
+      "qty_25": 1.2,
+      "qty_50": 1.104,
+      "qty_100": 1.02,
+      "qty_250": 0.96,
+      "qty_500": 0.9,
+      "qty_1000": 0.84,
+      "qty_5000": 0.744
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000030",
+    "name": "2 Ounce Black Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.37,
+    "sell_price": 0.65,
+    "markup_pct": 75.7,
+    "tier_pricing": {
+      "qty_25": 0.65,
+      "qty_50": 0.598,
+      "qty_100": 0.5525,
+      "qty_250": 0.52,
+      "qty_500": 0.4875,
+      "qty_1000": 0.455,
+      "qty_5000": 0.403
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000029",
+    "name": "2 Ounce Clear Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.21,
+    "sell_price": 0.45,
+    "markup_pct": 114.3,
+    "tier_pricing": {
+      "qty_25": 0.45,
+      "qty_50": 0.414,
+      "qty_100": 0.3825,
+      "qty_250": 0.36,
+      "qty_500": 0.3375,
+      "qty_1000": 0.315,
+      "qty_5000": 0.279
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000031",
+    "name": "2 Ounce Jar Tall Glass",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.18,
+    "sell_price": 0.5,
+    "markup_pct": 177.8,
+    "tier_pricing": {
+      "qty_25": 0.5,
+      "qty_50": 0.46,
+      "qty_100": 0.425,
+      "qty_250": 0.4,
+      "qty_500": 0.375,
+      "qty_1000": 0.35,
+      "qty_5000": 0.31
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000156",
+    "name": "2 Ounce Jar Tall Glass Colored Round",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.3,
+    "sell_price": 1.0,
+    "markup_pct": 233.3,
+    "tier_pricing": {
+      "qty_25": 1.0,
+      "qty_50": 0.92,
+      "qty_100": 0.85,
+      "qty_250": 0.8,
+      "qty_500": 0.75,
+      "qty_1000": 0.7,
+      "qty_5000": 0.62
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000032",
+    "name": "2 Ounce Jar Tall Plastic",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.16,
+    "sell_price": 0.45,
+    "markup_pct": 181.3,
+    "tier_pricing": {
+      "qty_25": 0.45,
+      "qty_50": 0.414,
+      "qty_100": 0.3825,
+      "qty_250": 0.36,
+      "qty_500": 0.3375,
+      "qty_1000": 0.315,
+      "qty_5000": 0.279
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000037",
+    "name": "3 Ounce Clear Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.22,
+    "sell_price": 0.55,
+    "markup_pct": 150.0,
+    "tier_pricing": {
+      "qty_25": 0.55,
+      "qty_50": 0.506,
+      "qty_100": 0.4675,
+      "qty_250": 0.44,
+      "qty_500": 0.4125,
+      "qty_1000": 0.385,
+      "qty_5000": 0.341
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000036",
+    "name": "3 Ounce Glass Jar - Black See-Through",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.43,
+    "sell_price": 0.75,
+    "markup_pct": 74.4,
+    "tier_pricing": {
+      "qty_25": 0.75,
+      "qty_50": 0.69,
+      "qty_100": 0.6375,
+      "qty_250": 0.6,
+      "qty_500": 0.5625,
+      "qty_1000": 0.525,
+      "qty_5000": 0.465
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000038",
+    "name": "3 Ounce Jar Chubby Gorilla Clear",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.44,
+    "sell_price": 0.83,
+    "markup_pct": 88.6,
+    "tier_pricing": {
+      "qty_25": 0.83,
+      "qty_50": 0.7636,
+      "qty_100": 0.7055,
+      "qty_250": 0.664,
+      "qty_500": 0.6225,
+      "qty_1000": 0.581,
+      "qty_5000": 0.5146
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000157",
+    "name": "3 Ounce Matte Black Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.34,
+    "sell_price": 0.7,
+    "markup_pct": 105.9,
+    "tier_pricing": {
+      "qty_25": 0.7,
+      "qty_50": 0.644,
+      "qty_100": 0.595,
+      "qty_250": 0.56,
+      "qty_500": 0.525,
+      "qty_1000": 0.49,
+      "qty_5000": 0.434
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000039",
+    "name": "3 Ounce Plastic Jar",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.1,
+    "sell_price": 0.5,
+    "markup_pct": 400.0,
+    "tier_pricing": {
+      "qty_25": 0.5,
+      "qty_50": 0.46,
+      "qty_100": 0.425,
+      "qty_250": 0.4,
+      "qty_500": 0.375,
+      "qty_1000": 0.35,
+      "qty_5000": 0.31
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000040",
+    "name": "4 Ounce Black Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.34,
+    "sell_price": 0.7,
+    "markup_pct": 105.9,
+    "tier_pricing": {
+      "qty_25": 0.7,
+      "qty_50": 0.644,
+      "qty_100": 0.595,
+      "qty_250": 0.56,
+      "qty_500": 0.525,
+      "qty_1000": 0.49,
+      "qty_5000": 0.434
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000041",
+    "name": "4 Ounce Glass Jar Clear",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.26,
+    "sell_price": 0.6,
+    "markup_pct": 130.8,
+    "tier_pricing": {
+      "qty_25": 0.6,
+      "qty_50": 0.552,
+      "qty_100": 0.51,
+      "qty_250": 0.48,
+      "qty_500": 0.45,
+      "qty_1000": 0.42,
+      "qty_5000": 0.372
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000042",
+    "name": "4 Ounce Plastic Jar Clear",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.1,
+    "sell_price": 0.3,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000051",
+    "name": "5 Ounce Jar Chubby Gorilla Clear Plastic",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.41,
+    "sell_price": 0.83,
+    "markup_pct": 102.4,
+    "tier_pricing": {
+      "qty_25": 0.83,
+      "qty_50": 0.7636,
+      "qty_100": 0.7055,
+      "qty_250": 0.664,
+      "qty_500": 0.6225,
+      "qty_1000": 0.581,
+      "qty_5000": 0.5146
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000154",
+    "name": "5 Ounce Plastic Jar with Cap",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.32,
+    "sell_price": 0.65,
+    "markup_pct": 103.1,
+    "tier_pricing": {
+      "qty_25": 0.65,
+      "qty_50": 0.598,
+      "qty_100": 0.5525,
+      "qty_250": 0.52,
+      "qty_500": 0.4875,
+      "qty_1000": 0.455,
+      "qty_5000": 0.403
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000052",
+    "name": "5ml Jar Black Glass Square/Round",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.3,
+    "sell_price": 0.55,
+    "markup_pct": 83.3,
+    "tier_pricing": {
+      "qty_25": 0.55,
+      "qty_50": 0.506,
+      "qty_100": 0.4675,
+      "qty_250": 0.44,
+      "qty_500": 0.4125,
+      "qty_1000": 0.385,
+      "qty_5000": 0.341
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000053",
+    "name": "5ml Jar Clear Glass Square/Round",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.16,
+    "sell_price": 0.45,
+    "markup_pct": 181.3,
+    "tier_pricing": {
+      "qty_25": 0.45,
+      "qty_50": 0.414,
+      "qty_100": 0.3825,
+      "qty_250": 0.36,
+      "qty_500": 0.3375,
+      "qty_1000": 0.315,
+      "qty_5000": 0.279
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000055",
+    "name": "6 Ounce Jar Clear Glass Round",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.37,
+    "sell_price": 0.8,
+    "markup_pct": 116.2,
+    "tier_pricing": {
+      "qty_25": 0.8,
+      "qty_50": 0.736,
+      "qty_100": 0.68,
+      "qty_250": 0.64,
+      "qty_500": 0.6,
+      "qty_1000": 0.56,
+      "qty_5000": 0.496
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000056",
+    "name": "60MM Chubby Gorilla Jar Clear Plastic",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.33,
+    "sell_price": 0.66,
+    "markup_pct": 100.0,
+    "tier_pricing": {
+      "qty_25": 0.66,
+      "qty_50": 0.6072,
+      "qty_100": 0.561,
+      "qty_250": 0.528,
+      "qty_500": 0.495,
+      "qty_1000": 0.462,
+      "qty_5000": 0.4092
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000067",
+    "name": "9ml Black or Frosty Glass Jar",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.26,
+    "sell_price": 0.6,
+    "markup_pct": 130.8,
+    "tier_pricing": {
+      "qty_25": 0.6,
+      "qty_50": 0.552,
+      "qty_100": 0.51,
+      "qty_250": 0.48,
+      "qty_500": 0.45,
+      "qty_1000": 0.42,
+      "qty_5000": 0.372
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000068",
+    "name": "9ml Jar Clear Glass Round/Square",
+    "category": "Jars",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.21,
+    "sell_price": 0.45,
+    "markup_pct": 114.3,
+    "tier_pricing": {
+      "qty_25": 0.45,
+      "qty_50": 0.414,
+      "qty_100": 0.3825,
+      "qty_250": 0.36,
+      "qty_500": 0.3375,
+      "qty_1000": 0.315,
+      "qty_5000": 0.279
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000136",
+    "name": "Push Pop Jars 16 pcs",
+    "category": "Jars",
+    "material": "Acrylic/Specialty",
+    "production_method": "digital",
+    "default_cost": 14.0,
+    "sell_price": 32.0,
+    "markup_pct": 128.6,
+    "tier_pricing": {
+      "qty_25": 32.0,
+      "qty_50": 29.44,
+      "qty_100": 27.2,
+      "qty_250": 25.6,
+      "qty_500": 24.0,
+      "qty_1000": 22.4,
+      "qty_5000": 19.84
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000149",
+    "name": "3D Jars 3-5 inch",
+    "category": "Jars",
+    "material": "Acrylic/Specialty",
+    "production_method": "digital",
+    "default_cost": 2.0,
+    "sell_price": 6.0,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 6.0,
+      "qty_50": 5.52,
+      "qty_100": 5.1,
+      "qty_250": 4.8,
+      "qty_500": 4.5,
+      "qty_1000": 4.2,
+      "qty_5000": 3.72
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000133",
+    "name": "3D Jars Small up to 3 inch height",
+    "category": "Jars",
+    "material": "Acrylic/Specialty",
+    "production_method": "digital",
+    "default_cost": 0.65,
+    "sell_price": 4.0,
+    "markup_pct": 515.4,
+    "tier_pricing": {
+      "qty_25": 4.0,
+      "qty_50": 3.68,
+      "qty_100": 3.4,
+      "qty_250": 3.2,
+      "qty_500": 3.0,
+      "qty_1000": 2.8,
+      "qty_5000": 2.48
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000150",
+    "name": "18.5 Ounce Jar Chubby Gorilla Clear with Black Cap",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 1.28,
+    "sell_price": 2.5,
+    "markup_pct": 95.3,
+    "tier_pricing": {
+      "qty_25": 2.5,
+      "qty_50": 2.3,
+      "qty_100": 2.125,
+      "qty_250": 2.0,
+      "qty_500": 1.875,
+      "qty_1000": 1.75,
+      "qty_5000": 1.55
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000151",
+    "name": "10 Ounce Chubby Gorilla Clear with White Cap",
+    "category": "Jars",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 1.17,
+    "sell_price": 2.5,
+    "markup_pct": 113.7,
+    "tier_pricing": {
+      "qty_25": 2.5,
+      "qty_50": 2.3,
+      "qty_100": 2.125,
+      "qty_250": 2.0,
+      "qty_500": 1.875,
+      "qty_1000": 1.75,
+      "qty_5000": 1.55
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000017",
+    "name": "100MM Chubby Gorilla Black Tube",
+    "category": "Tubes",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.22,
+    "sell_price": 0.72,
+    "markup_pct": 227.3,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000018",
+    "name": "100MM Chubby Gorilla Clear Tube Black Cap",
+    "category": "Tubes",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.22,
+    "sell_price": 0.72,
+    "markup_pct": 227.3,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000020",
+    "name": "113MM Chubby Gorilla Tube",
+    "category": "Tubes",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.22,
+    "sell_price": 0.72,
+    "markup_pct": 227.3,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000021",
+    "name": "115MM Chubby Gorilla Spiral Tube",
+    "category": "Tubes",
+    "material": "Plastic (HDPE)",
+    "production_method": "digital",
+    "default_cost": 0.39,
+    "sell_price": 0.72,
+    "markup_pct": 84.6,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000022",
+    "name": "116 Pre Roll Plastic Tube",
+    "category": "Tubes",
+    "material": "Plastic (PP)",
+    "production_method": "digital",
+    "default_cost": 0.04,
+    "sell_price": 0.1,
+    "markup_pct": 150.0,
+    "tier_pricing": {
+      "qty_25": 0.1,
+      "qty_50": 0.092,
+      "qty_100": 0.085,
+      "qty_250": 0.08,
+      "qty_500": 0.075,
+      "qty_1000": 0.07,
+      "qty_5000": 0.062
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000024",
+    "name": "120MM Chubby Gorilla Clear Glass Tube Black Cap",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.25,
+    "sell_price": 0.72,
+    "markup_pct": 188.0,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000033",
+    "name": "20x120MM Clear Glass Tube Cork Cap",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.1,
+    "sell_price": 0.3,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000034",
+    "name": "22x115MM Clear Glass Tube",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.11,
+    "sell_price": 0.3,
+    "markup_pct": 172.7,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000035",
+    "name": "27x115MM Clear Glass Tube",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.11,
+    "sell_price": 0.3,
+    "markup_pct": 172.7,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000063",
+    "name": "95MM Chubby Gorilla Clear Glass Tube Any Cap",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.34,
+    "sell_price": 0.72,
+    "markup_pct": 111.8,
+    "tier_pricing": {
+      "qty_25": 0.72,
+      "qty_50": 0.6624,
+      "qty_100": 0.612,
+      "qty_250": 0.576,
+      "qty_500": 0.54,
+      "qty_1000": 0.504,
+      "qty_5000": 0.4464
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000065",
+    "name": "98MM Clear Glass Tube",
+    "category": "Tubes",
+    "material": "Glass",
+    "production_method": "digital",
+    "default_cost": 0.1,
+    "sell_price": 0.3,
+    "markup_pct": 200.0,
+    "tier_pricing": {
+      "qty_25": 0.3,
+      "qty_50": 0.276,
+      "qty_100": 0.255,
+      "qty_250": 0.24,
+      "qty_500": 0.225,
+      "qty_1000": 0.21,
+      "qty_5000": 0.186
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  },
+  {
+    "sku": "210000000066",
+    "name": "98MM Plastic Pop-Top Tube",
+    "category": "Tubes",
+    "material": "Plastic (PP)",
+    "production_method": "digital",
+    "default_cost": 0.05,
+    "sell_price": 0.1,
+    "markup_pct": 100.0,
+    "tier_pricing": {
+      "qty_25": 0.1,
+      "qty_50": 0.092,
+      "qty_100": 0.085,
+      "qty_250": 0.08,
+      "qty_500": 0.075,
+      "qty_1000": 0.07,
+      "qty_5000": 0.062
+    },
+    "lead_time_days": null,
+    "min_qty": 25,
+    "source_link": null,
+    "notes": null
+  }
+];
+
+// ── End Packaging Catalog Seed Data ────────────────────────
+
 // Get filtered materials for a product type
 function getMaterialsForProduct(productType, facility = '') {
   const pt = PRODUCT_TYPES[productType];
@@ -2463,6 +4035,66 @@ function getInvoice(id) { return _get('invoices', id); }
 function getAllInvoices() { return _getAll('invoices'); }
 function updateInvoice(id, changes) { return _update('invoices', id, changes); }
 function deleteInvoice(id) { return _delete('invoices', id); }
+
+// ── Packaging Catalog CRUD (PUL-715) ────────────────────────
+// Table: packaging_products  — Bags / Jars / Tubes catalog with tiered pricing
+
+function addPackagingProduct(product) {
+  product.active = product.active !== false;
+  product.createdAt = new Date().toISOString();
+  return _add('packaging_products', product);
+}
+function getAllPackagingProducts() { return _getAll('packaging_products'); }
+function getPackagingProduct(id) { return _get('packaging_products', id); }
+function updatePackagingProduct(id, changes) { return _update('packaging_products', id, changes); }
+function deletePackagingProduct(id) { return _delete('packaging_products', id); }
+
+/**
+ * Returns active packaging products filtered by category (case-insensitive).
+ * Category values: 'Bags', 'Jars', 'Tubes', '' = all categories
+ */
+async function getActivePackagingProducts(category = '') {
+  const all = await getAllPackagingProducts();
+  return all.filter(p => p.active !== false && (!category || p.category === category));
+}
+
+/**
+ * Look up the tiered sale price for a SKU at a given quantity.
+ * Tier breaks: 25, 50, 100, 250, 500, 1000, 5000
+ * Returns sell_price (base) if no tier matches.
+ */
+function getPackagingTierPrice(product, qty) {
+  const tiers = product.tier_pricing || {};
+  const breaks = [
+    [5000, tiers.qty_5000],
+    [1000, tiers.qty_1000],
+    [500,  tiers.qty_500],
+    [250,  tiers.qty_250],
+    [100,  tiers.qty_100],
+    [50,   tiers.qty_50],
+    [25,   tiers.qty_25],
+  ];
+  // Walk from highest qty down — first break where qty >= threshold wins
+  for (const [threshold, price] of breaks) {
+    if (qty >= threshold && price != null) return price;
+  }
+  return product.sell_price || 0;
+}
+
+/**
+ * Seed the packaging catalog from the embedded JSON if the store is empty.
+ * Idempotent — skips if packaging_products already has rows.
+ * Data sourced from product-catalog-v2.json (68 SKUs, generated 2026-04-27).
+ */
+async function seedPackagingCatalogIfEmpty() {
+  const existing = await getAllPackagingProducts();
+  if (existing.length > 0) return;
+  for (const p of PACKAGING_CATALOG_SEED) {
+    await addPackagingProduct({ ...p });
+  }
+}
+
+// ── End Packaging Catalog CRUD ───────────────────────────────
 
 async function getInvoiceByOrderId(orderId) {
   const all = await getAllInvoices();
