@@ -282,6 +282,22 @@
   </div>
 </div>
 
+<!-- Approve / Decline Confirm Modal -->
+<div id="statusConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:26px;max-width:420px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <h3 id="scmTitle" style="margin:0 0 10px;font-size:17px;font-weight:800;"></h3>
+    <p id="scmBody" style="font-size:13px;color:#374151;margin:0 0 16px;line-height:1.5;"></p>
+    <div id="scmDeclineReasonRow" style="display:none;margin-bottom:16px;">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px;">Decline reason (optional)</label>
+      <textarea id="scmDeclineReason" rows="2" placeholder="e.g. Customer requested revisions, price too high…" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeStatusConfirmModal()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="scmConfirmBtn" onclick="confirmStatusAction()" style="padding:8px 20px;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;color:#fff;"></button>
+    </div>
+  </div>
+</div>
+
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('quotes');
@@ -677,9 +693,18 @@ function renderQuoteList() {
             <div style="font-size:12px;font-weight:700;color:var(--accent);">${qt.total ? '$'+Number(qt.total).toLocaleString() : '—'}</div>
             <div>${statusBadgeHtml(qt.status)}</div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;">
-              <button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
-              ${qt.status !== 'converted' ? `<button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">📤 Send</button>` : ''}
-              ${qt.status === 'approved' ? `<button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">📋 To Order</button>` : ''}
+              ${qt.status !== 'converted' ? `<button onclick="editQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;">Edit</button>` : ''}
+              ${qt.status === 'draft' ? `<button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">📤 Send</button>` : ''}
+              ${qt.status === 'sent' ? `
+                <button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;">🔁 Resend</button>
+                <button onclick="showApproveConfirm('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;" data-requires-am="true">✅ Approve</button>
+                <button onclick="showDeclineConfirm('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#dc2626;color:#fff;border:none;">✗ Decline</button>
+              ` : ''}
+              ${qt.status === 'approved' ? `
+                <button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">📋 To Order</button>
+                <button onclick="printQuotePdf('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;">📄 Print/PDF</button>
+              ` : ''}
+              ${qt.status === 'declined' ? `<button onclick="resendQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">🔁 Re-send</button>` : ''}
               ${qt.status === 'converted' ? '<span style="font-size:11px;color:#7c3aed;">✓ Converted</span>' : ''}
             </div>
           </div>`).join('')}
@@ -1105,6 +1130,13 @@ function saveQuote(status) {
     createdAt: _editingQuoteId ? (_quotes.find(x=>x.quoteId===_editingQuoteId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+  // preserve status-transition audit fields from existing record so they survive Edit saves
+  const _existingQt = _quotes.find(x => x.quoteId === quoteId);
+  if (_existingQt) {
+    for (const _af of ['approvedAt','approvedBy','declinedAt','declinedBy','declineReason','sentAt','sentVia']) {
+      if (_existingQt[_af] != null) qt[_af] = _existingQt[_af];
+    }
+  }
   if (_editingQuoteId) {
     const idx = _quotes.findIndex(x => x.quoteId === _editingQuoteId);
     if (idx >= 0) _quotes[idx] = qt; else _quotes.unshift(qt);
@@ -1215,6 +1247,134 @@ function closeSendModal() {
   document.getElementById('sendEmailBtn').style.display = '';
   document.getElementById('sendTextBtn').style.display = '';
   renderQuoteList();
+}
+
+// ── Approve / Decline State Machine ──────────────────────────────────────────
+// requiresAccountManager: true — ready for PUL-679 RBAC; any signed-in user for now
+const VALID_TRANSITIONS = {
+  draft:     ['sent', 'declined'],
+  sent:      ['approved', 'declined', 'sent'],
+  approved:  ['converted', 'declined'],
+  declined:  ['sent'],
+  converted: [],
+};
+
+function showToast(msg, color) {
+  let t = document.getElementById('pulseToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'pulseToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;transition:opacity 0.3s;pointer-events:none;color:#fff;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = color || '#1f2937';
+  t.style.opacity = '1';
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(() => { t.style.opacity = '0'; }, 2800);
+}
+
+let _scmAction = null; // 'approve' | 'decline'
+let _scmQuoteId = null;
+
+function showApproveConfirm(quoteId) {
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  if (!qt) return;
+  if (!VALID_TRANSITIONS[qt.status]?.includes('approved')) {
+    showToast(`⛔ Cannot approve a ${qt.status} quote.`, '#dc2626'); return;
+  }
+  _scmAction = 'approve';
+  _scmQuoteId = quoteId;
+  document.getElementById('scmTitle').textContent = '✅ Approve Quote';
+  document.getElementById('scmBody').textContent = 'Mark this quote as Approved? Customer will be moved to next stage.';
+  document.getElementById('scmDeclineReasonRow').style.display = 'none';
+  const btn = document.getElementById('scmConfirmBtn');
+  btn.textContent = 'Approve';
+  btn.style.background = '#16a34a';
+  document.getElementById('statusConfirmModal').style.display = 'flex';
+}
+
+function showDeclineConfirm(quoteId) {
+  loadQuotes();
+  const qt = _quotes.find(x => x.quoteId === quoteId);
+  if (!qt) return;
+  if (!VALID_TRANSITIONS[qt.status]?.includes('declined')) {
+    showToast(`⛔ Cannot decline a ${qt.status} quote.`, '#dc2626'); return;
+  }
+  _scmAction = 'decline';
+  _scmQuoteId = quoteId;
+  document.getElementById('scmTitle').textContent = '✗ Decline Quote';
+  document.getElementById('scmBody').textContent = 'Mark this quote as Declined? You can re-open and re-send if needed.';
+  document.getElementById('scmDeclineReason').value = '';
+  document.getElementById('scmDeclineReasonRow').style.display = 'block';
+  const btn = document.getElementById('scmConfirmBtn');
+  btn.textContent = 'Decline';
+  btn.style.background = '#dc2626';
+  document.getElementById('statusConfirmModal').style.display = 'flex';
+}
+
+function closeStatusConfirmModal() {
+  document.getElementById('statusConfirmModal').style.display = 'none';
+  _scmAction = null;
+  _scmQuoteId = null;
+}
+
+function confirmStatusAction() {
+  if (!_scmAction || !_scmQuoteId) return;
+  loadQuotes();
+  const idx = _quotes.findIndex(x => x.quoteId === _scmQuoteId);
+  if (idx < 0) { closeStatusConfirmModal(); return; }
+  const qt = _quotes[idx];
+  const now = new Date().toISOString();
+  // RBAC stub: real user resolution via PUL-679; for now fall back to 'admin'
+  const byUser = (typeof getCurrentUserId === 'function' ? getCurrentUserId() : null) || 'admin';
+
+  if (_scmAction === 'approve') {
+    if (!VALID_TRANSITIONS[qt.status]?.includes('approved')) {
+      showToast(`⛔ Cannot approve a ${qt.status} quote.`, '#dc2626');
+      closeStatusConfirmModal(); return;
+    }
+    _quotes[idx].status = 'approved';
+    _quotes[idx].approvedAt = now;
+    _quotes[idx].approvedBy = byUser;
+    saveQuotes();
+    showToast('✅ Quote approved.', '#16a34a');
+  } else if (_scmAction === 'decline') {
+    if (!VALID_TRANSITIONS[qt.status]?.includes('declined')) {
+      showToast(`⛔ Cannot decline a ${qt.status} quote.`, '#dc2626');
+      closeStatusConfirmModal(); return;
+    }
+    const reason = document.getElementById('scmDeclineReason').value.trim();
+    _quotes[idx].status = 'declined';
+    _quotes[idx].declinedAt = now;
+    _quotes[idx].declinedBy = byUser;
+    if (reason) _quotes[idx].declineReason = reason;
+    saveQuotes();
+    showToast('✗ Quote declined.', '#dc2626');
+  }
+  closeStatusConfirmModal();
+  renderQuoteList();
+  renderQuoteAlertBanner();
+}
+
+function resendQuote(quoteId) {
+  loadQuotes();
+  const idx = _quotes.findIndex(x => x.quoteId === quoteId);
+  if (idx < 0) return;
+  const qt = _quotes[idx];
+  if (!VALID_TRANSITIONS[qt.status]?.includes('sent')) {
+    showToast(`⛔ Cannot re-send a ${qt.status} quote.`, '#dc2626'); return;
+  }
+  // re-open to draft then trigger send modal
+  _quotes[idx].status = 'draft';
+  saveQuotes();
+  showSendModal(quoteId);
+}
+
+// Stub — real implementation out of scope for PUL-709
+function printQuotePdf(quoteId) {
+  showToast('📄 Print/PDF: coming soon.', '#6b7280');
 }
 
 // convertToOrder() and createJobTicketFromOrder() moved to Gate 2/3 script block at bottom of file.
@@ -1605,6 +1765,7 @@ function confirmGate3() {
 // Close gate modals on overlay click
 document.getElementById('gate2Modal').addEventListener('click', function(e){ if(e.target===this) closeGate2Modal(); });
 document.getElementById('gate3Modal').addEventListener('click', function(e){ if(e.target===this) closeGate3Modal(); });
+document.getElementById('statusConfirmModal').addEventListener('click', function(e){ if(e.target===this) closeStatusConfirmModal(); });
 </script>
 
 <script src="pulse-benchmark.js"></script>
