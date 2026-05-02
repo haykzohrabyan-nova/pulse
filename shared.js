@@ -4524,3 +4524,14 @@ function renderNextStepBanner(nextMachine, nextOperation) {
 
 // Auto-seed Personnel DB from OPERATOR_PROFILES on every page load (idempotent — skips if already seeded)
 document.addEventListener('DOMContentLoaded', () => { seedPersonnelFromProfiles().catch(() => {}); });
+
+// ── PUL-710: Company logo helper ─────────────────────────────
+// Returns the branding-directory path for a given company key,
+// relative to the v3 root (same directory as shared.js).
+function getCompanyLogo(companyKey) {
+  const paths = {
+    bazaar: 'branding/bazaar-logo.png',
+    pixel:  'branding/pixelpress-logo.png',
+  };
+  return paths[companyKey] || null;
+}
