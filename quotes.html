@@ -75,7 +75,10 @@
         <h3 id="quoteFormTitle" style="margin:0;font-size:17px;font-weight:700;">New Quote</h3>
         <span id="quoteStateBadge" style="display:none;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span>
       </div>
-      <button class="btn" onclick="showQuoteList()">← Back to Quotes</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn" id="printQuoteBtn" style="display:none;background:#6b7280;color:#fff;border:none;" onclick="printQuotePdf(_editingQuoteId)">📄 Print Quote</button>
+        <button class="btn" onclick="showQuoteList()">← Back to Quotes</button>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -85,7 +88,7 @@
         <div class="form-section">
           <h3 class="section-title">👤 Customer Info</h3>
           <div class="form-row">
-            <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required oninput="checkCustomerExemption()"></div>
+            <div class="field"><label>Customer Name *</label><input type="text" id="q_customer" placeholder="e.g. West Coast Edibles" required oninput="checkCustomerExemption()" autocomplete="off" list="q_customer_list"><datalist id="q_customer_list"></datalist></div>
           </div>
           <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="field"><label>Email</label><input type="email" id="q_email" placeholder="customer@email.com"></div>
@@ -98,7 +101,7 @@
           </div>
           <div class="form-row">
             <div class="field"><label>Company *</label>
-              <select id="q_company" onchange="updateCompanyLogo()">
+              <select id="q_company" onchange="updateCompanyLogo();filterRepsByCompany()">
                 <option value="">— Select Company —</option>
                 <option value="bazaar">Bazaar Printing</option>
                 <option value="pixel">Pixel Press Print</option>
@@ -181,8 +184,9 @@
               <input type="number" id="q_height" step="0.125" min="0" placeholder='e.g. 3' style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
             </div>
             <div class="field">
-              <label style="font-size:11px;">Quantity (units)</label>
+              <label style="font-size:11px;">Order Qty <span style="color:#9ca3af;font-weight:400;">(total ref)</span></label>
               <input type="number" id="q_qty_main" min="1" placeholder="e.g. 1000" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Overall job qty for benchmarks. Per-SKU qty is set below.</div>
             </div>
           </div>
         </div>
@@ -225,11 +229,11 @@
         <div class="form-section">
           <h3 class="section-title">✨ Special Finishing</h3>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_lamination"> Lamination</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_uv"> UV Coating</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_foil"> Foil Stamping</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_fin_perforation"> Perforation</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><input type="checkbox" id="q_addon_scodix"> Scodix</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="q_fin_lamination"> Lamination</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="q_fin_uv"> UV Coating</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="q_fin_foil"> Foil Stamping</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="q_fin_perforation"> Perforation</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="q_addon_scodix"> Scodix</label>
           </div>
         </div>
 
@@ -512,6 +516,13 @@ function populateRepDropdown() {
   });
 }
 
+function populateCustomerAutocomplete() {
+  const dl = document.getElementById('q_customer_list');
+  if (!dl) return;
+  const names = [...new Set((_quotes || []).map(q => q.customer).filter(Boolean))].sort();
+  dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+}
+
 function setQuoteFilter(f) {
   _quoteFilter = f;
   document.querySelectorAll('.qp-filter-btn[data-qf]').forEach(b => b.classList.toggle('active', b.dataset.qf === f));
@@ -594,6 +605,36 @@ function updateFormStateBadge(status) {
   badge.style.color = c.color;
   badge.style.border = `1px solid ${c.border}`;
   badge.style.display = '';
+}
+
+// Maps company value → rep names for that company. Extend as reps are assigned to companies.
+// 'all' means the rep works for both companies.
+const REP_COMPANY_MAP = {
+  'Gary Gharibyan':   'all',
+  'Ernesto Flores':   'all',
+  'Bob Werner':       'all',
+  'Tiko':             'all',
+  'Tigran Zohrabyan': 'all',
+};
+
+function filterRepsByCompany() {
+  const company = document.getElementById('q_company').value;
+  const sel = document.getElementById('q_rep');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select Rep —</option>';
+  Object.entries(OPERATOR_PROFILES)
+    .filter(([,p]) => p.role === 'account-manager' || p.role === 'supervisor')
+    .filter(([name]) => {
+      if (!company) return true;
+      const mapping = REP_COMPANY_MAP[name];
+      return !mapping || mapping === 'all' || mapping === company;
+    })
+    .forEach(([name]) => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      if (name === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
 }
 
 function updateCompanyLogo() {
@@ -699,13 +740,14 @@ function renderQuoteList() {
                 <button onclick="showSendModal('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;">🔁 Resend</button>
                 <button onclick="showApproveConfirm('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;" data-requires-am="true">✅ Approve</button>
                 <button onclick="showDeclineConfirm('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#dc2626;color:#fff;border:none;">✗ Decline</button>
+                <button onclick="printQuotePdf('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;">📄 Print</button>
               ` : ''}
               ${qt.status === 'approved' ? `
                 <button onclick="editQuoteAndConvert('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#16a34a;color:#fff;border:none;">📋 To Order</button>
                 <button onclick="printQuotePdf('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;">📄 Print/PDF</button>
               ` : ''}
               ${qt.status === 'declined' ? `<button onclick="resendQuote('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#2563eb;color:#fff;border:none;">🔁 Re-send</button>` : ''}
-              ${qt.status === 'converted' ? '<span style="font-size:11px;color:#7c3aed;">✓ Converted</span>' : ''}
+              ${qt.status === 'converted' ? `<span style="font-size:11px;color:#7c3aed;">✓ Converted</span><button onclick="printQuotePdf('${qt.quoteId}')" class="btn btn-sm" style="font-size:11px;background:#6b7280;color:#fff;border:none;margin-left:4px;">📄 Print</button>` : ''}
             </div>
           </div>`).join('')}
       </div>`;
@@ -713,6 +755,7 @@ function renderQuoteList() {
 
 function showNewQuoteForm() {
   _editingQuoteId = null;
+  populateCustomerAutocomplete();
   document.getElementById('quoteFormTitle').textContent = 'New Quote';
   document.getElementById('q_customer').value = '';
   document.getElementById('q_email').value = '';
@@ -749,6 +792,7 @@ function showNewQuoteForm() {
   syncAllAddonCards();
   document.getElementById('convertBtn').style.display = 'none';
   document.getElementById('sendBtn').style.display = 'none';
+  document.getElementById('printQuoteBtn').style.display = 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
   addLineItem();
@@ -800,6 +844,7 @@ function editQuote(quoteId) {
   syncAllAddonCards();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
   document.getElementById('sendBtn').style.display = qt.status !== 'converted' ? '' : 'none';
+  document.getElementById('printQuoteBtn').style.display = ['sent','approved','converted'].includes(qt.status) ? '' : 'none';
   _lineItemCount = 0;
   document.getElementById('lineItems').innerHTML = '';
   (qt.lineItems || [{}]).forEach(li => addLineItem(li));
@@ -962,8 +1007,13 @@ function addLineItem(data = {}) {
         </div>
         <div style="font-size:10px;color:#6b7280;margin-top:2px;">Selecting a SKU auto-fills the sale price for the entered quantity. You may override below.</div>
       </div>
-      <!-- Pricing panel (calculator-style, internal) -->
+      <!-- Customer-facing charge description — visible to customer; placed above internal pricing panel -->
       <div class="field" style="grid-column:span 2;">
+        <label style="font-size:10px;color:#374151;font-weight:600;display:block;margin-bottom:3px;">Customer-facing charge description <span style="color:#9ca3af;font-weight:400;">(auto-generated, editable)</span></label>
+        <input type="text" id="li_chargeDesc_${id}" value="${data.chargeDesc||''}" placeholder="e.g. 4&quot; × 3&quot; Labels (Roll), 1000 units, Gloss Lamination, 2-sided CMYK" oninput="this.dataset.manuallyEdited='1'" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;background:#fffbeb;">
+      </div>
+      <!-- Pricing panel (calculator-style, internal only — hidden in customer print/PDF view) -->
+      <div class="field" style="grid-column:span 2;" data-internal="true">
         <label style="font-size:11px;">Unit Price</label>
         <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px;margin-top:4px;">
           <div style="display:grid;grid-template-columns:1fr auto;gap:3px;font-size:11px;color:#374151;margin-bottom:8px;">
@@ -976,23 +1026,19 @@ function addLineItem(data = {}) {
             <input type="number" id="li_price_${id}" value="${data.price||''}" placeholder="0.0000" step="0.0001" oninput="updatePricePanel(${id});calcTotal()" style="padding:4px 8px;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;width:100px;">
           </div>
           <div id="li_priceFinal_${id}" style="margin-top:6px;font-size:11px;padding:5px 8px;background:#fff;border-radius:6px;display:none;"></div>
-          <div style="margin-top:6px;font-size:10px;color:#94a3b8;border-top:1px solid #e0e7ff;padding-top:5px;">🔒 Internal — rates are reference estimates; verify with pricing calculator before quoting</div>
+          <div style="margin-top:6px;font-size:10px;color:#94a3b8;border-top:1px solid #e0e7ff;padding-top:5px;" data-internal="true">🔒 Internal — rates are reference estimates; verify with pricing calculator before quoting</div>
         </div>
       </div>
     </div>
     <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;font-size:12px;align-items:center;">
-      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_uv_${id}" ${data.finUV?'checked':''} onchange="updatePricePanel(${id})"> UV Coating</label>
-      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_foil_${id}" ${data.finFoil?'checked':''}> Foil</label>
-      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_perf_${id}" ${data.finPerforation?'checked':''}> Perforation</label>
-      <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="li_scodix_${id}" ${data.finScodix?'checked':''}> Scodix</label>
+      <label style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="li_uv_${id}" ${data.finUV?'checked':''} onchange="updatePricePanel(${id})"> UV Coating</label>
+      <label style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="li_foil_${id}" ${data.finFoil?'checked':''}> Foil</label>
+      <label style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="li_perf_${id}" ${data.finPerforation?'checked':''}> Perforation</label>
+      <label style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="li_scodix_${id}" ${data.finScodix?'checked':''}> Scodix</label>
       <input type="text" id="li_foilNotes_${id}" value="${data.finFoilNotes||''}" placeholder="Foil type / notes" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;flex:1;min-width:100px;">
     </div>
     <div style="margin-top:8px;">
       <input type="text" id="li_pantone_${id}" value="${data.pantone||''}" placeholder="Special Color / Pantone (optional)" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;">
-    </div>
-    <div style="margin-top:8px;">
-      <label style="font-size:10px;color:#6b7280;display:block;margin-bottom:3px;">Customer-facing charge description (auto-generated, editable)</label>
-      <input type="text" id="li_chargeDesc_${id}" value="${data.chargeDesc||''}" placeholder="e.g. 4&quot; × 3&quot; Labels (Roll), 1000 units, Gloss Lamination, 2-sided CMYK" oninput="this.dataset.manuallyEdited='1'" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box;background:#fffbeb;">
     </div>
     <div style="text-align:right;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;" id="li_subtotal_${id}"></div>
   `;
@@ -1166,6 +1212,7 @@ function saveQuote(status) {
   saveQuotes();
   document.getElementById('convertBtn').style.display = qt.status === 'approved' ? '' : 'none';
   document.getElementById('sendBtn').style.display = qt.status !== 'converted' ? '' : 'none';
+  document.getElementById('printQuoteBtn').style.display = ['sent','approved','converted'].includes(qt.status) ? '' : 'none';
   updateFormStateBadge(qt.status);
   showSendModal(quoteId);
 }
@@ -1213,6 +1260,8 @@ function _markQuoteSent(quoteId, via) {
   const statusEl = document.getElementById('q_status');
   if (statusEl) statusEl.value = 'sent';
   updateFormStateBadge('sent');
+  const _pb = document.getElementById('printQuoteBtn');
+  if (_pb) _pb.style.display = '';
 }
 
 function sendQuoteByEmail() {
@@ -1391,9 +1440,10 @@ function resendQuote(quoteId) {
   showSendModal(quoteId);
 }
 
-// Stub — real implementation out of scope for PUL-709
+// PUL-710: Open customer-facing print template in new tab
 function printQuotePdf(quoteId) {
-  showToast('📄 Print/PDF: coming soon.', '#6b7280');
+  if (!quoteId) return;
+  window.open('quote-print.html?quoteId=' + encodeURIComponent(quoteId), '_blank');
 }
 
 // convertToOrder() and createJobTicketFromOrder() moved to Gate 2/3 script block at bottom of file.
