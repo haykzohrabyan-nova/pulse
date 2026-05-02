@@ -115,8 +115,6 @@
             <div class="field"><label>Facility</label>
               <select id="q_facility">
                 <option value="">— Select —</option>
-                <option value="16th-street">16th Street</option>
-                <option value="boyd-street">Boyd Street</option>
               </select>
             </div>
             <div class="field"><label>Due Date</label><input type="date" id="q_due"></div>
@@ -497,6 +495,7 @@ function getApplicationFee() {
 window.addEventListener('DOMContentLoaded', async () => {
   loadQuotes();
   renderQuoteList();
+  populateFacilityDropdown();
   populateRepDropdown();
   populateRepFilterDropdown();
   populateContainerDropdown();
@@ -508,6 +507,20 @@ function loadQuotes() {
   try { _quotes = JSON.parse(localStorage.getItem('pulse_quotes') || '[]'); } catch(e) { _quotes = []; }
 }
 function saveQuotes() { localStorage.setItem('pulse_quotes', JSON.stringify(_quotes)); }
+
+function populateFacilityDropdown(selectedValue) {
+  const sel = document.getElementById('q_facility');
+  if (!sel) return;
+  // Preserve options already there (the blank "— Select —")
+  sel.innerHTML = '<option value="">— Select —</option>';
+  Object.entries(FACILITIES).forEach(([key, cfg]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = cfg.name || key;
+    if (key === selectedValue) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
 
 function populateRepDropdown() {
   const sel = document.getElementById('q_rep');
@@ -813,7 +826,7 @@ function editQuote(quoteId) {
   document.getElementById('q_rep').value = qt.rep || '';
   document.getElementById('q_company').value = qt.company || '';
   updateCompanyLogo();
-  document.getElementById('q_facility').value = qt.facility || '';
+  populateFacilityDropdown(qt.facility || '');
   document.getElementById('q_due').value = qt.due || '';
   document.getElementById('q_notes').value = qt.notes || '';
   document.getElementById('q_internal').value = qt.internal || '';
