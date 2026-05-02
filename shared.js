@@ -2625,14 +2625,31 @@ const THEME_CSS = `
 
   /* Navigation */
   .top-nav {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px;
     padding: 12px 24px; background: #fff; border-bottom: 2px solid #e5e7eb;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .top-nav h1 { font-size: 18px; font-weight: 700; color: var(--text); }
-  .top-nav .nav-links { display: flex; gap: 16px; }
-  .top-nav .nav-links a { font-size: 13px; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; }
-  .top-nav .nav-links a:hover, .top-nav .nav-links a.active { color: var(--accent); background: #e0edff; text-decoration: none; }
+  .top-nav .nav-links {
+    display: flex; flex-wrap: wrap; gap: 8px 14px;
+    align-items: center; flex: 1 1 auto; min-width: 0;
+    max-width: 100%;
+  }
+  .top-nav .nav-links a {
+    font-size: 13px; color: var(--text-muted);
+    padding: 6px 10px; border-radius: 6px;
+    white-space: nowrap; line-height: 1.2;
+    border: 1px solid transparent;
+  }
+  .top-nav .nav-links a:hover, .top-nav .nav-links a.active {
+    color: var(--accent); background: #e0edff; text-decoration: none;
+    border-color: #bfdbfe;
+  }
+  @media (max-width: 1100px) {
+    .top-nav { flex-wrap: wrap; }
+    .top-nav .nav-links { width: 100%; }
+  }
 
   /* Modal */
   .modal-overlay {
