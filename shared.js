@@ -2964,7 +2964,11 @@ const STATUS_LABELS = {
   'received': 'Received',
   'completed': 'Completed',
   'qc-failed': 'QC Failed',
-  'reprint': 'Reprint'
+  'reprint': 'Reprint',
+  // PUL-713/714: Order form statuses
+  'order-pending':   'Order Draft',
+  'order-priced':    'Pricing Locked',
+  'order-confirmed': 'Order Confirmed',
 };
 
 const STATUS_COLORS = {
@@ -2986,7 +2990,11 @@ const STATUS_COLORS = {
   'received': '#3fb950',
   'completed': '#8b949e',
   'qc-failed': '#f85149',
-  'reprint': '#f97316'
+  'reprint': '#f97316',
+  // PUL-713/714: Order form statuses
+  'order-pending':   '#64748b',
+  'order-priced':    '#2563eb',
+  'order-confirmed': '#16a34a',
 };
 
 // ── BroadcastChannel ───────────────────────────────────────
@@ -4448,6 +4456,10 @@ const STATUS_ICONS = {
   'completed':              '✔️',
   'qc-failed':              '❌',
   'reprint':                '🔁',
+  // PUL-713/714: Order form statuses
+  'order-pending':          '📄',
+  'order-priced':           '🔒',
+  'order-confirmed':        '✅',
 };
 
 function renderStatusBadge(status) {

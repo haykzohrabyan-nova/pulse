@@ -137,7 +137,7 @@
       <h2 id="modalTitle" style="margin:0;font-size:18px;font-weight:700;"></h2>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-sm" id="modalInvoiceBtn" onclick="openInvoice()" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;">📋 Invoice</button>
-        <button class="btn btn-primary btn-sm" id="modalEditBtn" onclick="openJobTicket()">Open Job Ticket</button>
+        <button class="btn btn-primary btn-sm" id="modalEditBtn" onclick="openJobTicket()" id="modalEditBtn">Open Order / Job Ticket</button>
         <button class="btn btn-sm" onclick="closeDetail()">✕ Close</button>
       </div>
     </div>
@@ -330,7 +330,9 @@
 
   const STATUS_GROUPS = {
     all: null,
-    new: ['new', 'pending-confirmation', 'pending-review', 'waiting-approval'],
+    // PUL-713/714: order-form statuses map to "new"
+    new: ['new', 'pending-confirmation', 'pending-review', 'waiting-approval',
+          'order-pending', 'order-priced', 'order-confirmed'],
     prepress: ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager'],
     production: ['in-production'],
     qc: ['qc-checkout', 'qc-failed', 'reprint'],
@@ -690,7 +692,12 @@
   function openJobTicket() {
     const o = allOrders.find(x => x.id === currentOrderId);
     if (!o) return;
-    window.location.href = `job-ticket.html?order=${encodeURIComponent(o.orderId || o.id)}`;
+    const orderStatuses = ['order-pending', 'order-priced', 'order-confirmed'];
+    if (orderStatuses.includes(o.status)) {
+      window.location.href = `order-form.html?order=${encodeURIComponent(o.orderId || o.id)}`;
+    } else {
+      window.location.href = `job-ticket.html?order=${encodeURIComponent(o.orderId || o.id)}`;
+    }
   }
 
   function openInvoice() {
@@ -700,15 +707,22 @@
   }
 
   // ── Actions ────────────────────────────────────────────────
+  // PUL-713 / PUL-714: Create Order → order-form.html (separate from Job Ticket)
   function createOrder() {
-    window.location.href = 'job-ticket.html';
+    window.location.href = 'order-form.html';
   }
 
   function editOrder(orderId, dbId) {
-    if (orderId) {
+    // Orders that have been priced or are still drafts → order-form.html
+    // Orders that have been converted to job tickets → job-ticket.html
+    const o = allOrders.find(x => x.id === dbId);
+    const orderStatuses = ['order-pending', 'order-priced', 'order-confirmed'];
+    if (o && orderStatuses.includes(o.status)) {
+      window.location.href = `order-form.html?order=${encodeURIComponent(orderId || '')}`;
+    } else if (orderId) {
       window.location.href = `job-ticket.html?order=${encodeURIComponent(orderId)}`;
     } else {
-      window.location.href = `job-ticket.html`;
+      window.location.href = `order-form.html`;
     }
   }
 
