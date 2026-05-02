@@ -1385,9 +1385,9 @@ function resendQuote(quoteId) {
   if (!VALID_TRANSITIONS[qt.status]?.includes('sent')) {
     showToast(`⛔ Cannot re-send a ${qt.status} quote.`, '#dc2626'); return;
   }
-  // re-open to draft then trigger send modal
-  _quotes[idx].status = 'draft';
-  saveQuotes();
+  // Open the send modal directly — _markQuoteSent() will write 'sent' on confirm.
+  // Do NOT pre-transition to draft: if the user cancels the modal the quote would
+  // be stuck in 'draft' instead of remaining 'declined'.
   showSendModal(quoteId);
 }
 
