@@ -33,6 +33,8 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 | `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed 21 team members into auth.users |
 | `migrations/009_instagram_leads.sql` | **PRI-256** — Instagram leads pipeline table |
 | `migrations/010_workflow_objects.sql` | **PRI-262** — Phase 1+4: leads, deals, design_tasks, proofs, proof_versions, proof_approval_events, shipping_tasks, post_sale_tasks |
+| `migrations/011_packaging_catalog.sql` | **PUL-715** — `packaging_products` table: Bags/Jars/Tubes catalog with tiered pricing, RLS, realtime |
+| `migrations/011_packaging_catalog_seed.sql` | **PUL-715** — Seed 68 SKUs from product-catalog-v2.json (Bags 23, Jars 33, Tubes 12) |
 | `migrations/006_vendor_purchasing_intelligence.sql` | **PRI-247** — Vendor master, material catalog, price records, receiving; extends purchase_orders + purchase_order_items |
 | `migrations/007_vendor_purchasing_rls.sql` | **PRI-247** — RLS policies for vendor purchasing tables |
 | `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed all 21 Pulse team members into auth.users (temp password `Pulse2026!`); fixes qc-failed enum bug from 003 |

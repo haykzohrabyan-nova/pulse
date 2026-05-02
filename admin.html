@@ -22,6 +22,7 @@
     <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
     <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
+    <button class="tab-btn" data-tab="packaging-catalog" onclick="switchTab('packaging-catalog')">🫙 Packaging Catalog</button>
     <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
@@ -173,6 +174,133 @@
 
     <!-- ══════════════════════════════════════ SETTINGS ══ -->
     <!-- ═══ QA SIGN-OFF RULES TAB ═════════════════════════════════ -->
+    <!-- ════════════════════════ PACKAGING CATALOG TAB ═══════════ -->
+<div class="tab-pane" id="tab-packaging-catalog">
+  <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div>
+      <h2>🫙 Packaging Catalog</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:0;">Jars / Tubes / Bags — cost &amp; tiered sale pricing for rep quoting</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select id="pkgCatFilter" onchange="renderPackagingTable()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <option value="">All Categories</option>
+        <option value="Bags">Bags</option>
+        <option value="Jars">Jars</option>
+        <option value="Tubes">Tubes</option>
+        <option value="Labels">Labels</option>
+        <option value="Pouches">Pouches</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="text" id="pkgSearch" placeholder="Search SKU or name..." oninput="renderPackagingTable()"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="pkgShowInactive" onchange="renderPackagingTable()"> Show inactive
+      </label>
+      <button class="btn" onclick="openPackagingModal(null)">+ Add SKU</button>
+      <button class="btn" onclick="document.getElementById('pkgCsvInput').click()" title="Import from CSV">&#8679; CSV Import</button>
+      <input type="file" id="pkgCsvInput" accept=".csv" style="display:none;" onchange="importPackagingCsv(this)">
+      <button class="btn" onclick="exportPackagingCsv()" title="Export to CSV">&#8681; CSV Export</button>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;" id="pkgSummaryLine"></div>
+  <div class="table-wrap">
+    <table class="data-table" id="pkgTable">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Material</th>
+          <th style="text-align:right;">Cost</th>
+          <th style="text-align:right;">@25</th>
+          <th style="text-align:right;">@100</th>
+          <th style="text-align:right;">@500</th>
+          <th style="text-align:right;">@1000</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pkgTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Packaging Product Modal -->
+<div class="modal" id="packagingModal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="pkgModalTitle">Add Packaging Product</h3>
+      <button class="modal-close" onclick="closePackagingModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <input type="hidden" id="pkgId">
+      <div class="field" style="grid-column:span 2;">
+        <label>SKU *</label>
+        <input type="text" id="pkgSku" placeholder="e.g. 210000000006" style="font-family:monospace;">
+      </div>
+      <div class="field" style="grid-column:span 2;">
+        <label>Name *</label>
+        <input type="text" id="pkgName" placeholder="e.g. 1 Gram Bag">
+      </div>
+      <div class="field">
+        <label>Category *</label>
+        <select id="pkgCategory">
+          <option value="Bags">Bags</option>
+          <option value="Jars">Jars</option>
+          <option value="Tubes">Tubes</option>
+          <option value="Labels">Labels</option>
+          <option value="Pouches">Pouches</option>
+          <option value="Cartons">Cartons</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Material</label>
+        <input type="text" id="pkgMaterial" placeholder="e.g. Mylar, Glass, Plastic">
+      </div>
+      <div class="field">
+        <label>Cost per unit (internal) $</label>
+        <input type="number" id="pkgCost" step="0.0001" min="0" placeholder="0.0000">
+      </div>
+      <div class="field">
+        <label>Min Qty</label>
+        <input type="number" id="pkgMinQty" value="25" min="1">
+      </div>
+      <div class="field" style="grid-column:span 2;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px;">
+        <label style="font-weight:700;color:#1d4ed8;">Tiered Sale Prices ($/unit)</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">
+          <div><label style="font-size:10px;color:#6b7280;">@ 25</label><input type="number" id="pkgP25" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 50</label><input type="number" id="pkgP50" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 100</label><input type="number" id="pkgP100" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 250</label><input type="number" id="pkgP250" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 500</label><input type="number" id="pkgP500" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 1,000</label><input type="number" id="pkgP1000" step="0.0001" min="0" placeholder="0.00"></div>
+          <div><label style="font-size:10px;color:#6b7280;">@ 5,000</label><input type="number" id="pkgP5000" step="0.0001" min="0" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Lead Time (days)</label>
+        <input type="number" id="pkgLeadTime" min="0" placeholder="e.g. 7">
+      </div>
+      <div class="field">
+        <label>Active</label>
+        <select id="pkgActive">
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:span 2;">
+        <label>Notes</label>
+        <textarea id="pkgNotes" rows="2" style="width:100%;box-sizing:border-box;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closePackagingModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePackagingProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="tab-pane" id="tab-qa-rules">
   <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;">
     <div>
@@ -585,6 +713,7 @@ async function loadTab(tab) {
   else if (tab === 'settings') await loadSettings();
   else if (tab === 'qa-rules') renderQARules();
   else if (tab === 'roles') renderRoles();
+  else if (tab === 'packaging-catalog') await loadPackagingCatalog();
 }
 
 async function renderAdminAlerts() {
@@ -1767,6 +1896,238 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     if (e.target === overlay) overlay.classList.remove('active');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// PACKAGING CATALOG — PUL-715
+// ─────────────────────────────────────────────────────────────────
+
+async function loadPackagingCatalog() {
+  await seedPackagingCatalogIfEmpty();
+  await renderPackagingTable();
+}
+
+async function renderPackagingTable() {
+  const catFilter  = document.getElementById('pkgCatFilter')?.value || '';
+  const searchQ    = (document.getElementById('pkgSearch')?.value || '').toLowerCase();
+  const showInactive = document.getElementById('pkgShowInactive')?.checked;
+
+  const all = await getAllPackagingProducts();
+  let rows = all.filter(p => {
+    if (!showInactive && p.active === false) return false;
+    if (catFilter && p.category !== catFilter) return false;
+    if (searchQ) {
+      const haystack = `${p.sku} ${p.name} ${p.material || ''}`.toLowerCase();
+      if (!haystack.includes(searchQ)) return false;
+    }
+    return true;
+  });
+
+  const tbody = document.getElementById('pkgTableBody');
+  if (!tbody) return;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:20px;">No products found.</td></tr>';
+    const summary = document.getElementById('pkgSummaryLine');
+    if (summary) summary.textContent = '';
+    return;
+  }
+
+  const fmt = v => v != null ? '$' + Number(v).toFixed(4) : '—';
+  const fmtShort = v => v != null ? '$' + Number(v).toFixed(2) : '—';
+
+  tbody.innerHTML = rows.map(p => {
+    const t = p.tier_pricing || {};
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;">${escHtml(p.sku || '')}</td>
+      <td style="font-weight:600;">${escHtml(p.name || '')}</td>
+      <td><span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-size:11px;">${escHtml(p.category || '')}</span></td>
+      <td style="font-size:12px;color:var(--text-muted);">${escHtml(p.material || '—')}</td>
+      <td style="text-align:right;font-size:12px;color:#6b7280;font-style:italic;" title="Internal cost — not shown to customers">${fmt(p.default_cost)}</td>
+      <td style="text-align:right;font-size:12px;font-weight:600;">${fmtShort(t.qty_25 ?? p.sell_price)}</td>
+      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_100)}</td>
+      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_500)}</td>
+      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_1000)}</td>
+      <td><span class="${p.active !== false ? 'status-active' : 'status-inactive'}">${p.active !== false ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <button class="btn btn-sm" onclick="editPackagingProduct(${p.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePackagingProductConfirm(${p.id}, '${(p.name||'').replace(/'/g,"\'")}')"'>Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Summary
+  const byCategory = {};
+  rows.forEach(p => { byCategory[p.category] = (byCategory[p.category] || 0) + 1; });
+  const summaryText = Object.entries(byCategory).map(([c, n]) => `${c}: ${n}`).join(' · ');
+  const summary = document.getElementById('pkgSummaryLine');
+  if (summary) summary.textContent = `${rows.length} product(s) · ${summaryText}`;
+}
+
+function openPackagingModal(product) {
+  const modal = document.getElementById('packagingModal');
+  if (!modal) return;
+  const t = product?.tier_pricing || {};
+  document.getElementById('pkgModalTitle').textContent = product ? 'Edit Packaging Product' : 'Add Packaging Product';
+  document.getElementById('pkgId').value         = product?.id || '';
+  document.getElementById('pkgSku').value        = product?.sku || '';
+  document.getElementById('pkgName').value       = product?.name || '';
+  document.getElementById('pkgCategory').value   = product?.category || 'Bags';
+  document.getElementById('pkgMaterial').value   = product?.material || '';
+  document.getElementById('pkgCost').value       = product?.default_cost ?? '';
+  document.getElementById('pkgMinQty').value     = product?.min_qty ?? 25;
+  document.getElementById('pkgP25').value        = t.qty_25   ?? product?.sell_price ?? '';
+  document.getElementById('pkgP50').value        = t.qty_50   ?? '';
+  document.getElementById('pkgP100').value       = t.qty_100  ?? '';
+  document.getElementById('pkgP250').value       = t.qty_250  ?? '';
+  document.getElementById('pkgP500').value       = t.qty_500  ?? '';
+  document.getElementById('pkgP1000').value      = t.qty_1000 ?? '';
+  document.getElementById('pkgP5000').value      = t.qty_5000 ?? '';
+  document.getElementById('pkgLeadTime').value   = product?.lead_time_days ?? '';
+  document.getElementById('pkgActive').value     = product?.active === false ? 'false' : 'true';
+  document.getElementById('pkgNotes').value      = product?.notes || '';
+  modal.classList.add('active');
+}
+
+function closePackagingModal() {
+  document.getElementById('packagingModal')?.classList.remove('active');
+}
+
+async function editPackagingProduct(id) {
+  const all = await getAllPackagingProducts();
+  const p = all.find(x => x.id === id);
+  if (p) openPackagingModal(p);
+}
+
+async function savePackagingProduct() {
+  const sku  = document.getElementById('pkgSku').value.trim();
+  const name = document.getElementById('pkgName').value.trim();
+  if (!sku || !name) { alert('SKU and Name are required.'); return; }
+
+  const parsePrice = id => {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? null : v;
+  };
+
+  const tier_pricing = {
+    qty_25:   parsePrice('pkgP25'),
+    qty_50:   parsePrice('pkgP50'),
+    qty_100:  parsePrice('pkgP100'),
+    qty_250:  parsePrice('pkgP250'),
+    qty_500:  parsePrice('pkgP500'),
+    qty_1000: parsePrice('pkgP1000'),
+    qty_5000: parsePrice('pkgP5000'),
+  };
+  // Remove null tiers
+  Object.keys(tier_pricing).forEach(k => tier_pricing[k] === null && delete tier_pricing[k]);
+
+  const data = {
+    sku,
+    name,
+    category:      document.getElementById('pkgCategory').value,
+    material:      document.getElementById('pkgMaterial').value.trim() || null,
+    default_cost:  parseFloat(document.getElementById('pkgCost').value) || 0,
+    sell_price:    tier_pricing.qty_25 || 0,
+    tier_pricing,
+    min_qty:       parseInt(document.getElementById('pkgMinQty').value) || 25,
+    lead_time_days:parsePrice('pkgLeadTime'),
+    active:        document.getElementById('pkgActive').value !== 'false',
+    notes:         document.getElementById('pkgNotes').value.trim() || null,
+  };
+
+  const id = parseInt(document.getElementById('pkgId').value) || null;
+  if (id) {
+    await updatePackagingProduct(id, data);
+  } else {
+    await addPackagingProduct(data);
+  }
+  closePackagingModal();
+  await renderPackagingTable();
+}
+
+async function deletePackagingProductConfirm(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  await deletePackagingProduct(id);
+  await renderPackagingTable();
+}
+
+// ── CSV Export ─────────────────────────────────────────────
+async function exportPackagingCsv() {
+  const all = await getAllPackagingProducts();
+  const headers = ['sku','name','category','material','default_cost','sell_price_25','sell_price_50','sell_price_100','sell_price_250','sell_price_500','sell_price_1000','sell_price_5000','min_qty','lead_time_days','active','notes'];
+  const rows = all.map(p => {
+    const t = p.tier_pricing || {};
+    return [
+      p.sku, p.name, p.category, p.material||'',
+      p.default_cost||0,
+      t.qty_25||'', t.qty_50||'', t.qty_100||'', t.qty_250||'', t.qty_500||'', t.qty_1000||'', t.qty_5000||'',
+      p.min_qty||25, p.lead_time_days||'', p.active!==false?'true':'false', p.notes||''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `packaging-catalog-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── CSV Import ─────────────────────────────────────────────
+async function importPackagingCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) { alert('CSV appears empty or header-only.'); return; }
+
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+  let imported = 0, skipped = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    // basic CSV parse (handles quoted fields)
+    const vals = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g) || [];
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').replace(/^"|"$/g,'').trim(); });
+
+    if (!row.sku || !row.name) { skipped++; continue; }
+
+    const tier_pricing = {};
+    ['25','50','100','250','500','1000','5000'].forEach(q => {
+      const v = parseFloat(row[`sell_price_${q}`]);
+      if (!isNaN(v)) tier_pricing[`qty_${q}`] = v;
+    });
+
+    const data = {
+      sku:           row.sku,
+      name:          row.name,
+      category:      row.category || 'Other',
+      material:      row.material || null,
+      default_cost:  parseFloat(row.default_cost) || 0,
+      sell_price:    tier_pricing.qty_25 || 0,
+      tier_pricing,
+      min_qty:       parseInt(row.min_qty) || 25,
+      lead_time_days:row.lead_time_days ? parseInt(row.lead_time_days) : null,
+      active:        row.active !== 'false',
+      notes:         row.notes || null,
+    };
+
+    const all = await getAllPackagingProducts();
+    const existing = all.find(p => p.sku === data.sku);
+    if (existing) {
+      await updatePackagingProduct(existing.id, data);
+    } else {
+      await addPackagingProduct(data);
+    }
+    imported++;
+  }
+
+  input.value = '';
+  await renderPackagingTable();
+  alert(`CSV import complete: ${imported} imported, ${skipped} skipped (missing SKU/name).`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// END PACKAGING CATALOG
+// ─────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>

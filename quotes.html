@@ -421,7 +421,7 @@ const COMPANY_LOGOS = {
 };
 const COMPANY_LABELS = { bazaar: 'Bazaar Printing', pixel: 'Pixel Press Print' };
 
-const PRODUCT_TYPES_SIMPLE = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets','Vinyl Banners','Canvas Prints','Other'];
+const PRODUCT_TYPES_SIMPLE = ['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets','Vinyl Banners','Canvas Prints','Jars','Tubes','Bags','Other'];
 const MATERIALS_SIMPLE = ['White BOPP','Silver BOPP','Clear BOPP','Kraft Paper','White Matte','Gloss Paper','Cardstock','Vinyl','Other'];
 
 function populateContainerDropdown() {
@@ -918,7 +918,7 @@ function addLineItem(data = {}) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div class="field"><label style="font-size:11px;">Product Type *</label>
-        <select id="li_product_${id}" onchange="calcTotal();generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <select id="li_product_${id}" onchange="calcTotal();generateChargeDesc(${id});updatePricePanel(${id});togglePackagingRow(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
           ${sel(PRODUCT_TYPES_SIMPLE, data.product)}
         </select>
       </div>
@@ -938,7 +938,7 @@ function addLineItem(data = {}) {
         </select>
       </div>
       <div class="field"><label style="font-size:11px;">Quantity</label>
-        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal();generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <input type="number" id="li_qty_${id}" value="${data.qty||''}" placeholder="e.g. 1000" oninput="calcTotal();generateChargeDesc(${id});updatePricePanel(${id});onPackagingQtyChange(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
       <div class="field"><label style="font-size:11px;">Lamination</label>
         <select id="li_lam_${id}" onchange="generateChargeDesc(${id});updatePricePanel(${id})" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
@@ -949,6 +949,18 @@ function addLineItem(data = {}) {
         <select id="li_rollDir_${id}" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
           ${sel(ROLL_DIRECTIONS, data.rollDirection)}
         </select>
+      </div>
+      <!-- Packaging SKU selector — shown only for Jars/Tubes/Bags product types (PUL-715) -->
+      <div class="field" id="li_pkgRow_${id}" style="grid-column:span 2;display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;">
+        <label style="font-size:11px;font-weight:700;color:#166534;">Packaging SKU</label>
+        <select id="li_pkgSku_${id}" onchange="onPackagingSkuChange(${id})" style="padding:5px;border:1px solid #86efac;border-radius:6px;font-size:12px;width:100%;margin-top:4px;">
+          <option value="">— Select SKU —</option>
+        </select>
+        <div id="li_pkgInfo_${id}" style="font-size:11px;color:#166534;margin-top:4px;display:none;">
+          Cost: <span id="li_pkgCost_${id}" style="font-style:italic;color:#6b7280;">—</span> &nbsp;|&nbsp;
+          Sale @ qty: <span id="li_pkgSalePrice_${id}" style="font-weight:700;">—</span>
+        </div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Selecting a SKU auto-fills the sale price for the entered quantity. You may override below.</div>
       </div>
       <!-- Pricing panel (calculator-style, internal) -->
       <div class="field" style="grid-column:span 2;">
@@ -988,6 +1000,12 @@ function addLineItem(data = {}) {
   calcTotal();
   updatePricePanel(id);
   if (!data.chargeDesc) generateChargeDesc(id);
+  // Show packaging SKU row if product type is Jars/Tubes/Bags (handles pre-filled line items)
+  togglePackagingRow(id);
+  // If loading from saved data, restore the packaging SKU and price
+  if (data.packagingSku) {
+    populatePackagingSkuDropdown(id, data.product, data.packagingSku);
+  }
 }
 
 function getLineItems() {
@@ -1015,6 +1033,7 @@ function getLineItems() {
       pantone: document.getElementById(`li_pantone_${id}`)?.value || '',
       chargeDesc: document.getElementById(`li_chargeDesc_${id}`)?.value || '',
       notes: document.getElementById(`li_chargeDesc_${id}`)?.value || '', // keep compat
+      packagingSku: document.getElementById(`li_pkgSku_${id}`)?.value || '',
       subtotal: sub
     });
   });
@@ -1766,6 +1785,147 @@ function confirmGate3() {
 document.getElementById('gate2Modal').addEventListener('click', function(e){ if(e.target===this) closeGate2Modal(); });
 document.getElementById('gate3Modal').addEventListener('click', function(e){ if(e.target===this) closeGate3Modal(); });
 document.getElementById('statusConfirmModal').addEventListener('click', function(e){ if(e.target===this) closeStatusConfirmModal(); });
+
+// ─────────────────────────────────────────────────────────────────
+// PACKAGING SKU SELECTOR — PUL-715
+// ─────────────────────────────────────────────────────────────────
+
+const PACKAGING_PRODUCT_TYPES = new Set(['Jars', 'Tubes', 'Bags']);
+
+// Cache of packaging products keyed by category, populated on first use
+const _pkgCache = {};
+
+async function _getPackagingForCategory(category) {
+  if (!_pkgCache[category]) {
+    _pkgCache[category] = await getActivePackagingProducts(category);
+  }
+  return _pkgCache[category];
+}
+
+// Invalidate cache when catalog changes (called from admin if needed)
+function invalidatePackagingCache() {
+  Object.keys(_pkgCache).forEach(k => delete _pkgCache[k]);
+}
+
+/**
+ * Show/hide the packaging SKU row based on product type selection.
+ * Also populates the SKU dropdown for the selected category.
+ */
+async function togglePackagingRow(id) {
+  const product = document.getElementById(`li_product_${id}`)?.value || '';
+  const row = document.getElementById(`li_pkgRow_${id}`);
+  if (!row) return;
+
+  if (PACKAGING_PRODUCT_TYPES.has(product)) {
+    row.style.display = '';
+    await populatePackagingSkuDropdown(id, product, null);
+  } else {
+    row.style.display = 'none';
+    // Clear any previously auto-filled price if switching away from packaging
+    const skuEl = document.getElementById(`li_pkgSku_${id}`);
+    if (skuEl) skuEl.value = '';
+  }
+}
+
+/**
+ * Populate packaging SKU dropdown for a given category.
+ * Optionally pre-select a SKU value.
+ */
+async function populatePackagingSkuDropdown(id, category, selectedSku) {
+  const sel = document.getElementById(`li_pkgSku_${id}`);
+  if (!sel) return;
+
+  const products = await _getPackagingForCategory(category);
+  sel.innerHTML = '<option value="">— Select SKU —</option>' +
+    products.map(p =>
+      `<option value="${p.sku}" ${selectedSku === p.sku ? 'selected' : ''}>${p.sku} — ${p.name}</option>`
+    ).join('');
+
+  if (selectedSku) {
+    await onPackagingSkuChange(id);
+  } else {
+    // Hide info row
+    const infoEl = document.getElementById(`li_pkgInfo_${id}`);
+    if (infoEl) infoEl.style.display = 'none';
+  }
+}
+
+/**
+ * Called when rep selects a packaging SKU.
+ * Auto-fills the sale price based on the quantity tier.
+ */
+async function onPackagingSkuChange(id) {
+  const skuEl  = document.getElementById(`li_pkgSku_${id}`);
+  const qtyEl  = document.getElementById(`li_qty_${id}`);
+  const priceEl = document.getElementById(`li_price_${id}`);
+  const infoEl = document.getElementById(`li_pkgInfo_${id}`);
+  const salePriceEl = document.getElementById(`li_pkgSalePrice_${id}`);
+  const costEl = document.getElementById(`li_pkgCost_${id}`);
+
+  if (!skuEl?.value) {
+    if (infoEl) infoEl.style.display = 'none';
+    return;
+  }
+
+  // Find product in catalog
+  const product = document.getElementById(`li_product_${id}`)?.value || '';
+  const products = await _getPackagingForCategory(product);
+  const pkg = products.find(p => p.sku === skuEl.value);
+  if (!pkg) {
+    if (infoEl) infoEl.style.display = 'none';
+    return;
+  }
+
+  const qty = parseFloat(qtyEl?.value) || pkg.min_qty || 25;
+  const tierPrice = getPackagingTierPrice(pkg, qty);
+
+  // Auto-fill price (rep can override)
+  if (priceEl && !priceEl.dataset.manuallyOverridden) {
+    priceEl.value = tierPrice.toFixed(4);
+  }
+
+  // Show info panel (cost is shown for reps; not on customer-facing PDF)
+  if (infoEl) {
+    infoEl.style.display = '';
+    if (costEl) costEl.textContent = `$${pkg.default_cost?.toFixed(4) ?? '—'}`;
+    if (salePriceEl) salePriceEl.textContent = `$${tierPrice.toFixed(4)} / unit`;
+  }
+
+  // Auto-generate customer-facing charge description
+  const descEl = document.getElementById(`li_chargeDesc_${id}`);
+  if (descEl && !descEl.dataset.manuallyEdited) {
+    descEl.value = `${pkg.name} (${pkg.sku}), ${Number(qty).toLocaleString()} units`;
+  }
+
+  calcTotal();
+  updatePricePanel(id);
+}
+
+/**
+ * Called by the qty oninput on packaging line items to refresh the tier price.
+ * Separate from calcTotal to avoid circular calls.
+ */
+function onPackagingQtyChange(id) {
+  const row = document.getElementById(`li_pkgRow_${id}`);
+  if (!row || row.style.display === 'none') return;
+  const skuEl = document.getElementById(`li_pkgSku_${id}`);
+  if (!skuEl?.value) return;
+  const priceEl = document.getElementById(`li_price_${id}`);
+  if (priceEl && !priceEl.dataset.manuallyOverridden) {
+    onPackagingSkuChange(id); // async, updates price tier based on new qty
+  }
+}
+
+// Mark price as manually overridden when rep types in the override field
+document.addEventListener('input', e => {
+  if (e.target && e.target.id && e.target.id.startsWith('li_price_')) {
+    e.target.dataset.manuallyOverridden = '1';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// END PACKAGING SKU SELECTOR
+// ─────────────────────────────────────────────────────────────────
 </script>
 
 <script src="pulse-benchmark.js"></script>
