@@ -3,7 +3,7 @@
 **Project:** Pulse Production Management System  
 **Supabase project domain:** pulse.bazaar-admin.com  
 **Generated:** 2026-04-27 (PRI-236)  
-**Updated:** 2026-04-29 (PRI-262 — Pulse MVP Phase 1+4: workflow objects, proofs, leads)
+**Updated:** 2026-05-03 (PUL-679 — V3 Foundation: RBAC roles, production_tasks, qc_tasks)
 
 ---
 
@@ -35,6 +35,7 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 | `migrations/010_workflow_objects.sql` | **PRI-262** — Phase 1+4: leads, deals, design_tasks, proofs, proof_versions, proof_approval_events, shipping_tasks, post_sale_tasks |
 | `migrations/011_packaging_catalog.sql` | **PUL-715** — `packaging_products` table: Bags/Jars/Tubes catalog with tiered pricing, RLS, realtime |
 | `migrations/011_packaging_catalog_seed.sql` | **PUL-715** — Seed 68 SKUs from product-catalog-v2.json (Bags 23, Jars 33, Tubes 12) |
+| `migrations/012_v3_roles_and_tasks.sql` | **PUL-679** — V3 Foundation: add enum values (sdr, job_manager, ops_manager, designer, walkin_front_desk, shipping); `production_tasks` + `qc_tasks` tables; RLS policies; realtime publication |
 | `migrations/006_vendor_purchasing_intelligence.sql` | **PRI-247** — Vendor master, material catalog, price records, receiving; extends purchase_orders + purchase_order_items |
 | `migrations/007_vendor_purchasing_rls.sql` | **PRI-247** — RLS policies for vendor purchasing tables |
 | `migrations/008_seed_auth_users.sql` | **PRI-238** — Seed all 21 Pulse team members into auth.users (temp password `Pulse2026!`); fixes qc-failed enum bug from 003 |
@@ -189,7 +190,9 @@ California labor law compliance. Tracks clock-in/out and meal/rest breaks.
 
 | Enum | Values |
 |------|--------|
-| `user_role` | admin, supervisor, production_manager, account_manager, operator, prepress, david_review |
+| `user_role` | admin, supervisor, production_manager, account_manager, operator, prepress, david_review, sdr, job_manager, ops_manager, designer, walkin_front_desk, shipping _(added PUL-679)_ |
+| `production_task_status` | scheduled, in_progress, complete, failed, cancelled _(added PUL-679)_ |
+| `qc_task_status` | pending, in_inspection, passed, failed _(added PUL-679)_ |
 | `facility` | 16th-street, boyd-street |
 | `order_status` | new, pending-review, pending-confirmation, waiting-approval, prepress, prepress-active, prepress-paused, in-production, qc-checkout, ready-to-ship, shipped, received, on-hold, completed, cancelled |
 | `step_status` | pending, in-progress, completed, skipped |

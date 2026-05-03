@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer — Bazaar Print</title>
+  <script src="shared.js?v=20260503-PUL679"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260503-PUL679"></script>
+  <script src="auth.js?v=20260503-PUL679"></script>
+  <style id="page-styles"></style>
+  <style>
+    .cd-layout { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    /* Header card */
+    .cd-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .cd-header-left h2 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+    .cd-meta-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); }
+    .cd-meta-row span { display: flex; align-items: center; gap: 4px; }
+
+    /* Stat tiles */
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .stat-tile .num { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-tile .lbl { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-tile.ok  { border-top: 3px solid var(--green); }
+    .stat-tile.info { border-top: 3px solid var(--accent); }
+    .stat-tile.warn { border-top: 3px solid var(--yellow); }
+
+    /* Two-column grid */
+    .grid-2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* Panel */
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+    .panel-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 12px; }
+
+    /* Timeline */
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .tl-item { position: relative; margin-bottom: 20px; }
+    .tl-dot { position: absolute; left: -24px; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); z-index: 1; }
+    .tl-dot.lead  { background: #dbeafe; border-color: #2563eb; }
+    .tl-dot.deal  { background: #fef3cd; border-color: #d97706; }
+    .tl-dot.order { background: #d1fae5; border-color: #059669; }
+    .tl-dot.production { background: #ede9fe; border-color: #7c3aed; }
+    .tl-date  { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .tl-card  { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .tl-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; }
+    .tl-card .tl-type  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px; }
+    .tl-card .tl-title { font-weight: 700; font-size: 14px; }
+    .tl-card .tl-sub   { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .tl-card .tl-tags  { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .tl-tag { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--border); color: var(--text-muted); }
+    .tl-tag.won      { background: #d1fae5; color: #065f46; }
+    .tl-tag.lost     { background: #fee2e2; color: #991b1b; }
+    .tl-tag.shipped  { background: #d1fae5; color: #065f46; }
+    .tl-tag.active   { background: #dbeafe; color: #1e40af; }
+    .tl-tag.pending  { background: #fef3cd; color: #92400e; }
+    .tl-tag.hot      { background: #fee2e2; color: #b91c1c; }
+    .tl-tag.warm     { background: #fef3cd; color: #92400e; }
+    .tl-tag.cool     { background: #dbeafe; color: #1e40af; }
+    .tl-tag.revenue  { background: #d1fae5; color: #065f46; font-weight: 700; }
+
+    /* Deal summary on right */
+    .open-deal { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg); font-size: 13px; cursor: pointer; }
+    .open-deal:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+    .od-stage { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .od-stage.draft    { background: #f1f5f9; color: #475569; }
+    .od-stage.sent     { background: #dbeafe; color: #1e40af; }
+    .od-stage.follow_up { background: #fef3cd; color: #92400e; }
+    .od-stage.won      { background: #d1fae5; color: #065f46; }
+    .od-stage.lost     { background: #fee2e2; color: #991b1b; }
+    .od-stage.nurture  { background: #ede9fe; color: #5b21b6; }
+
+    .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; }
+    .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
+
+    .btn-back { font-size: 13px; color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 12px; }
+    .btn-back:hover { text-decoration: underline; }
+
+    /* Order status badges */
+    .ord-status { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .ord-status.order-pending   { background: #f1f5f9; color: #475569; }
+    .ord-status.order-priced    { background: #dbeafe; color: #1e40af; }
+    .ord-status.order-confirmed { background: #fef3cd; color: #92400e; }
+    .ord-status.INTAKE, .ord-status.QUEUED, .ord-status.IN_PRODUCTION { background: #ede9fe; color: #5b21b6; }
+    .ord-status.QC_HOLD  { background: #fef3cd; color: #92400e; }
+    .ord-status.SHIPPED  { background: #d1fae5; color: #065f46; }
+    .ord-status.CANCELLED { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="cd-layout">
+  <a href="javascript:history.back()" class="btn-back">← Back</a>
+
+  <div id="pageContent">
+    <div class="loading">Loading customer record…</div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('');
+initAuth('customer-detail');
+
+const sb = window.supabaseClient;
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtMoney(n) {
+  if (n == null || n === '') return '—';
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function ageLabel(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(ms / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  const mo = Math.floor(days / 30);
+  return mo === 1 ? '1 mo ago' : `${mo} mo ago`;
+}
+function ordStatusClass(s) {
+  // sanitize for CSS class
+  return (s || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+// ── Load ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadCustomer);
+
+async function loadCustomer() {
+  const params = new URLSearchParams(window.location.search);
+  const customerId = params.get('id');
+
+  if (!customerId) {
+    document.getElementById('pageContent').innerHTML =
+      '<div class="empty-state">No customer ID provided. Use <code>?id=&lt;uuid&gt;</code>.</div>';
+    return;
+  }
+
+  try {
+    // Fetch in parallel
+    const [custRes, leadsRes, dealsRes, ordersRes] = await Promise.all([
+      sb.from('customers').select('*').eq('id', customerId).single(),
+      sb.from('leads').select('*').eq('customer_id', customerId).order('created_at', { ascending: true }),
+      sb.from('deals').select('*').eq('customer_id', customerId).order('created_at', { ascending: true }),
+      sb.from('orders').select('id, order_number, status, created_at, updated_at, deadline, order_total, notes, facility')
+        .eq('customer_id', customerId).order('created_at', { ascending: true }),
+    ]);
+
+    const cust   = custRes.data;
+    const leads  = leadsRes.data  || [];
+    const deals  = dealsRes.data  || [];
+    const orders = ordersRes.data || [];
+
+    if (!cust) {
+      document.getElementById('pageContent').innerHTML =
+        '<div class="empty-state">Customer not found.</div>';
+      return;
+    }
+
+    renderPage(cust, leads, deals, orders);
+  } catch(e) {
+    console.error('Failed to load customer', e);
+    document.getElementById('pageContent').innerHTML =
+      `<div class="empty-state">Error loading customer: ${e.message}</div>`;
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────
+function renderPage(cust, leads, deals, orders) {
+  document.title = `${cust.name} — Bazaar Print`;
+
+  // Stats
+  const totalRevenue = orders
+    .filter(o => !['order-pending','order-priced','CANCELLED'].includes(o.status))
+    .reduce((s, o) => s + (parseFloat(o.order_total) || 0), 0);
+  const activeOrders = orders.filter(o =>
+    ['order-confirmed','INTAKE','QUEUED','IN_PRODUCTION','QC_HOLD'].includes(o.status)
+  ).length;
+  const openDeals = deals.filter(d => !['won','lost'].includes(d.status)).length;
+  const wonDeals  = deals.filter(d => d.status === 'won').length;
+
+  // Build timeline: merge leads + deals + orders by created_at
+  const tlItems = [
+    ...leads.map(l => ({ type: 'lead',  sortKey: l.created_at, data: l })),
+    ...deals.map(d => ({ type: 'deal',  sortKey: d.created_at, data: d })),
+    ...orders.map(o => ({ type: 'order', sortKey: o.created_at, data: o })),
+  ].sort((a, b) => new Date(a.sortKey) - new Date(b.sortKey));
+
+  const timelineHtml = tlItems.length === 0
+    ? '<div class="empty-state">No activity yet for this customer.</div>'
+    : tlItems.map(renderTimelineItem).join('');
+
+  // Open deals list (right panel)
+  const openDealsList = deals.filter(d => !['won','lost'].includes(d.status));
+  const openDealsHtml = openDealsList.length === 0
+    ? '<div class="empty-state" style="padding:16px 0;">No open deals.</div>'
+    : openDealsList.map(d => `
+      <div class="open-deal" onclick="window.location.href='sales-dashboard.html'">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${esc(d.product_type || d.customer_notes || 'Deal')}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            FU: ${fmtDate(d.follow_up_date)} · ${ageLabel(d.created_at)}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${d.quoted_price ? `<span style="font-weight:700;font-size:13px;">${fmtMoney(d.quoted_price)}</span>` : ''}
+          <span class="od-stage ${d.status}">${d.status.replace('_',' ')}</span>
+        </div>
+      </div>`
+    ).join('');
+
+  // Active orders list (right panel)
+  const activeOrdersList = orders.filter(o =>
+    ['order-confirmed','INTAKE','QUEUED','IN_PRODUCTION','QC_HOLD','READY_TO_SHIP'].includes(o.status)
+  );
+  const activeOrdersHtml = activeOrdersList.length === 0
+    ? '<div class="empty-state" style="padding:16px 0;">No active orders.</div>'
+    : activeOrdersList.map(o => `
+      <div class="open-deal" onclick="window.location.href='order-form.html?order=${encodeURIComponent(o.order_number || o.id)}'">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${esc(o.order_number || o.id.slice(0,8))}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            Due: ${fmtDate(o.deadline)} · ${esc(o.facility || '')}
+          </div>
+        </div>
+        <span class="ord-status ${ordStatusClass(o.status)}">${o.status}</span>
+      </div>`
+    ).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <!-- Header -->
+    <div class="cd-header">
+      <div class="cd-header-left">
+        <h2>${esc(cust.name)}</h2>
+        ${cust.company ? `<div style="font-size:15px;color:var(--text-muted);margin-bottom:6px;">${esc(cust.company)}</div>` : ''}
+        <div class="cd-meta-row">
+          ${cust.email ? `<span>✉️ ${esc(cust.email)}</span>` : ''}
+          ${cust.phone ? `<span>📞 ${esc(cust.phone)}</span>` : ''}
+          <span>🗓 Customer since ${fmtDate(cust.created_at)}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" onclick="window.location.href='sales-dashboard.html'">+ New Deal</button>
+        <button class="btn btn-sm btn-primary" onclick="window.location.href='order-form.html'">+ New Order</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-tiles">
+      <div class="stat-tile info">
+        <div class="num">${leads.length}</div>
+        <div class="lbl">Leads</div>
+      </div>
+      <div class="stat-tile warn">
+        <div class="num">${openDeals}</div>
+        <div class="lbl">Open Deals</div>
+      </div>
+      <div class="stat-tile ok">
+        <div class="num">${wonDeals}</div>
+        <div class="lbl">Won Deals</div>
+      </div>
+      <div class="stat-tile ok">
+        <div class="num">${orders.length}</div>
+        <div class="lbl">Total Orders</div>
+      </div>
+      <div class="stat-tile ok">
+        <div class="num" style="font-size:20px;">${totalRevenue > 0 ? fmtMoney(totalRevenue) : '—'}</div>
+        <div class="lbl">Lifetime Revenue</div>
+      </div>
+      <div class="stat-tile info">
+        <div class="num">${activeOrders}</div>
+        <div class="lbl">Active Orders</div>
+      </div>
+    </div>
+
+    <!-- Two-column: timeline + sidebar -->
+    <div class="grid-2">
+
+      <!-- Left: timeline -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">Lead → Deal → Job Timeline</div>
+          <div class="timeline">${timelineHtml}</div>
+        </div>
+      </div>
+
+      <!-- Right: sidebar -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">Open Deals</div>
+          ${openDealsHtml}
+        </div>
+        <div class="panel">
+          <div class="panel-title">Active Orders</div>
+          ${activeOrdersHtml}
+        </div>
+        ${cust.notes ? `
+        <div class="panel">
+          <div class="panel-title">Customer Notes</div>
+          <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">${esc(cust.notes)}</div>
+        </div>` : ''}
+      </div>
+
+    </div>
+  `;
+}
+
+function renderTimelineItem(item) {
+  const { type, data } = item;
+  let dotClass, typeLabel, title, sub, tags, href;
+
+  if (type === 'lead') {
+    dotClass  = 'lead';
+    typeLabel = 'Lead';
+    title     = esc(data.name);
+    sub       = [data.source && `via ${data.source.replace('_',' ')}`, data.product_type].filter(Boolean).join(' · ');
+    tags      = [
+      `<span class="tl-tag ${data.score || 'warm'}">${data.score || 'warm'}</span>`,
+      `<span class="tl-tag">${(data.status || '').replace('_',' ')}</span>`,
+      data.product_type ? `<span class="tl-tag">${esc(data.product_type)}</span>` : '',
+    ].filter(Boolean).join('');
+    href = `leads.html`;
+  } else if (type === 'deal') {
+    dotClass  = 'deal';
+    typeLabel = 'Deal';
+    title     = esc(data.deal_number || 'Deal') + (data.product_type ? ` — ${esc(data.product_type)}` : '');
+    sub       = data.quoted_price
+      ? `Quoted ${fmtMoney(data.quoted_price)}` + (data.quantity ? ` · qty ${data.quantity.toLocaleString()}` : '')
+      : data.quantity ? `qty ${data.quantity.toLocaleString()}` : '';
+    const stageClass = { won: 'won', lost: 'lost', sent: 'active', follow_up: 'pending', draft: '', nurture: '' };
+    tags = [
+      `<span class="tl-tag ${stageClass[data.status] || ''}">${(data.status||'').replace('_',' ')}</span>`,
+      data.quoted_price ? `<span class="tl-tag revenue">${fmtMoney(data.quoted_price)}</span>` : '',
+      data.artwork_status ? `<span class="tl-tag">${esc(data.artwork_status)}</span>` : '',
+    ].filter(Boolean).join('');
+    href = `sales-dashboard.html`;
+  } else {
+    // order
+    dotClass  = ['INTAKE','QUEUED','IN_PRODUCTION','QC_HOLD','READY_TO_SHIP'].includes(data.status) ? 'production' : 'order';
+    typeLabel = 'Order';
+    title     = esc(data.order_number || data.id.slice(0, 8));
+    sub       = [data.deadline && `Due ${fmtDate(data.deadline)}`, data.facility].filter(Boolean).join(' · ');
+    const sClass = { SHIPPED: 'shipped', CANCELLED: 'lost', 'order-confirmed': 'active', 'order-pending': 'pending' };
+    tags = [
+      `<span class="tl-tag ${sClass[data.status] || 'active'}">${data.status}</span>`,
+      data.order_total ? `<span class="tl-tag revenue">${fmtMoney(data.order_total)}</span>` : '',
+    ].filter(Boolean).join('');
+    href = `order-form.html?order=${encodeURIComponent(data.order_number || data.id)}`;
+  }
+
+  return `
+    <div class="tl-item">
+      <div class="tl-dot ${dotClass}"></div>
+      <div class="tl-date">${fmtDate(item.sortKey)} · ${ageLabel(item.sortKey)}</div>
+      <div class="tl-card" onclick="${href ? `window.location.href='${href}'` : ''}">
+        <div class="tl-type">${typeLabel}</div>
+        <div class="tl-title">${title}</div>
+        ${sub ? `<div class="tl-sub">${sub}</div>` : ''}
+        <div class="tl-tags">${tags}</div>
+      </div>
+    </div>`;
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
