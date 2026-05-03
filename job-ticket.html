@@ -548,6 +548,69 @@
     <!-- Hidden: workflow template (still used internally for save) -->
     <input type="hidden" id="workflowTemplate">
   </form>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- GATE 3: Job → Design Task                              -->
+  <!-- PUL-680: Visible to JM after ticket is saved.         -->
+  <!-- Hidden on new-ticket form; shown once orderId exists. -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="gate3Section" class="form-section" style="display:none;margin-top:8px;">
+    <h3 class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      🎨 Design Tasks
+      <button class="btn btn-sm" id="createDesignTaskBtn" onclick="showCreateDesignTaskModal()" style="font-size:12px;">+ Create Design Task</button>
+    </h3>
+    <div id="gate3DesignTaskList" style="min-height:36px;"></div>
+  </div>
+
+  <!-- Create Design Task Modal (Gate 3) -->
+  <div id="createDesignTaskModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:0;max-width:520px;width:94%;box-shadow:0 8px 32px rgba(0,0,0,0.22);max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+        <div style="font-size:16px;font-weight:700;">🎨 Create Design Task</div>
+        <button onclick="document.getElementById('createDesignTaskModal').style.display='none'" style="border:none;background:none;cursor:pointer;font-size:18px;color:#6b7280;">✕</button>
+      </div>
+      <div style="padding:20px;">
+        <!-- Gate 3 warning block — filled dynamically -->
+        <div id="gate3Warnings" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:16px;">
+          <div style="font-weight:700;color:#b91c1c;margin-bottom:8px;">⛔ Gate 3: Cannot create design task</div>
+          <ul id="gate3WarningList" style="font-size:13px;color:#dc2626;margin:0;padding-left:18px;"></ul>
+        </div>
+
+        <div class="field">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:5px;">Task Title *</label>
+          <input type="text" id="dt_title" placeholder="e.g. Label artwork for Mylar bags" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div class="field">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:5px;">Brief / Description *</label>
+          <textarea id="dt_description" rows="3" placeholder="Specs, color mode, bleed, reference files needed..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+        <div class="field">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:5px;">Special Notes (optional)</label>
+          <input type="text" id="dt_notes" placeholder="e.g. Customer has logo file — contact AM" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div class="field">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:5px;">Assign Designer (optional)</label>
+          <select id="dt_designer" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+            <option value="">— Unassigned —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:5px;">Files Present? *</label>
+          <select id="dt_filesStatus" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;">
+            <option value="">— Select —</option>
+            <option value="present">✅ Files attached to this job</option>
+            <option value="missing_routed">📧 Files missing — missing-file request already sent to customer/AM</option>
+            <option value="designer_creates">🎨 Designer creating from scratch (no customer files needed)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button onclick="document.getElementById('createDesignTaskModal').style.display='none'" style="padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:13px;">Cancel</button>
+          <button id="dt_submitBtn" onclick="submitCreateDesignTask()" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Create Design Task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /jt-container -->
 </div><!-- /formPane -->
 
@@ -3444,6 +3507,259 @@ function resetToNewTicket() {
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 9000);
   }, { once: true });
 })()
+
+// ============================================================
+// GATE 3: Job → Design Task
+// PUL-680: Phase W3-W4 — creates design_tasks record after
+// JM confirms job ticket is complete.
+// ============================================================
+
+// Track the order UUID for Supabase inserts (set when ticket is loaded/saved)
+let _gate3OrderUUID = null;
+let _gate3DesignerOptions = [];
+
+// Called after saveTicket resolves — show the Gate 3 section
+function showGate3Section(orderUUID) {
+  _gate3OrderUUID = orderUUID || null;
+  const section = document.getElementById('gate3Section');
+  if (!section) return;
+
+  // Gate 3 visible only to JM/admin/supervisor; hide for operators/designers
+  const session = (typeof getSession === 'function') ? getSession() : null;
+  const role = session?.role || '';
+  const managerRoles = ['admin', 'supervisor', 'job_manager', 'ops_manager'];
+  if (!managerRoles.includes(role)) return;
+
+  section.style.display = '';
+  loadGate3DesignTasks();
+  loadGate3DesignerOptions();
+}
+
+async function loadGate3DesignTasks() {
+  if (!_gate3OrderUUID) {
+    document.getElementById('gate3DesignTaskList').innerHTML =
+      '<p style="font-size:12px;color:#6b7280;">Save the ticket first to create design tasks.</p>';
+    return;
+  }
+  try {
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (!sb) {
+      document.getElementById('gate3DesignTaskList').innerHTML =
+        '<p style="font-size:12px;color:#6b7280;">Connect Supabase to manage design tasks.</p>';
+      return;
+    }
+    const { data, error } = await sb
+      .from('design_tasks')
+      .select('id, status, title, assigned_designer, created_at')
+      .eq('order_id', _gate3OrderUUID)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+
+    const list = document.getElementById('gate3DesignTaskList');
+    if (!data || !data.length) {
+      list.innerHTML = '<p style="font-size:12px;color:#6b7280;">No design tasks yet. Use the button above to create one.</p>';
+      return;
+    }
+
+    const statusColors = {
+      queued: '#f59e0b', in_progress: '#3b82f6', jm_review: '#8b5cf6',
+      revision: '#f97316', done: '#16a34a',
+    };
+    const statusLabels = {
+      queued: '⏳ Queued', in_progress: '🔵 In Progress', jm_review: '🔍 JM Review',
+      revision: '✏️ Revision', done: '✅ Done',
+    };
+    list.innerHTML = data.map(t => {
+      const color = statusColors[t.status] || '#6b7280';
+      const label = statusLabels[t.status] || t.status;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-left:3px solid ${color};border-radius:8px;margin-bottom:6px;font-size:13px;">
+        <span style="flex:1;font-weight:600;">${escHtmlJT(t.title || 'Design Task')}</span>
+        <span style="font-size:11px;font-weight:600;color:${color};">${label}</span>
+        <a href="design-task.html" style="font-size:11px;color:#2563eb;text-decoration:none;">Open →</a>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('gate3DesignTaskList').innerHTML =
+      `<p style="font-size:12px;color:#dc2626;">Error loading design tasks: ${e.message}</p>`;
+  }
+}
+
+async function loadGate3DesignerOptions() {
+  try {
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (!sb) return;
+    const { data } = await sb
+      .from('profiles')
+      .select('id, name, role')
+      .eq('role', 'designer');
+    _gate3DesignerOptions = data || [];
+    const sel = document.getElementById('dt_designer');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Unassigned —</option>' +
+      _gate3DesignerOptions.map(d =>
+        `<option value="${escHtmlJT(d.id)}">${escHtmlJT(d.name || d.id)}</option>`
+      ).join('');
+  } catch (e) { /* non-critical */ }
+}
+
+function showCreateDesignTaskModal() {
+  // Gate 3 check: validate required fields before allowing task creation
+  const warnings = runGate3Checks();
+  const warnEl   = document.getElementById('gate3Warnings');
+  const warnList = document.getElementById('gate3WarningList');
+  if (warnings.length) {
+    warnEl.style.display  = '';
+    warnList.innerHTML    = warnings.map(w => `<li style="margin-bottom:4px;">${w}</li>`).join('');
+    document.getElementById('dt_submitBtn').disabled = true;
+  } else {
+    warnEl.style.display  = 'none';
+    document.getElementById('dt_submitBtn').disabled = false;
+  }
+
+  // Pre-fill title from product type if possible
+  const productType = (document.getElementById('productType')?.value || '').replace(/_/g, ' ');
+  const customer    = document.getElementById('customerName')?.value?.trim() || '';
+  document.getElementById('dt_title').value = productType
+    ? `${productType} — ${customer}`
+    : '';
+  document.getElementById('dt_description').value = '';
+  document.getElementById('dt_notes').value = '';
+  document.getElementById('dt_filesStatus').value = '';
+
+  document.getElementById('createDesignTaskModal').style.display = 'flex';
+}
+
+function runGate3Checks() {
+  const issues = [];
+  const facility    = document.getElementById('facility')?.value?.trim();
+  const customer    = document.getElementById('customerName')?.value?.trim();
+  const dueDate     = document.getElementById('dueDate')?.value?.trim();
+  const productType = document.getElementById('productType')?.value;
+  const quantity    = parseInt(document.getElementById('quantity')?.value) || 0;
+  const ticketNum   = document.getElementById('jobTicketNumber')?.value?.trim();
+
+  if (!ticketNum) issues.push('Job ticket must be saved first (no ticket number).');
+  if (!facility)  issues.push('Facility must be selected.');
+  if (!customer)  issues.push('Customer name must be filled in.');
+  if (!dueDate)   issues.push('Due date must be set.');
+  if (!productType) issues.push('Product type must be selected.');
+  if (!quantity)  issues.push('Quantity must be entered.');
+  return issues;
+}
+
+async function submitCreateDesignTask() {
+  const warnings = runGate3Checks();
+  if (warnings.length) {
+    const warnEl   = document.getElementById('gate3Warnings');
+    const warnList = document.getElementById('gate3WarningList');
+    warnEl.style.display = '';
+    warnList.innerHTML = warnings.map(w => `<li style="margin-bottom:4px;">${w}</li>`).join('');
+    return;
+  }
+
+  const filesStatus = document.getElementById('dt_filesStatus')?.value;
+  if (!filesStatus) {
+    alert('Please confirm the files status before creating the design task.');
+    return;
+  }
+
+  const title       = document.getElementById('dt_title').value.trim();
+  const description = document.getElementById('dt_description').value.trim();
+  const notes       = document.getElementById('dt_notes').value.trim();
+  const designerId  = document.getElementById('dt_designer').value || null;
+
+  if (!title)       { alert('Task title is required.'); return; }
+  if (!description) { alert('Brief / description is required.'); return; }
+
+  const submitBtn = document.getElementById('dt_submitBtn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
+
+  try {
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    const session = (typeof getSession === 'function') ? getSession() : null;
+
+    if (!sb || !_gate3OrderUUID) {
+      // Demo mode — just close and refresh list
+      alert('Design task created (demo mode — Supabase required to persist).');
+      document.getElementById('createDesignTaskModal').style.display = 'none';
+      return;
+    }
+
+    const { error } = await sb.from('design_tasks').insert({
+      order_id:          _gate3OrderUUID,
+      assigned_designer: designerId,
+      assigned_by:       session?.userId || null,
+      status:            'queued',
+      title,
+      description,
+      special_notes:     notes,
+      due_date:          document.getElementById('dueDate')?.value || null,
+    });
+    if (error) throw error;
+
+    document.getElementById('createDesignTaskModal').style.display = 'none';
+    await loadGate3DesignTasks();
+
+    // Show confirmation
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#7c3aed;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+    toast.textContent = '🎨 Design task created and queued for designer.';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  } catch (e) {
+    alert('Error creating design task: ' + e.message);
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create Design Task'; }
+  }
+}
+
+function escHtmlJT(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Hook into saveTicket: after a successful save, expose Gate 3 section.
+// We patch _lastSavedOrderId monitoring via MutationObserver on the ticket
+// number input, or hook on the DOMContentLoaded for ?saved= param.
+document.addEventListener('DOMContentLoaded', async () => {
+  const params   = new URLSearchParams(window.location.search);
+  const savedParam = params.get('saved');
+  if (savedParam) {
+    // Ticket was just saved and redirected; find its Supabase UUID
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (sb) {
+      const { data } = await sb
+        .from('orders')
+        .select('id')
+        .eq('order_id', savedParam)
+        .maybeSingle();
+      if (data?.id) showGate3Section(data.id);
+    } else {
+      showGate3Section(null);
+    }
+  }
+});
+
+// Also expose Gate 3 when an existing ticket is loaded for editing
+// (hook into the existing loadOrderIntoForm pattern — listen for a custom event
+// that saveTicket fires, or detect _lastSavedOrderId being set)
+(function() {
+  const origSave = typeof saveTicket !== 'undefined' ? window.saveTicket : null;
+  if (!origSave) return;
+  window.saveTicket = async function(suppressRedirect) {
+    await origSave.call(this, suppressRedirect);
+    // After save completes, _lastSavedOrderId is set — look up UUID
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (sb && _lastSavedOrderId) {
+      const { data } = await sb
+        .from('orders')
+        .select('id')
+        .eq('order_id', _lastSavedOrderId)
+        .maybeSingle();
+      if (data?.id) showGate3Section(data.id);
+    }
+  };
+})();
 </script>
 </body>
 </html>
