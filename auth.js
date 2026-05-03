@@ -45,7 +45,7 @@ const ROLE_CONFIG = {
   'account-manager': {
     label: 'Account Manager',
     color: '#d97706',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads'],
+    pages: ['dashboard','sales-dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -56,6 +56,24 @@ const ROLE_CONFIG = {
     label: 'Digital SDR',
     color: '#7c3aed',
     pages: ['dashboard','sdr-dashboard','leads','instagram-leads'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+  },
+  'walkin-front-desk': {
+    label: 'Walk-In / Front Desk',
+    color: '#0891b2',
+    pages: ['dashboard','sdr-dashboard','leads','orders'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+  },
+  shipping: {
+    label: 'Shipping',
+    color: '#0d9488',
+    pages: ['dashboard','shipping'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -147,7 +165,8 @@ const LOCAL_EMAIL_USERS = {
   'bob@bazaar-admin.com':      { name: 'Bob Werner',       role: 'account-manager' },
   'tiko@bazaar-admin.com':     { name: 'Tiko',             role: 'account-manager' },
   'sdr@bazaar-admin.com':      { name: 'Digital SDR',      role: 'sdr' },
-  'frontdesk@bazaar-admin.com':{ name: 'Front Desk SDR',   role: 'sdr' },
+  'frontdesk@bazaar-admin.com':{ name: 'Front Desk',        role: 'walkin-front-desk' },
+  'shipping@bazaar-admin.com': { name: 'Shipping',          role: 'shipping' },
   'jm@bazaar-admin.com':       { name: 'Job Manager',      role: 'job-manager' },
   'ops@bazaar-admin.com':      { name: 'Ops Manager',      role: 'ops-manager' },
   'hrach@bazaar-admin.com':    { name: 'Hrach',            role: 'prepress' },
@@ -219,7 +238,26 @@ const EXTRA_AUTH_USERS = [
 ];
 
 // ── Login modal ───────────────────────────────────────────
+// Role → landing page after login (PUL-679: V3 role home pages)
+const ROLE_HOME_PAGE = {
+  'admin':               'dashboard.html',
+  'supervisor':          'dashboard.html',
+  'sdr':                 'sdr-dashboard.html',
+  'walkin-front-desk':   'sdr-dashboard.html',
+  'account-manager':     'sales-dashboard.html',
+  'job-manager':         'jm-dashboard.html',
+  'designer':            'dashboard.html',
+  'prepress':            'prepress.html',
+  'production-manager':  'production-manager.html',
+  'qc':                  'qc-checkout.html',
+  'shipping':            'shipping.html',
+  'ops-manager':         'ops-manager.html',
+  'operator':            'operator-terminal.html',
+  'david-review':        'dashboard.html',
+};
+
 function getDefaultPageForRole(role) {
+  if (ROLE_HOME_PAGE[role]) return ROLE_HOME_PAGE[role];
   const config = ROLE_CONFIG[role];
   if (!config) return 'dashboard.html';
   if (config.pages.includes('all')) return 'dashboard.html';

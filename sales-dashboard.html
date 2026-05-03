@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales / AM Dashboard — Bazaar Print</title>
+  <script src="shared.js?v=20260503-PUL679"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260503-PUL679"></script>
+  <script src="auth.js?v=20260503-PUL679"></script>
+  <style id="page-styles"></style>
+  <style>
+    .am-layout { max-width: 1400px; margin: 0 auto; padding: 20px 16px; }
+    .am-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+    .am-header h2 { font-size: 22px; font-weight: 700; margin: 0 0 2px; }
+    .am-header .subtitle { font-size: 13px; color: var(--text-muted); }
+
+    /* Stat tiles */
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .stat-tile.danger { border-top: 3px solid var(--red); }
+    .stat-tile.warn   { border-top: 3px solid var(--yellow); }
+    .stat-tile.ok     { border-top: 3px solid var(--green); }
+    .stat-tile.info   { border-top: 3px solid var(--accent); }
+    .stat-tile .num   { font-size: 30px; font-weight: 800; line-height: 1; }
+    .stat-tile .lbl   { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* Alert bar */
+    .alert-bar { padding: 10px 14px; border-radius: var(--radius); background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .alert-bar.warn { background: #fef3cd; border-color: #fcd34d; color: #92400e; }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+    @media (max-width: 1100px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* Panel */
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .panel-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .panel-title .badge { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; color: var(--text); }
+
+    /* Stage tabs */
+    .stage-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .stage-tab  { padding: 5px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .stage-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .stage-tab .cnt { display: inline-block; margin-left: 4px; font-size: 10px; }
+
+    /* Deal card */
+    .deal-card { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg); cursor: pointer; transition: box-shadow 0.15s; }
+    .deal-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .deal-card.stale-red    { background: #fff5f5; border-color: #fca5a5; }
+    .deal-card.stale-yellow { background: #fffbeb; border-color: #fcd34d; }
+    .dc-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .dc-name   { font-weight: 700; font-size: 14px; }
+    .dc-company { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .dc-meta   { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
+    .dc-tag    { padding: 2px 7px; border-radius: 4px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); }
+    .dc-tag.hot { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .dc-tag.warm { background: #fef3cd; color: #92400e; border-color: #fcd34d; }
+    .dc-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .dc-btn  { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--bg); }
+    .dc-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Follow-up list */
+    .fu-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .fu-item:last-child { border-bottom: none; }
+    .fu-overdue { color: var(--red); font-weight: 700; }
+    .fu-today   { color: var(--yellow); font-weight: 600; }
+
+    /* Win/loss summary */
+    .wl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .wl-row:last-child { border-bottom: none; }
+    .wl-won  { color: var(--green); font-weight: 700; }
+    .wl-lost { color: var(--red); font-weight: 600; }
+
+    /* New leads from SDR */
+    .nl-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    .nl-item:last-child { border-bottom: none; }
+    .nl-item .nl-name  { font-weight: 600; }
+    .nl-item .nl-time  { font-size: 11px; color: var(--text-muted); }
+
+    .empty-state { text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="am-layout">
+  <div class="am-header">
+    <div>
+      <h2>📊 Sales / AM Pipeline</h2>
+      <div class="subtitle">Manage your deals · Follow up on quotes · Convert to orders</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="window.location.href='order-form.html'">+ New Order</button>
+      <button class="btn" onclick="window.location.href='leads.html'">View Leads</button>
+    </div>
+  </div>
+
+  <!-- Stat tiles -->
+  <div class="stat-tiles">
+    <div class="stat-tile info">
+      <div class="num" id="stat-active">—</div>
+      <div class="lbl">Active Deals</div>
+    </div>
+    <div class="stat-tile warn" id="tile-followup">
+      <div class="num" id="stat-followup">—</div>
+      <div class="lbl">Follow-Ups Due Today</div>
+    </div>
+    <div class="stat-tile danger" id="tile-stale">
+      <div class="num" id="stat-stale">—</div>
+      <div class="lbl">Stale Quotes (24h+)</div>
+    </div>
+    <div class="stat-tile ok">
+      <div class="num" id="stat-won-week">—</div>
+      <div class="lbl">Won This Week</div>
+    </div>
+    <div class="stat-tile" style="border-top:3px solid #6b7280;">
+      <div class="num" id="stat-new-leads">—</div>
+      <div class="lbl">New Leads (SDR)</div>
+    </div>
+  </div>
+
+  <!-- Stale alert -->
+  <div id="stale-alert" class="alert-bar" style="display:none;">
+    <span>⚠️</span>
+    <span id="stale-alert-msg"></span>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left: Deal pipeline -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">
+          Deal Pipeline
+          <span class="badge" id="pipeline-count">0 deals</span>
+        </div>
+
+        <!-- Stage filter tabs -->
+        <div class="stage-tabs" id="stage-tabs">
+          <div class="stage-tab active" data-stage="all" onclick="setStage('all')">All <span class="cnt" id="cnt-all"></span></div>
+          <div class="stage-tab" data-stage="draft"     onclick="setStage('draft')">Draft <span class="cnt" id="cnt-draft"></span></div>
+          <div class="stage-tab" data-stage="sent"      onclick="setStage('sent')">Sent <span class="cnt" id="cnt-sent"></span></div>
+          <div class="stage-tab" data-stage="follow_up" onclick="setStage('follow_up')">Follow-Up <span class="cnt" id="cnt-follow_up"></span></div>
+          <div class="stage-tab" data-stage="won"       onclick="setStage('won')">Won <span class="cnt" id="cnt-won"></span></div>
+          <div class="stage-tab" data-stage="lost"      onclick="setStage('lost')">Lost <span class="cnt" id="cnt-lost"></span></div>
+          <div class="stage-tab" data-stage="nurture"   onclick="setStage('nurture')">Nurture <span class="cnt" id="cnt-nurture"></span></div>
+        </div>
+
+        <div id="deal-list">
+          <div class="empty-state">Loading deals…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Follow-ups due -->
+      <div class="panel">
+        <div class="panel-title">
+          Follow-Ups Due
+          <span class="badge" id="fu-count">0</span>
+        </div>
+        <div id="fu-list">
+          <div class="empty-state">No follow-ups due today.</div>
+        </div>
+      </div>
+
+      <!-- New leads from SDR -->
+      <div class="panel">
+        <div class="panel-title">
+          New Leads from SDR
+          <span class="badge" id="nl-count">0</span>
+        </div>
+        <div id="nl-list">
+          <div class="empty-state">No new leads overnight.</div>
+        </div>
+      </div>
+
+      <!-- Win/loss summary -->
+      <div class="panel">
+        <div class="panel-title">Win / Loss Summary</div>
+        <div id="wl-list">
+          <div class="wl-row">
+            <span>Won this week</span><span class="wl-won" id="wl-won-week">—</span>
+          </div>
+          <div class="wl-row">
+            <span>Won this month</span><span class="wl-won" id="wl-won-month">—</span>
+          </div>
+          <div class="wl-row">
+            <span>Lost this week</span><span class="wl-lost" id="wl-lost-week">—</span>
+          </div>
+          <div class="wl-row">
+            <span>Lost this month</span><span class="wl-lost" id="wl-lost-month">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PUL-679: Sales/AM Dashboard ──────────────────────────────────────────────
+// Supabase-backed — queries `deals` table from migration 010
+// Role-gated to: account-manager, supervisor, admin, ops-manager
+
+const PAGE_ID = 'sales-dashboard';
+const STALE_WARN_HOURS  = 24;  // yellow: sent 24h+ with no update
+const STALE_ALERT_HOURS = 48;  // red: sent 48h+ with no update
+const NEW_LEAD_LOOKBACK_HOURS = 20; // "overnight" window
+
+let _allDeals = [];
+let _activeStage = 'all';
+let _currentUser = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // page guard
+  if (typeof requireLogin === 'function') requireLogin(PAGE_ID);
+  _currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  if (typeof injectNav === 'function') injectNav(PAGE_ID);
+  if (typeof applyTheme === 'function') applyTheme();
+  await loadAll();
+  if (typeof onDBUpdate === 'function') onDBUpdate(() => loadAll());
+});
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (!sb) { _allDeals = getDemoDeals(); }
+    else {
+      const { data, error } = await sb
+        .from('deals')
+        .select('id, deal_number, customer_name, company, product_type, quoted_price, status, assigned_rep, follow_up_date, updated_at, created_at, last_contact_at, converted_to_order_id, lead_id')
+        .order('follow_up_date', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      _allDeals = data || [];
+    }
+    renderAll();
+  } catch(e) {
+    console.warn('Sales dashboard loadAll:', e);
+    _allDeals = getDemoDeals();
+    renderAll();
+  }
+}
+
+// ── Demo data ─────────────────────────────────────────────────────────────────
+function getDemoDeals() {
+  const now = Date.now();
+  const h = 3600000;
+  return [
+    { id: 'demo-1', deal_number: 'DL-001', customer_name: 'Green Leaf Farms', company: 'Green Leaf', product_type: 'Cannabis Labels', quoted_price: 1200, status: 'sent',      follow_up_date: new Date(now - 50*h).toISOString().slice(0,10), updated_at: new Date(now - 50*h).toISOString(), created_at: new Date(now - 3*86400000).toISOString() },
+    { id: 'demo-2', deal_number: 'DL-002', customer_name: 'Pacific Print Co',  company: 'Pacific',    product_type: 'Flyers 5000ct',   quoted_price:  450, status: 'follow_up', follow_up_date: new Date(now - 2*h).toISOString().slice(0,10),  updated_at: new Date(now - 26*h).toISOString(), created_at: new Date(now - 5*86400000).toISOString() },
+    { id: 'demo-3', deal_number: 'DL-003', customer_name: 'Mango Bay Organics', company:'Mango Bay',  product_type: 'Folding Cartons', quoted_price: 3400, status: 'draft',     follow_up_date: new Date(now + 2*86400000).toISOString().slice(0,10), updated_at: new Date(now - 1*h).toISOString(), created_at: new Date(now - 1*86400000).toISOString() },
+    { id: 'demo-4', deal_number: 'DL-004', customer_name: 'Sunrise Dispensary', company:'Sunrise',   product_type: 'Mylar Bags',      quoted_price: 2100, status: 'won',       follow_up_date: null, updated_at: new Date(now - 2*86400000).toISOString(), created_at: new Date(now - 7*86400000).toISOString() },
+    { id: 'demo-5', deal_number: 'DL-005', customer_name: 'Blue Mountain Co',  company:'Blue Mtn',   product_type: 'Business Cards',  quoted_price:  120, status: 'nurture',   follow_up_date: new Date(now + 7*86400000).toISOString().slice(0,10), updated_at: new Date(now - 10*86400000).toISOString(), created_at: new Date(now - 14*86400000).toISOString() },
+  ];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function hoursAgo(iso) { return iso ? Math.floor((Date.now() - new Date(iso)) / 3600000) : null; }
+function todayStr()     { return new Date().toISOString().slice(0,10); }
+
+function isStaleRed(deal) {
+  if (deal.status !== 'sent' && deal.status !== 'follow_up') return false;
+  return hoursAgo(deal.updated_at) >= STALE_ALERT_HOURS;
+}
+function isStaleYellow(deal) {
+  if (deal.status !== 'sent' && deal.status !== 'follow_up') return false;
+  const h = hoursAgo(deal.updated_at);
+  return h >= STALE_WARN_HOURS && h < STALE_ALERT_HOURS;
+}
+function isFollowUpDue(deal) {
+  if (!deal.follow_up_date) return false;
+  if (['won','lost'].includes(deal.status)) return false;
+  return deal.follow_up_date <= todayStr();
+}
+function isNewLead(deal) {
+  return hoursAgo(deal.created_at) <= NEW_LEAD_LOOKBACK_HOURS && deal.status === 'draft' && deal.lead_id;
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+function fmtMoney(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + Number(n).toLocaleString();
+}
+function staleLabel(deal) {
+  const h = hoursAgo(deal.updated_at);
+  if (h < 60) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderAll() {
+  const active = _allDeals.filter(d => !['won','lost'].includes(d.status));
+  const staleRed    = _allDeals.filter(isStaleRed);
+  const staleAll    = _allDeals.filter(d => isStaleRed(d) || isStaleYellow(d));
+  const followups   = _allDeals.filter(isFollowUpDue);
+  const newLeads    = _allDeals.filter(isNewLead);
+  const now = Date.now();
+  const weekAgo  = new Date(now - 7*86400000);
+  const monthAgo = new Date(now - 30*86400000);
+  const wonWeek  = _allDeals.filter(d => d.status === 'won' && new Date(d.updated_at) > weekAgo);
+  const wonMonth = _allDeals.filter(d => d.status === 'won' && new Date(d.updated_at) > monthAgo);
+  const lostWeek = _allDeals.filter(d => d.status === 'lost' && new Date(d.updated_at) > weekAgo);
+  const lostMonth= _allDeals.filter(d => d.status === 'lost' && new Date(d.updated_at) > monthAgo);
+
+  // Stage counts
+  const stages = ['draft','sent','follow_up','won','lost','nurture'];
+  const counts = {};
+  stages.forEach(s => { counts[s] = _allDeals.filter(d => d.status === s).length; });
+  counts.all = _allDeals.length;
+
+  // Stat tiles
+  document.getElementById('stat-active').textContent    = active.length;
+  document.getElementById('stat-followup').textContent  = followups.length;
+  document.getElementById('stat-stale').textContent     = staleAll.length;
+  document.getElementById('stat-won-week').textContent  = wonWeek.length;
+  document.getElementById('stat-new-leads').textContent = newLeads.length;
+
+  // Stale alert
+  const alertEl = document.getElementById('stale-alert');
+  if (staleRed.length) {
+    document.getElementById('stale-alert-msg').textContent =
+      `${staleRed.length} sent quote${staleRed.length > 1 ? 's' : ''} past 48h without action — escalation flag active`;
+    alertEl.style.display = 'flex';
+  } else {
+    alertEl.style.display = 'none';
+  }
+
+  // Stage tab counts
+  stages.concat(['all']).forEach(s => {
+    const el = document.getElementById('cnt-' + s);
+    if (el) el.textContent = counts[s] || '';
+  });
+
+  document.getElementById('pipeline-count').textContent = _allDeals.length + ' deal' + (_allDeals.length !== 1 ? 's' : '');
+
+  // Deal list
+  const filtered = _activeStage === 'all'
+    ? _allDeals
+    : _allDeals.filter(d => d.status === _activeStage);
+  renderDeals(filtered);
+
+  // Follow-ups
+  renderFollowUps(followups);
+
+  // New leads
+  renderNewLeads(newLeads);
+
+  // Win/loss
+  document.getElementById('wl-won-week').textContent   = wonWeek.length;
+  document.getElementById('wl-won-month').textContent  = wonMonth.length;
+  document.getElementById('wl-lost-week').textContent  = lostWeek.length;
+  document.getElementById('wl-lost-month').textContent = lostMonth.length;
+}
+
+function renderDeals(deals) {
+  const el = document.getElementById('deal-list');
+  if (!deals.length) { el.innerHTML = '<div class="empty-state">No deals in this stage.</div>'; return; }
+
+  el.innerHTML = deals.map(d => {
+    const cls = isStaleRed(d) ? 'deal-card stale-red' : isStaleYellow(d) ? 'deal-card stale-yellow' : 'deal-card';
+    const statusBadge = {
+      draft: '#64748b', sent: '#2563eb', follow_up: '#d97706',
+      won: '#16a34a', lost: '#dc2626', nurture: '#7c3aed',
+    }[d.status] || '#6b7280';
+
+    const staleInfo = (d.status === 'sent' || d.status === 'follow_up')
+      ? `<span class="dc-tag">${staleLabel(d)}</span>`
+      : '';
+    const fuInfo = d.follow_up_date
+      ? `<span class="dc-tag" style="background:#f0f9ff;border-color:#bae6fd;color:#0369a1;">📅 ${fmtDate(d.follow_up_date)}</span>`
+      : '';
+
+    // Gate 2 CTA: show Convert button only if status = won and not yet converted
+    const convertBtn = d.status === 'won' && !d.converted_to_order_id
+      ? `<button class="dc-btn primary" onclick="event.stopPropagation();openConvertModal('${d.id}')">Convert to Order</button>`
+      : '';
+    const viewOrderBtn = d.converted_to_order_id
+      ? `<button class="dc-btn" onclick="event.stopPropagation();window.location.href='orders.html?id=${d.converted_to_order_id}'">View Order →</button>`
+      : '';
+
+    return `<div class="${cls}" onclick="openDeal('${d.id}')">
+      <div class="dc-header">
+        <div>
+          <div class="dc-name">${d.customer_name || '(No name)'}</div>
+          <div class="dc-company">${d.company || ''} · ${d.product_type || ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:13px;font-weight:700;">${fmtMoney(d.quoted_price)}</div>
+          <div style="font-size:11px;background:${statusBadge};color:#fff;border-radius:4px;padding:2px 6px;margin-top:3px;">${d.status}</div>
+        </div>
+      </div>
+      <div class="dc-meta">
+        <span class="dc-tag" style="font-size:10px;">${d.deal_number || ''}</span>
+        ${staleInfo}
+        ${fuInfo}
+      </div>
+      ${convertBtn || viewOrderBtn ? `<div class="dc-actions">${convertBtn}${viewOrderBtn}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderFollowUps(deals) {
+  const el = document.getElementById('fu-list');
+  document.getElementById('fu-count').textContent = deals.length;
+  if (!deals.length) { el.innerHTML = '<div class="empty-state">No follow-ups due.</div>'; return; }
+  el.innerHTML = deals.map(d => {
+    const overdue = d.follow_up_date < todayStr();
+    return `<div class="fu-item" onclick="openDeal('${d.id}')" style="cursor:pointer;">
+      <div>
+        <div style="font-weight:600;">${d.customer_name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${d.product_type || ''} · ${d.status}</div>
+      </div>
+      <div class="${overdue ? 'fu-overdue' : 'fu-today'}">${overdue ? 'Overdue' : 'Today'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderNewLeads(deals) {
+  const el = document.getElementById('nl-list');
+  document.getElementById('nl-count').textContent = deals.length;
+  if (!deals.length) { el.innerHTML = '<div class="empty-state">No new leads from SDR.</div>'; return; }
+  el.innerHTML = deals.map(d => {
+    const h = hoursAgo(d.created_at);
+    return `<div class="nl-item" onclick="openDeal('${d.id}')" style="cursor:pointer;">
+      <div class="nl-name">${d.customer_name} <span style="font-weight:400;color:var(--text-muted);">${d.product_type || ''}</span></div>
+      <div class="nl-time">${h}h ago</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Stage filter ──────────────────────────────────────────────────────────────
+function setStage(stage) {
+  _activeStage = stage;
+  document.querySelectorAll('.stage-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.stage === stage);
+  });
+  const filtered = stage === 'all'
+    ? _allDeals
+    : _allDeals.filter(d => d.status === stage);
+  renderDeals(filtered);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function openDeal(id) {
+  // Navigate to order-form (for won deals) or a deal detail page
+  const deal = _allDeals.find(d => d.id === id);
+  if (!deal) return;
+  if (deal.converted_to_order_id) {
+    window.location.href = `orders.html?id=${deal.converted_to_order_id}`;
+  } else {
+    // Future: dedicated deal detail page; for now open order-form with dealId param
+    window.location.href = `order-form.html?dealId=${id}`;
+  }
+}
+
+// Gate 2 enforcement: confirm all prereqs before converting deal to order
+function openConvertModal(dealId) {
+  const deal = _allDeals.find(d => d.id === dealId);
+  if (!deal) return;
+
+  const checklist = [
+    { label: 'Written customer approval recorded',   key: 'approval_recorded' },
+    { label: 'Deposit / payment collected',          key: 'deposit_collected' },
+    { label: 'Product specs complete (type, qty)',   key: 'product_type', check: d => !!(d.product_type && d.product_type.trim()) },
+    { label: 'Artwork status set',                   key: 'artwork_status', check: d => !!(d.artwork_status && d.artwork_status.trim()) },
+    { label: 'Deadline confirmed',                   key: 'deadline', check: d => !!(d.deadline) },
+  ];
+
+  const missing = checklist.filter(c => {
+    if (c.check) return !c.check(deal);
+    return !deal[c.key];
+  }).map(c => c.label);
+
+  if (missing.length) {
+    alert('Cannot convert to Order yet. Complete these first:\n\n' + missing.map(m => '• ' + m).join('\n') +
+      '\n\nOpen the deal to fill in missing fields.');
+    return;
+  }
+
+  if (!confirm(`Convert "${deal.customer_name}" deal to Order?\n\nThis will create an Order in the system.\nMake sure pricing is locked before confirming.`)) return;
+  convertDealToOrder(deal);
+}
+
+async function convertDealToOrder(deal) {
+  try {
+    const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (!sb) { alert('Supabase not connected. Cannot convert.'); return; }
+
+    // Create order in order-pending state (PUL-713 Order phase)
+    const { data: order, error: orderErr } = await sb
+      .from('orders')
+      .insert({
+        customer_id:    deal.customer_id || null,
+        customer_name:  deal.customer_name || '',
+        customer_email: deal.customer_email || '',
+        customer_phone: deal.customer_phone || '',
+        company:        deal.company || '',
+        product_type:   deal.product_type || '',
+        specs:          deal.specs || '',
+        status:         'order-pending',
+        contact_name:   deal.customer_name || '',
+        account_manager_name: _currentUser?.name || '',
+      })
+      .select()
+      .single();
+    if (orderErr) throw orderErr;
+
+    // Link deal → order
+    const { error: dealErr } = await sb
+      .from('deals')
+      .update({ converted_to_order_id: order.id, converted_at: new Date().toISOString() })
+      .eq('id', deal.id);
+    if (dealErr) throw dealErr;
+
+    showToast('Order created. Opening order form…', 'success');
+    setTimeout(() => { window.location.href = `orders.html?id=${order.id}`; }, 800);
+  } catch(e) {
+    console.error('convertDealToOrder:', e);
+    showToast('Error creating order: ' + e.message, 'error');
+  }
+}
+
+function showToast(msg, type) {
+  if (typeof showPageToast === 'function') { showPageToast(msg, type); return; }
+  alert(msg);
+}
+</script>
+</body>
+</html>
