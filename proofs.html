@@ -1162,6 +1162,20 @@ async function confirmLock() {
         notes: `Version ${lockVersionNumPending} locked for production`,
       });
 
+      // ── Gate 5: Auto-create production_task so prepress sees the file ──
+      // This is the anti-Slack-side-chain enforcement.
+      // Prepress must receive the file through Pulse, not via Slack/email.
+      try {
+        await sb.from('production_tasks').insert({
+          order_id: proof.order_id,
+          status: 'scheduled',
+          run_notes: `Approved proof v${lockVersionNumPending} locked. File ready for prepress check and press scheduling.`,
+        });
+      } catch (ptErr) {
+        // Non-fatal: log but don't block the lock operation
+        console.warn('Gate 5: production_task creation failed:', ptErr.message);
+      }
+
       await loadProofs();
     } else {
       // Demo
@@ -1176,7 +1190,7 @@ async function confirmLock() {
     closeModal('lockModal');
     renderProofList();
     if (currentProofId) openProof(currentProofId);
-    showPageToast('🔒 Proof locked for production. File routed through Pulse only.', 'success');
+    showPageToast('🔒 Proof locked for production. Production task created — prepress routed through Pulse.', 'success');
   } catch(e) {
     showPageToast('Error: ' + e.message, 'error');
   }

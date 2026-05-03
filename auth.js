@@ -82,7 +82,7 @@ const ROLE_CONFIG = {
   'job-manager': {
     label: 'Job Manager',
     color: '#0891b2',
-    pages: ['dashboard','jm-dashboard','job-ticket','orders','prepress','proofs','application-dept','qc-checkout','shipping'],
+    pages: ['dashboard','jm-dashboard','job-ticket','design-task','orders','prepress','proofs','application-dept','qc-checkout','shipping'],
     canEditAllTickets: true,
     canViewAdmin: false,
     canViewProduction: true,
@@ -110,7 +110,7 @@ const ROLE_CONFIG = {
   designer: {
     label: 'Designer',
     color: '#8b5cf6',
-    pages: ['dashboard','job-ticket','proofs','leads'],
+    pages: ['dashboard','job-ticket','design-task','proofs','leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
