@@ -1103,9 +1103,46 @@ function adminUnlock() {
   }
 }
 
+// ── Gate 2: Order → Production enforcement ───────────────────────────
+// Blocks "Convert to Job Ticket" unless all 5 prereqs are satisfied.
+// PUL-679: Required-field enforcement before state transition.
 function convertToJobTicket() {
   if (!_editingOrderId) return;
-  const items = collectLineItems();
+
+  const rep       = document.getElementById('f_rep').value.trim();
+  const facility  = document.getElementById('f_facility').value.trim();
+  const dueDate   = document.getElementById('f_dueDate').value.trim();
+  const items     = collectLineItems();
+  const hasValidItem = items.some(li => li.product && li.qty > 0 && li.price > 0);
+
+  const checks = [
+    { label: 'Account Manager / Rep assigned',         ok: !!rep },
+    { label: 'Facility selected',                      ok: !!facility },
+    { label: 'Due date confirmed',                     ok: !!dueDate },
+    { label: 'At least one line item with product, qty, and price', ok: hasValidItem },
+    { label: 'Order confirmed with customer (status)',  ok: _currentStatus === 'order-confirmed' },
+  ];
+
+  const failed = checks.filter(c => !c.ok);
+  if (failed.length > 0) {
+    const list = failed.map(c => `<li style="margin-bottom:6px;">❌ ${c.label}</li>`).join('');
+    const modal = document.createElement('div');
+    modal.id = 'gate2Modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:14px;padding:28px 28px 20px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.22);">
+        <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:6px;">⛔ Cannot Convert to Job Ticket</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:16px;">The following requirements must be met before this order can move to production:</div>
+        <ul style="font-size:13px;color:#dc2626;padding-left:16px;margin:0 0 20px;">${list}</ul>
+        <div style="text-align:right;">
+          <button onclick="document.getElementById('gate2Modal').remove()"
+            style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;">Got it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    return;
+  }
+
   const orderId = document.getElementById('orderNumBadge').textContent;
   window.location.href = `job-ticket.html?order=${encodeURIComponent(orderId)}&fromOrder=1`;
 }
