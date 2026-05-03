@@ -361,10 +361,13 @@ async function loadData() {
   try {
     const sb = getSupabaseClient ? getSupabaseClient() : null;
     if (!sb) { jobs = getDemoJobs(); return; }
+    // PUL-679: exclude ORDER_* phases (order-pending, order-priced, order-confirmed)
+    // Those belong to the Sales/AM dashboard, not the JM production queue.
+    // JM sees jobs that have been converted (INTAKE / old statuses onwards).
     const { data, error } = await sb
       .from('orders')
       .select('order_id, customer_name, status, facility, created_at, deadline, rush, notes, assigned_designer, product_type, proof_sent_at, proof_approved_at, specs')
-      .in('status', ['design','proof','approved','in-production','qc-checkout','ready-to-ship'])
+      .in('status', ['design','proof','approved','in-production','qc-checkout','ready-to-ship','INTAKE','QUEUED','IN_PRODUCTION','QC_HOLD'])
       .order('deadline', { ascending: true });
     if (error) throw error;
     jobs = data || [];
