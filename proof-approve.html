@@ -119,13 +119,17 @@ async function init() {
       .select(`
         *,
         proofs (
-          id, status, order_id, approved_version_number,
+          id, status, order_id, design_task_id, approved_version_number,
           orders ( order_id, customer_name, product_type )
         ),
         order_files ( r2_key, original_name, file_size, mime_type )
       `)
       .eq('approval_token', TOKEN_PARAM)
       .maybeSingle();
+    // Note: revision auto-routing to design_tasks is handled by the DB trigger
+    // in migration 014 (trg_route_revision_to_designer) which fires when
+    // proofs.status changes to 'revision_requested'. No client-side update needed
+    // from this unauthenticated page.
 
     if (error) throw error;
     if (!version) {

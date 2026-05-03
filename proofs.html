@@ -1075,6 +1075,27 @@ async function submitJMDecision() {
       }
       await sb.from('proofs').update(proofUpdate).eq('id', currentProofId);
 
+      // ── Gap fix: revision auto-routing (belt-and-suspenders alongside migration-014 trigger)
+      // Trigger on proofs.status handles this at DB layer, but update here too for
+      // immediate UI consistency and in case trigger hasn't been applied yet.
+      if (decision === 'revision_requested' && proof) {
+        try {
+          if (proof.design_task_id) {
+            await sb.from('design_tasks')
+              .update({ status: 'revision' })
+              .eq('id', proof.design_task_id)
+              .not('status', 'in', '("done","revision")');
+          } else if (proof.order_id) {
+            await sb.from('design_tasks')
+              .update({ status: 'revision' })
+              .eq('order_id', proof.order_id)
+              .not('status', 'in', '("done","revision")');
+          }
+        } catch (dtErr) {
+          console.warn('design_task revision routing (non-fatal):', dtErr.message);
+        }
+      }
+
       await sb.from('proof_approval_events').insert({
         proof_id: currentProofId,
         proof_version_id: jmVersionId,
@@ -1162,18 +1183,20 @@ async function confirmLock() {
         notes: `Version ${lockVersionNumPending} locked for production`,
       });
 
-      // ── Gate 5: Auto-create production_task so prepress sees the file ──
-      // This is the anti-Slack-side-chain enforcement.
-      // Prepress must receive the file through Pulse, not via Slack/email.
+      // ── Gate 5: Auto-create production_task + advance order to 'prepress' ──
+      // Anti-Slack-side-chain enforcement: prepress receives file through Pulse only.
       try {
         await sb.from('production_tasks').insert({
           order_id: proof.order_id,
           status: 'scheduled',
           run_notes: `Approved proof v${lockVersionNumPending} locked. File ready for prepress check and press scheduling.`,
         });
+        // Advance the order status so both Supabase prepress.html and legacy
+        // IndexedDB queues surface this job.
+        await sb.from('orders').update({ status: 'prepress' }).eq('id', proof.order_id);
       } catch (ptErr) {
         // Non-fatal: log but don't block the lock operation
-        console.warn('Gate 5: production_task creation failed:', ptErr.message);
+        console.warn('Gate 5: production_task / order status update failed:', ptErr.message);
       }
 
       await loadProofs();
