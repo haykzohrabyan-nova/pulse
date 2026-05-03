@@ -4415,6 +4415,7 @@ function renderNav(activePage) {
     { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
     { id: 'leads',              label: '\uD83D\uDCCB Leads',              href: 'leads.html',               access: 'all' },
     { id: 'sdr-dashboard',      label: '\uD83C\uDFAF SDR Inbox',          href: 'sdr-dashboard.html',       access: 'all' },
+    { id: 'walkin-dashboard',   label: '\uD83D\uDEAA Walk-In',            href: 'walkin-dashboard.html',    access: 'all' },
     { id: 'proofs',             label: '\uD83D\uDDBC\uFE0F Proofs',             href: 'proofs.html',              access: 'all' },
     { id: 'design-task',       label: '\uD83C\uDFA8 Design Tasks',       href: 'design-task.html',         access: 'all' },
     { id: 'instagram-leads',    label: '\uD83D\uDCF8 Instagram',           href: 'instagram-leads.html',     access: 'all' },

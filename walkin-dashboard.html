@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walk-In / Front Desk — Bazaar Print</title>
+  <script src="shared.js?v=20260503-PUL686"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260430-PRI262"></script>
+  <script src="auth.js?v=20260503-PUL685"></script>
+  <style id="page-styles"></style>
+  <style>
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .fd-layout { max-width: 1500px; margin: 0 auto; padding: 20px 16px; }
+    .fd-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+    .fd-header h2 { font-size: 22px; font-weight: 700; margin: 0 0 2px; }
+    .fd-header .subtitle { font-size: 13px; color: var(--text-muted); }
+
+    /* ── At-Desk Live Timer ──────────────────────────────────────────────── */
+    .at-desk-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: var(--radius); margin-bottom: 14px; gap: 16px; flex-wrap: wrap; }
+    .at-desk-bar.idle    { background: var(--bg); border: 2px dashed var(--border); }
+    .at-desk-bar.waiting { background: #d1fae5; border: 2px solid #34d399; }
+    .at-desk-bar.warn    { background: #fef3cd; border: 2px solid #fcd34d; }
+    .at-desk-bar.danger  { background: #fee2e2; border: 2px solid #f87171; animation: pulse-border 1.2s ease-in-out infinite; }
+    @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.5)} 50%{box-shadow:0 0 0 6px rgba(248,113,113,0)} }
+
+    .at-desk-left { display: flex; align-items: center; gap: 14px; }
+    .at-desk-icon { font-size: 32px; line-height: 1; }
+    .at-desk-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .at-desk-timer { font-size: 36px; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+    .at-desk-timer.warn   { color: #d97706; }
+    .at-desk-timer.danger { color: #dc2626; }
+    .at-desk-name  { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+    .at-desk-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* ── Stat tiles ──────────────────────────────────────────────────────── */
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .stat-tile.danger { border-top: 3px solid var(--red); }
+    .stat-tile.warn   { border-top: 3px solid var(--yellow); }
+    .stat-tile.ok     { border-top: 3px solid var(--green); }
+    .stat-tile.info   { border-top: 3px solid var(--accent); }
+    .stat-tile.purple { border-top: 3px solid #7c3aed; }
+    .stat-tile .num   { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-tile .lbl   { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* ── Alert banners ───────────────────────────────────────────────────── */
+    .alert-bar { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .alert-bar.danger { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
+    .alert-bar.warn   { background: #fef3cd; border: 1px solid #fcd34d; color: #92400e; }
+    .alert-bar.ok     { background: #d4edda; border: 1px solid #86efac; color: #166534; }
+
+    /* ── Main grid ───────────────────────────────────────────────────────── */
+    .main-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 1050px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* ── Secondary grid ──────────────────────────────────────────────────── */
+    .secondary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 900px) { .secondary-grid { grid-template-columns: 1fr; } }
+
+    /* ── Bottom row ──────────────────────────────────────────────────────── */
+    .bottom-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 850px) { .bottom-grid { grid-template-columns: 1fr; } }
+
+    /* ── Panel ───────────────────────────────────────────────────────────── */
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .panel-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .panel-title .count-badge { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; color: var(--text); font-weight: 700; }
+    .panel-title .count-badge.danger { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+    .panel-title .count-badge.warn   { background: #fef3cd; border-color: #fcd34d; color: #92400e; }
+    .panel-title .count-badge.ok     { background: #d4edda; border-color: #86efac; color: #166534; }
+
+    /* ── Walk-in queue tabs ──────────────────────────────────────────────── */
+    .queue-controls { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .queue-tab { padding: 5px 11px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .queue-tab.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+
+    /* ── Queue items ─────────────────────────────────────────────────────── */
+    .queue-item { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 7px; background: var(--bg); cursor: pointer; transition: box-shadow 0.15s; }
+    .queue-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+    .queue-item.is-new     { border-left: 3px solid #7c3aed; }
+    .queue-item.is-waiting { border-left: 3px solid var(--yellow); background: #fffbeb; border-color: #fcd34d; }
+
+    .qi-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .qi-name   { font-weight: 700; font-size: 14px; }
+    .qi-meta   { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; align-items: center; }
+    .qi-tag    { padding: 2px 7px; border-radius: 6px; background: var(--border); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .qi-right  { text-align: right; flex-shrink: 0; }
+    .qi-age    { font-size: 11px; color: var(--text-muted); }
+
+    .qi-stage-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .qi-stage-pill.new       { background: #ede9fe; color: #5b21b6; }
+    .qi-stage-pill.qualifying{ background: #fef3cd; color: #92400e; }
+    .qi-stage-pill.qualified { background: #d4edda; color: #166534; }
+    .qi-stage-pill.routed    { background: #dbeafe; color: #1e40af; }
+
+    /* ── Pickup schedule items ───────────────────────────────────────────── */
+    .pickup-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 7px; border: 1px solid var(--border); background: var(--bg); }
+    .pickup-item.overdue    { background: #fffbeb; border-color: #fcd34d; border-left: 3px solid var(--red); }
+    .pickup-item.upcoming   { background: var(--bg); border-left: 3px solid var(--green); }
+    .pickup-item.no-time    { border-left: 3px solid var(--border); }
+    .pickup-item .pi-name   { font-weight: 700; font-size: 14px; }
+    .pickup-item .pi-order  { font-size: 12px; color: #7c3aed; font-weight: 600; }
+    .pickup-item .pi-meta   { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .pickup-item .pi-time   { font-size: 11px; font-weight: 700; }
+    .pickup-item .pi-time.overdue   { color: var(--red); }
+    .pickup-item .pi-time.upcoming  { color: var(--green); }
+    .pickup-item .pi-time.no-appt   { color: var(--text-muted); }
+
+    .confirm-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--green); background: #d4edda; color: #166534; cursor: pointer; font-weight: 700; }
+    .confirm-btn:hover { background: #a7f3d0; }
+    .notify-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+
+    /* ── Drop-off items ──────────────────────────────────────────────────── */
+    .dropoff-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 7px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+    .dropoff-item:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .dropoff-item.unstaged { background: #fffbeb; border-left: 3px solid var(--yellow); border-color: #fcd34d; }
+    .dropoff-item.staged   { background: var(--bg); border-left: 3px solid var(--green); }
+    .dropoff-item .do-header { display: flex; justify-content: space-between; align-items: center; }
+    .dropoff-item .do-name   { font-weight: 700; font-size: 13px; }
+    .dropoff-item .do-meta   { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .unstaged-badge { font-size: 10px; font-weight: 800; background: var(--yellow); color: #78350f; border-radius: 4px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .staged-badge   { font-size: 10px; font-weight: 800; background: #d1fae5; color: #065f46; border-radius: 4px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* ── Slow-time work queue ────────────────────────────────────────────── */
+    .slow-task-item { padding: 9px 12px; border-radius: 7px; margin-bottom: 6px; border: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; gap: 12px; }
+    .slow-task-item .stk-icon  { font-size: 18px; flex-shrink: 0; }
+    .slow-task-item .stk-label { font-weight: 600; font-size: 13px; flex: 1; }
+    .slow-task-item .stk-count { font-size: 11px; color: var(--text-muted); }
+    .slow-task-item .stk-prio  { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 6px; }
+    .stk-prio.high   { background: #fee2e2; color: #b91c1c; }
+    .stk-prio.medium { background: #fef3cd; color: #92400e; }
+    .stk-prio.low    { background: #dbeafe; color: #1e40af; }
+
+    /* ── Log walk-in modal ───────────────────────────────────────────────── */
+    .log-modal { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; display: none; }
+    .log-modal.active { display: block; }
+    .log-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .log-field { display: flex; flex-direction: column; gap: 4px; }
+    .log-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+    .log-field input, .log-field select, .log-field textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); }
+    .log-field textarea { resize: vertical; min-height: 56px; }
+    .action-bar { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
+
+    /* ── Misc ────────────────────────────────────────────────────────────── */
+    .empty-state    { text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 13px; }
+    .empty-state-sm { text-align: center; padding: 16px 8px; color: var(--text-muted); font-size: 12px; }
+    .section-note   { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .right-col > .panel + .panel { margin-top: 14px; }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="fd-layout">
+
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <div class="fd-header">
+    <div>
+      <h2>🚪 Walk-In / Front Desk</h2>
+      <div class="subtitle">Walk-in intake · Pickups · Drop-offs · Slow-time tasks</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="last-refresh" style="font-size:11px;color:var(--text-muted);"></span>
+      <button class="btn" onclick="loadAll()">↻ Refresh</button>
+      <button class="btn btn-primary" onclick="openLogModal()">+ Log Walk-In</button>
+    </div>
+  </div>
+
+  <!-- ── AT-DESK LIVE TIMER ─────────────────────────────────────────── -->
+  <div id="at-desk-bar" class="at-desk-bar idle">
+    <div class="at-desk-left">
+      <div class="at-desk-icon" id="at-desk-icon">🚪</div>
+      <div>
+        <div class="at-desk-label" id="at-desk-label">No customer at desk</div>
+        <div class="at-desk-timer" id="at-desk-timer" style="color:var(--text-muted);font-size:18px;">—</div>
+        <div class="at-desk-name" id="at-desk-name" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="at-desk-actions">
+      <button class="btn btn-primary" id="btn-greet" onclick="startGreet()" style="background:#7c3aed;border-color:#7c3aed;">🔔 Customer Arrived</button>
+      <button class="btn" id="btn-resolve" onclick="resolveGreet()" style="display:none;">✓ Greeted / Resolved</button>
+    </div>
+  </div>
+
+  <!-- ── Stat tiles ──────────────────────────────────────────────────── -->
+  <div class="stat-tiles">
+    <div class="stat-tile purple"><div class="num" id="tile-walkin"   style="color:#7c3aed">—</div><div class="lbl">Walk-Ins Open</div></div>
+    <div class="stat-tile warn">  <div class="num" id="tile-new"      style="color:#d97706">—</div><div class="lbl">New Today</div></div>
+    <div class="stat-tile ok">    <div class="num" id="tile-pickups"  style="color:var(--green)">—</div><div class="lbl">Pickups Today</div></div>
+    <div class="stat-tile danger"><div class="num" id="tile-overdue"  style="color:var(--red)">—</div><div class="lbl">Pickups Overdue</div></div>
+    <div class="stat-tile warn">  <div class="num" id="tile-dropoffs" style="color:#d97706">—</div><div class="lbl">Drop-offs Pending</div></div>
+    <div class="stat-tile danger"><div class="num" id="tile-unstaged" style="color:var(--red)">—</div><div class="lbl">Drop-offs Unstaged</div></div>
+  </div>
+
+  <!-- ── Alert banners ───────────────────────────────────────────────── -->
+  <div id="alert-banners-host"></div>
+
+  <!-- ── Log Walk-In Modal (inline panel) ────────────────────────────── -->
+  <div id="log-modal" class="log-modal">
+    <h3 style="margin:0 0 14px;font-size:16px;font-weight:700;">Log Walk-In Customer</h3>
+    <div class="log-grid">
+      <div class="log-field">
+        <label>Customer Name *</label>
+        <input id="lm-name" type="text" placeholder="Full name">
+      </div>
+      <div class="log-field">
+        <label>Company</label>
+        <input id="lm-company" type="text" placeholder="Company (optional)">
+      </div>
+      <div class="log-field">
+        <label>Phone</label>
+        <input id="lm-phone" type="tel" placeholder="(213) 555-0000">
+      </div>
+      <div class="log-field">
+        <label>Email</label>
+        <input id="lm-email" type="email" placeholder="email@domain.com">
+      </div>
+      <div class="log-field">
+        <label>Purpose</label>
+        <select id="lm-purpose">
+          <option value="inquiry">💬 Inquiry / Quote</option>
+          <option value="dropoff">📦 Drop-off (artwork / materials)</option>
+          <option value="pickup">🏪 Pickup (completed order)</option>
+          <option value="complaint">⚠️ Complaint / Issue</option>
+          <option value="other">❓ Other</option>
+        </select>
+      </div>
+      <div class="log-field">
+        <label>Product Interest</label>
+        <input id="lm-product" type="text" placeholder="e.g. Roll Labels, Mylar Bags">
+      </div>
+      <div class="log-field">
+        <label>Urgency / Notes</label>
+        <input id="lm-urgency" type="text" placeholder="e.g. Rush — needs by Friday">
+      </div>
+      <div class="log-field">
+        <label>Route to</label>
+        <select id="lm-route">
+          <option value="">— Handle at desk —</option>
+          <option value="Gary Gharibyan">Gary Gharibyan (AM)</option>
+          <option value="Ernesto Flores">Ernesto Flores (AM)</option>
+          <option value="Bob Werner">Bob Werner (AM)</option>
+          <option value="Tiko">Tiko (AM)</option>
+          <option value="Job Manager">Job Manager</option>
+          <option value="Shipping">Shipping / Boyd</option>
+        </select>
+      </div>
+    </div>
+    <div class="log-field" style="margin-bottom:0;">
+      <label>Additional Notes</label>
+      <textarea id="lm-notes" placeholder="Parking instructions, special requests, context…"></textarea>
+    </div>
+    <div class="action-bar">
+      <button class="btn" onclick="closeLogModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveWalkIn()">💾 Log Walk-In</button>
+      <button class="btn btn-primary" onclick="saveAndStartGreet()" style="background:#7c3aed;border-color:#7c3aed;">🔔 Log + Start Greet Timer</button>
+    </div>
+  </div>
+
+  <!-- ── MAIN GRID: Walk-In Queue | Pickup Schedule ────────────────────── -->
+  <div class="main-grid">
+
+    <!-- LEFT: Walk-in queue (full edit — not read-only) -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>🚶 Walk-In Queue</span>
+        <span class="count-badge" id="walkin-queue-count">0</span>
+      </div>
+      <div class="queue-controls">
+        <button class="queue-tab active" data-filter="all"       onclick="setWalkInFilter('all')">All Open</button>
+        <button class="queue-tab"        data-filter="new"       onclick="setWalkInFilter('new')">🆕 New</button>
+        <button class="queue-tab"        data-filter="qualifying" onclick="setWalkInFilter('qualifying')">🔍 Qualifying</button>
+        <button class="queue-tab"        data-filter="qualified"  onclick="setWalkInFilter('qualified')">✅ Ready to Route</button>
+      </div>
+      <div id="walkin-queue-list"></div>
+      <p class="section-note">Walk-in leads are separate from Digital SDR inbound. Log with "+ Log Walk-In" above.</p>
+    </div>
+
+    <!-- RIGHT: Today's pickup schedule + quick stats -->
+    <div class="right-col" style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Today's pickup schedule -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>📦 Today's Pickup Schedule</span>
+          <span class="count-badge" id="pickup-count">0</span>
+        </div>
+        <div id="pickup-list"><div class="empty-state-sm">No pickups scheduled for today.</div></div>
+        <p class="section-note">Showing orders in <strong>Waiting Pickup</strong> state. Confirm pickup in Shipping module.</p>
+      </div>
+
+      <!-- Pickup stats widget -->
+      <div class="panel">
+        <div class="panel-title"><span>📊 Pickup Status</span></div>
+        <div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+            <span style="color:var(--text-muted);">Awaiting pickup</span>
+            <strong id="stat-awaiting">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+            <span style="color:var(--text-muted);">Overdue (past appt time)</span>
+            <strong id="stat-overdue-p" style="color:var(--red)">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
+            <span style="color:var(--text-muted);">No appointment set</span>
+            <strong id="stat-no-appt">—</strong>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SECONDARY GRID: Drop-offs | Slow-time Work ────────────────────── -->
+  <div class="secondary-grid">
+
+    <!-- Pending drop-offs awaiting downstream pickup -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>📥 Pending Drop-offs</span>
+        <span class="count-badge" id="dropoff-count">0</span>
+      </div>
+      <div id="dropoff-list"><div class="empty-state-sm">No pending drop-offs.</div></div>
+      <p class="section-note">Items dropped off by customers or vendors awaiting downstream pickup (Designer, Job Manager, Production).</p>
+    </div>
+
+    <!-- Slow-time work queue -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>🕐 Slow-Time Work Queue</span>
+        <span class="count-badge" id="slowwork-count">0</span>
+      </div>
+      <div id="slowwork-list"><div class="empty-state-sm">No slow-time tasks queued.</div></div>
+      <p class="section-note">Tasks to handle during quiet periods — no customers waiting.</p>
+    </div>
+
+  </div>
+
+  <!-- ── BOTTOM GRID: Quick Actions ────────────────────────────────────── -->
+  <div class="bottom-grid">
+
+    <!-- Greet / intake log (today's activity) -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>📋 Today's Desk Activity</span>
+        <span class="count-badge" id="activity-count">0</span>
+      </div>
+      <div id="activity-list"><div class="empty-state-sm">No desk events logged today.</div></div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="panel">
+      <div class="panel-title"><span>🚀 Quick Actions</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary" onclick="openLogModal()">🚶 Log Walk-In Customer</button>
+        <button class="btn" onclick="window.location.href='leads.html?source=walk_in&action=new'">＋ Full Walk-In Lead Form</button>
+        <button class="btn" onclick="window.location.href='shipping.html'">📦 Open Shipping / Pickup Module</button>
+        <button class="btn" onclick="window.location.href='leads.html'">📋 All Leads Board</button>
+        <button class="btn" onclick="window.location.href='sdr-dashboard.html'">🎯 SDR Dashboard (read-only)</button>
+        <button class="btn" onclick="window.location.href='orders.html'">📦 Orders</button>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- end .fd-layout -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// Walk-In / Front Desk Dashboard — PUL-686
+// ═══════════════════════════════════════════════════════════════════════════
+injectThemeCSS();
+document.getElementById('nav').innerHTML        = renderNav('walkin-dashboard');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: '🚪 Walk-In / Front Desk' }]);
+initAuth('walkin-dashboard');
+
+// ── State ─────────────────────────────────────────────────────────────────
+let walkInLeads   = [];   // leads with source='walk_in', status open
+let pickupOrders  = [];   // orders with status='waiting-pickup'
+let dropOffs      = [];   // pending drop-offs
+let slowWorkTasks = [];   // slow-time work queue items
+let deskEvents    = [];   // today's greet/resolve events (in-memory only)
+let walkInFilter  = 'all';
+
+// ── At-desk greet timer ────────────────────────────────────────────────────
+let greetStart    = null;   // Date when current greet started
+let greetName     = null;   // Name logged with greet (if any)
+let greetInterval = null;
+
+function startGreet(nameHint) {
+  greetStart  = Date.now();
+  greetName   = nameHint || null;
+  document.getElementById('btn-greet').style.display   = 'none';
+  document.getElementById('btn-resolve').style.display = 'inline-flex';
+  updateGreetTimer();
+  if (greetInterval) clearInterval(greetInterval);
+  greetInterval = setInterval(updateGreetTimer, 1000);
+  logDeskEvent('greet_started', greetName ? `Customer arrived: ${escHtml(greetName)}` : 'Customer arrived at desk');
+}
+function resolveGreet() {
+  const elapsed = greetStart ? Math.floor((Date.now() - greetStart) / 1000) : 0;
+  logDeskEvent('greet_resolved', `Greeted in ${fmtSecs(elapsed)}`);
+  greetStart    = null;
+  greetName     = null;
+  if (greetInterval) { clearInterval(greetInterval); greetInterval = null; }
+
+  const bar   = document.getElementById('at-desk-bar');
+  const label = document.getElementById('at-desk-label');
+  const timer = document.getElementById('at-desk-timer');
+  const icon  = document.getElementById('at-desk-icon');
+  const name  = document.getElementById('at-desk-name');
+  bar.className   = 'at-desk-bar ok';
+  icon.textContent = '✅';
+  label.textContent = 'Last greet resolved';
+  timer.textContent = fmtSecs(elapsed);
+  timer.className   = 'at-desk-timer';
+  timer.style.color = 'var(--green)';
+  timer.style.fontSize = '18px';
+  name.style.display = 'none';
+
+  document.getElementById('btn-greet').style.display   = 'inline-flex';
+  document.getElementById('btn-resolve').style.display = 'none';
+
+  renderAlertBanners();
+  renderActivityLog();
+}
+function updateGreetTimer() {
+  if (!greetStart) return;
+  const elapsed = Math.floor((Date.now() - greetStart) / 1000);
+  const bar     = document.getElementById('at-desk-bar');
+  const label   = document.getElementById('at-desk-label');
+  const timer   = document.getElementById('at-desk-timer');
+  const icon    = document.getElementById('at-desk-icon');
+  const name    = document.getElementById('at-desk-name');
+
+  timer.textContent = fmtSecs(elapsed);
+  timer.style.fontSize = '36px';
+
+  if (elapsed < 30) {
+    bar.className = 'at-desk-bar waiting';
+    icon.textContent = '🔔';
+    label.textContent = 'Customer at desk — waiting for greeting';
+    timer.className = 'at-desk-timer';
+    timer.style.color = '';
+  } else if (elapsed < 90) {
+    bar.className = 'at-desk-bar warn';
+    icon.textContent = '⚠️';
+    label.textContent = 'GREET OVERDUE — Customer waiting too long';
+    timer.className = 'at-desk-timer warn';
+    timer.style.color = '';
+  } else {
+    bar.className = 'at-desk-bar danger';
+    icon.textContent = '🚨';
+    label.textContent = 'URGENT — Customer ungreeted for too long';
+    timer.className = 'at-desk-timer danger';
+    timer.style.color = '';
+  }
+
+  if (greetName) {
+    name.textContent  = greetName;
+    name.style.display = 'block';
+  }
+
+  if (elapsed >= 30) renderAlertBanners();
+}
+function fmtSecs(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m}m ${String(sec).padStart(2,'0')}s` : `${sec}s`;
+}
+
+// ── Demo data ──────────────────────────────────────────────────────────────
+function getDemoData() {
+  const now  = Date.now();
+  const ago  = (m) => new Date(now - m * 60000).toISOString();
+  const tod  = () => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); };
+  const hhmm = (h, m) => {
+    const d = new Date(); d.setHours(h, m||0, 0, 0);
+    return d.toISOString();
+  };
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  return {
+    walkInLeads: [
+      { id:'w1', name:'Carmen Reyes',   company:'Reyes Provisions', phone:'(213) 555-0110', email:'carmen@reyes.co',  source:'walk_in', product_type:'Mylar Bags',     quantity:'500',  status:'new',        created_at: ago(12),  purpose:'inquiry',  urgency:'Needs by next week', notes:'', assigned_rep:null },
+      { id:'w2', name:'Daniel Park',    company:'Park Coffee Co',   phone:'(310) 555-0220', email:'',                source:'walk_in', product_type:'Roll Labels',    quantity:'2000', status:'qualifying', created_at: ago(35),  purpose:'inquiry',  urgency:'',                   notes:'Has artwork ready', assigned_rep:null },
+      { id:'w3', name:'Samantha Ortiz', company:'',                 phone:'(818) 555-0330', email:'sam@gmail.com',   source:'walk_in', product_type:'Stickers',       quantity:'300',  status:'new',        created_at: ago(5),   purpose:'inquiry',  urgency:'No rush',            notes:'', assigned_rep:null },
+      { id:'w4', name:'Mike Tanaka',    company:'Tanaka Auto',      phone:'(562) 555-0440', email:'mike@tanaka.biz', source:'walk_in', product_type:'Vehicle Magnets',quantity:'50',   status:'qualified',  created_at: ago(95),  purpose:'inquiry',  urgency:'This week',          notes:'Routed to Gary', assigned_rep:'Gary Gharibyan' },
+    ],
+    pickupOrders: [
+      { id:'o1', order_id:'ORD-1041', customer_name:'West Coast Herb Co',  product_type:'Mylar Bags 500ct',       pickupContact:'Elena',   pickupExpectedDate: hhmm(10,30), status:'waiting-pickup', created_at: ago(60*18) },
+      { id:'o2', order_id:'ORD-1039', customer_name:'Sunrise Organics',    product_type:'Roll Labels 2000ct',     pickupContact:'James Chen',pickupExpectedDate: hhmm(11,0),  status:'waiting-pickup', created_at: ago(60*24) },
+      { id:'o3', order_id:'ORD-1035', customer_name:'GreenLeaf Dispensary',product_type:'Folding Cartons 2500ct', pickupContact:'Tony R.',  pickupExpectedDate: hhmm(14,0),  status:'waiting-pickup', created_at: ago(60*48) },
+      { id:'o4', order_id:'ORD-1029', customer_name:'Park Wellness',       product_type:'Sticker Sheets 200ct',   pickupContact:null,       pickupExpectedDate: null,        status:'waiting-pickup', created_at: ago(60*72) },
+    ],
+    dropOffs: [
+      { id:'do1', name:'Carlos Vega',    company:'Vega Distribution',  type:'artwork',   contents:'USB drive with final logo files',          dropped_at: ago(20),  staged:false, staged_to:null },
+      { id:'do2', name:'Maria Garcia',   company:'West Coast Herb Co', type:'samples',   contents:'Physical sample (bag) for spec reference',  dropped_at: ago(90),  staged:true,  staged_to:'Job Manager' },
+      { id:'do3', name:'Anon drop-off',  company:'',                   type:'materials', contents:'Substrate roll for prepress testing',        dropped_at: ago(185), staged:false, staged_to:null },
+    ],
+    slowWorkTasks: [
+      { id:'sw1', icon:'🖼️', label:'Sample wall — update with latest print runs',      category:'sample-wall',   priority:'medium', notes:'Add Q2 label samples from Boyd, replace faded stickers' },
+      { id:'sw2', icon:'📠', label:'Scanning backlog — 8 job packets to digitize',      category:'scanning',      priority:'high',   notes:'Packets from last week still not in Pulse' },
+      { id:'sw3', icon:'📦', label:'Shipping support — restock box/tape inventory',     category:'shipping-supp', priority:'medium', notes:'Supply room showing low stock on 6x9 mailers' },
+      { id:'sw4', icon:'📋', label:'Walk-in collateral — reprint rate card inserts',    category:'collateral',    priority:'low',    notes:'Rate cards are out of date; use latest pricing sheet' },
+      { id:'sw5', icon:'🧹', label:'Front desk — tidy sample display',                  category:'front-desk',    priority:'low',    notes:'Reorganize display order by product category' },
+    ],
+  };
+}
+
+// ── Load all data ──────────────────────────────────────────────────────────
+async function loadAll() {
+  const lastEl = document.getElementById('last-refresh');
+  if (lastEl) lastEl.textContent = 'Refreshing…';
+
+  const demo = getDemoData();
+  const sb   = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+
+  if (sb) {
+    try {
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+      const [wiRes, pickRes] = await Promise.all([
+        sb.from('leads').select('*').eq('source','walk_in').in('status',['new','qualifying','qualified']).order('created_at',{ascending:true}),
+        sb.from('orders').select('order_id,customer_name,product_type,status,pickupContact,pickupExpectedDate,pickupReadyBy,created_at')
+          .eq('status','waiting-pickup').order('pickupExpectedDate',{ascending:true}),
+      ]);
+
+      walkInLeads  = (wiRes.data   && wiRes.data.length)   ? wiRes.data   : demo.walkInLeads;
+      pickupOrders = (pickRes.data && pickRes.data.length) ? pickRes.data : demo.pickupOrders;
+    } catch(e) {
+      console.warn('FD loadAll error:', e);
+      walkInLeads  = demo.walkInLeads;
+      pickupOrders = demo.pickupOrders;
+    }
+  } else {
+    walkInLeads  = demo.walkInLeads;
+    pickupOrders = demo.pickupOrders;
+  }
+
+  // Drop-offs and slow-work always from demo until table exists
+  dropOffs      = demo.dropOffs;
+  slowWorkTasks = demo.slowWorkTasks;
+
+  renderAll();
+
+  const ts = new Date();
+  if (lastEl) lastEl.textContent = `Updated ${ts.getHours()}:${String(ts.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderAll() {
+  renderTiles();
+  renderAlertBanners();
+  renderWalkInQueue();
+  renderPickups();
+  renderDropOffs();
+  renderSlowWork();
+  renderActivityLog();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function minAgo(iso) { return iso ? Math.floor((Date.now() - new Date(iso)) / 60000) : null; }
+function ageText(iso) {
+  if (!iso) return '';
+  const m = minAgo(iso);
+  if (m === null) return '';
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+function isToday(iso) {
+  if (!iso) return false;
+  const a = new Date(iso), b = new Date();
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function fmtTime(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hh = h % 12 || 12;
+  return `${hh}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+function isPickupOverdue(o) {
+  if (!o.pickupExpectedDate) return false;
+  return new Date(o.pickupExpectedDate) < new Date();
+}
+function logDeskEvent(type, detail) {
+  deskEvents.unshift({ type, detail, ts: new Date().toISOString() });
+  renderActivityLog();
+}
+
+// ── Tiles ──────────────────────────────────────────────────────────────────
+function renderTiles() {
+  const newToday = walkInLeads.filter(l => isToday(l.created_at)).length;
+  const overdue  = pickupOrders.filter(isPickupOverdue).length;
+  const unstaged = dropOffs.filter(d => !d.staged).length;
+
+  document.getElementById('tile-walkin').textContent   = walkInLeads.length;
+  document.getElementById('tile-new').textContent      = newToday;
+  document.getElementById('tile-pickups').textContent  = pickupOrders.length;
+  document.getElementById('tile-overdue').textContent  = overdue;
+  document.getElementById('tile-dropoffs').textContent = dropOffs.length;
+  document.getElementById('tile-unstaged').textContent = unstaged;
+}
+
+// ── Alert banners ──────────────────────────────────────────────────────────
+function renderAlertBanners() {
+  const parts     = [];
+  const overdue   = pickupOrders.filter(isPickupOverdue);
+  const unstaged  = dropOffs.filter(d => !d.staged);
+  const greetSecs = greetStart ? Math.floor((Date.now() - greetStart) / 1000) : 0;
+
+  if (greetStart && greetSecs >= 30) {
+    parts.push(`<div class="alert-bar danger"><span style="font-size:18px;">🚨</span><strong>Customer ungreeted ${fmtSecs(greetSecs)}</strong> — stop and greet them now.</div>`);
+  }
+  if (overdue.length) {
+    const names = overdue.map(o => escHtml(o.customer_name)).join(', ');
+    parts.push(`<div class="alert-bar danger"><span style="font-size:18px;">⏰</span><strong>${overdue.length} pickup${overdue.length>1?'s':''} overdue</strong> — customer has not shown by appointment time: ${names}. Consider calling.</div>`);
+  }
+  if (unstaged.length) {
+    parts.push(`<div class="alert-bar warn"><span style="font-size:18px;">📥</span><strong>${unstaged.length} drop-off${unstaged.length>1?'s':''} unstaged</strong> — items sitting at the desk with no downstream handoff assigned.</div>`);
+  }
+  if (!parts.length) {
+    parts.push(`<div class="alert-bar ok"><span style="font-size:18px;">✅</span>Desk clear — no urgent items. Use slow-time tasks if quiet.</div>`);
+  }
+  document.getElementById('alert-banners-host').innerHTML = parts.join('');
+}
+
+// ── Walk-in queue ──────────────────────────────────────────────────────────
+function setWalkInFilter(f) {
+  walkInFilter = f;
+  document.querySelectorAll('.queue-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderWalkInQueue();
+}
+function getFilteredWalkIns() {
+  switch(walkInFilter) {
+    case 'new':       return walkInLeads.filter(l => l.status === 'new');
+    case 'qualifying':return walkInLeads.filter(l => l.status === 'qualifying');
+    case 'qualified': return walkInLeads.filter(l => l.status === 'qualified');
+    default:          return walkInLeads;
+  }
+}
+function renderWalkInQueue() {
+  const list = getFilteredWalkIns();
+  document.getElementById('walkin-queue-count').textContent = list.length;
+  const el = document.getElementById('walkin-queue-list');
+  if (!list.length) { el.innerHTML = `<div class="empty-state">No walk-in leads match this filter.</div>`; return; }
+  el.innerHTML = list.map(l => {
+    const m = minAgo(l.created_at);
+    const cls = l.status === 'new' ? 'is-new' : l.status === 'qualifying' ? 'is-waiting' : '';
+    return `
+      <div class="queue-item ${cls}" onclick="window.location.href='leads.html?id=${escHtml(l.id)}'">
+        <div class="qi-header">
+          <div style="min-width:0;flex:1;">
+            <div class="qi-name">${escHtml(l.name)}${l.company?` <span style="font-weight:400;color:var(--text-muted);">— ${escHtml(l.company)}</span>`:''}
+              <span class="qi-stage-pill ${l.status}" style="margin-left:6px;">${l.status}</span>
+            </div>
+            <div class="qi-meta">
+              ${l.product_type ? `<span class="qi-tag" style="background:#ede9fe;color:#5b21b6;">${escHtml(l.product_type)}${l.quantity?' × '+escHtml(l.quantity):''}</span>` : ''}
+              ${l.urgency ? `<span class="qi-tag" style="background:#fed7aa;color:#9a3412;">⚡ ${escHtml(l.urgency)}</span>` : ''}
+              ${l.assigned_rep ? `<span class="qi-tag" style="background:#d1fae5;color:#065f46;">→ ${escHtml(l.assigned_rep)}</span>` : ''}
+            </div>
+          </div>
+          <div class="qi-right">
+            <div class="qi-age">${ageText(l.created_at)}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Today's pickup schedule ────────────────────────────────────────────────
+function renderPickups() {
+  const list = pickupOrders;
+  document.getElementById('pickup-count').textContent  = list.length;
+
+  const overdue = list.filter(isPickupOverdue).length;
+  const noAppt  = list.filter(o => !o.pickupExpectedDate).length;
+  document.getElementById('stat-awaiting').textContent = list.length;
+  const odEl = document.getElementById('stat-overdue-p');
+  odEl.textContent = overdue;
+  odEl.style.color = overdue > 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('stat-no-appt').textContent = noAppt;
+
+  const cnt = document.getElementById('pickup-count');
+  if (overdue > 0) { cnt.className = 'count-badge danger'; }
+  else if (list.length > 0) { cnt.className = 'count-badge warn'; }
+  else { cnt.className = 'count-badge ok'; }
+
+  const el = document.getElementById('pickup-list');
+  if (!list.length) { el.innerHTML = `<div class="empty-state-sm">No pickups scheduled today. Queue is clear.</div>`; return; }
+
+  const sorted = [...list].sort((a,b) => {
+    const at = a.pickupExpectedDate ? new Date(a.pickupExpectedDate) : new Date(9e15);
+    const bt = b.pickupExpectedDate ? new Date(b.pickupExpectedDate) : new Date(9e15);
+    return at - bt;
+  });
+
+  el.innerHTML = sorted.map(o => {
+    const overdue  = isPickupOverdue(o);
+    const hasAppt  = !!o.pickupExpectedDate;
+    const timeFmt  = hasAppt ? fmtTime(o.pickupExpectedDate) : null;
+    const cls      = overdue ? 'overdue' : hasAppt ? 'upcoming' : 'no-time';
+    const timeCls  = overdue ? 'overdue' : hasAppt ? 'upcoming' : 'no-appt';
+    return `
+      <div class="pickup-item ${cls}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <div class="pi-name">${escHtml(o.customer_name)}</div>
+            <div class="pi-order">${escHtml(o.order_id)} · ${escHtml(o.product_type||'Order')}</div>
+            <div class="pi-meta">
+              ${o.pickupContact ? `<span>Contact: <strong>${escHtml(o.pickupContact)}</strong></span>` : '<span style="color:#d97706;">⚠ No pickup contact</span>'}
+              ${timeFmt ? `<span class="pi-time ${timeCls}">${overdue?'⏰ Overdue — ':''}Appt: ${timeFmt}</span>` : '<span class="pi-time no-appt">No appointment time set</span>'}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end;">
+            <button class="confirm-btn" onclick="confirmPickup(event,'${escHtml(o.id||o.order_id)}')">✓ Confirm Pickup</button>
+            <button class="notify-btn"  onclick="notifyPickup(event,'${escHtml(o.id||o.order_id)}')">📲 Call/Text</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function confirmPickup(e, id) {
+  e.stopPropagation();
+  if (!confirm('Mark this pickup as completed? This will open the Shipping module to log the confirmation.')) return;
+  window.location.href = 'shipping.html';
+}
+function notifyPickup(e, id) {
+  e.stopPropagation();
+  const o = pickupOrders.find(x => (x.id||x.order_id) === id);
+  if (o) showPageToast(`Call/text ${o.pickupContact||o.customer_name} to check on their pickup.`, 'info');
+}
+
+// ── Drop-offs ──────────────────────────────────────────────────────────────
+function renderDropOffs() {
+  document.getElementById('dropoff-count').textContent = dropOffs.length;
+  const cnt = document.getElementById('dropoff-count');
+  const unstaged = dropOffs.filter(d => !d.staged).length;
+  if (unstaged > 0) cnt.className = 'count-badge warn';
+  else if (dropOffs.length > 0) cnt.className = 'count-badge ok';
+  else cnt.className = 'count-badge';
+
+  const el = document.getElementById('dropoff-list');
+  if (!dropOffs.length) { el.innerHTML = `<div class="empty-state-sm">No pending drop-offs.</div>`; return; }
+
+  el.innerHTML = dropOffs.map(d => `
+    <div class="dropoff-item ${d.staged?'staged':'unstaged'}" onclick="stageDropOff('${escHtml(d.id)}')">
+      <div class="do-header">
+        <div class="do-name">${escHtml(d.name)}${d.company?` <span style="font-weight:400;color:var(--text-muted);">— ${escHtml(d.company)}</span>`:''}</div>
+        ${d.staged ? `<span class="staged-badge">✓ Staged → ${escHtml(d.staged_to)}</span>` : `<span class="unstaged-badge">⚠ Unstaged</span>`}
+      </div>
+      <div class="do-meta">
+        ${d.type ? `📎 ${d.type} · ` : ''}${escHtml(d.contents)} · ${ageText(d.dropped_at)}
+        ${!d.staged ? `<br><span style="color:#d97706;font-weight:600;">Click to mark as staged / assign downstream</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+function stageDropOff(id) {
+  const d = dropOffs.find(x => x.id === id);
+  if (!d || d.staged) return;
+  const dest = prompt('Who is this going to? (e.g. "Job Manager", "Designer", "Production")');
+  if (!dest) return;
+  d.staged    = true;
+  d.staged_to = dest;
+  logDeskEvent('dropoff_staged', `Drop-off from ${d.name} staged → ${dest}`);
+  renderDropOffs();
+  renderTiles();
+  renderAlertBanners();
+}
+
+// ── Slow-time work ─────────────────────────────────────────────────────────
+function renderSlowWork() {
+  document.getElementById('slowwork-count').textContent = slowWorkTasks.length;
+  const el = document.getElementById('slowwork-list');
+  if (!slowWorkTasks.length) { el.innerHTML = `<div class="empty-state-sm">No slow-time tasks. 🎉</div>`; return; }
+  el.innerHTML = slowWorkTasks.map(t => `
+    <div class="slow-task-item">
+      <div class="stk-icon">${escHtml(t.icon)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="stk-label">${escHtml(t.label)}</div>
+        ${t.notes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHtml(t.notes)}</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <span class="stk-prio ${t.priority}">${t.priority}</span>
+        <button class="btn" style="padding:3px 8px;font-size:11px;" onclick="doneSlowTask('${escHtml(t.id)}')">Done</button>
+      </div>
+    </div>`).join('');
+}
+function doneSlowTask(id) {
+  const t = slowWorkTasks.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Mark "${t.label}" as done?`)) return;
+  slowWorkTasks = slowWorkTasks.filter(x => x.id !== id);
+  logDeskEvent('slowwork_done', `Completed: ${t.label}`);
+  renderSlowWork();
+}
+
+// ── Activity log ───────────────────────────────────────────────────────────
+function renderActivityLog() {
+  document.getElementById('activity-count').textContent = deskEvents.length;
+  const el = document.getElementById('activity-list');
+  if (!deskEvents.length) { el.innerHTML = `<div class="empty-state-sm">No desk events logged yet today.</div>`; return; }
+  el.innerHTML = deskEvents.map(ev => {
+    const icons = { greet_started:'🔔', greet_resolved:'✅', dropoff_staged:'📦', slowwork_done:'✓', walkin_logged:'🚶' };
+    const icon = icons[ev.type] || '•';
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:8px;align-items:flex-start;">
+      <span style="flex-shrink:0;">${icon}</span>
+      <span style="flex:1;">${escHtml(ev.detail)}</span>
+      <span style="color:var(--text-muted);flex-shrink:0;">${fmtTime(ev.ts)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Log walk-in modal ──────────────────────────────────────────────────────
+function openLogModal() {
+  document.getElementById('lm-name').value    = '';
+  document.getElementById('lm-company').value = '';
+  document.getElementById('lm-phone').value   = '';
+  document.getElementById('lm-email').value   = '';
+  document.getElementById('lm-product').value = '';
+  document.getElementById('lm-urgency').value = '';
+  document.getElementById('lm-notes').value   = '';
+  document.getElementById('lm-purpose').value = 'inquiry';
+  document.getElementById('lm-route').value   = '';
+  const m = document.getElementById('log-modal');
+  m.classList.add('active');
+  m.scrollIntoView({ behavior:'smooth', block:'start' });
+  document.getElementById('lm-name').focus();
+}
+function closeLogModal() {
+  document.getElementById('log-modal').classList.remove('active');
+}
+async function saveWalkIn(andGreet) {
+  const name = document.getElementById('lm-name').value.trim();
+  if (!name) { showPageToast('Customer name is required.', 'error'); return; }
+
+  const lead = {
+    id:           'wi-' + Date.now(),
+    name,
+    company:      document.getElementById('lm-company').value.trim() || null,
+    phone:        document.getElementById('lm-phone').value.trim()   || null,
+    email:        document.getElementById('lm-email').value.trim()   || null,
+    source:       'walk_in',
+    product_type: document.getElementById('lm-product').value.trim() || null,
+    urgency:      document.getElementById('lm-urgency').value.trim() || null,
+    notes:        document.getElementById('lm-notes').value.trim()   || null,
+    purpose:      document.getElementById('lm-purpose').value        || 'inquiry',
+    assigned_rep: document.getElementById('lm-route').value          || null,
+    status:       document.getElementById('lm-route').value ? 'qualified' : 'new',
+    created_at:   new Date().toISOString(),
+  };
+
+  // Try Supabase save
+  const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+  if (sb) {
+    try {
+      const { error } = await sb.from('leads').insert({
+        name:        lead.name,
+        company:     lead.company,
+        phone:       lead.phone,
+        email:       lead.email,
+        source:      'walk_in',
+        product_type:lead.product_type,
+        urgency:     lead.urgency,
+        notes:       lead.notes,
+        status:      lead.status,
+        assigned_rep:lead.assigned_rep || null,
+        created_at:  lead.created_at,
+      });
+      if (error) console.warn('Supabase insert warn:', error);
+    } catch(e) { console.warn('saveWalkIn Supabase err:', e); }
+  }
+
+  walkInLeads.unshift(lead);
+  logDeskEvent('walkin_logged', `Walk-in logged: ${name}${lead.company ? ' — '+lead.company : ''}`);
+  closeLogModal();
+  renderAll();
+  showPageToast(`Walk-in logged: ${name}`, 'success');
+
+  if (andGreet) {
+    greetName = name;
+    startGreet(name);
+  }
+}
+function saveAndStartGreet() { saveWalkIn(true); }
+</script>
+</body>
+</html>
