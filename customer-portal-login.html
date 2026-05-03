@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Portal — Bazaar Printing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; overflow-x: hidden; }
+    .header { background: #1d4ed8; color: #fff; padding: 20px 24px; }
+    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-sub { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+    .container { max-width: 440px; margin: 40px auto; padding: 0 16px; width: 100%; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .card .subtitle { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .field input { width: 100%; padding: 12px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    .field input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .btn-primary { width: 100%; padding: 14px; background: #1d4ed8; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+    .error-box { display: none; padding: 12px 14px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; color: #dc2626; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+    .error-box.visible { display: block; }
+    .otp-section { display: none; }
+    .otp-section.visible { display: block; }
+    .back-link { display: inline-block; font-size: 13px; color: #64748b; cursor: pointer; margin-bottom: 16px; text-decoration: underline; background: none; border: none; padding: 0; font-family: inherit; }
+    .help-text { font-size: 12px; color: #94a3b8; margin-top: 16px; text-align: center; }
+    @media (max-width: 480px) {
+      .container { margin: 16px auto; }
+      .card { padding: 24px 16px; border-radius: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">Bazaar Printing</div>
+  <div class="header-sub">Customer Portal</div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <!-- Error message -->
+    <div class="error-box portal-error" id="login-error" data-testid="portal-error"></div>
+
+    <!-- Step 1: Phone number -->
+    <div id="phone-section">
+      <h2>Welcome Back</h2>
+      <p class="subtitle">Enter your phone number and we'll send you a one-time verification code.</p>
+      <div class="field">
+        <label for="phone-input">Phone Number</label>
+        <input
+          type="tel"
+          id="phone-input"
+          name="phone"
+          data-testid="portal-phone-input"
+          placeholder="+1 (555) 000-0000"
+          autocomplete="tel"
+        >
+      </div>
+      <button
+        type="button"
+        id="send-otp-btn"
+        data-testid="portal-send-otp"
+        class="btn-primary"
+        onclick="handlePhoneSubmit()"
+      >Send Verification Code</button>
+      <p class="help-text">Need help? Call us or reply to your quote email.</p>
+    </div>
+
+    <!-- Step 2: OTP entry -->
+    <div id="otp-section" class="otp-section">
+      <button type="button" class="back-link" onclick="showPhoneSection()">← Back</button>
+      <h2>Enter Your Code</h2>
+      <p class="subtitle" id="otp-desc">We sent a 6-digit code to your phone. Enter it below.</p>
+      <div class="field">
+        <label for="otp-input">Verification Code</label>
+        <input
+          type="text"
+          id="otp-input"
+          name="otp"
+          data-testid="portal-otp-input"
+          placeholder="000000"
+          maxlength="6"
+          autocomplete="one-time-code"
+          inputmode="numeric"
+        >
+      </div>
+      <button
+        type="button"
+        id="verify-otp-btn"
+        data-testid="portal-verify-otp"
+        class="btn-primary"
+        onclick="handleOtpSubmit()"
+      >Verify Code</button>
+      <p class="help-text">Didn't get a code? <button type="button" class="back-link" onclick="showPhoneSection()" style="display:inline;">Try again</button></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// PUL-733 — Customer Portal Login
+// Auth model: OTP via localStorage (pulse_portal_otp_codes)
+// Session stored in pulse_portal_sessions + pulse_portal_active_session
+
+var currentPhone = '';
+
+function showError(msg) {
+  var el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('login-error').classList.remove('visible');
+}
+
+function showPhoneSection() {
+  document.getElementById('phone-section').style.display = '';
+  document.getElementById('otp-section').classList.remove('visible');
+  hideError();
+}
+
+function showOtpSection(phone) {
+  document.getElementById('phone-section').style.display = 'none';
+  var desc = document.getElementById('otp-desc');
+  desc.textContent = 'We sent a 6-digit code to ' + phone + '. Enter it below.';
+  var otpSection = document.getElementById('otp-section');
+  otpSection.classList.add('visible');
+  document.getElementById('otp-input').value = '';
+  document.getElementById('otp-input').focus();
+}
+
+function handlePhoneSubmit() {
+  hideError();
+  var phone = document.getElementById('phone-input').value.trim();
+  if (!phone) {
+    showError('Please enter your phone number.');
+    return;
+  }
+
+  // Check pulse_customers for this phone
+  var customers = JSON.parse(localStorage.getItem('pulse_customers') || '[]');
+  var customer = customers.find(function(c) { return c.phone === phone; });
+
+  if (!customer) {
+    showError('Phone number not found. Please contact Bazaar Printing.');
+    return;
+  }
+
+  currentPhone = phone;
+  showOtpSection(phone);
+}
+
+function handleOtpSubmit() {
+  hideError();
+  var phone = currentPhone || document.getElementById('phone-input').value.trim();
+  var code = document.getElementById('otp-input').value.trim();
+
+  if (!code) {
+    showError('Please enter the verification code.');
+    return;
+  }
+
+  // Look up OTP record
+  var codes = JSON.parse(localStorage.getItem('pulse_portal_otp_codes') || '[]');
+  var record = codes.find(function(c) { return c.phone === phone; });
+
+  if (!record) {
+    showError('Invalid code. Please try again.');
+    return;
+  }
+
+  // Check expiry (>10 min = expired)
+  if (new Date(record.expiresAt) < new Date()) {
+    showError('Code expired. Please request a new code.');
+    return;
+  }
+
+  // Check code match
+  if (record.code !== code) {
+    showError('Invalid code. Please try again.');
+    return;
+  }
+
+  // Mark used
+  record.usedAt = new Date().toISOString();
+  localStorage.setItem('pulse_portal_otp_codes', JSON.stringify(codes));
+
+  // Create session
+  var customers = JSON.parse(localStorage.getItem('pulse_customers') || '[]');
+  var customer = customers.find(function(c) { return c.phone === phone; });
+  var customerId = customer ? customer.customerId : ('cust-' + phone.replace(/\D/g, ''));
+
+  var sessionToken = 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  var session = {
+    sessionToken: sessionToken,
+    customerId: customerId,
+    phone: phone,
+    createdAt: new Date().toISOString(),
+  };
+
+  var sessions = JSON.parse(localStorage.getItem('pulse_portal_sessions') || '[]');
+  sessions = sessions.filter(function(s) { return s.phone !== phone; });
+  sessions.unshift(session);
+  localStorage.setItem('pulse_portal_sessions', JSON.stringify(sessions));
+  localStorage.setItem('pulse_portal_active_session', sessionToken);
+
+  window.location.href = 'customer-portal.html';
+}
+
+// Keyboard submit
+document.getElementById('phone-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handlePhoneSubmit();
+});
+document.getElementById('otp-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleOtpSubmit();
+});
+
+// Redirect if already logged in
+(function() {
+  var token = localStorage.getItem('pulse_portal_active_session');
+  if (token) {
+    var sessions = JSON.parse(localStorage.getItem('pulse_portal_sessions') || '[]');
+    var session = sessions.find(function(s) { return s.sessionToken === token; });
+    if (session) {
+      window.location.href = 'customer-portal.html';
+    }
+  }
+})();
+</script>
+</body>
+</html>

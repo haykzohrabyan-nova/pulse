@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Jobs — Bazaar Printing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; overflow-x: hidden; max-width: 100vw; }
+    .header { background: #1d4ed8; color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .header-left .logo { font-size: 18px; font-weight: 800; }
+    .header-left .sub { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .customer-name { font-size: 13px; opacity: 0.9; }
+    .logout-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 20px 16px; width: 100%; }
+
+    /* Job list */
+    .section-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
+    .portal-jobs { display: flex; flex-direction: column; gap: 12px; }
+    .portal-job-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; text-decoration: none; color: inherit; display: block; }
+    .portal-job-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #93c5fd; }
+    .job-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .job-item-id { font-size: 14px; font-weight: 700; }
+    .job-item-product { font-size: 13px; color: #64748b; margin-top: 3px; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #e0f2fe; color: #0369a1; white-space: nowrap; flex-shrink: 0; }
+    .status-badge.shipped { background: #dcfce7; color: #16a34a; }
+    .status-badge.complete { background: #f0fdf4; color: #15803d; }
+    .status-badge.production { background: #fef9c3; color: #a16207; }
+    .status-badge.cancelled { background: #fee2e2; color: #dc2626; }
+    .status-badge.hold { background: #fce7f3; color: #be185d; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* Job detail */
+    .detail-back { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #3b82f6; cursor: pointer; margin-bottom: 16px; text-decoration: none; background: none; border: none; padding: 0; font-family: inherit; }
+    .detail-back:hover { text-decoration: underline; }
+    .detail-header { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .detail-job-id { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .detail-product { font-size: 14px; color: #64748b; margin-bottom: 12px; }
+    .detail-status { font-size: 15px; font-weight: 600; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 4px; margin-bottom: 16px; overflow-x: auto; }
+    .tab-btn { padding: 8px 14px; border: none; background: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; color: #64748b; white-space: nowrap; font-family: inherit; transition: all 0.12s; }
+    .tab-btn.active { background: #fff; color: #1d4ed8; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Messages */
+    .messages-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; max-height: 400px; overflow-y: auto; }
+    .message-bubble { padding: 12px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; max-width: 85%; }
+    .message-bubble.inbound { background: #eff6ff; border: 1px solid #bfdbfe; align-self: flex-end; }
+    .message-bubble.outbound { background: #f8fafc; border: 1px solid #e2e8f0; align-self: flex-start; }
+    .message-meta { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .message-input-area { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+    .message-input-area textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; outline: none; min-height: 80px; }
+    .message-input-area textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .send-btn { margin-top: 10px; padding: 10px 20px; background: #1d4ed8; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .send-btn:hover { background: #1e40af; }
+
+    /* Files */
+    .files-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+    .file-icon { font-size: 20px; flex-shrink: 0; }
+    .file-name { font-size: 14px; font-weight: 500; }
+    .file-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+    /* Tracking */
+    .tracking-info { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; }
+    .tracking-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+    .tracking-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .tracking-row:last-child { border-bottom: none; }
+    .tracking-label { color: #64748b; font-weight: 500; }
+    .tracking-value { font-weight: 600; }
+    .tracking-link { display: inline-block; margin-top: 14px; padding: 10px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1d4ed8; font-size: 14px; font-weight: 600; text-decoration: none; }
+    .tracking-link:hover { background: #dbeafe; }
+
+    /* Reorder */
+    .reorder-section { margin-top: 16px; }
+    .reorder-btn { padding: 12px 24px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .reorder-btn:hover { background: #15803d; }
+
+    /* Proof */
+    .proof-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+    .proof-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .proof-item:last-child { border-bottom: none; }
+    .proof-status-pending { color: #d97706; font-weight: 600; font-size: 13px; }
+    .proof-status-approved { color: #16a34a; font-weight: 600; font-size: 13px; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 60px; color: #94a3b8; font-size: 15px; }
+
+    @media (max-width: 600px) {
+      .container { padding: 12px; }
+      .tabs { gap: 2px; }
+      .tab-btn { padding: 7px 10px; font-size: 13px; }
+      .header { padding: 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Bazaar Printing</div>
+    <div class="sub">Customer Portal</div>
+  </div>
+  <div class="header-right">
+    <span class="customer-name" id="header-customer-name"></span>
+    <button class="logout-btn" onclick="logout()">Log Out</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="app-root"><div class="loading">Loading your jobs…</div></div>
+</div>
+
+<script>
+// PUL-733 — Customer Portal Dashboard
+// Auth: pulse_portal_active_session (localStorage)
+// Jobs: IndexedDB BazaarPrintDB / orders store
+// Messages/uploads/proofs: localStorage
+
+var SESSION = null;
+var CUSTOMER = null;
+var ALL_JOBS = [];
+
+// ── Status display map ────────────────────────────────────────────────────────
+var STATUS_DISPLAY = {
+  'new':                    'New',
+  'pending-confirmation':   'Pending Confirmation',
+  'pending-review':         'Pending Review',
+  'prepress':               'In Prepress',
+  'prepress-active':        'In Prepress',
+  'prepress-paused':        'In Prepress',
+  'pending-account-manager':'Pending Review',
+  'on-hold':                'On Hold',
+  'in-production':          'In Production',
+  'qc-checkout':            'Quality Check',
+  'qc-failed':              'QC Review',
+  'ready-to-ship':          'Ready to Ship',
+  'ready-for-pickup':       'Ready for Pickup',
+  'completed':              'Complete',
+  'shipped':                'Shipped',
+  'delivered':              'Delivered',
+  'picked-up':              'Picked Up',
+  'delivery-confirmed':     'Delivered',
+  'outreach':               'Outreach',
+  'cancelled':              'Cancelled',
+  'received':               'Received',
+};
+
+function displayStatus(status) {
+  return STATUS_DISPLAY[status] || status || 'Unknown';
+}
+
+function statusBadgeClass(status) {
+  if (status === 'shipped' || status === 'delivered') return 'status-badge shipped';
+  if (status === 'completed') return 'status-badge complete';
+  if (status === 'in-production') return 'status-badge production';
+  if (status === 'cancelled') return 'status-badge cancelled';
+  if (status === 'on-hold') return 'status-badge hold';
+  return 'status-badge';
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch(e) { return iso; }
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function logout() {
+  localStorage.removeItem('pulse_portal_active_session');
+  window.location.href = 'customer-portal-login.html';
+}
+
+function getSession() {
+  var token = localStorage.getItem('pulse_portal_active_session');
+  if (!token) return null;
+  var sessions = JSON.parse(localStorage.getItem('pulse_portal_sessions') || '[]');
+  return sessions.find(function(s) { return s.sessionToken === token; }) || null;
+}
+
+function getCustomer(customerId) {
+  var customers = JSON.parse(localStorage.getItem('pulse_customers') || '[]');
+  return customers.find(function(c) { return c.customerId === customerId; }) || null;
+}
+
+// ── IndexedDB job loader ──────────────────────────────────────────────────────
+function loadJobsFromIDB(customerName, callback) {
+  try {
+    var req = indexedDB.open('BazaarPrintDB');
+    req.onerror = function() { callback([]); };
+    req.onsuccess = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('orders')) { db.close(); callback([]); return; }
+      var tx = db.transaction('orders', 'readonly');
+      var store = tx.objectStore('orders');
+      var cursor = store.openCursor();
+      var jobs = [];
+      cursor.onsuccess = function(ev) {
+        var c = ev.target.result;
+        if (c) {
+          var rec = c.value;
+          if (rec.customer === customerName || rec.customerName === customerName) {
+            jobs.push(rec);
+          }
+          c.continue();
+        } else {
+          db.close();
+          callback(jobs);
+        }
+      };
+      cursor.onerror = function() { db.close(); callback(jobs); };
+    };
+  } catch(e) {
+    callback([]);
+  }
+}
+
+// ── URL params ────────────────────────────────────────────────────────────────
+function getParams() {
+  var params = new URLSearchParams(window.location.search);
+  return { job: params.get('job'), tab: params.get('tab') || 'overview' };
+}
+
+// ── Render job list ───────────────────────────────────────────────────────────
+function renderJobList(jobs) {
+  var root = document.getElementById('app-root');
+  if (jobs.length === 0) {
+    root.innerHTML = '<div class="empty-state"><div class="icon">📦</div><p>No jobs found for your account.</p></div>';
+    return;
+  }
+  var html = '<h2 class="section-title">My Jobs</h2>';
+  html += '<div class="portal-jobs" data-testid="portal-job-list" id="job-list">';
+  jobs.forEach(function(job) {
+    var jobId = job.orderId || job.jobId || '';
+    var product = job.productType || job.jobDescription || '';
+    var status = job.status || '';
+    html += '<a class="portal-job-item" data-testid="portal-job-item" data-job-id="' + esc(jobId) + '" href="customer-portal.html?job=' + esc(jobId) + '">';
+    html += '<div class="job-item-top">';
+    html += '<div><div class="job-item-id">' + esc(jobId) + '</div>';
+    if (product) html += '<div class="job-item-product">' + esc(product) + '</div>';
+    html += '</div>';
+    html += '<span class="' + statusBadgeClass(status) + '">' + esc(displayStatus(status)) + '</span>';
+    html += '</div></a>';
+  });
+  html += '</div>';
+  root.innerHTML = html;
+}
+
+// ── Render job detail ─────────────────────────────────────────────────────────
+function renderJobDetail(job, tab) {
+  var jobId = job.orderId || job.jobId || '';
+  var product = job.productType || job.jobDescription || '';
+  var status = job.status || '';
+  var root = document.getElementById('app-root');
+
+  var html = '<button type="button" class="detail-back" onclick="window.location.href=\'customer-portal.html\'">← All Jobs</button>';
+  html += '<div class="detail-header">';
+  html += '<div class="detail-job-id">' + esc(jobId) + '</div>';
+  if (product) html += '<div class="detail-product">' + esc(product) + '</div>';
+  html += '<div class="detail-status"><span class="' + statusBadgeClass(status) + '">' + esc(displayStatus(status)) + '</span></div>';
+  html += '</div>';
+
+  // Tabs
+  var tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'messages', label: 'Messages' },
+    { id: 'files',    label: 'Files' },
+    { id: 'tracking', label: 'Tracking' },
+  ];
+  html += '<div class="tabs">';
+  tabs.forEach(function(t) {
+    var active = tab === t.id ? ' active' : '';
+    html += '<button type="button" class="tab-btn' + active + '" onclick="switchTab(\'' + esc(jobId) + '\',\'' + t.id + '\')">' + esc(t.label) + '</button>';
+  });
+  html += '</div>';
+
+  html += '<div id="tab-content">' + renderTabContent(job, tab, jobId) + '</div>';
+
+  // Reorder button (only for completed jobs, outside tabs)
+  if (status === 'completed') {
+    html += '<div class="reorder-section">';
+    html += '<button type="button" class="reorder-btn" data-testid="reorder-btn" onclick="handleReorder(\'' + esc(jobId) + '\')">Reorder</button>';
+    html += '</div>';
+  }
+
+  root.innerHTML = html;
+}
+
+function renderTabContent(job, tab, jobId) {
+  if (tab === 'messages') return renderMessages(jobId);
+  if (tab === 'files')    return renderFiles(jobId);
+  if (tab === 'tracking') return renderTracking(job, jobId);
+  return renderOverview(job, jobId);
+}
+
+function renderOverview(job, jobId) {
+  var html = '';
+  // Tracking section if shipped with tracking number
+  var trackingHtml = renderTracking(job, jobId);
+  if (trackingHtml) html += trackingHtml;
+  // Proofs
+  var proofs = JSON.parse(localStorage.getItem('pulse_proofs') || '[]').filter(function(p) { return p.jobId === jobId; });
+  if (proofs.length > 0) {
+    html += '<div class="proof-section" style="margin-top:12px;"><h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">Proofs</h3>';
+    proofs.forEach(function(p) {
+      html += '<div class="proof-item"><span>Version ' + esc(p.version) + '</span>';
+      if (p.status === 'approved') {
+        html += '<span class="proof-status-approved">✓ Approved</span>';
+      } else if (p.awaitingCustomerApproval) {
+        html += '<span class="proof-status-pending">Awaiting Your Approval</span>';
+      } else {
+        html += '<span style="font-size:13px;color:#64748b;">' + esc(p.status) + '</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  return html || '<p style="color:#94a3b8;font-size:14px;">No additional details available.</p>';
+}
+
+function renderMessages(jobId) {
+  var msgs = JSON.parse(localStorage.getItem('pulse_portal_messages') || '[]')
+    .filter(function(m) { return m.jobId === jobId && !m.internalNote; });
+
+  var html = '<div class="messages-list" id="messages-list">';
+  if (msgs.length === 0) {
+    html += '<p style="color:#94a3b8;font-size:14px;text-align:center;padding:20px;">No messages yet.</p>';
+  } else {
+    msgs.slice().reverse().forEach(function(m) {
+      var dir = m.direction === 'inbound' ? 'inbound' : 'outbound';
+      var who = dir === 'inbound' ? 'You' : 'Bazaar Printing';
+      html += '<div class="message-bubble ' + dir + '">';
+      html += '<div>' + esc(m.body) + '</div>';
+      html += '<div class="message-meta">' + esc(who) + ' · ' + fmtDate(m.sentAt) + '</div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+  html += '<div class="message-input-area">';
+  html += '<textarea id="message-input" name="message" data-testid="portal-message-input" placeholder="Send a message to our team…"></textarea>';
+  html += '<button type="button" id="send-message-btn" data-testid="portal-send-message" data-action="send-message" class="send-btn" onclick="sendMessage(\'' + esc(jobId) + '\')">Send</button>';
+  html += '</div>';
+  return html;
+}
+
+function renderFiles(jobId) {
+  var uploads = JSON.parse(localStorage.getItem('pulse_portal_uploads') || '[]')
+    .filter(function(u) { return u.jobId === jobId; });
+
+  if (uploads.length === 0) {
+    return '<p style="color:#94a3b8;font-size:14px;text-align:center;padding:20px;">No files uploaded yet.</p>';
+  }
+  var html = '<div class="files-list">';
+  uploads.forEach(function(u) {
+    html += '<div class="file-item">';
+    html += '<span class="file-icon">📄</span>';
+    html += '<div><div class="file-name">' + esc(u.filename) + '</div>';
+    html += '<div class="file-meta">Uploaded ' + fmtDate(u.uploadedAt) + '</div></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderTracking(job, jobId) {
+  var tn = job.trackingNumber;
+  if (!tn || !tn.trim()) return '';
+
+  var carrier = job.carrier || '';
+  var trackingUrls = {
+    'UPS':   'https://www.ups.com/track?tracknum=' + encodeURIComponent(tn),
+    'FedEx': 'https://www.fedex.com/fedextrack/?trknbr=' + encodeURIComponent(tn),
+    'USPS':  'https://tools.usps.com/go/TrackConfirmAction?tLabels=' + encodeURIComponent(tn),
+    'DHL':   'https://www.dhl.com/en/express/tracking.html?AWB=' + encodeURIComponent(tn),
+  };
+  var trackUrl = trackingUrls[carrier] || ('https://www.google.com/search?q=' + encodeURIComponent(carrier + ' tracking ' + tn));
+
+  var html = '<div class="tracking-info" data-testid="tracking-section" id="tracking-section">';
+  html += '<h3>Shipment Tracking</h3>';
+  html += '<div class="tracking-row"><span class="tracking-label">Tracking Number</span><span class="tracking-value">' + esc(tn) + '</span></div>';
+  if (carrier) html += '<div class="tracking-row"><span class="tracking-label">Carrier</span><span class="tracking-value">' + esc(carrier) + '</span></div>';
+  if (job.shippedAt) html += '<div class="tracking-row"><span class="tracking-label">Shipped</span><span class="tracking-value">' + fmtDate(job.shippedAt) + '</span></div>';
+  html += '<a href="' + esc(trackUrl) + '" target="_blank" rel="noopener" class="tracking-link" data-testid="tracking-link">Track on ' + esc(carrier || 'Carrier') + ' →</a>';
+  html += '</div>';
+  return html;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function switchTab(jobId, tab) {
+  window.location.href = 'customer-portal.html?job=' + encodeURIComponent(jobId) + '&tab=' + encodeURIComponent(tab);
+}
+
+function sendMessage(jobId) {
+  var textarea = document.getElementById('message-input');
+  if (!textarea) return;
+  var body = textarea.value.trim();
+  if (!body) return;
+
+  var customerId = SESSION ? SESSION.customerId : '';
+  var msgs = JSON.parse(localStorage.getItem('pulse_portal_messages') || '[]');
+  msgs.unshift({
+    messageId: 'msg-portal-' + Date.now(),
+    jobId: jobId,
+    customerId: customerId,
+    body: body,
+    direction: 'inbound',
+    internalNote: false,
+    sentAt: new Date().toISOString(),
+  });
+  localStorage.setItem('pulse_portal_messages', JSON.stringify(msgs));
+
+  // Notify job owner
+  var notifs = JSON.parse(localStorage.getItem('pulse_notifications') || '[]');
+  notifs.unshift({
+    notificationId: 'notif-msg-' + Date.now(),
+    recipientRole: 'job_manager',
+    jobId: jobId,
+    message: 'Customer sent a message on job ' + jobId + ': ' + body.slice(0, 80),
+    createdAt: new Date().toISOString(),
+  });
+  localStorage.setItem('pulse_notifications', JSON.stringify(notifs));
+
+  textarea.value = '';
+  // Refresh messages list
+  var msgList = document.getElementById('messages-list');
+  if (msgList) {
+    var job = ALL_JOBS.find(function(j) { return (j.orderId || j.jobId) === jobId; }) || {};
+    msgList.outerHTML = '<div id="messages-list" class="messages-list">' + renderMessages(jobId).split('<div class="messages-list" id="messages-list">')[1].split('</div>')[0] + '</div>';
+    // Simple: just re-render the whole tab
+    var tabContent = document.getElementById('tab-content');
+    if (tabContent) tabContent.innerHTML = renderMessages(jobId);
+  }
+}
+
+function handleReorder(jobId) {
+  var customerId = SESSION ? SESSION.customerId : '';
+  var requests = JSON.parse(localStorage.getItem('pulse_reorder_requests') || '[]');
+  requests.unshift({
+    requestId: 'reorder-' + Date.now(),
+    originalJobId: jobId,
+    customerId: customerId,
+    createdAt: new Date().toISOString(),
+  });
+  localStorage.setItem('pulse_reorder_requests', JSON.stringify(requests));
+
+  // Create lead in Sales/AM queue
+  var leads = JSON.parse(localStorage.getItem('pulse_leads') || '[]');
+  var customers = JSON.parse(localStorage.getItem('pulse_customers') || '[]');
+  var cust = customers.find(function(c) { return c.customerId === customerId; });
+  leads.unshift({
+    leadId: 'lead-reorder-' + Date.now(),
+    customerName: cust ? cust.name : (CUSTOMER ? CUSTOMER.name : 'Unknown'),
+    customerId: customerId,
+    source: 'portal_reorder',
+    originalJobId: jobId,
+    assignedRole: 'Sales/AM',
+    status: 'new',
+    createdAt: new Date().toISOString(),
+  });
+  localStorage.setItem('pulse_leads', JSON.stringify(leads));
+
+  // Add reorder message to thread
+  var msgs = JSON.parse(localStorage.getItem('pulse_portal_messages') || '[]');
+  msgs.unshift({
+    messageId: 'msg-reorder-' + Date.now(),
+    jobId: jobId,
+    customerId: customerId,
+    body: 'Customer requested a reorder from Job ' + jobId + '.',
+    direction: 'inbound',
+    internalNote: false,
+    sentAt: new Date().toISOString(),
+  });
+  localStorage.setItem('pulse_portal_messages', JSON.stringify(msgs));
+
+  alert('Reorder request submitted! Our team will be in touch shortly.');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  SESSION = getSession();
+  if (!SESSION) {
+    window.location.href = 'customer-portal-login.html';
+    return;
+  }
+
+  CUSTOMER = getCustomer(SESSION.customerId);
+  var customerName = CUSTOMER ? CUSTOMER.name : (SESSION.phone || '');
+
+  // Update header
+  var nameEl = document.getElementById('header-customer-name');
+  if (nameEl && customerName) nameEl.textContent = customerName;
+
+  var params = getParams();
+
+  loadJobsFromIDB(customerName, function(jobs) {
+    ALL_JOBS = jobs;
+
+    if (params.job) {
+      // Find the specific job
+      var job = jobs.find(function(j) {
+        return (j.orderId === params.job) || (j.jobId === params.job);
+      });
+      if (job) {
+        renderJobDetail(job, params.tab);
+      } else {
+        // Job not found via IDB — try to render a minimal placeholder
+        // (allows tracking tab to be accessed even if IDB read races)
+        renderJobDetail({ orderId: params.job, status: '', trackingNumber: null, carrier: null }, params.tab);
+      }
+    } else {
+      renderJobList(jobs);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
