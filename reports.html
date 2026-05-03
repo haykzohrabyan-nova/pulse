@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Reports — Bazaar Print</title>
+  <script src="shared.js?v=20260503-PUL734"></script>
+  <script src="auth.js?v=20260503-PUL734"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260503-PUL734"></script>
+  <style id="page-styles"></style>
+  <style>
+    .reports-layout {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    .reports-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .reports-header h2 { font-size: 22px; font-weight: 700; margin: 0; }
+    .reports-header .subtitle { font-size: 13px; color: var(--text-muted, #64748b); margin-top: 2px; }
+
+    /* Report tabs */
+    .report-tabs {
+      display: flex; gap: 4px;
+      background: var(--bg, #f1f5f9);
+      border-radius: 8px; padding: 4px;
+      margin-bottom: 20px;
+    }
+    .report-tab {
+      padding: 10px 18px;
+      border: none; background: none;
+      border-radius: 6px; font-size: 14px; font-weight: 500;
+      cursor: pointer; color: var(--text-muted, #64748b);
+      white-space: nowrap; font-family: inherit;
+      transition: all 0.12s;
+    }
+    .report-tab.active {
+      background: var(--card, #fff);
+      color: var(--accent, #1d4ed8);
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Panel */
+    .report-panel { display: none; }
+    .report-panel.active { display: block; }
+
+    .panel-card {
+      background: var(--card, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: var(--radius, 10px);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .panel-title {
+      font-size: 16px; font-weight: 700;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* KPI row */
+    .kpi-row {
+      display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .kpi-tile {
+      background: var(--bg, #f8fafc);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 8px;
+      padding: 14px 20px;
+      text-align: center; flex: 1; min-width: 100px;
+    }
+    .kpi-tile .kpi-val { font-size: 32px; font-weight: 900; line-height: 1; }
+    .kpi-tile .kpi-lbl { font-size: 11px; color: var(--text-muted, #64748b); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .kpi-tile.ok .kpi-val { color: var(--green, #16a34a); }
+    .kpi-tile.bad .kpi-val { color: var(--red, #dc2626); }
+    .kpi-tile.info .kpi-val { color: var(--accent, #1d4ed8); }
+
+    /* Date range filter */
+    .date-filter {
+      display: flex; gap: 8px; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .date-filter label { font-size: 13px; font-weight: 600; color: var(--text-muted, #64748b); }
+    .date-filter input[type="date"] {
+      padding: 6px 10px; border: 1px solid var(--border, #e2e8f0);
+      border-radius: 6px; font-size: 13px; font-family: inherit;
+    }
+    .filter-btn {
+      padding: 6px 14px; background: var(--accent, #1d4ed8);
+      color: #fff; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .filter-btn:hover { opacity: 0.9; }
+
+    /* Loss reasons table */
+    .reason-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .reason-table th {
+      text-align: left; padding: 8px 10px;
+      background: var(--bg, #f8fafc);
+      border-bottom: 2px solid var(--border, #e2e8f0);
+      font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      color: var(--text-muted, #64748b);
+    }
+    .reason-table td { padding: 8px 10px; border-bottom: 1px solid var(--border, #e2e8f0); }
+    .reason-table tr:last-child td { border-bottom: none; }
+    .reason-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      background: #fee2e2; color: var(--red, #dc2626);
+    }
+
+    /* Chart container */
+    .chart-container {
+      position: relative; height: 200px;
+      background: var(--bg, #f8fafc);
+      border-radius: 8px; padding: 12px;
+      display: flex; align-items: flex-end; gap: 4px;
+      overflow: hidden;
+    }
+    .chart-container canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+    }
+
+    /* Job table */
+    .job-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .job-table th {
+      text-align: left; padding: 8px 10px;
+      background: var(--bg, #f8fafc);
+      border-bottom: 2px solid var(--border, #e2e8f0);
+      font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      color: var(--text-muted, #64748b);
+    }
+    .job-table td { padding: 8px 10px; border-bottom: 1px solid var(--border, #e2e8f0); }
+    .job-table tr:last-child td { border-bottom: none; }
+    .late-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      background: #fee2e2; color: var(--red, #dc2626);
+    }
+    .ok-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      background: #dcfce7; color: var(--green, #16a34a);
+    }
+
+    /* Category breakdown */
+    .category-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+    .category-row:last-child { border-bottom: none; }
+    .cat-bar-wrap { flex: 1; margin: 0 12px; }
+    .cat-bar {
+      height: 8px; background: var(--accent, #1d4ed8);
+      border-radius: 4px; min-width: 4px;
+    }
+
+    /* Access denied */
+    #access-denied, .access-denied {
+      max-width: 480px; margin: 80px auto; text-align: center;
+      padding: 40px 24px;
+      background: var(--card, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-top: 4px solid var(--red, #dc2626);
+      border-radius: 10px;
+    }
+    .access-denied-icon { font-size: 48px; margin-bottom: 12px; }
+    .access-denied h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .access-denied p { font-size: 14px; color: var(--text-muted, #64748b); }
+
+    .empty-note {
+      text-align: center; color: var(--text-muted, #94a3b8);
+      font-size: 13px; padding: 24px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div id="breadcrumb"></div>
+
+  <!-- Access denied screen (hidden by default) -->
+  <div id="access-denied" class="access-denied" data-testid="access-denied" style="display:none">
+    <div class="access-denied-icon">🚫</div>
+    <h2>403 — Access Denied</h2>
+    <p>You are not authorized to view this page.<br>
+       This report is available to Operations Managers and above.</p>
+  </div>
+
+  <!-- Main reports content -->
+  <div id="reports-main" class="reports-layout" style="display:none">
+    <div class="reports-header">
+      <div>
+        <h2>📊 Advanced Reports</h2>
+        <div class="subtitle">Win/Loss · Cycle Time · Defect Escape · On-Time Delivery</div>
+      </div>
+    </div>
+
+    <!-- Report tabs -->
+    <div class="report-tabs" role="tablist">
+      <button class="report-tab active"
+              data-report="winloss"
+              data-testid="tab-winloss"
+              id="tab-winloss"
+              role="tab"
+              onclick="switchTab('winloss')">Win / Loss</button>
+      <button class="report-tab"
+              data-report="cycletime"
+              data-testid="tab-cycletime"
+              id="tab-cycletime"
+              role="tab"
+              onclick="switchTab('cycletime')">Cycle Time</button>
+      <button class="report-tab"
+              data-report="defect"
+              data-testid="tab-defect"
+              id="tab-defect"
+              role="tab"
+              onclick="switchTab('defect')">Defect Escape</button>
+      <button class="report-tab"
+              data-report="ontime"
+              data-testid="tab-ontime"
+              id="tab-ontime"
+              role="tab"
+              onclick="switchTab('ontime')">On-Time Delivery</button>
+    </div>
+
+    <!-- ── WIN / LOSS PANEL ─────────────────────────────────────── -->
+    <div id="panel-winloss" class="report-panel active" data-panel="winloss">
+
+      <!-- Date range filter -->
+      <div class="panel-card">
+        <div class="panel-title">🏆 Win / Loss Filter</div>
+        <div class="date-filter">
+          <label>From</label>
+          <input type="date" id="wl-from" />
+          <label>To</label>
+          <input type="date" id="wl-to" />
+          <button class="filter-btn" onclick="renderWinLoss()">Apply</button>
+        </div>
+      </div>
+
+      <!-- KPI tiles -->
+      <div class="panel-card">
+        <div class="panel-title">Win/Loss Summary</div>
+        <div class="kpi-row">
+          <div class="kpi-tile info">
+            <div class="kpi-val" id="wl-total">—</div>
+            <div class="kpi-lbl">Total Closed</div>
+          </div>
+          <div class="kpi-tile ok">
+            <div class="kpi-val" id="wl-wins">—</div>
+            <div class="kpi-lbl">Won</div>
+          </div>
+          <div class="kpi-tile bad">
+            <div class="kpi-val" id="wl-losses">—</div>
+            <div class="kpi-lbl">Lost</div>
+          </div>
+          <div class="kpi-tile ok">
+            <div class="kpi-val" id="wl-rate">—</div>
+            <div class="kpi-lbl">Win Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loss reasons -->
+      <div class="panel-card">
+        <div class="panel-title">Top Loss Reasons</div>
+        <div id="wl-reasons-wrap">
+          <p class="empty-note">No lost deals found.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CYCLE TIME PANEL ─────────────────────────────────────── -->
+    <div id="panel-cycletime" class="report-panel" data-panel="cycletime">
+
+      <div class="panel-card">
+        <div class="panel-title">⏱ Cycle Time Summary</div>
+        <div class="kpi-row">
+          <div class="kpi-tile info">
+            <div class="kpi-val" id="ct-avg">—</div>
+            <div class="kpi-lbl">Avg Days (Job → Shipped)</div>
+          </div>
+          <div class="kpi-tile info">
+            <div class="kpi-val" id="ct-count">—</div>
+            <div class="kpi-lbl">Completed Jobs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend chart -->
+      <div class="panel-card">
+        <div class="panel-title">Cycle Time Trend</div>
+        <div class="chart-container" data-testid="cycletime-chart">
+          <canvas id="ct-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Category breakdown -->
+      <div class="panel-card">
+        <div class="panel-title">Breakdown by Category</div>
+        <div id="ct-category-wrap">
+          <p class="empty-note">No category data available.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEFECT ESCAPE PANEL ──────────────────────────────────── -->
+    <div id="panel-defect" class="report-panel" data-panel="defect">
+
+      <div class="panel-card">
+        <div class="panel-title">🔍 Defect Escape Summary</div>
+        <div class="kpi-row">
+          <div class="kpi-tile bad">
+            <div class="kpi-val" id="de-customer">—</div>
+            <div class="kpi-lbl">Customer Defects</div>
+          </div>
+          <div class="kpi-tile info">
+            <div class="kpi-val" id="de-internal">—</div>
+            <div class="kpi-lbl">Internal Defects</div>
+          </div>
+          <div class="kpi-tile bad">
+            <div class="kpi-val" id="de-rate">—</div>
+            <div class="kpi-lbl">Escape Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Affected Jobs</div>
+        <div id="de-jobs-wrap">
+          <p class="empty-note">No defect escape events found.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ON-TIME DELIVERY PANEL ───────────────────────────────── -->
+    <div id="panel-ontime" class="report-panel" data-panel="ontime">
+
+      <div class="panel-card">
+        <div class="panel-title">🚚 On-Time Delivery Summary</div>
+        <div class="kpi-row">
+          <div class="kpi-tile ok">
+            <div class="kpi-val" id="ot-rate">—</div>
+            <div class="kpi-lbl">On-Time Rate</div>
+          </div>
+          <div class="kpi-tile ok">
+            <div class="kpi-val" id="ot-ontime">—</div>
+            <div class="kpi-lbl">On-Time</div>
+          </div>
+          <div class="kpi-tile bad">
+            <div class="kpi-val" id="ot-late">—</div>
+            <div class="kpi-lbl">Late</div>
+          </div>
+          <div class="kpi-tile info">
+            <div class="kpi-val" id="ot-total">—</div>
+            <div class="kpi-lbl">Total w/ Promise</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Late Jobs</div>
+        <div id="ot-late-wrap">
+          <p class="empty-note">No late jobs found.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── Role gating ────────────────────────────────────────────────────────────
+  //
+  // Priority order:
+  //   1. localStorage.pulse_current_user_role  (set by tests / quick-switch)
+  //   2. sessionStorage.pulse_session.role     (set on login)
+  //
+  // Blocked roles: production_operator
+  // Allowed: ops_manager, admin, supervisor, account-manager, job_manager, etc.
+  // Default (no role set): allow (dashboard sets admin session in tests)
+
+  const BLOCKED_ROLES = ['production_operator'];
+
+  function getEffectiveRole() {
+    const explicit = localStorage.getItem('pulse_current_user_role');
+    if (explicit) return explicit;
+    try {
+      const session = JSON.parse(sessionStorage.getItem('pulse_session') || 'null');
+      if (session && session.role) return session.role;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function checkAccess() {
+    const role = getEffectiveRole();
+    if (role && BLOCKED_ROLES.includes(role)) {
+      document.getElementById('access-denied').style.display = '';
+      document.getElementById('reports-main').style.display = 'none';
+      return false;
+    }
+    document.getElementById('access-denied').style.display = 'none';
+    document.getElementById('reports-main').style.display = '';
+    return true;
+  }
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.report-tab').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.report-panel').forEach(panel => panel.classList.remove('active'));
+
+    const tab = document.querySelector(`[data-report="${tabId}"]`);
+    if (tab) tab.classList.add('active');
+
+    const panel = document.getElementById(`panel-${tabId}`);
+    if (panel) panel.classList.add('active');
+
+    renderActivePanel(tabId);
+  }
+
+  function renderActivePanel(tabId) {
+    if (tabId === 'winloss')   renderWinLoss();
+    if (tabId === 'cycletime') renderCycleTime();
+    if (tabId === 'defect')    renderDefectEscape();
+    if (tabId === 'ontime')    renderOnTime();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function fmtDays(d) {
+    return Number.isFinite(d) ? d.toFixed(1) + ' days' : '—';
+  }
+
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function daysBetween(a, b) {
+    return (new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24);
+  }
+
+  // ── Win / Loss ─────────────────────────────────────────────────────────────
+
+  function renderWinLoss() {
+    const fromVal = document.getElementById('wl-from').value;
+    const toVal   = document.getElementById('wl-to').value;
+
+    const allQuotes = JSON.parse(localStorage.getItem('pulse_quotes') || '[]');
+
+    let quotes = allQuotes.filter(q => q.status === 'won' || q.status === 'lost');
+
+    if (fromVal || toVal) {
+      const from = fromVal ? new Date(fromVal) : null;
+      const to   = toVal   ? new Date(toVal)   : null;
+      quotes = quotes.filter(q => {
+        const d = new Date(q.closedAt || q.wonAt || q.lostAt);
+        if (isNaN(d)) return false;
+        if (from && d < from) return false;
+        if (to   && d > to)   return false;
+        return true;
+      });
+    }
+
+    const wins   = quotes.filter(q => q.status === 'won');
+    const losses = quotes.filter(q => q.status === 'lost');
+    const total  = quotes.length;
+    const rate   = total > 0 ? Math.round((wins.length / total) * 100) : 0;
+
+    document.getElementById('wl-total').textContent  = total;
+    document.getElementById('wl-wins').textContent   = wins.length;
+    document.getElementById('wl-losses').textContent = losses.length;
+    document.getElementById('wl-rate').textContent   = rate + '%';
+
+    // Loss reasons
+    const reasonCounts = {};
+    losses.forEach(q => {
+      if (q.lostReason) {
+        reasonCounts[q.lostReason] = (reasonCounts[q.lostReason] || 0) + 1;
+      }
+    });
+    const sorted = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+
+    const wrap = document.getElementById('wl-reasons-wrap');
+    if (!sorted.length) {
+      wrap.innerHTML = '<p class="empty-note">No loss reasons recorded.</p>';
+      return;
+    }
+
+    const rows = sorted.map(([reason, count]) =>
+      `<tr>
+        <td>${esc(reason)}</td>
+        <td><span class="reason-badge">${count}</span></td>
+        <td style="font-size:12px;color:var(--text-muted,#64748b)">${total > 0 ? Math.round((count/total)*100) : 0}% of total</td>
+      </tr>`
+    ).join('');
+
+    wrap.innerHTML = `<table class="reason-table">
+      <thead><tr>
+        <th>Reason</th><th>Count</th><th>Share</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ── Cycle Time ─────────────────────────────────────────────────────────────
+
+  function renderCycleTime() {
+    const jobs = JSON.parse(localStorage.getItem('pulse_report_jobs') || '[]');
+    const completed = jobs.filter(j => j.shippedAt && j.createdAt);
+
+    const cycleData = completed.map(j => ({
+      jobId: j.jobId,
+      customer: j.customer,
+      category: j.category,
+      days: daysBetween(j.createdAt, j.shippedAt),
+    })).filter(j => Number.isFinite(j.days) && j.days >= 0);
+
+    const avg = cycleData.length > 0
+      ? cycleData.reduce((s, j) => s + j.days, 0) / cycleData.length
+      : 0;
+
+    document.getElementById('ct-avg').textContent   = cycleData.length ? fmtDays(avg) : '—';
+    document.getElementById('ct-count').textContent = cycleData.length;
+
+    drawCycleChart(cycleData);
+    renderCycleCategories(cycleData);
+  }
+
+  function drawCycleChart(cycleData) {
+    const canvas = document.getElementById('ct-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth || canvas.width || 600;
+    const H = canvas.offsetHeight || canvas.height || 160;
+    canvas.width  = W;
+    canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+
+    if (!cycleData.length) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data', W / 2, H / 2);
+      return;
+    }
+
+    const maxDays = Math.max(...cycleData.map(j => j.days), 1);
+    const pad = 24;
+    const barW = Math.max(4, Math.floor((W - pad * 2) / cycleData.length) - 2);
+
+    ctx.fillStyle = '#1d4ed8';
+    cycleData.forEach((job, i) => {
+      const x = pad + i * (barW + 2);
+      const h = Math.max(4, (job.days / maxDays) * (H - pad * 2));
+      const y = H - pad - h;
+      ctx.fillRect(x, y, barW, h);
+    });
+
+    // Avg line
+    const avgY = H - pad - (avg_for_chart(cycleData) / maxDays) * (H - pad * 2);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pad, avgY);
+    ctx.lineTo(W - pad, avgY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function avg_for_chart(data) {
+    return data.length ? data.reduce((s, j) => s + j.days, 0) / data.length : 0;
+  }
+
+  function renderCycleCategories(cycleData) {
+    const wrap = document.getElementById('ct-category-wrap');
+    if (!cycleData.length) {
+      wrap.innerHTML = '<p class="empty-note">No completed jobs found.</p>';
+      return;
+    }
+
+    const byCategory = {};
+    cycleData.forEach(j => {
+      const cat = j.category || 'uncategorized';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(j.days);
+    });
+
+    const avgs = Object.entries(byCategory).map(([cat, times]) => ({
+      cat,
+      avg: times.reduce((a, b) => a + b, 0) / times.length,
+      count: times.length,
+    })).sort((a, b) => b.avg - a.avg);
+
+    const maxAvg = Math.max(...avgs.map(a => a.avg), 1);
+    const rows = avgs.map(a =>
+      `<div class="category-row">
+        <span style="font-size:13px;font-weight:600;min-width:100px">${esc(a.cat)}</span>
+        <div class="cat-bar-wrap">
+          <div class="cat-bar" style="width:${Math.round((a.avg/maxAvg)*100)}%"></div>
+        </div>
+        <span style="font-size:13px;font-weight:700;white-space:nowrap;min-width:80px;text-align:right">${fmtDays(a.avg)}</span>
+        <span style="font-size:11px;color:var(--text-muted,#64748b);margin-left:8px">(${a.count})</span>
+      </div>`
+    ).join('');
+
+    wrap.innerHTML = rows;
+  }
+
+  // ── Defect Escape ──────────────────────────────────────────────────────────
+
+  function renderDefectEscape() {
+    const events   = JSON.parse(localStorage.getItem('pulse_qc_events')   || '[]');
+    const jobs     = JSON.parse(localStorage.getItem('pulse_report_jobs') || '[]');
+
+    const customerDefects = events.filter(e => e.type === 'defect_customer');
+    const internalDefects = events.filter(e => e.type === 'defect_internal');
+    const totalShipped    = jobs.filter(j => j.shippedAt).length;
+
+    const escapeRate = totalShipped > 0
+      ? ((customerDefects.length / totalShipped) * 100).toFixed(1) + '%'
+      : '0.0%';
+
+    document.getElementById('de-customer').textContent = customerDefects.length;
+    document.getElementById('de-internal').textContent = internalDefects.length;
+    document.getElementById('de-rate').textContent     = escapeRate;
+
+    const wrap = document.getElementById('de-jobs-wrap');
+    if (!customerDefects.length) {
+      wrap.innerHTML = '<p class="empty-note">No defect escape events found.</p>';
+      return;
+    }
+
+    const rows = customerDefects.map(e => {
+      const job = jobs.find(j => j.jobId === e.jobId);
+      const customer = job ? job.customer : '—';
+      const date = e.detectedAt ? new Date(e.detectedAt).toLocaleDateString() : '—';
+      return `<tr>
+        <td style="font-weight:600">${esc(e.jobId)}</td>
+        <td>${esc(customer)}</td>
+        <td>${date}</td>
+        <td><span class="reason-badge">Escaped</span></td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table class="job-table">
+      <thead><tr>
+        <th>Job ID</th><th>Customer</th><th>Detected</th><th>Type</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ── On-Time Delivery ───────────────────────────────────────────────────────
+
+  function renderOnTime() {
+    const jobs       = JSON.parse(localStorage.getItem('pulse_report_jobs') || '[]');
+    const withPromise = jobs.filter(j => j.shippedAt && j.promisedDate);
+    const onTime     = withPromise.filter(j => new Date(j.shippedAt) <= new Date(j.promisedDate));
+    const late       = withPromise.filter(j => new Date(j.shippedAt) > new Date(j.promisedDate));
+    const rate       = withPromise.length > 0
+      ? Math.round((onTime.length / withPromise.length) * 100)
+      : 0;
+
+    document.getElementById('ot-rate').textContent   = rate + '%';
+    document.getElementById('ot-ontime').textContent = onTime.length;
+    document.getElementById('ot-late').textContent   = late.length;
+    document.getElementById('ot-total').textContent  = withPromise.length;
+
+    const wrap = document.getElementById('ot-late-wrap');
+    if (!late.length) {
+      wrap.innerHTML = '<p class="empty-note">No late jobs found.</p>';
+      return;
+    }
+
+    const rows = late.map(j => {
+      const delayDays = Math.round(daysBetween(j.promisedDate, j.shippedAt));
+      return `<tr>
+        <td style="font-weight:600">${esc(j.jobId)}</td>
+        <td>${esc(j.customer || '—')}</td>
+        <td>${j.promisedDate || '—'}</td>
+        <td>${j.shippedAt || '—'}</td>
+        <td><span class="late-badge">${delayDays} days late</span></td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table class="job-table">
+      <thead><tr>
+        <th>Job ID</th><th>Customer</th><th>Promised</th><th>Shipped</th><th>Delay</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+
+  (function init() {
+    if (typeof renderNav === 'function') {
+      const navHtml = renderNav('reports');
+      if (navHtml) document.getElementById('nav').innerHTML = navHtml;
+    }
+    if (typeof renderBreadcrumb === 'function') {
+      const crumbHtml = renderBreadcrumb([{ label: 'Advanced Reports' }]);
+      if (crumbHtml) document.getElementById('breadcrumb').innerHTML = crumbHtml;
+    }
+
+    if (!checkAccess()) return;
+
+    // Initial render of active tab
+    renderWinLoss();
+  })();
+  </script>
+</body>
+</html>
