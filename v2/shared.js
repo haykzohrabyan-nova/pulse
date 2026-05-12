@@ -1353,12 +1353,16 @@ function addOrder(order) {
   order.workflowSteps = order.workflowSteps || [];
   order.currentStep = order.currentStep ?? 0;
   order.status = order.status || 'new';
+  order.notesLog = [];
+  order.conversationHistory = [];
   return _add('orders', order);
 }
 
 function getOrder(id) { return _get('orders', id); }
 function getAllOrders() { return _getAll('orders'); }
-function updateOrder(id, changes) { return _update('orders', id, changes); }
+function updateOrder(id, changes) {
+  return _update('orders', id, { ...(changes || {}), notesLog: [], conversationHistory: [] });
+}
 
 function getOrderByOrderId(orderId) {
   return openDB().then(db => new Promise((resolve, reject) => {
@@ -1392,24 +1396,78 @@ function getAllDevices() { return _getAll('devices'); }
 function updateDevice(id, changes) { return _update('devices', id, changes); }
 function deleteDevice(id) { return _delete('devices', id); }
 
-// ── Activity Log ───────────────────────────────────────────
+// ── Activity Log (disabled — order audit history removed) ──
 
-function addActivity(log) {
-  log.timestamp = log.timestamp || new Date().toISOString();
-  return _add('activity_log', log);
+function addActivity(_log) {
+  return Promise.resolve(null);
 }
 
-function getActivityLog(orderId) {
-  return openDB().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction('activity_log', 'readonly');
-    const idx = tx.objectStore('activity_log').index('orderId');
-    const req = idx.getAll(orderId);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  }));
+function getActivityLog(_orderId) {
+  return Promise.resolve([]);
 }
 
-function getAllActivity() { return _getAll('activity_log'); }
+function getAllActivity() {
+  return Promise.resolve([]);
+}
+
+/**
+ * Same as root shared.js — full browser wipe for Pulse (IDB + pulse_ localStorage + Supabase auth token + session).
+ */
+function wipeAllPulseBrowserData() {
+  try {
+    localStorage.setItem('pulse_seed_demo', '0');
+  } catch (e) {}
+
+  const lsDrop = [];
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (
+      k.startsWith('pulse_') ||
+      k === 'bazaar_admin_next_state_v4' ||
+      (k.startsWith('sb-') && k.includes('auth-token'))
+    ) {
+      lsDrop.push(k);
+    }
+  }
+  lsDrop.forEach(k => {
+    try {
+      localStorage.removeItem(k);
+    } catch (e) {}
+  });
+
+  ['pulse_session', 'op_operator'].forEach(k => {
+    try {
+      sessionStorage.removeItem(k);
+    } catch (e) {}
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    req.onsuccess = () => {
+      const db = req.result;
+      const names = Array.from(db.objectStoreNames);
+      if (names.length === 0) {
+        db.close();
+        resolve(true);
+        return;
+      }
+      const tx = db.transaction(names, 'readwrite');
+      names.forEach(n => tx.objectStore(n).clear());
+      tx.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      tx.onerror = () => reject(tx.error || new Error('IndexedDB clear failed'));
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB clear aborted'));
+    };
+  });
+}
+
+function clearLocalPulseOrdersAndHistory() {
+  return wipeAllPulseBrowserData();
+}
 
 // ── Config (for admin variable overrides) ──────────────────
 

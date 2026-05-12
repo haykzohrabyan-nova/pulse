@@ -12,7 +12,6 @@
 </head>
 <body>
 <div id="nav"></div>
-<div id="breadcrumb"></div>
 
 <!-- Header: Filters + Stats -->
 <div class="dash-header">
@@ -62,7 +61,7 @@
 
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
-  <div class="modal" style="max-width:700px;">
+  <div class="modal" style="max-width:760px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h2 id="modalTitle">Order Details</h2>
       <button class="btn btn-sm" onclick="closeDetail()">✕</button>
@@ -73,13 +72,17 @@
 
 <script>
   injectThemeCSS();
-  document.getElementById('nav').innerHTML = renderNav('dashboard');
-  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Dashboard' }]);
-  initAuth('dashboard');
+  const DASH_EMBEDDED = new URLSearchParams(window.location.search).get('embedded') === 'admin-personnel';
+  if (DASH_EMBEDDED) {
+    document.getElementById('nav').style.display = 'none';
+  } else {
+    document.getElementById('nav').innerHTML = renderNav('dashboard');
+    initAuth('dashboard');
+  }
 
   document.getElementById('page-styles').textContent = `
     /* ── Header ── */
-    .dash-header { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+    .dash-header { padding: ${DASH_EMBEDDED ? '10px 12px' : '12px 20px'}; border-bottom: 1px solid var(--border); }
     .filter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .dash-facility-toggle { display: flex; gap: 4px; }
     .view-toggle { display: flex; gap: 4px; }
@@ -97,7 +100,7 @@
     .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* ── Board (Kanban) ── */
-    .board-container { padding: 16px 12px; overflow-x: auto; height: calc(100vh - 220px); }
+    .board-container { padding: 16px 12px; overflow-x: auto; height: ${DASH_EMBEDDED ? '360px' : 'calc(100vh - 220px)'}; }
     .line-section { margin-bottom: 24px; }
     .line-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 12px; border-radius: var(--radius); font-weight: 700; font-size: 14px; }
     .line-header .line-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -162,6 +165,37 @@
     .data-table td { white-space: nowrap; font-size: 12px; }
     .line-dot-sm { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
     .current-stage { font-weight: 600; }
+
+    /* Order detail modal — tabs */
+    .dash-detail-tabs {
+      display: flex; gap: 4px; margin: 4px 0 14px;
+      border-bottom: 1px solid var(--border); padding-bottom: 2px;
+    }
+    .dash-detail-tab {
+      padding: 8px 14px; font-size: 13px; font-weight: 600;
+      border: 1px solid transparent; border-bottom: none;
+      border-radius: 8px 8px 0 0; background: transparent;
+      color: var(--text-muted); cursor: pointer; font-family: inherit;
+    }
+    .dash-detail-tab:hover { color: var(--text); background: #f8fafc; }
+    .dash-detail-tab.active {
+      color: var(--accent); background: #eff6ff;
+      border-color: var(--border); border-bottom-color: #eff6ff; margin-bottom: -1px;
+    }
+    .dash-tl-section { margin-bottom: 18px; }
+    .dash-tl-section h4 {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); margin: 0 0 10px;
+    }
+    .dash-tl-row {
+      display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px;
+      font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f1f5f9;
+      align-items: start;
+    }
+    .dash-tl-row:last-child { border-bottom: none; }
+    .dash-tl-label { color: var(--text-muted); font-weight: 600; }
+    .dash-tl-val { color: var(--text); font-weight: 500; line-height: 1.45; }
+    .dash-tl-note { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-top: 4px; }
   `;
 
   let currentFilter = 'all';
@@ -1010,6 +1044,57 @@
     </div>`;
   }
 
+  function renderDashTimelinePanel(o) {
+    const at = (iso) => (iso ? formatDateTime(iso) : '—');
+    const whoWhen = (who, iso) => {
+      if (!iso && !who) return '—';
+      if (iso && who) return `${who} · ${at(iso)}`;
+      if (iso) return at(iso);
+      return who;
+    };
+    const steps = o.workflowSteps || [];
+    const firstStart = steps[0]?.startedAt || steps[0]?.startTime || null;
+    const floorStatuses = ['in-production','on-hold','qc-checkout','qc-failed','ready-to-ship','shipped','received','completed','waiting-pickup'];
+    const fallbackFirstStep = !o.prepressApprovedAt && firstStart && floorStatuses.includes(o.status);
+    const createdVal = o.createdAt ? at(o.createdAt) : (o.updatedAt ? `${at(o.updatedAt)} <span class="dash-tl-note">(no separate created timestamp)</span>` : '—');
+    return `
+    <div class="dash-tl-section">
+      <h4>Order record</h4>
+      <div class="dash-tl-row"><div class="dash-tl-label">Created</div><div class="dash-tl-val">${createdVal}</div></div>
+      <div class="dash-tl-row"><div class="dash-tl-label">Owner (rep)</div><div class="dash-tl-val">${o.accountManager || '—'}</div></div>
+    </div>
+    <div class="dash-tl-section">
+      <h4>Prepress</h4>
+      <div class="dash-tl-row"><div class="dash-tl-label">Review started</div><div class="dash-tl-val">${whoWhen(o.prepressStartedBy, o.prepressStartedAt)}</div></div>
+      <div class="dash-tl-row"><div class="dash-tl-label">Review completed</div><div class="dash-tl-val">${whoWhen(o.prepressCompletedBy, o.prepressCompletedAt)}${o.prepressCompletedAt ? '<div class="dash-tl-note">Left prepress — typically moves to production queue for approval.</div>' : ''}</div></div>
+    </div>
+    <div class="dash-tl-section">
+      <h4>Production floor</h4>
+      <div class="dash-tl-row"><div class="dash-tl-label">Released to production</div><div class="dash-tl-val">${whoWhen(o.prepressApprovedBy, o.prepressApprovedAt)}${fallbackFirstStep ? '<div class="dash-tl-note">No approval timestamp on file — first workflow step start is shown below.</div>' : ''}</div></div>
+      ${fallbackFirstStep ? `<div class="dash-tl-row"><div class="dash-tl-label">First step started</div><div class="dash-tl-val">${at(firstStart)}${steps[0]?.machine ? ` · ${steps[0].machine}` : ''}</div></div>` : ''}
+    </div>`;
+  }
+
+  (function setupDashOrderModalTabs() {
+    const mc = document.getElementById('modalContent');
+    if (!mc || mc.dataset.dashTabDelegate === '1') return;
+    mc.dataset.dashTabDelegate = '1';
+    mc.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dash-detail-tab');
+      if (!btn || !btn.dataset.tab) return;
+      const which = btn.dataset.tab;
+      mc.querySelectorAll('.dash-detail-tab').forEach(b => {
+        const on = b.dataset.tab === which;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      mc.querySelectorAll('.dash-detail-panel').forEach(p => {
+        if (p.dataset.panel === which) p.removeAttribute('hidden');
+        else p.setAttribute('hidden', '');
+      });
+    });
+  })();
+
   // ── Detail Modal (same as before, enhanced) ──
   async function showDetail(id) {
     const o = await getOrder(id);
@@ -1030,8 +1115,8 @@
       if (o.dieStatus === 'new-ordered') cutStr += ' (NEW — ordered)';
     }
 
-    document.getElementById('modalContent').innerHTML = `
-      <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+    const detailsPanelHtml = `
+      <div style="display:flex;gap:8px;margin-top:4px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
         <span class="card-line-tag tag-${line}" style="font-size:12px;padding:3px 10px;">${lineConfig.name}</span>
         <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
         <a href="job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
@@ -1075,7 +1160,15 @@
             }).join('')}
           </tbody>
         </table>
-      ` : ''}
+      ` : ''}`;
+
+    document.getElementById('modalContent').innerHTML = `
+      <div class="dash-detail-tabs" role="tablist">
+        <button type="button" class="dash-detail-tab active" role="tab" aria-selected="true" data-tab="details">Details</button>
+        <button type="button" class="dash-detail-tab" role="tab" aria-selected="false" data-tab="timeline">Timeline &amp; ownership</button>
+      </div>
+      <div class="dash-detail-panel" data-panel="details" role="tabpanel">${detailsPanelHtml}</div>
+      <div class="dash-detail-panel" data-panel="timeline" role="tabpanel" hidden>${renderDashTimelinePanel(o)}</div>
     `;
     document.getElementById('detailModal').classList.add('active');
   }

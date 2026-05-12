@@ -209,7 +209,7 @@
 
   <!-- ── Quick-qualify modal (inline panel) ───────────────────────────── -->
   <div id="qa-modal" class="qa-modal">
-    <h3 id="qa-title" style="margin:0 0 10px;font-size:16px;font-weight:700;">Qualify Lead</h3>
+    <h3 id="qa-title" style="margin:0 0 10px;font-size:16px;font-weight:700;">Verify Lead</h3>
     <div id="qa-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
 
     <div class="qa-field" style="margin-bottom:12px;">
@@ -223,8 +223,8 @@
 
     <div class="qa-grid">
       <div class="qa-field">
-        <label>Product Type</label>
-        <input id="qa-product" type="text" placeholder="e.g. Roll Labels">
+        <label>Interest</label>
+        <input id="qa-product" type="text" placeholder="e.g. Roll Labels, mylar bags">
       </div>
       <div class="qa-field">
         <label>Quantity</label>
@@ -411,6 +411,7 @@
         <button class="btn" onclick="window.location.href='instagram-leads.html'">📸 Instagram / FB Inbox</button>
         <button class="btn" onclick="window.location.href='leads.html?action=new'">＋ Log New Lead</button>
         <button class="btn" onclick="window.location.href='leads.html?source=walk_in&action=new'">🚶 Log Walk-In Lead</button>
+        <button class="btn" onclick="window.location.href='sdr-pipeline-portal.html'">🖥️ SDR Pipeline (AI leads table)</button>
         <button class="btn" onclick="window.location.href='sales-dashboard.html'">📈 View AM Pipeline (read-only)</button>
       </div>
     </div>
@@ -488,8 +489,8 @@ function getDemoLeads() {
       { id:'r6', deal_id:'deal-6', assigned_rep_name:'Bob Werner',       routed_at: ago(24*20)},
     ],
     staleManyChat: [
-      { id:'ig1', ig_handle:'@tropicalbotanicals', created_at: ago(4), stage:'new', source:'manychat' },
-      { id:'ig2', ig_handle:'@freshlabelco',       created_at: ago(6), stage:'new', source:'manychat' },
+      { id:'ig1', ig_handle:'@tropicalbotanicals', created_at: ago(4), stage:'new', source:'manychat', product_type: 'Mylar pouches' },
+      { id:'ig2', ig_handle:'@freshlabelco',       created_at: ago(6), stage:'new', source:'manychat', product_type: 'Roll labels' },
     ],
   };
 }
@@ -517,7 +518,7 @@ async function loadAll() {
           .eq('status','lost').gte('updated_at', ystStart.toISOString()).lt('updated_at', todayStart.toISOString()),
         sb.from('leads').select('id,deal_id,assigned_rep,routed_at')
           .eq('status','routed').gte('routed_at', thirtyAgo.toISOString()),
-        sb.from('instagram_leads').select('id,ig_handle,created_at,stage,source')
+        sb.from('instagram_leads').select('id,ig_handle,created_at,stage,source,product_type')
           .eq('source','manychat').eq('stage','new').lt('created_at', new Date(Date.now()-2*3600000).toISOString()),
       ]);
 
@@ -682,12 +683,15 @@ function renderAutomationWidget() {
   const rows = staleManyChat.map(m => `
     <div class="automation-row">
       <span class="err-label">ManyChat stale</span>
-      <span>${escHtml(m.ig_handle)}</span>
-      <span style="color:var(--text-muted);">${ageText(m.created_at)}</span>
+      <div style="flex:1;min-width:0;text-align:right;padding:0 10px;">
+        <div style="font-weight:600;">${escHtml(m.ig_handle)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Interest: ${escHtml(m.product_type || '—')}</div>
+      </div>
+      <span style="color:var(--text-muted);white-space:nowrap;">${ageText(m.created_at)}</span>
     </div>`).join('');
   host.innerHTML = `
     <div class="automation-widget">
-      <h4>🤖 Broken Automation Indicators (${staleManyChat.length})</h4>
+      <h4>🤖 Automated AI Leads (${staleManyChat.length})</h4>
       ${rows}
       <p style="font-size:11px;color:#1e40af;margin-top:6px;">These ManyChat leads have not progressed past "new" in 2+ hours — flow may be stalled. Check ManyChat dashboard for delivery errors.</p>
     </div>`;
@@ -909,8 +913,9 @@ function openQa(id) {
   qaLeadId = id;
   qaScore  = l.score || 'warm';
 
-  document.getElementById('qa-title').textContent   = `Qualify: ${l.name}${l.company?' — '+l.company:''}`;
-  document.getElementById('qa-summary').textContent = `${channelLabel(l.source)} · ${l.email||''} ${l.phone?' · '+l.phone:''} · created ${ageText(l.created_at)}`;
+  document.getElementById('qa-title').textContent   = `Verify: ${l.name}${l.company?' — '+l.company:''}`;
+  const interestLine = l.product_type ? ` · Interest: ${l.product_type}` : ' · Interest: —';
+  document.getElementById('qa-summary').textContent = `${channelLabel(l.source)} · ${l.email||''} ${l.phone?' · '+l.phone:''} · created ${ageText(l.created_at)}${interestLine}`;
 
   document.getElementById('qa-product').value      = l.product_type || '';
   document.getElementById('qa-quantity').value     = l.quantity || '';
