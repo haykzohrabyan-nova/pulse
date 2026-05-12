@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
   <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
@@ -15,12 +16,17 @@
 <div id="breadcrumb"></div>
 
 <div class="pm-layout">
-  <!-- Sidebar: Filters + Stats (PrePress-style) -->
-  <div class="pm-sidebar">
-    <div class="sidebar-section">
-      <input type="text" id="searchInput" placeholder="🔍 Order # or customer..." oninput="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
-      <select id="pmStatusFilter" onchange="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
-        <option value="all">All Orders</option>
+  <!-- Sidebar: same filter UX as Prepress (creation-date ranges) -->
+  <aside class="pm-sidebar">
+    <div class="queue-header">
+      <div class="queue-title">🏭 Production queue</div>
+      <div class="queue-subtitle" id="pmSidebarOrderCount">—</div>
+    </div>
+    <div class="queue-filters">
+      <input type="text" id="searchInput" placeholder="Search order or customer..." oninput="renderList()" autocomplete="off">
+      <select id="pmStatusFilter" onchange="renderList()">
+        <option value="all">All</option>
+        <option value="approved-queue">✅ Approved — production queue</option>
         <option value="new">New</option>
         <option value="pending-review">Pending Review</option>
         <option value="in-production">In Production</option>
@@ -31,27 +37,25 @@
         <option value="ready-to-ship">Ready to Ship</option>
         <option value="overdue">🔴 Overdue</option>
       </select>
-      <select id="pmDateFilter" onchange="onPmDateFilterChange()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:4px;">
-        <option value="all">📅 All Dates</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="last-week">Last Week</option>
-        <option value="last-month">Last Month</option>
+      <select id="pmDateFilter" onchange="onPmDateFilterChange()">
+        <option value="all">📅 All (Created)</option>
+        <option value="today">Created Today</option>
+        <option value="yesterday">Created Yesterday</option>
+        <option value="last-week">Created Last Week</option>
+        <option value="last-month">Created Last Month</option>
         <option value="custom">Custom…</option>
       </select>
-      <input type="date" id="pmCustomDate" onchange="renderList()" style="display:none;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:4px;">
-      <select id="pmFacilityFilter" onchange="renderList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+      <input type="date" id="pmCustomDate" onchange="renderList()" style="display:none;">
+      <select id="pmFacilityFilter" onchange="renderList()">
         <option value="all">All Facilities</option>
-        <option value="16th-street">16th Street</option>
-        <option value="boyd-street">Boyd Street</option>
       </select>
     </div>
-    <div class="sidebar-section">
-      <a href="job-ticket.html" class="btn btn-primary" style="width:100%;text-align:center;justify-content:center;">+ New Job</a>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.45;">Ticket editing is done in pop up window. Related ticket examples: 17919_1, 17919_1_R1, 17919_1_RS.</div>
+    <div class="pm-sidebar-actions">
+      <a href="job-ticket.html" class="btn btn-primary pm-new-job-btn">+ New Job</a>
+      <div class="pm-sidebar-hint">Ticket editing is done in pop up window. Related ticket examples: 17919_1, 17919_1_R1, 17919_1_RS.</div>
     </div>
     <div class="sidebar-stats" id="sidebarStats"></div>
-  </div>
+  </aside>
 
   <!-- Main: Order List -->
   <div class="pm-main">
@@ -270,15 +274,30 @@ document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Pr
 initAuth('production-manager');
 
 document.getElementById('page-styles').textContent = `
-  .pm-layout { display: flex; height: calc(100vh - 52px); overflow: hidden; }
-  .pm-sidebar { width: 220px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 8px; }
+  .pm-layout { display: flex; gap: 14px; padding: 14px; min-height: calc(100vh - 52px); overflow: hidden; box-sizing: border-box; align-items: stretch; }
+  .pm-sidebar {
+    width: 300px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 80px);
+    background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(15,23,42,0.05); overflow: hidden;
+  }
+  .pm-sidebar .queue-header { padding: 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-sidebar .queue-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .pm-sidebar .queue-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .pm-sidebar .queue-filters { padding: 10px 14px; display: grid; gap: 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-sidebar .queue-filters input,
+  .pm-sidebar .queue-filters select {
+    width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; box-sizing: border-box;
+    background: #fff; color: var(--text);
+  }
+  .pm-sidebar-actions { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-new-job-btn { width: 100%; text-align: center; justify-content: center; box-sizing: border-box; font-weight: 600; padding: 10px 14px; border-radius: 10px; }
+  .pm-sidebar-hint { margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.45; }
   .sidebar-section { margin-bottom: 16px; }
   .sidebar-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 4px 8px 6px; }
   .filter-btn { display: block; width: 100%; text-align: left; padding: 7px 12px; border: none; border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; font-size: 13px; margin-bottom: 2px; }
   .filter-btn:hover { background: var(--card-hover); }
   .filter-btn.active { background: #e0edff; color: var(--accent); font-weight: 600; }
-  .sidebar-stats { font-size: 12px; color: var(--text-muted); padding: 8px; }
-  .pm-main { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .sidebar-stats { font-size: 12px; color: var(--text-muted); padding: 10px 14px 14px; overflow-y: auto; flex: 1; min-height: 0; }
+  .pm-main { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 8px 16px 4px; background: transparent; }
   .pm-main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
   .pm-main-header h2 { font-size: 18px; font-weight: 700; }
 
@@ -341,6 +360,12 @@ document.getElementById('page-styles').textContent = `
   .overdue { color: var(--red); }
   .due-soon { color: var(--yellow); }
 
+  @media (max-width: 960px) {
+    .pm-layout { flex-direction: column; overflow: auto; align-items: stretch; height: auto; min-height: calc(100vh - 52px); }
+    .pm-sidebar { width: 100%; max-height: none; }
+    .pm-main { overflow: visible; }
+  }
+
   .artwork-preview-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .art-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
   .art-thumb-pdf { width: 80px; height: 80px; background: #f0f0f5; border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
@@ -348,6 +373,8 @@ document.getElementById('page-styles').textContent = `
 
 // State
 let allOrders = [];
+/** Job tickets that have left prepress and are in production / QC / shipping (or done). */
+const PM_APPROVED_PRODUCTION_STATUSES = ['pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'waiting-pickup', 'completed', 'shipped', 'received'];
 let currentStatusFilter = 'all';
 let currentFacilityFilter = 'all';
 let activeOrderId = null; // the DB id currently expanded
@@ -372,8 +399,49 @@ OPERATIONS.forEach(o => {
   document.getElementById('newStepOperation').innerHTML += `<option value="${o}">${o}</option>`;
 });
 
+// ── Dynamic facility helpers ──────────────────────────────
+function _getPmOrgFacilities() {
+  if (window.PulseOrgJsonStore) {
+    try {
+      const bundle = PulseOrgJsonStore.loadRaw();
+      if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
+        return bundle.facilities
+          .filter(f => f.slug && f.name)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      }
+    } catch (_) {}
+  }
+  if (typeof FACILITIES !== 'undefined') {
+    return Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
+  }
+  return [];
+}
+
+function getPmFacilityLabel(slug) {
+  if (!slug) return '—';
+  const facs = _getPmOrgFacilities();
+  const found = facs.find(f => f.slug === slug);
+  if (found) return found.name;
+  return (typeof FACILITIES !== 'undefined' && FACILITIES[slug]?.name) || slug;
+}
+
+function populatePmFacilityFilter() {
+  const sel = document.getElementById('pmFacilityFilter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">All Facilities</option>';
+  _getPmOrgFacilities().forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.slug;
+    opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+  if (current && current !== 'all') sel.value = current;
+}
+
 // ── Init ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  populatePmFacilityFilter();
   await loadOrders();
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -431,7 +499,7 @@ function getSmartBatchSuggestions(orders) {
       const dueSpreadDays = earliest && latest ? Math.round((new Date(latest) - new Date(earliest)) / 86400000) : 0;
       return {
         line: getProductionLine(group[0]),
-        facility: FACILITIES[group[0].facility]?.name || group[0].facility || '—',
+        facility: getPmFacilityLabel(group[0].facility),
         material: group[0].material,
         printType: group[0].printType || '—',
         lamination: group[0].lamination || 'None',
@@ -488,15 +556,15 @@ function renderList() {
   const dateFilter = document.getElementById('pmDateFilter')?.value || 'all';
   const customDate = document.getElementById('pmCustomDate')?.value || '';
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
-  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
-  const doneStatuses = ['completed','shipped','received','waiting-pickup'];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const doneStatuses = ['completed', 'shipped', 'received', 'waiting-pickup'];
 
   let filtered = allOrders.filter(o => {
     if (statusFilter === 'reprint') {
       if (!o.isReprint) return false;
+    } else if (statusFilter === 'approved-queue') {
+      if (!PM_APPROVED_PRODUCTION_STATUSES.includes(o.status)) return false;
     } else if (statusFilter === 'overdue') {
       if (doneStatuses.includes(o.status) || !o.dueDate || new Date(o.dueDate+'T12:00:00') >= today) return false;
     } else if (statusFilter !== 'all' && o.status !== statusFilter) {
@@ -507,27 +575,19 @@ function renderList() {
       const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription, o.reprintOfOrderId, o.reprintReason].join(' ').toLowerCase();
       if (!haystack.includes(search)) return false;
     }
-    // Date filter
-    if (dateFilter === 'today') {
-      if (!o.dueDate) return false;
-      const d = new Date(o.dueDate+'T12:00:00'); if (!(d >= today && d < new Date(today.getTime()+86400000))) return false;
-    } else if (dateFilter === 'yesterday') {
-      if (!o.dueDate) return false;
-      const d = new Date(o.dueDate+'T12:00:00'); if (!(d >= yesterday && d < today)) return false;
-    } else if (dateFilter === 'last-week') {
-      if (!o.dueDate || new Date(o.dueDate+'T12:00:00') < weekStart) return false;
-    } else if (dateFilter === 'last-month') {
-      if (!o.dueDate || new Date(o.dueDate+'T12:00:00') < monthStart) return false;
-    } else if (dateFilter === 'custom' && customDate) {
-      if (!o.dueDate) return false;
-      const d = new Date(o.dueDate+'T12:00:00');
-      if (!(d >= new Date(customDate+'T00:00:00') && d <= new Date(customDate+'T23:59:59'))) return false;
-    }
+    if (!pulseOrderMatchesCreatedDateFilter(o, dateFilter, customDate)) return false;
     return true;
   });
 
-  document.getElementById('listTitle').textContent = statusFilter === 'all' ? 'All Orders' : (statusFilter === 'reprint' ? 'Reprints / Shortages' : (STATUS_LABELS[statusFilter] || statusFilter));
-  document.getElementById('orderCount').textContent = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('listTitle').textContent =
+    statusFilter === 'all' ? 'All Orders'
+      : statusFilter === 'approved-queue' ? 'Approved — production queue'
+        : statusFilter === 'reprint' ? 'Reprints / Shortages'
+          : (STATUS_LABELS[statusFilter] || statusFilter);
+  const countLabel = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('orderCount').textContent = countLabel;
+  const sideCt = document.getElementById('pmSidebarOrderCount');
+  if (sideCt) sideCt.textContent = countLabel;
 
   const container = document.getElementById('orderList');
   if (filtered.length === 0) {
@@ -644,7 +704,7 @@ function di(label, val) {
 
 function getActionButtons(order) {
   const btns = [];
-  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager'];
+  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
   if (editableStatuses.includes(order.status)) {
     btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
   } else {
@@ -1080,7 +1140,7 @@ function openRedirectModal(dbId, stepId, stepIndex) {
   for (const [facKey, fac] of Object.entries(FACILITIES)) {
     const facMachines = fac.machines.filter(m => m !== currentMachine);
     if (facMachines.length > 0) {
-      machineSel.innerHTML += `<optgroup label="${fac.name}">`;
+      machineSel.innerHTML += `<optgroup label="${getPmFacilityLabel(facKey)}">`;
       facMachines.forEach(m => {
         machineSel.innerHTML += `<option value="${m}">${m}</option>`;
       });
@@ -1457,7 +1517,7 @@ function printPackingSlips() {
         </div>
       </div>
       <div class="slip-footer">
-        <span>Bazaar Printing · ${FACILITIES[order.facility]?.name || ''}</span>
+        <span>Bazaar Printing · ${getPmFacilityLabel(order.facility)}</span>
         <span>#${order.orderId} · ${today}</span>
       </div>
     </div>`;
@@ -1575,7 +1635,7 @@ function _packingSlipLegacy(dbId) {
         </div>
         <div class="slip-col" style="text-align:right;">
           <div class="slip-label">Facility</div>
-          <div class="slip-val">${FACILITIES[order.facility]?.name || order.facility || '—'}</div>
+          <div class="slip-val">${getPmFacilityLabel(order.facility)}</div>
         </div>
       </div>
 
@@ -1633,7 +1693,7 @@ function _packingSlipLegacy(dbId) {
       </div>
     </div>
     <div class="slip-footer">
-      <span>Bazaar Printing • ${FACILITIES[order.facility]?.name || ''}</span>
+      <span>Bazaar Printing • ${getPmFacilityLabel(order.facility)}</span>
       <span>Order #${order.orderId} • ${today}</span>
     </div>
   </div>

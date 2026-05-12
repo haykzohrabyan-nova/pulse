@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
   <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
@@ -17,15 +18,16 @@
   <!-- Tab Bar -->
   <div class="admin-tabs">
     <button class="tab-btn active" data-tab="personnel" onclick="switchTab('personnel')">👥 Personnel</button>
+    <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="dies" onclick="switchTab('dies')">🔧 Dies</button>
+    <button class="tab-btn" data-tab="organisation" onclick="switchTab('organisation')">Organisation</button>
     <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">📦 Inventory</button>
     <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
-    <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
-    <button class="tab-btn" data-tab="packaging-catalog" onclick="switchTab('packaging-catalog')">🫙 Packaging Catalog</button>
     <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+    <button class="tab-btn" data-tab="products" onclick="switchTab('products')">🗂 Products</button>
   </div>
 
   <div class="admin-content">
@@ -35,7 +37,10 @@
     <div class="tab-pane active" id="tab-personnel">
       <div class="pane-header">
         <h2>Personnel</h2>
-        <button class="btn btn-primary" onclick="openPersonnelModal()">+ Add Person</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="bulkSetUserIds()" title="Set same User ID for all personnel">⚙ Bulk Set User IDs</button>
+          <button class="btn btn-primary" onclick="openPersonnelModal()">+ Add Personnel</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -95,6 +100,16 @@
           <tbody id="dieTableBody"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ═════════════════════════════════════ ORGANISATION ══ -->
+    <div class="tab-pane" id="tab-organisation">
+      <iframe
+        id="organisationAdminFrame"
+        class="admin-org-frame"
+        title="Organisation"
+        src="organisation.html?embedded=admin"
+      ></iframe>
     </div>
 
     <!-- ══════════════════════════════════════════ INVENTORY ══ -->
@@ -174,132 +189,6 @@
 
     <!-- ══════════════════════════════════════ SETTINGS ══ -->
     <!-- ═══ QA SIGN-OFF RULES TAB ═════════════════════════════════ -->
-    <!-- ════════════════════════ PACKAGING CATALOG TAB ═══════════ -->
-<div class="tab-pane" id="tab-packaging-catalog">
-  <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-    <div>
-      <h2>🫙 Packaging Catalog</h2>
-      <p style="color:var(--text-muted);font-size:13px;margin:0;">Jars / Tubes / Bags — cost &amp; tiered sale pricing for rep quoting</p>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <select id="pkgCatFilter" onchange="renderPackagingTable()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-        <option value="">All Categories</option>
-        <option value="Bags">Bags</option>
-        <option value="Jars">Jars</option>
-        <option value="Tubes">Tubes</option>
-        <option value="Labels">Labels</option>
-        <option value="Pouches">Pouches</option>
-        <option value="Other">Other</option>
-      </select>
-      <input type="text" id="pkgSearch" placeholder="Search SKU or name..." oninput="renderPackagingTable()"
-        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;">
-      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
-        <input type="checkbox" id="pkgShowInactive" onchange="renderPackagingTable()"> Show inactive
-      </label>
-      <button class="btn" onclick="openPackagingModal(null)">+ Add SKU</button>
-      <button class="btn" onclick="document.getElementById('pkgCsvInput').click()" title="Import from CSV">&#8679; CSV Import</button>
-      <input type="file" id="pkgCsvInput" accept=".csv" style="display:none;" onchange="importPackagingCsv(this)">
-      <button class="btn" onclick="exportPackagingCsv()" title="Export to CSV">&#8681; CSV Export</button>
-    </div>
-  </div>
-  <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;" id="pkgSummaryLine"></div>
-  <div class="table-wrap">
-    <table class="data-table" id="pkgTable">
-      <thead>
-        <tr>
-          <th>SKU</th>
-          <th>Name</th>
-          <th>Category</th>
-          <th>Material</th>
-          <th style="text-align:right;">Cost</th>
-          <th style="text-align:right;">@25</th>
-          <th style="text-align:right;">@100</th>
-          <th style="text-align:right;">@500</th>
-          <th style="text-align:right;">@1000</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="pkgTableBody"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Packaging Product Modal -->
-<div class="modal" id="packagingModal">
-  <div class="modal-box" style="max-width:560px;">
-    <div class="modal-header">
-      <h3 id="pkgModalTitle">Add Packaging Product</h3>
-      <button class="modal-close" onclick="closePackagingModal()">×</button>
-    </div>
-    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <input type="hidden" id="pkgId">
-      <div class="field" style="grid-column:span 2;">
-        <label>SKU *</label>
-        <input type="text" id="pkgSku" placeholder="e.g. 210000000006" style="font-family:monospace;">
-      </div>
-      <div class="field" style="grid-column:span 2;">
-        <label>Name *</label>
-        <input type="text" id="pkgName" placeholder="e.g. 1 Gram Bag">
-      </div>
-      <div class="field">
-        <label>Category *</label>
-        <select id="pkgCategory">
-          <option value="Bags">Bags</option>
-          <option value="Jars">Jars</option>
-          <option value="Tubes">Tubes</option>
-          <option value="Labels">Labels</option>
-          <option value="Pouches">Pouches</option>
-          <option value="Cartons">Cartons</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Material</label>
-        <input type="text" id="pkgMaterial" placeholder="e.g. Mylar, Glass, Plastic">
-      </div>
-      <div class="field">
-        <label>Cost per unit (internal) $</label>
-        <input type="number" id="pkgCost" step="0.0001" min="0" placeholder="0.0000">
-      </div>
-      <div class="field">
-        <label>Min Qty</label>
-        <input type="number" id="pkgMinQty" value="25" min="1">
-      </div>
-      <div class="field" style="grid-column:span 2;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px;">
-        <label style="font-weight:700;color:#1d4ed8;">Tiered Sale Prices ($/unit)</label>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">
-          <div><label style="font-size:10px;color:#6b7280;">@ 25</label><input type="number" id="pkgP25" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 50</label><input type="number" id="pkgP50" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 100</label><input type="number" id="pkgP100" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 250</label><input type="number" id="pkgP250" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 500</label><input type="number" id="pkgP500" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 1,000</label><input type="number" id="pkgP1000" step="0.0001" min="0" placeholder="0.00"></div>
-          <div><label style="font-size:10px;color:#6b7280;">@ 5,000</label><input type="number" id="pkgP5000" step="0.0001" min="0" placeholder="0.00"></div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Lead Time (days)</label>
-        <input type="number" id="pkgLeadTime" min="0" placeholder="e.g. 7">
-      </div>
-      <div class="field">
-        <label>Active</label>
-        <select id="pkgActive">
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-      </div>
-      <div class="field" style="grid-column:span 2;">
-        <label>Notes</label>
-        <textarea id="pkgNotes" rows="2" style="width:100%;box-sizing:border-box;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closePackagingModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="savePackagingProduct()">Save</button>
-    </div>
-  </div>
-</div>
 
 <div class="tab-pane" id="tab-qa-rules">
   <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;">
@@ -321,20 +210,15 @@
 <div class="tab-pane" id="tab-roles">
   <div class="pane-header">
     <h2>🔐 Roles & Permissions</h2>
-    <p style="color:#6b7280;font-size:13px;margin:4px 0 0;">What each role can see and do in Pulse.</p>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="rolesSaveStatus" style="font-size:12px;color:#6b7280;"></span>
+      <button class="btn btn-secondary" onclick="openAddRoleModal()">+ Add Role</button>
+      <button class="btn btn-primary" onclick="saveRolePermissions()">Save Changes</button>
+    </div>
   </div>
-  <table class="data-table" style="font-size:13px;">
-    <thead><tr><th>Role</th><th>Job Ticket Access</th><th>Can Edit Others' Tickets</th><th>Production Pages</th><th>Admin Access</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Admin</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
-      <tr><td><strong>David Review</strong></td><td>Selected pages</td><td>❌ No</td><td>Dashboard, Job Ticket, Pricing, Prepress, Production, Operator, QC, Machines</td><td>Personnel, Dies, Machines only</td></tr>
-      <tr><td><strong>Supervisor</strong></td><td>All</td><td>✅ Yes</td><td>✅ Yes</td><td>✅ Yes</td></tr>
-      <tr><td><strong>Production Manager</strong></td><td>View only</td><td>❌ No</td><td>✅ Yes</td><td>❌ No</td></tr>
-      <tr><td><strong>Account Manager</strong></td><td>Own tickets only</td><td>❌ No (own only)</td><td>❌ No</td><td>❌ No</td></tr>
-      <tr><td><strong>Operator</strong></td><td>None</td><td>❌ No</td><td>Operator Terminal, QC, Application only</td><td>❌ No</td></tr>
-    </tbody>
-  </table>
-  <div style="margin-top:24px;">
+  <p style="color:#6b7280;font-size:13px;margin:0 0 14px;">Check a cell to grant access, uncheck to revoke. Changes take effect on next login.</p>
+  <div id="rolesMatrixWrap" style="overflow-x:auto;"></div>
+  <div style="margin-top:28px;">
     <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Current User Assignments</h3>
     <div id="roleUserList"></div>
   </div>
@@ -385,6 +269,105 @@
         </div>
       </div>
     </div>
+
+    <!-- ══════════════════════════════════════ PRODUCTS CATALOGUE ══ -->
+    <div class="tab-pane" id="tab-products">
+      <div class="pane-header">
+        <h2>Product Catalogue</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="file" id="catalogImportFile" accept=".json" style="display:none" onchange="catalogImportAll(this)">
+          <button class="btn" onclick="document.getElementById('catalogImportFile').click()">Import JSON</button>
+          <button class="btn" onclick="catalogExportAll()">Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Sub-nav -->
+      <div class="cat-sub-nav">
+        <button class="cat-sub-btn active" data-cat="products" onclick="switchCatTab('products')">Products</button>
+        <button class="cat-sub-btn" data-cat="materials" onclick="switchCatTab('materials')">Materials</button>
+        <button class="cat-sub-btn" data-cat="finishing" onclick="switchCatTab('finishing')">Special Finishing</button>
+        <button class="cat-sub-btn" data-cat="color-modes" onclick="switchCatTab('color-modes')">Color Modes</button>
+      </div>
+
+      <!-- ── Products ── -->
+      <div class="cat-section active" id="cat-products">
+        <div class="pane-header" style="margin-top:16px;">
+          <h3 style="font-size:16px;font-weight:700;">Products</h3>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="catImportProducts" accept=".json" style="display:none" onchange="catImportSection('products',this)">
+            <button class="btn" onclick="document.getElementById('catImportProducts').click()">Import</button>
+            <button class="btn" onclick="catExportSection('products')">Export</button>
+            <button class="btn btn-primary" onclick="openCatProductModal()">+ Add Product</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table cat-products-table">
+            <thead><tr>
+              <th>Name</th><th>Facilities</th><th>Materials</th><th>Color Modes</th><th>Finishing</th><th>Sides</th><th>Roll Dir</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="catProductsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Materials ── -->
+      <div class="cat-section" id="cat-materials">
+        <div class="pane-header" style="margin-top:16px;">
+          <h3 style="font-size:16px;font-weight:700;">Materials</h3>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="catImportMaterials" accept=".json" style="display:none" onchange="catImportSection('materials',this)">
+            <button class="btn" onclick="document.getElementById('catImportMaterials').click()">Import</button>
+            <button class="btn" onclick="catExportSection('materials')">Export</button>
+            <button class="btn btn-primary" onclick="openCatMaterialModal()">+ Add Category</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Category</th><th>Items</th><th style="width:140px;">Actions</th></tr></thead>
+            <tbody id="catMaterialsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Special Finishing ── -->
+      <div class="cat-section" id="cat-finishing">
+        <div class="pane-header" style="margin-top:16px;">
+          <h3 style="font-size:16px;font-weight:700;">Special Finishing</h3>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="catImportFinishing" accept=".json" style="display:none" onchange="catImportSection('finishing',this)">
+            <button class="btn" onclick="document.getElementById('catImportFinishing').click()">Import</button>
+            <button class="btn" onclick="catExportSection('finishing')">Export</button>
+            <button class="btn btn-primary" onclick="openCatFinishingModal()">+ Add Finishing</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
+            <tbody id="catFinishingBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Color Modes ── -->
+      <div class="cat-section" id="cat-color-modes">
+        <div class="pane-header" style="margin-top:16px;">
+          <h3 style="font-size:16px;font-weight:700;">Color Modes</h3>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="catImportColorModes" accept=".json" style="display:none" onchange="catImportSection('colorModes',this)">
+            <button class="btn" onclick="document.getElementById('catImportColorModes').click()">Import</button>
+            <button class="btn" onclick="catExportSection('colorModes')">Export</button>
+            <button class="btn btn-primary" onclick="openCatColorModeModal()">+ Add Color Mode</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
+            <tbody id="catColorModesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -393,31 +376,22 @@
 <!-- Personnel Modal -->
 <div class="modal-overlay" id="personnelModal">
   <div class="modal">
-    <h2 id="personnelModalTitle">Add Person</h2>
+    <h2 id="personnelModalTitle">Add Personnel</h2>
     <input type="hidden" id="personnelId">
     <div class="modal-form">
       <div class="field"><label>Name *</label><input type="text" id="pName" required></div>
-      <div class="field"><label>Role</label>
+      <div class="field"><label>Role *</label>
         <select id="pRole">
-          <option value="operator">Operator</option>
-          <option value="supervisor">Supervisor</option>
-          <option value="prepress">Prepress</option>
-          <option value="production_manager">Production Manager</option>
-          <option value="account_manager">Account Manager</option>
-          <option value="admin">Admin</option>
+          <option value="">— Select Role —</option>
         </select>
       </div>
-      <div class="field"><label>Facility</label>
-        <select id="pFacility">
-          <option value="16th-street">16th Street</option>
-          <option value="boyd-street">Boyd Street</option>
-          <option value="both">Both</option>
-        </select>
+      <div class="field"><label>Facility *</label>
+        <select id="pFacility"></select>
       </div>
       <div class="field">
-        <label>User ID</label>
+        <label>User ID *</label>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="pUserId" placeholder="Auto-generated operator ID" style="flex:1;">
+          <input type="text" id="pUserId" placeholder="Auto-generated operator ID" style="flex:1;" required>
           <button type="button" class="btn btn-sm" onclick="generatePersonnelUserId()">Generate</button>
         </div>
       </div>
@@ -431,6 +405,30 @@
   </div>
 </div>
 
+<!-- Add Role Modal -->
+<div class="modal-overlay" id="addRoleModal">
+  <div class="modal" style="max-width:420px;">
+    <h2>Add Role</h2>
+    <div class="modal-form">
+      <div class="field">
+        <label>Role Name *</label>
+        <input type="text" id="addRoleName" placeholder="e.g. Finishing Operator">
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="color" id="addRoleColor" value="#6b7280" style="width:48px;height:36px;padding:2px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;">
+          <span style="font-size:12px;color:#6b7280;">Used as badge color in the matrix</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddRoleModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewRole()">Add Role</button>
+    </div>
+  </div>
+</div>
+
 <!-- Die Modal -->
 <div class="modal-overlay" id="dieModal">
   <div class="modal" style="max-width:600px;">
@@ -439,8 +437,8 @@
     <div class="modal-form">
       <div class="field-row">
         <div class="field"><label>Die Number *</label><input type="text" id="dNumber" placeholder="e.g. 42 or GM-7" required></div>
-        <div class="field"><label>Type</label>
-          <select id="dType">
+        <div class="field"><label>Type *</label>
+          <select id="dType" required>
             <option value="">— Select —</option>
             <option value="box">Box</option>
             <option value="label">Label</option>
@@ -462,8 +460,9 @@
             <option value="other">Other</option>
           </select>
         </div>
-        <div class="field"><label>Status</label>
-          <select id="dStatus">
+        <div class="field"><label>Status *</label>
+          <select id="dStatus" required>
+            <option value="">— Select —</option>
             <option value="active">Active</option>
             <option value="damaged">Damaged</option>
             <option value="retired">Retired</option>
@@ -481,7 +480,7 @@
         </div>
       </div>
       <div class="field"><label>Dieline PDF filename</label><input type="text" id="dTemplatePdf" placeholder="e.g. Kream 20ct box.pdf"></div>
-      <div class="field"><label>Google Drive Photo / Preview URL</label><input type="url" id="dPhotosUrl" placeholder="https://drive.google.com/file/d/…/view"></div>
+      <div class="field"><label>Google Drive Photo / Preview URL *</label><input type="url" id="dPhotosUrl" placeholder="https://drive.google.com/file/d/…/view" required></div>
       <div class="field"><label>Notes</label><input type="text" id="dNotes"></div>
       <div class="field" id="barcodeDisplay" style="display:none;">
         <label>Barcode</label>
@@ -612,6 +611,108 @@
   </div>
 </div>
 
+<!-- Color Mode Modal -->
+<div class="modal-overlay" id="catColorModeModal">
+  <div class="modal">
+    <h2 id="catCMTitle">Add Color Mode</h2>
+    <div class="modal-form">
+      <div class="field"><label>Name *</label><input type="text" id="catCMName" placeholder="e.g. CMYK"></div>
+      <div class="field"><label>Description</label><input type="text" id="catCMDesc" placeholder="Optional description"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('catColorModeModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatColorMode()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material Category Modal -->
+<div class="modal-overlay" id="catMaterialModal">
+  <div class="modal" style="max-width:560px;">
+    <h2 id="catMatTitle">Add Material Category</h2>
+    <div class="modal-form">
+      <div class="field"><label>Category Name *</label><input type="text" id="catMatCategory" placeholder="e.g. BOPP"></div>
+      <div class="field">
+        <label>Items</label>
+        <div id="catMatItemList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:6px 0;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="catMatItemInput" placeholder="Type item and press Enter or Add…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCatMatItem();}">
+          <button type="button" class="btn btn-sm" onclick="addCatMatItem()">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('catMaterialModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatMaterial()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Special Finishing Modal -->
+<div class="modal-overlay" id="catFinishingModal">
+  <div class="modal">
+    <h2 id="catFinTitle">Add Finishing Option</h2>
+    <div class="modal-form">
+      <div class="field"><label>Name *</label><input type="text" id="catFinName" placeholder="e.g. Lamination"></div>
+      <div class="field"><label>Description</label><input type="text" id="catFinDesc" placeholder="Optional description"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('catFinishingModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatFinishing()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="catProductModal">
+  <div class="modal" style="max-width:680px;max-height:90vh;overflow-y:auto;">
+    <h2 id="catProdTitle">Add Product</h2>
+    <div class="modal-form">
+      <div class="field"><label>Product Name *</label><input type="text" id="catProdName" placeholder="e.g. Labels (Roll)"></div>
+
+      <div class="field">
+        <label>Facilities</label>
+        <div id="catProdFacilities" class="cat-check-grid"></div>
+      </div>
+
+      <div class="field">
+        <label>Color Modes</label>
+        <div id="catProdColorModes" class="cat-check-grid"></div>
+      </div>
+
+      <div class="field">
+        <label>Materials</label>
+        <div id="catProdMaterials" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;"></div>
+      </div>
+
+      <div class="field">
+        <label>Special Finishing</label>
+        <div id="catProdFinishing" class="cat-check-grid"></div>
+      </div>
+
+      <div class="field">
+        <label>Sides</label>
+        <div class="cat-check-grid">
+          <label class="cat-check-label"><input type="checkbox" name="catProdSide" id="catProdSide_1sided" value="1-sided"> 1-sided</label>
+          <label class="cat-check-label"><input type="checkbox" name="catProdSide" id="catProdSide_2sided" value="2-sided"> 2-sided</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="cat-check-label" style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:600;font-size:13px;">
+          <input type="checkbox" id="catProdRollDir"> Roll Direction applies to this product
+        </label>
+      </div>
+
+      <div class="field"><label>Notes</label><textarea id="catProdNotes" rows="2" placeholder="Optional production notes"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('catProductModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('admin');
@@ -623,9 +724,11 @@ document.getElementById('page-styles').textContent = `
   .tab-btn { padding: 8px 16px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; transition: all 0.15s; }
   .tab-btn:hover { background: var(--card-hover); color: var(--text); }
   .tab-btn.active { background: var(--bg); border-color: var(--border); color: var(--accent); font-weight: 700; margin-bottom: -2px; }
-  .admin-content { flex: 1; overflow-y: visible; }
+  .admin-content { flex: 1; overflow-y: visible; overflow-x: hidden; }
   .tab-pane { display: none; padding: 20px 24px; }
   .tab-pane.active { display: block; }
+  #tab-organisation { padding: 0; }
+  .admin-org-frame { width: 100%; height: calc(100vh - 112px); border: 0; display: block; background: var(--bg); }
   .pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .pane-header h2 { font-size: 20px; font-weight: 700; }
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
@@ -659,10 +762,38 @@ document.getElementById('page-styles').textContent = `
   .kb-severity-warning { color: var(--yellow); font-weight: 700; }
   .kb-severity-info { color: var(--accent); }
 
+  /* Product Catalogue sub-nav */
+  .cat-sub-nav { display:flex; gap:4px; border-bottom:2px solid var(--border); margin-bottom:4px; }
+  .cat-sub-btn { padding:8px 16px; border:none; background:transparent; color:var(--text-muted); font-size:13px; font-weight:500; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.15s; white-space:nowrap; }
+  .cat-sub-btn:hover { color:var(--text); background:var(--card-hover); }
+  .cat-sub-btn.active { color:var(--accent); font-weight:700; border-bottom-color:var(--accent); }
+  .cat-section { display:none; }
+  .cat-section.active { display:block; }
+  /* Tags */
+  .cat-tag { display:inline-block; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); font-size:11px; color:var(--text-muted); font-weight:500; }
+  .cat-tag-removable { display:inline-flex; align-items:center; gap:4px; padding:3px 6px 3px 10px; border-radius:20px; background:#e0e7ff; color:#3730a3; font-size:12px; font-weight:500; }
+  .cat-tag-removable button { border:none; background:none; cursor:pointer; color:#6366f1; font-size:14px; line-height:1; padding:0; }
+  /* Checkbox grid in modals */
+  .cat-check-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .cat-check-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; color:var(--text); text-transform:none; letter-spacing:0; cursor:pointer; padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg); }
+  .cat-check-label:hover { background:var(--card-hover); }
+  .cat-check-label input[type="checkbox"] { width:14px; height:14px; cursor:pointer; }
+  /* Products table — single-line rows */
+  .cat-products-table td, .cat-products-table th { white-space: nowrap; }
+  .cat-products-table td:nth-child(2),
+  .cat-products-table td:nth-child(3),
+  .cat-products-table td:nth-child(4),
+  .cat-products-table td:nth-child(5) { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+
   /* Die Data Center */
-  .die-filter-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
-  .die-filter-row input[type="text"] { flex:1; min-width:200px; max-width:320px; }
-  .die-filter-row select { min-width:160px; }
+  .die-filter-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:nowrap; align-items:center; width:100%; }
+  .die-filter-row input[type="text"] { flex:1 1 280px; min-width:180px; max-width:320px; }
+  .die-filter-row select { flex:1 1 180px; min-width:150px; width:auto; }
+  .die-filter-row #dieCount { flex:0 0 auto; }
+  @media (max-width: 760px) {
+    .die-filter-row { flex-wrap:wrap; }
+    .die-filter-row input[type="text"], .die-filter-row select { flex:1 1 100%; max-width:none; }
+  }
   .die-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
   .die-card { background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow 0.15s; }
   .die-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.15); }
@@ -709,11 +840,15 @@ async function loadTab(tab) {
   else if (tab === 'inventory') await loadInventory();
   else if (tab === 'purchase-orders') await loadPOs();
   else if (tab === 'machines') renderMachines();
+  else if (tab === 'organisation') {
+    const frame = document.getElementById('organisationAdminFrame');
+    if (frame && !frame.src) frame.src = 'organisation.html?embedded=admin';
+  }
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'settings') await loadSettings();
   else if (tab === 'qa-rules') renderQARules();
-  else if (tab === 'roles') renderRoles();
-  else if (tab === 'packaging-catalog') await loadPackagingCatalog();
+  else if (tab === 'roles') await renderRoles();
+  else if (tab === 'products') await loadProductsTab();
 }
 
 async function renderAdminAlerts() {
@@ -939,25 +1074,283 @@ function evaluateQARules(ticket) {
 }
 
 // Roles tab
-function renderRoles() {
+// ── Roles & Permissions matrix ────────────────────────────
+
+const ROLES_PAGES = [
+  { key: 'dashboard',           label: 'Dashboard' },
+  { key: 'job-ticket',          label: 'Job Ticket' },
+  { key: 'pricing-calculator',  label: 'Pricing' },
+  { key: 'quotes',              label: 'Quotes' },
+  { key: 'orders',              label: 'Orders' },
+  { key: 'invoices',            label: 'Invoices' },
+  { key: 'prepress',            label: 'Prepress' },
+  { key: 'production-manager',  label: 'Production' },
+  { key: 'operator-terminal',   label: 'Operator' },
+  { key: 'qc-checkout',         label: 'QC Checkout' },
+  { key: 'machine-issues',      label: 'Machine Issues' },
+  { key: 'application-dept',    label: 'Application' },
+  { key: 'shipping',            label: 'Shipping' },
+  { key: 'proofs',              label: 'Proofs' },
+  { key: 'design-task',         label: 'Design Task' },
+  { key: 'rep-tasks',           label: 'Rep Tasks' },
+  { key: 'leads',               label: 'Leads' },
+  { key: 'instagram-leads',     label: 'Instagram Leads' },
+  { key: 'sales-dashboard',     label: 'Sales Dashboard' },
+  { key: 'jm-dashboard',        label: 'JM Dashboard' },
+  { key: 'sdr-dashboard',       label: 'SDR Dashboard' },
+  { key: 'sdr-pipeline-portal', label: 'SDR Pipeline' },
+  { key: 'ops-manager',         label: 'Ops Manager' },
+  { key: 'organisation',        label: 'Organisation' },
+  { key: 'admin',               label: 'Admin' },
+];
+
+const ROLES_SPECIAL = [
+  { key: 'canEditAllTickets',  label: 'Edit All Tickets' },
+  { key: 'canViewAdmin',       label: 'View Admin' },
+  { key: 'canViewProduction',  label: 'View Production' },
+  { key: 'canViewOperator',    label: 'View Operator' },
+];
+
+let _roleOverrides = {};
+
+// ── Custom Roles List (merged from ROLE_CONFIG + user additions) ──────────────
+let _customRoles = [];
+
+async function loadCustomRoles() {
+  if (_customRoles.length) return; // already loaded
+  const saved = await getConfig('customRoles');
+  if (saved?.value && Array.isArray(saved.value) && saved.value.length) {
+    _customRoles = saved.value;
+  } else {
+    // Seed from ROLE_CONFIG so the dropdown includes all defined roles
+    _customRoles = Object.entries(ROLE_CONFIG).map(([key, cfg]) => ({
+      key,
+      label: cfg.label || key,
+      color: cfg.color || '#6b7280',
+    }));
+    await setConfig('customRoles', _customRoles);
+  }
+}
+
+async function saveCustomRoles() {
+  await setConfig('customRoles', _customRoles);
+}
+
+function populateRoleDropdown(selectedVal) {
+  const sel = document.getElementById('pRole');
+  if (!sel) return;
+  const current = selectedVal !== undefined ? selectedVal : sel.value;
+  sel.innerHTML = '<option value="">— Select Role —</option>';
+  _customRoles.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.key;
+    opt.textContent = r.label;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+async function deleteRoleRow(key) {
+  const role = _customRoles.find(r => r.key === key);
+  if (key === 'admin') { alert('The Admin role cannot be deleted.'); return; }
+  if (!confirm(`Delete role "${role?.label || key}"?\n\nPersonnel assigned this role will keep the value but it will no longer appear in the selector.`)) return;
+  _customRoles = _customRoles.filter(r => r.key !== key);
+  delete _roleOverrides[key];
+  await saveCustomRoles();
+  await setConfig('rolePermissions', _roleOverrides);
+  // Refresh dropdown if personnel modal is open
+  const pRole = document.getElementById('pRole');
+  if (pRole) populateRoleDropdown(pRole.value);
+  await renderRoles();
+}
+
+function openAddRoleModal() {
+  document.getElementById('addRoleName').value = '';
+  document.getElementById('addRoleColor').value = '#6b7280';
+  document.getElementById('addRoleModal').classList.add('active');
+}
+
+function closeAddRoleModal() {
+  document.getElementById('addRoleModal').classList.remove('active');
+}
+
+async function saveNewRole() {
+  const label = document.getElementById('addRoleName').value.trim();
+  if (!label) { alert('Role name is required.'); return; }
+  const color = document.getElementById('addRoleColor').value || '#6b7280';
+  const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (_customRoles.find(r => r.key === key)) {
+    alert(`A role with the key "${key}" already exists.`);
+    return;
+  }
+  _customRoles.push({ key, label, color });
+  await saveCustomRoles();
+  closeAddRoleModal();
+  // Refresh dropdown if it is currently rendered
+  populateRoleDropdown();
+  await renderRoles();
+}
+
+async function renderRoles() {
+  await loadCustomRoles();
+  const saved = await getConfig('rolePermissions');
+  _roleOverrides = (saved?.value) || {};
+
+  const wrap = document.getElementById('rolesMatrixWrap');
+  if (!wrap) return;
+
+  const thBase = 'padding:6px 3px;border-bottom:2px solid #e2e8f0;min-width:42px;max-width:42px;background:#f8fafc;text-align:center;vertical-align:bottom;';
+  const thSpecial = 'padding:6px 3px;border-bottom:2px solid #e2e8f0;min-width:42px;max-width:42px;background:#eef2ff;text-align:center;vertical-align:bottom;';
+  const rotLabel = (text, color) =>
+    `<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;font-weight:600;color:${color};padding:4px 0;margin:0 auto;">${text}</div>`;
+
+  let html = `
+  <div style="border:1px solid #e2e8f0;border-radius:12px;background:#fff;">
+    <table style="border-collapse:collapse;font-size:12px;min-width:max-content;width:100%;">
+      <thead>
+        <tr>
+          <th style="position:sticky;left:0;z-index:3;background:#f8fafc;padding:10px 16px;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;font-size:12px;min-width:200px;text-align:left;white-space:nowrap;">Role</th>
+          ${ROLES_PAGES.map(p => `<th style="${thBase}">${rotLabel(p.label, '#374151')}</th>`).join('')}
+          <th style="border-left:3px solid #a5b4fc;${thSpecial}"></th>
+          ${ROLES_SPECIAL.map(s => `<th style="${thSpecial}">${rotLabel(s.label, '#4338ca')}</th>`).join('')}
+        </tr>
+        <tr>
+          <th style="position:sticky;left:0;z-index:3;background:#f1f5f9;padding:4px 16px;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">
+            Page Access →
+          </th>
+          <th colspan="${ROLES_PAGES.length}" style="background:#f1f5f9;border-bottom:2px solid #e2e8f0;padding:4px 8px;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Pages</th>
+          <th colspan="${ROLES_SPECIAL.length + 1}" style="border-left:3px solid #a5b4fc;background:#eef2ff;border-bottom:2px solid #e2e8f0;padding:4px 8px;font-size:10px;color:#4338ca;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Special Permissions</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  _customRoles.forEach((role, ri) => {
+    const roleKey = role.key;
+    const baseCfg = ROLE_CONFIG[roleKey] || { label: role.label, color: role.color || '#6b7280', pages: [], canEditAllTickets: false, canViewAdmin: false, canViewProduction: false, canViewOperator: false };
+    const overrides = _roleOverrides[roleKey] || {};
+    const hasPageOverride = Array.isArray(overrides.pages) && overrides.pages.length > 0;
+    const basePages = baseCfg.pages.includes('all') ? ROLES_PAGES.map(p => p.key) : (baseCfg.pages || []);
+    const pages = hasPageOverride ? overrides.pages : basePages;
+    const bg = ri % 2 === 0 ? '#fff' : '#f9fafb';
+    const bgSpecial = ri % 2 === 0 ? '#f5f7ff' : '#eef0fa';
+    const hasOverride = !!_roleOverrides[roleKey];
+    const deleteBtn = roleKey === 'admin'
+      ? ''
+      : `<button onclick="deleteRoleRow('${roleKey}')" title="Delete role" style="float:right;background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px;padding:0 2px;line-height:1;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">✕</button>`;
+    const resetBtn = hasOverride
+      ? `<button onclick="resetRoleToDefault('${roleKey}')" title="Reset to default permissions" style="float:right;background:none;border:none;cursor:pointer;color:#f59e0b;font-size:10px;font-weight:700;padding:0 4px;line-height:1;margin-right:2px;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">↺</button>`
+      : '';
+
+    html += `<tr>
+      <td style="position:sticky;left:0;z-index:1;background:${bg};padding:7px 16px;border-bottom:1px solid #f1f5f9;border-right:2px solid #e2e8f0;white-space:nowrap;">
+        ${deleteBtn}${resetBtn}
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${role.color || baseCfg.color || '#6b7280'};margin-right:7px;flex-shrink:0;"></span>
+        <strong style="font-size:12px;">${role.label || roleKey}</strong>
+      </td>`;
+
+    const isAdminRole = roleKey === 'admin';
+    ROLES_PAGES.forEach(p => {
+      const checked = pages.includes(p.key) ? 'checked' : '';
+      const disabled = isAdminRole ? 'disabled title="Admin always has full access"' : '';
+      const cursor = isAdminRole ? 'not-allowed;opacity:.5' : 'pointer';
+      html += `<td style="padding:3px;text-align:center;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;background:${bg};">
+        <input type="checkbox" ${checked} ${disabled}
+          data-role="${roleKey}" data-page="${p.key}"
+          onchange="roleMatrixChange(this)"
+          style="width:15px;height:15px;cursor:${cursor};accent-color:#6366f1;">
+      </td>`;
+    });
+
+    html += `<td style="border-left:3px solid #a5b4fc;background:${bgSpecial};"></td>`;
+
+    ROLES_SPECIAL.forEach(s => {
+      const val = s.key in overrides ? overrides[s.key] : (baseCfg[s.key] || false);
+      const checked = val ? 'checked' : '';
+      const disabled = isAdminRole ? 'disabled title="Admin always has full access"' : '';
+      const cursor = isAdminRole ? 'not-allowed;opacity:.5' : 'pointer';
+      html += `<td style="padding:3px;text-align:center;border-bottom:1px solid #e0e7ff;border-right:1px solid #e0e7ff;background:${bgSpecial};">
+        <input type="checkbox" ${checked} ${disabled}
+          data-role="${roleKey}" data-special="${s.key}"
+          onchange="roleMatrixChange(this)"
+          style="width:15px;height:15px;cursor:${cursor};accent-color:#6366f1;">
+      </td>`;
+    });
+
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  wrap.innerHTML = html;
+
+  // User assignments list
   const el = document.getElementById('roleUserList');
   if (!el) return;
   const rows = Object.entries(OPERATOR_PROFILES)
     .concat((typeof EXTRA_AUTH_USERS !== 'undefined' ? EXTRA_AUTH_USERS.map(u => [u.name, u]) : []))
     .concat([['Hayk Zohrabyan', { role: 'admin', notes: 'Owner / Admin' }]])
     .map(([name, p]) => {
-      const cfg = typeof ROLE_CONFIG !== 'undefined' ? (ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' }) : { label: p.role, color: '#6b7280' };
+      const customRole = _customRoles.find(r => r.key === p.role);
+      const cfg = customRole || ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' };
       return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
         <span style="font-weight:600;min-width:160px;">${name}</span>
         <span style="padding:2px 10px;border-radius:10px;background:${cfg.color}22;color:${cfg.color};font-size:11px;font-weight:600;">${cfg.label || p.role}</span>
         <span style="color:#9ca3af;font-size:11px;">${p.notes || ''}</span>
       </div>`;
     }).join('');
-  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows}</div>`;
+  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows || '<div style="padding:16px;color:#9ca3af;font-size:13px;">No users found.</div>'}</div>`;
+}
+
+function roleMatrixChange(cb) {
+  const role = cb.dataset.role;
+  const page = cb.dataset.page;
+  const special = cb.dataset.special;
+  if (!_roleOverrides[role]) _roleOverrides[role] = {};
+
+  if (page) {
+    // Build the current working page list: use existing override (if non-empty), else expand from base config
+    if (!Array.isArray(_roleOverrides[role].pages) || _roleOverrides[role].pages.length === 0) {
+      const base = (ROLE_CONFIG[role] || {}).pages || [];
+      _roleOverrides[role].pages = base.includes('all') ? ROLES_PAGES.map(p => p.key) : [...base];
+    }
+    if (cb.checked) {
+      if (!_roleOverrides[role].pages.includes(page)) _roleOverrides[role].pages.push(page);
+    } else {
+      _roleOverrides[role].pages = _roleOverrides[role].pages.filter(p => p !== page);
+    }
+  } else if (special) {
+    _roleOverrides[role][special] = cb.checked;
+  }
+
+  const status = document.getElementById('rolesSaveStatus');
+  if (status) { status.textContent = '● Unsaved changes'; status.style.color = '#f59e0b'; }
+}
+
+async function resetRoleToDefault(roleKey) {
+  if (!confirm(`Reset "${ROLE_CONFIG[roleKey]?.label || roleKey}" to its default permissions?`)) return;
+  delete _roleOverrides[roleKey];
+  await saveRolePermissions();
+  await renderRoles();
+}
+
+async function saveRolePermissions() {
+  // Never persist admin page overrides — admin always has full access
+  delete _roleOverrides['admin'];
+  await setConfig('rolePermissions', _roleOverrides);
+  // Cache to localStorage so auth.js can read it synchronously on any page
+  try { localStorage.setItem('pulse_role_overrides', JSON.stringify(_roleOverrides)); } catch (_) {}
+  // Apply to live ROLE_CONFIG so changes are active immediately on this page
+  Object.entries(_roleOverrides).forEach(([role, ov]) => {
+    if (!ROLE_CONFIG[role]) return;
+    if (Array.isArray(ov.pages) && ov.pages.length > 0) ROLE_CONFIG[role].pages = [...ov.pages];
+    ROLES_SPECIAL.forEach(s => { if (s.key in ov) ROLE_CONFIG[role][s.key] = ov[s.key]; });
+  });
+  const status = document.getElementById('rolesSaveStatus');
+  if (status) { status.textContent = '✓ Saved'; status.style.color = '#16a34a'; setTimeout(() => { status.textContent = ''; }, 3000); }
 }
 
 // ── Init ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  await loadCustomRoles();
   await seedKnowledge();
   await loadTab(activeTab);
   onDBUpdate(async (data) => { await loadTab(activeTab); });
@@ -975,6 +1368,20 @@ function updateAppDeptTotal() {
 }
 
 // ── PERSONNEL ─────────────────────────────────────────────
+function personnelRoleLabel(role) {
+  if (!role) return '—';
+  // Check live custom roles list first (covers all ROLE_CONFIG roles + user-added)
+  const found = _customRoles.find(r => r.key === role);
+  if (found) return found.label;
+  // Fallback: check ROLE_CONFIG directly
+  if (ROLE_CONFIG[role]) return ROLE_CONFIG[role].label;
+  // Legacy underscore keys
+  const legacyMap = { production_manager: 'Production Manager', account_manager: 'Account Manager', qc: 'QC Inspector' };
+  if (legacyMap[role]) return legacyMap[role];
+  // Generic formatting
+  return role.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function generatePersonnelUserId() {
   const name = (document.getElementById('pName').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'USR';
   const seed = String(Date.now()).slice(-4);
@@ -991,7 +1398,7 @@ async function loadPersonnel() {
   tbody.innerHTML = people.map(p => `
     <tr>
       <td style="font-weight:600;">${p.name}</td>
-      <td><span style="text-transform:capitalize;">${p.role || 'operator'}</span></td>
+      <td>${personnelRoleLabel(p.role)}</td>
       <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
       <td>${FACILITIES[p.facility]?.name || p.facility || '—'}</td>
       <td>${p.phone || '—'}</td>
@@ -1004,15 +1411,64 @@ async function loadPersonnel() {
   `).join('');
 }
 
+async function _waitForSupabaseClient(maxMs = 8000) {
+  const step = 150;
+  let t = 0;
+  while (t < maxMs) {
+    const c = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (c) return c;
+    await new Promise(r => setTimeout(r, step));
+    t += step;
+  }
+  return typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+}
+
+function populateFacilityDropdown(selectedSlug) {
+  const sel = document.getElementById('pFacility');
+  if (!sel) return;
+  let entries = [];
+
+  // 1. Org local store — synchronous, instant
+  if (window.PulseOrgJsonStore) {
+    try {
+      const bundle = PulseOrgJsonStore.loadRaw();
+      if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
+        entries = bundle.facilities
+          .filter(f => f.slug && f.name)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map(f => ({ slug: f.slug, name: f.name }));
+      }
+    } catch (_) {}
+  }
+
+  // 2. Static FACILITIES fallback
+  if (!entries.length && typeof FACILITIES !== 'undefined') {
+    entries = Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
+  }
+
+  sel.innerHTML = '<option value="">— Select Facility —</option>';
+  entries.forEach(({ name }) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  const bothOpt = document.createElement('option');
+  bothOpt.value = 'Both Facilities';
+  bothOpt.textContent = 'Both Facilities';
+  sel.appendChild(bothOpt);
+  sel.value = selectedSlug || '';
+}
+
 function openPersonnelModal(person) {
-  document.getElementById('personnelModalTitle').textContent = person ? 'Edit Person' : 'Add Person';
+  document.getElementById('personnelModalTitle').textContent = person ? 'Edit Personnel' : 'Add Personnel';
   document.getElementById('personnelId').value = person?.id || '';
   document.getElementById('pName').value = person?.name || '';
-  document.getElementById('pRole').value = person?.role || 'operator';
-  document.getElementById('pFacility').value = person?.facility || '16th-street';
+  populateRoleDropdown(person?.role || '');
   document.getElementById('pUserId').value = person?.userId || '';
   document.getElementById('pPhone').value = person?.phone || '';
   document.getElementById('pActive').checked = person?.active !== false;
+  populateFacilityDropdown(person?.facility || null);
   document.getElementById('personnelModal').classList.add('active');
 }
 
@@ -1025,11 +1481,17 @@ async function editPersonnel(id) {
 async function savePersonnel() {
   const name = document.getElementById('pName').value.trim();
   if (!name) { alert('Name is required.'); return; }
+  const role = document.getElementById('pRole').value;
+  if (!role) { alert('Role is required.'); return; }
+  const facility = document.getElementById('pFacility').value;
+  if (!facility) { alert('Facility is required.'); return; }
+  const userId = document.getElementById('pUserId').value.trim();
+  if (!userId) { alert('User ID is required.'); return; }
   const id = parseInt(document.getElementById('personnelId').value) || null;
   const data = {
     name,
-    role: document.getElementById('pRole').value,
-    facility: document.getElementById('pFacility').value,
+    role,
+    facility,
     userId: document.getElementById('pUserId').value.trim(),
     phone: document.getElementById('pPhone').value.trim(),
     active: document.getElementById('pActive').checked
@@ -1046,6 +1508,21 @@ async function deletePersonnelConfirm(id, name) {
   if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
   await deletePersonnel(id);
   await loadPersonnel();
+}
+
+async function bulkSetUserIds() {
+  const newId = prompt('Enter the User ID to assign to ALL personnel:', '1111');
+  if (newId === null) return;
+  const id = newId.trim();
+  if (!id) { alert('User ID cannot be empty.'); return; }
+  const all = await getAllPersonnel();
+  if (!all.length) { alert('No personnel found.'); return; }
+  if (!confirm(`This will set the User ID to "${id}" for all ${all.length} personnel records. Continue?`)) return;
+  for (const p of all) {
+    await updatePersonnel(p.id, { ...p, userId: id });
+  }
+  await loadPersonnel();
+  alert(`✓ Updated ${all.length} records to User ID "${id}".`);
 }
 
 // ── DIE MASTER DATA ────────────────────────────────────────
@@ -1413,16 +1890,34 @@ async function setDieStatus(id, status) {
 async function saveDie() {
   const dieNumber = document.getElementById('dNumber').value.trim();
   if (!dieNumber) { alert('Die number is required.'); return; }
+  const dieType = document.getElementById('dType').value;
+  if (!dieType) {
+    alert('Type is required.');
+    document.getElementById('dType').focus();
+    return;
+  }
+  const dieStatus = document.getElementById('dStatus').value;
+  if (!dieStatus) {
+    alert('Status is required.');
+    document.getElementById('dStatus').focus();
+    return;
+  }
+  const driveUrl = document.getElementById('dPhotosUrl').value.trim();
+  if (!driveUrl) {
+    alert('Google Drive Photo / Preview URL is required.');
+    document.getElementById('dPhotosUrl').focus();
+    return;
+  }
   const id = parseInt(document.getElementById('dieDbId').value) || null;
   const data = {
     dieNumber,
     description:  document.getElementById('dDescription').value.trim(),
     customer:     document.getElementById('dCustomer').value.trim(),
     machine:      document.getElementById('dMachine').value,
-    status:       document.getElementById('dStatus').value,
-    die_type:     document.getElementById('dType').value,
+    status:       dieStatus,
+    die_type:     dieType,
     template_pdf: document.getElementById('dTemplatePdf').value.trim(),
-    photos_url:   document.getElementById('dPhotosUrl').value.trim(),
+    photos_url:   driveUrl,
     notes:        document.getElementById('dNotes').value.trim(),
   };
   try {
@@ -1885,6 +2380,467 @@ async function clearDatabase() {
   await loadTab(activeTab);
 }
 
+// ── Product Catalogue ──────────────────────────────────────
+const CAT_KEYS = {
+  colorModes: 'catalogColorModes',
+  materials:  'catalogMaterials',
+  finishing:  'catalogFinishing',
+  products:   'productCatalog',
+};
+
+let catColorModes = [];
+let catMaterials  = [];
+let catFinishing  = [];
+let catProducts   = [];
+let catEditingId  = { colorModes: null, materials: null, finishing: null, products: null };
+let catMatItems   = [];
+
+function catalogUID() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Load & seed ────────────────────────────────────────────
+async function loadProductsTab() {
+  // Color Modes
+  const cmCfg = await getConfig(CAT_KEYS.colorModes);
+  catColorModes = cmCfg?.value ?? null;
+  if (!catColorModes) {
+    catColorModes = [
+      { id: catalogUID(), name: 'CMYK',         description: 'Standard 4-color process' },
+      { id: catalogUID(), name: 'CMYK + White',  description: 'CMYK with white underbase' },
+    ];
+    await setConfig(CAT_KEYS.colorModes, catColorModes);
+  }
+
+  // Materials — seed from shared.js MATERIALS constant
+  const matCfg = await getConfig(CAT_KEYS.materials);
+  catMaterials = matCfg?.value ?? null;
+  if (!catMaterials) {
+    catMaterials = (typeof MATERIALS !== 'undefined' ? MATERIALS : []).map(g => ({
+      id: catalogUID(), category: g.category, items: [...g.items],
+    }));
+    await setConfig(CAT_KEYS.materials, catMaterials);
+  }
+
+  // Special Finishing
+  const finCfg = await getConfig(CAT_KEYS.finishing);
+  catFinishing = finCfg?.value ?? null;
+  if (!catFinishing) {
+    catFinishing = [
+      { id: catalogUID(), name: 'Lamination',  description: 'Gloss, Matte, Soft Touch, Holo, Coating' },
+      { id: catalogUID(), name: 'Spot UV',      description: 'UV coating on selected areas' },
+      { id: catalogUID(), name: 'Foil',         description: 'Gold, Silver, Rose Gold, Holographic, Custom' },
+      { id: catalogUID(), name: 'Scodix',       description: 'Scodix UV and foil digital effects' },
+      { id: catalogUID(), name: 'Embossing',    description: 'Raised emboss effect' },
+      { id: catalogUID(), name: 'Perforation',  description: 'Tear-off perforation line' },
+    ];
+    await setConfig(CAT_KEYS.finishing, catFinishing);
+  }
+
+  // Products — seed from shared.js PRODUCT_TYPES constant
+  const prodCfg = await getConfig(CAT_KEYS.products);
+  catProducts = prodCfg?.value ?? null;
+  if (!catProducts) {
+    catProducts = (typeof PRODUCT_TYPES !== 'undefined' ? Object.entries(PRODUCT_TYPES) : []).map(([name, pt]) => ({
+      id:           catalogUID(),
+      name,
+      facilities:   pt.facilities   || [],
+      colorModes:   ['CMYK'],
+      materials:    pt.materials    || [],
+      finishing:    [],
+      sides:        ['1-sided', '2-sided'],
+      rollDirection: pt.defaultPrintType === 'Roll',
+      notes:        pt.notes        || '',
+    }));
+    await setConfig(CAT_KEYS.products, catProducts);
+  }
+
+  renderCatProducts();
+  renderCatMaterials();
+  renderCatFinishing();
+  renderCatColorModes();
+  switchCatTab('products');
+}
+
+// ── Sub-tab switching ──────────────────────────────────────
+function switchCatTab(tab) {
+  document.querySelectorAll('.cat-sub-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === tab));
+  document.querySelectorAll('.cat-section').forEach(s => s.classList.toggle('active', s.id === `cat-${tab}`));
+}
+
+// ── Color Modes ────────────────────────────────────────────
+function renderCatColorModes() {
+  const tbody = document.getElementById('catColorModesBody');
+  if (!tbody) return;
+  if (!catColorModes.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No color modes yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = catColorModes.map(cm => `
+    <tr>
+      <td style="font-weight:600;">${escHtml(cm.name)}</td>
+      <td style="color:var(--text-muted);font-size:13px;">${escHtml(cm.description || '—')}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openCatColorModeModal('${cm.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCatColorMode('${cm.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openCatColorModeModal(id) {
+  const cm = id ? catColorModes.find(x => x.id === id) : null;
+  catEditingId.colorModes = id || null;
+  document.getElementById('catCMTitle').textContent = cm ? 'Edit Color Mode' : 'Add Color Mode';
+  document.getElementById('catCMName').value = cm?.name || '';
+  document.getElementById('catCMDesc').value = cm?.description || '';
+  document.getElementById('catColorModeModal').classList.add('active');
+}
+
+async function saveCatColorMode() {
+  const name = document.getElementById('catCMName').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const description = document.getElementById('catCMDesc').value.trim();
+  if (catEditingId.colorModes) {
+    const idx = catColorModes.findIndex(x => x.id === catEditingId.colorModes);
+    if (idx >= 0) catColorModes[idx] = { ...catColorModes[idx], name, description };
+  } else {
+    catColorModes.push({ id: catalogUID(), name, description });
+  }
+  await setConfig(CAT_KEYS.colorModes, catColorModes);
+  closeModal('catColorModeModal');
+  renderCatColorModes();
+}
+
+async function deleteCatColorMode(id) {
+  if (!confirm('Delete this color mode?')) return;
+  catColorModes = catColorModes.filter(x => x.id !== id);
+  await setConfig(CAT_KEYS.colorModes, catColorModes);
+  renderCatColorModes();
+}
+
+// ── Materials ──────────────────────────────────────────────
+function renderCatMaterials() {
+  const tbody = document.getElementById('catMaterialsBody');
+  if (!tbody) return;
+  if (!catMaterials.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No material categories yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = catMaterials.map(m => `
+    <tr>
+      <td style="font-weight:600;">${escHtml(m.category)}</td>
+      <td style="font-size:12px;">${(m.items || []).map(i => `<span class="cat-tag">${escHtml(i)}</span>`).join(' ')}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openCatMaterialModal('${m.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCatMaterial('${m.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openCatMaterialModal(id) {
+  const mat = id ? catMaterials.find(x => x.id === id) : null;
+  catEditingId.materials = id || null;
+  catMatItems = mat ? [...(mat.items || [])] : [];
+  document.getElementById('catMatTitle').textContent = mat ? 'Edit Material Category' : 'Add Material Category';
+  document.getElementById('catMatCategory').value = mat?.category || '';
+  document.getElementById('catMatItemInput').value = '';
+  renderCatMatItems();
+  document.getElementById('catMaterialModal').classList.add('active');
+}
+
+function renderCatMatItems() {
+  const list = document.getElementById('catMatItemList');
+  if (!list) return;
+  list.innerHTML = catMatItems.map((item, i) =>
+    `<span class="cat-tag-removable">${escHtml(item)}<button type="button" onclick="removeCatMatItem(${i})">×</button></span>`
+  ).join('');
+}
+
+function addCatMatItem() {
+  const input = document.getElementById('catMatItemInput');
+  const val = (input.value || '').trim();
+  if (!val) return;
+  if (!catMatItems.includes(val)) catMatItems.push(val);
+  input.value = '';
+  renderCatMatItems();
+}
+
+function removeCatMatItem(idx) {
+  catMatItems.splice(idx, 1);
+  renderCatMatItems();
+}
+
+async function saveCatMaterial() {
+  const category = document.getElementById('catMatCategory').value.trim();
+  if (!category) { alert('Category name is required.'); return; }
+  if (catEditingId.materials) {
+    const idx = catMaterials.findIndex(x => x.id === catEditingId.materials);
+    if (idx >= 0) catMaterials[idx] = { ...catMaterials[idx], category, items: [...catMatItems] };
+  } else {
+    catMaterials.push({ id: catalogUID(), category, items: [...catMatItems] });
+  }
+  await setConfig(CAT_KEYS.materials, catMaterials);
+  closeModal('catMaterialModal');
+  renderCatMaterials();
+}
+
+async function deleteCatMaterial(id) {
+  if (!confirm('Delete this material category and all its items?')) return;
+  catMaterials = catMaterials.filter(x => x.id !== id);
+  await setConfig(CAT_KEYS.materials, catMaterials);
+  renderCatMaterials();
+}
+
+// ── Special Finishing ──────────────────────────────────────
+function renderCatFinishing() {
+  const tbody = document.getElementById('catFinishingBody');
+  if (!tbody) return;
+  if (!catFinishing.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No finishing options yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = catFinishing.map(f => `
+    <tr>
+      <td style="font-weight:600;">${escHtml(f.name)}</td>
+      <td style="color:var(--text-muted);font-size:13px;">${escHtml(f.description || '—')}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openCatFinishingModal('${f.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCatFinishing('${f.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openCatFinishingModal(id) {
+  const fin = id ? catFinishing.find(x => x.id === id) : null;
+  catEditingId.finishing = id || null;
+  document.getElementById('catFinTitle').textContent = fin ? 'Edit Finishing Option' : 'Add Finishing Option';
+  document.getElementById('catFinName').value = fin?.name || '';
+  document.getElementById('catFinDesc').value = fin?.description || '';
+  document.getElementById('catFinishingModal').classList.add('active');
+}
+
+async function saveCatFinishing() {
+  const name = document.getElementById('catFinName').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const description = document.getElementById('catFinDesc').value.trim();
+  if (catEditingId.finishing) {
+    const idx = catFinishing.findIndex(x => x.id === catEditingId.finishing);
+    if (idx >= 0) catFinishing[idx] = { ...catFinishing[idx], name, description };
+  } else {
+    catFinishing.push({ id: catalogUID(), name, description });
+  }
+  await setConfig(CAT_KEYS.finishing, catFinishing);
+  closeModal('catFinishingModal');
+  renderCatFinishing();
+}
+
+async function deleteCatFinishing(id) {
+  if (!confirm('Delete this finishing option?')) return;
+  catFinishing = catFinishing.filter(x => x.id !== id);
+  await setConfig(CAT_KEYS.finishing, catFinishing);
+  renderCatFinishing();
+}
+
+// ── Products ───────────────────────────────────────────────
+function renderCatProducts() {
+  const tbody = document.getElementById('catProductsBody');
+  if (!tbody) return;
+  if (!catProducts.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No products yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = catProducts.map(p => `
+    <tr>
+      <td style="font-weight:600;">${escHtml(p.name)}</td>
+      <td style="font-size:12px;">${(p.facilities || []).map(f => (typeof FACILITIES !== 'undefined' && FACILITIES[f]) ? FACILITIES[f].name : f).join(', ') || '—'}</td>
+      <td style="font-size:12px;">${(p.materials || []).join(', ') || '—'}</td>
+      <td style="font-size:12px;">${(p.colorModes || []).join(', ') || '—'}</td>
+      <td style="font-size:12px;">${(p.finishing || []).join(', ') || '—'}</td>
+      <td style="font-size:12px;">${(p.sides || []).join(', ') || '—'}</td>
+      <td style="text-align:center;">${p.rollDirection ? '✓' : '—'}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openCatProductModal('${p.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCatProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openCatProductModal(id) {
+  const prod = id ? catProducts.find(x => x.id === id) : null;
+  catEditingId.products = id || null;
+  document.getElementById('catProdTitle').textContent = prod ? 'Edit Product' : 'Add Product';
+  document.getElementById('catProdName').value  = prod?.name  || '';
+  document.getElementById('catProdNotes').value = prod?.notes || '';
+  document.getElementById('catProdRollDir').checked = prod?.rollDirection || false;
+
+  // Facilities — load from org local store, fallback to static FACILITIES
+  let orgFacilities = [];
+  if (window.PulseOrgJsonStore) {
+    try {
+      const bundle = PulseOrgJsonStore.loadRaw();
+      if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
+        orgFacilities = bundle.facilities
+          .filter(f => f.slug && f.name)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      }
+    } catch (_) {}
+  }
+  if (!orgFacilities.length && typeof FACILITIES !== 'undefined') {
+    orgFacilities = Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
+  }
+
+  const facDiv = document.getElementById('catProdFacilities');
+  facDiv.innerHTML = orgFacilities.map(f => `
+    <label class="cat-check-label">
+      <input type="checkbox" name="catProdFac" value="${escHtml(f.slug)}" ${(prod?.facilities || []).includes(f.slug) ? 'checked' : ''}>
+      ${escHtml(f.name)}
+    </label>`).join('');
+
+  // Color Modes
+  const cmDiv = document.getElementById('catProdColorModes');
+  cmDiv.innerHTML = catColorModes.map(cm => `
+    <label class="cat-check-label">
+      <input type="checkbox" name="catProdCM" value="${escHtml(cm.name)}" ${(prod?.colorModes || []).includes(cm.name) ? 'checked' : ''}>
+      ${escHtml(cm.name)}
+    </label>`).join('');
+
+  // Materials — grouped by category
+  const matDiv = document.getElementById('catProdMaterials');
+  matDiv.innerHTML = catMaterials.map(m => `
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">${escHtml(m.category)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${m.items.map(item => `
+          <label class="cat-check-label">
+            <input type="checkbox" name="catProdMat" value="${escHtml(item)}" ${(prod?.materials || []).includes(item) ? 'checked' : ''}>
+            ${escHtml(item)}
+          </label>`).join('')}
+      </div>
+    </div>`).join('');
+
+  // Finishing
+  const finDiv = document.getElementById('catProdFinishing');
+  finDiv.innerHTML = catFinishing.map(f => `
+    <label class="cat-check-label">
+      <input type="checkbox" name="catProdFin" value="${escHtml(f.name)}" ${(prod?.finishing || []).includes(f.name) ? 'checked' : ''}>
+      ${escHtml(f.name)}
+    </label>`).join('');
+
+  // Sides
+  ['1-sided', '2-sided'].forEach(side => {
+    const el = document.getElementById(`catProdSide_${side.replace('-', '')}`);
+    if (el) el.checked = (prod?.sides ?? ['1-sided', '2-sided']).includes(side);
+  });
+
+  document.getElementById('catProductModal').classList.add('active');
+}
+
+async function saveCatProduct() {
+  const name = document.getElementById('catProdName').value.trim();
+  if (!name) { alert('Product name is required.'); return; }
+
+  const data = {
+    name,
+    facilities:   [...document.querySelectorAll('input[name="catProdFac"]:checked')].map(el => el.value),
+    colorModes:   [...document.querySelectorAll('input[name="catProdCM"]:checked')].map(el => el.value),
+    materials:    [...document.querySelectorAll('input[name="catProdMat"]:checked')].map(el => el.value),
+    finishing:    [...document.querySelectorAll('input[name="catProdFin"]:checked')].map(el => el.value),
+    sides:        [...document.querySelectorAll('input[name="catProdSide"]:checked')].map(el => el.value),
+    rollDirection: document.getElementById('catProdRollDir').checked,
+    notes:        document.getElementById('catProdNotes').value.trim(),
+  };
+
+  if (catEditingId.products) {
+    const idx = catProducts.findIndex(x => x.id === catEditingId.products);
+    if (idx >= 0) catProducts[idx] = { ...catProducts[idx], ...data };
+  } else {
+    catProducts.push({ id: catalogUID(), ...data });
+  }
+  await setConfig(CAT_KEYS.products, catProducts);
+  closeModal('catProductModal');
+  renderCatProducts();
+}
+
+async function deleteCatProduct(id) {
+  if (!confirm('Delete this product?')) return;
+  catProducts = catProducts.filter(x => x.id !== id);
+  await setConfig(CAT_KEYS.products, catProducts);
+  renderCatProducts();
+}
+
+// ── Import / Export ────────────────────────────────────────
+function catDownloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function catExportSection(section) {
+  const map = { colorModes: catColorModes, materials: catMaterials, finishing: catFinishing, products: catProducts };
+  catDownloadJSON(map[section], `pulse-${section}-${new Date().toISOString().slice(0,10)}.json`);
+}
+
+function catalogExportAll() {
+  catDownloadJSON(
+    { colorModes: catColorModes, materials: catMaterials, finishing: catFinishing, products: catProducts },
+    `pulse-product-catalog-${new Date().toISOString().slice(0,10)}.json`
+  );
+}
+
+async function catImportSection(section, input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const arr = Array.isArray(parsed) ? parsed : (parsed[section] || []);
+    const mergeByKey = (list, incoming, key) => {
+      incoming.forEach(item => {
+        if (!item[key]) return;
+        const ex = list.find(x => x[key] === item[key]);
+        if (ex) Object.assign(ex, item);
+        else list.push({ id: catalogUID(), ...item });
+      });
+    };
+    if (section === 'colorModes') { mergeByKey(catColorModes, arr, 'name'); await setConfig(CAT_KEYS.colorModes, catColorModes); renderCatColorModes(); }
+    else if (section === 'materials') { mergeByKey(catMaterials, arr, 'category'); await setConfig(CAT_KEYS.materials, catMaterials); renderCatMaterials(); }
+    else if (section === 'finishing')  { mergeByKey(catFinishing, arr, 'name'); await setConfig(CAT_KEYS.finishing, catFinishing); renderCatFinishing(); }
+    else if (section === 'products')   { mergeByKey(catProducts, arr, 'name'); await setConfig(CAT_KEYS.products, catProducts); renderCatProducts(); }
+    if (typeof showPageToast === 'function') showPageToast('Imported successfully.', 'success');
+  } catch (e) { alert('Import failed: ' + e.message); }
+  input.value = '';
+}
+
+async function catalogImportAll(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const merge = (list, incoming, key) => {
+      (incoming || []).forEach(item => {
+        if (!item[key]) return;
+        const ex = list.find(x => x[key] === item[key]);
+        if (ex) Object.assign(ex, item);
+        else list.push({ id: catalogUID(), ...item });
+      });
+    };
+    merge(catColorModes, parsed.colorModes, 'name');     await setConfig(CAT_KEYS.colorModes, catColorModes);
+    merge(catMaterials,  parsed.materials,  'category'); await setConfig(CAT_KEYS.materials,  catMaterials);
+    merge(catFinishing,  parsed.finishing,  'name');     await setConfig(CAT_KEYS.finishing,   catFinishing);
+    merge(catProducts,   parsed.products,   'name');     await setConfig(CAT_KEYS.products,    catProducts);
+    renderCatColorModes(); renderCatMaterials(); renderCatFinishing(); renderCatProducts();
+    if (typeof showPageToast === 'function') showPageToast('Catalog imported successfully.', 'success');
+  } catch (e) { alert('Import failed: ' + e.message); }
+  input.value = '';
+}
+
 // ── Modal helpers ─────────────────────────────────────────
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
@@ -1897,237 +2853,6 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────
-// PACKAGING CATALOG — PUL-715
-// ─────────────────────────────────────────────────────────────────
-
-async function loadPackagingCatalog() {
-  await seedPackagingCatalogIfEmpty();
-  await renderPackagingTable();
-}
-
-async function renderPackagingTable() {
-  const catFilter  = document.getElementById('pkgCatFilter')?.value || '';
-  const searchQ    = (document.getElementById('pkgSearch')?.value || '').toLowerCase();
-  const showInactive = document.getElementById('pkgShowInactive')?.checked;
-
-  const all = await getAllPackagingProducts();
-  let rows = all.filter(p => {
-    if (!showInactive && p.active === false) return false;
-    if (catFilter && p.category !== catFilter) return false;
-    if (searchQ) {
-      const haystack = `${p.sku} ${p.name} ${p.material || ''}`.toLowerCase();
-      if (!haystack.includes(searchQ)) return false;
-    }
-    return true;
-  });
-
-  const tbody = document.getElementById('pkgTableBody');
-  if (!tbody) return;
-
-  if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:20px;">No products found.</td></tr>';
-    const summary = document.getElementById('pkgSummaryLine');
-    if (summary) summary.textContent = '';
-    return;
-  }
-
-  const fmt = v => v != null ? '$' + Number(v).toFixed(4) : '—';
-  const fmtShort = v => v != null ? '$' + Number(v).toFixed(2) : '—';
-
-  tbody.innerHTML = rows.map(p => {
-    const t = p.tier_pricing || {};
-    return `<tr>
-      <td style="font-family:monospace;font-size:11px;">${escHtml(p.sku || '')}</td>
-      <td style="font-weight:600;">${escHtml(p.name || '')}</td>
-      <td><span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-size:11px;">${escHtml(p.category || '')}</span></td>
-      <td style="font-size:12px;color:var(--text-muted);">${escHtml(p.material || '—')}</td>
-      <td style="text-align:right;font-size:12px;color:#6b7280;font-style:italic;" title="Internal cost — not shown to customers">${fmt(p.default_cost)}</td>
-      <td style="text-align:right;font-size:12px;font-weight:600;">${fmtShort(t.qty_25 ?? p.sell_price)}</td>
-      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_100)}</td>
-      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_500)}</td>
-      <td style="text-align:right;font-size:12px;">${fmtShort(t.qty_1000)}</td>
-      <td><span class="${p.active !== false ? 'status-active' : 'status-inactive'}">${p.active !== false ? 'Active' : 'Inactive'}</span></td>
-      <td>
-        <button class="btn btn-sm" onclick="editPackagingProduct(${p.id})">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deletePackagingProductConfirm(${p.id}, '${(p.name||'').replace(/'/g,"\'")}')"'>Delete</button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  // Summary
-  const byCategory = {};
-  rows.forEach(p => { byCategory[p.category] = (byCategory[p.category] || 0) + 1; });
-  const summaryText = Object.entries(byCategory).map(([c, n]) => `${c}: ${n}`).join(' · ');
-  const summary = document.getElementById('pkgSummaryLine');
-  if (summary) summary.textContent = `${rows.length} product(s) · ${summaryText}`;
-}
-
-function openPackagingModal(product) {
-  const modal = document.getElementById('packagingModal');
-  if (!modal) return;
-  const t = product?.tier_pricing || {};
-  document.getElementById('pkgModalTitle').textContent = product ? 'Edit Packaging Product' : 'Add Packaging Product';
-  document.getElementById('pkgId').value         = product?.id || '';
-  document.getElementById('pkgSku').value        = product?.sku || '';
-  document.getElementById('pkgName').value       = product?.name || '';
-  document.getElementById('pkgCategory').value   = product?.category || 'Bags';
-  document.getElementById('pkgMaterial').value   = product?.material || '';
-  document.getElementById('pkgCost').value       = product?.default_cost ?? '';
-  document.getElementById('pkgMinQty').value     = product?.min_qty ?? 25;
-  document.getElementById('pkgP25').value        = t.qty_25   ?? product?.sell_price ?? '';
-  document.getElementById('pkgP50').value        = t.qty_50   ?? '';
-  document.getElementById('pkgP100').value       = t.qty_100  ?? '';
-  document.getElementById('pkgP250').value       = t.qty_250  ?? '';
-  document.getElementById('pkgP500').value       = t.qty_500  ?? '';
-  document.getElementById('pkgP1000').value      = t.qty_1000 ?? '';
-  document.getElementById('pkgP5000').value      = t.qty_5000 ?? '';
-  document.getElementById('pkgLeadTime').value   = product?.lead_time_days ?? '';
-  document.getElementById('pkgActive').value     = product?.active === false ? 'false' : 'true';
-  document.getElementById('pkgNotes').value      = product?.notes || '';
-  modal.classList.add('active');
-}
-
-function closePackagingModal() {
-  document.getElementById('packagingModal')?.classList.remove('active');
-}
-
-async function editPackagingProduct(id) {
-  const all = await getAllPackagingProducts();
-  const p = all.find(x => x.id === id);
-  if (p) openPackagingModal(p);
-}
-
-async function savePackagingProduct() {
-  const sku  = document.getElementById('pkgSku').value.trim();
-  const name = document.getElementById('pkgName').value.trim();
-  if (!sku || !name) { alert('SKU and Name are required.'); return; }
-
-  const parsePrice = id => {
-    const v = parseFloat(document.getElementById(id).value);
-    return isNaN(v) ? null : v;
-  };
-
-  const tier_pricing = {
-    qty_25:   parsePrice('pkgP25'),
-    qty_50:   parsePrice('pkgP50'),
-    qty_100:  parsePrice('pkgP100'),
-    qty_250:  parsePrice('pkgP250'),
-    qty_500:  parsePrice('pkgP500'),
-    qty_1000: parsePrice('pkgP1000'),
-    qty_5000: parsePrice('pkgP5000'),
-  };
-  // Remove null tiers
-  Object.keys(tier_pricing).forEach(k => tier_pricing[k] === null && delete tier_pricing[k]);
-
-  const data = {
-    sku,
-    name,
-    category:      document.getElementById('pkgCategory').value,
-    material:      document.getElementById('pkgMaterial').value.trim() || null,
-    default_cost:  parseFloat(document.getElementById('pkgCost').value) || 0,
-    sell_price:    tier_pricing.qty_25 || 0,
-    tier_pricing,
-    min_qty:       parseInt(document.getElementById('pkgMinQty').value) || 25,
-    lead_time_days:parsePrice('pkgLeadTime'),
-    active:        document.getElementById('pkgActive').value !== 'false',
-    notes:         document.getElementById('pkgNotes').value.trim() || null,
-  };
-
-  const id = parseInt(document.getElementById('pkgId').value) || null;
-  if (id) {
-    await updatePackagingProduct(id, data);
-  } else {
-    await addPackagingProduct(data);
-  }
-  closePackagingModal();
-  await renderPackagingTable();
-}
-
-async function deletePackagingProductConfirm(id, name) {
-  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-  await deletePackagingProduct(id);
-  await renderPackagingTable();
-}
-
-// ── CSV Export ─────────────────────────────────────────────
-async function exportPackagingCsv() {
-  const all = await getAllPackagingProducts();
-  const headers = ['sku','name','category','material','default_cost','sell_price_25','sell_price_50','sell_price_100','sell_price_250','sell_price_500','sell_price_1000','sell_price_5000','min_qty','lead_time_days','active','notes'];
-  const rows = all.map(p => {
-    const t = p.tier_pricing || {};
-    return [
-      p.sku, p.name, p.category, p.material||'',
-      p.default_cost||0,
-      t.qty_25||'', t.qty_50||'', t.qty_100||'', t.qty_250||'', t.qty_500||'', t.qty_1000||'', t.qty_5000||'',
-      p.min_qty||25, p.lead_time_days||'', p.active!==false?'true':'false', p.notes||''
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
-  });
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `packaging-catalog-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-}
-
-// ── CSV Import ─────────────────────────────────────────────
-async function importPackagingCsv(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const text = await file.text();
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) { alert('CSV appears empty or header-only.'); return; }
-
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
-  let imported = 0, skipped = 0;
-
-  for (let i = 1; i < lines.length; i++) {
-    // basic CSV parse (handles quoted fields)
-    const vals = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g) || [];
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').replace(/^"|"$/g,'').trim(); });
-
-    if (!row.sku || !row.name) { skipped++; continue; }
-
-    const tier_pricing = {};
-    ['25','50','100','250','500','1000','5000'].forEach(q => {
-      const v = parseFloat(row[`sell_price_${q}`]);
-      if (!isNaN(v)) tier_pricing[`qty_${q}`] = v;
-    });
-
-    const data = {
-      sku:           row.sku,
-      name:          row.name,
-      category:      row.category || 'Other',
-      material:      row.material || null,
-      default_cost:  parseFloat(row.default_cost) || 0,
-      sell_price:    tier_pricing.qty_25 || 0,
-      tier_pricing,
-      min_qty:       parseInt(row.min_qty) || 25,
-      lead_time_days:row.lead_time_days ? parseInt(row.lead_time_days) : null,
-      active:        row.active !== 'false',
-      notes:         row.notes || null,
-    };
-
-    const all = await getAllPackagingProducts();
-    const existing = all.find(p => p.sku === data.sku);
-    if (existing) {
-      await updatePackagingProduct(existing.id, data);
-    } else {
-      await addPackagingProduct(data);
-    }
-    imported++;
-  }
-
-  input.value = '';
-  await renderPackagingTable();
-  alert(`CSV import complete: ${imported} imported, ${skipped} skipped (missing SKU/name).`);
-}
-
-// ─────────────────────────────────────────────────────────────────
-// END PACKAGING CATALOG
-// ─────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>

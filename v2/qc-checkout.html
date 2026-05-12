@@ -43,22 +43,22 @@
     <!-- Observations & Verdict -->
     <div class="card">
       <h3 class="section-title">📋 QC Assessment</h3>
-      <div class="form-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field">
-          <label>QC Verdict *</label>
+      <div class="qc-assessment-toolbar">
+        <div class="qc-toolbar-group qc-toolbar-verdict">
+          <span class="qc-toolbar-label">QC Verdict *</span>
           <div class="verdict-buttons">
-            <button class="verdict-btn verdict-pass" id="verdictPass" onclick="setVerdict('pass')">✅ PASS</button>
-            <button class="verdict-btn verdict-fail" id="verdictFail" onclick="setVerdict('fail')">❌ FAIL</button>
+            <button type="button" class="verdict-btn verdict-pass" id="verdictPass" onclick="setVerdict('pass')">✅ PASS</button>
+            <button type="button" class="verdict-btn verdict-fail" id="verdictFail" onclick="setVerdict('fail')">❌ FAIL</button>
           </div>
         </div>
-        <div class="field">
-          <label>QC Inspector Name *</label>
-          <input type="text" id="qcInspector" placeholder="Your name">
+        <div class="qc-toolbar-group qc-toolbar-notes">
+          <label class="qc-toolbar-label" for="qcNotes">QC Notes</label>
+          <input type="text" id="qcNotes" class="qc-notes-inline" placeholder="Comments..." autocomplete="off">
         </div>
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label>QC Notes</label>
-        <textarea id="qcNotes" rows="3" placeholder="Any observations, issues, or comments..."></textarea>
+        <div class="qc-toolbar-group qc-toolbar-inspector">
+          <label class="qc-toolbar-label" for="qcInspector">QC Inspector Name *</label>
+          <select id="qcInspector" class="qc-inspector-select" aria-label="QC Inspector Name"></select>
+        </div>
       </div>
 
       <!-- Fail Options -->
@@ -96,12 +96,6 @@
       <button class="btn btn-primary" id="submitQCBtn" onclick="submitQC()">Submit QC Result</button>
     </div>
   </div>
-
-  <!-- Recent QC Log -->
-  <div class="card" style="margin-top:24px;">
-    <h3 class="section-title">📜 Recent QC Activity</h3>
-    <div id="recentQCLog"></div>
-  </div>
 </div>
 
 <script>
@@ -127,10 +121,35 @@ document.getElementById('page-styles').textContent = `
   .sri-product { font-size: 12px; color: var(--text-muted); flex: 1; }
 
   .qc-checklist-card { margin-bottom: 16px; }
-  .checklist { display: flex; flex-direction: column; gap: 0; }
-  .checklist-item { display: flex; align-items: flex-start; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  .checklist-item:last-child { border-bottom: none; }
-  .ci-left { flex: 1; }
+  .checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+    background: var(--card);
+  }
+  .checklist-item:nth-child(2n) { border-right: none; }
+  .checklist-item:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) {
+    .checklist { grid-template-columns: 1fr; }
+    .checklist-item { border-right: none; }
+    .checklist-item:nth-last-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .checklist-item:last-child { border-bottom: none; }
+  }
+  .ci-left { flex: 1; min-width: 0; }
   .ci-label { font-weight: 600; font-size: 14px; }
   .ci-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   .ci-verdict { display: flex; gap: 8px; }
@@ -142,8 +161,83 @@ document.getElementById('page-styles').textContent = `
   .ci-notes { margin-top: 6px; }
   .ci-notes input { font-size: 12px; padding: 4px 8px; }
 
-  .verdict-buttons { display: flex; gap: 10px; margin-top: 8px; }
-  .verdict-btn { flex: 1; padding: 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 18px; font-weight: 800; cursor: pointer; transition: all 0.15s; background: var(--card); }
+  .qc-assessment-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .qc-toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .qc-toolbar-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .qc-toolbar-verdict { flex: 0 0 auto; }
+  .qc-toolbar-notes { flex: 1 1 140px; min-width: min(100%, 120px); }
+  .qc-toolbar-inspector { flex: 0 1 220px; min-width: min(100%, 160px); }
+  .verdict-buttons { display: flex; gap: 8px; margin-top: 0; min-height: 52px; }
+  .verdict-btn {
+    flex: 0 1 auto;
+    min-width: 96px;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+  }
+  .qc-notes-inline {
+    width: 100%;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--text);
+  }
+  .qc-notes-inline:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+  .qc-inspector-select {
+    width: 100%;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .qc-inspector-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
   .verdict-pass.selected { background: var(--green); color: white; border-color: var(--green); }
   .verdict-fail.selected { background: var(--red); color: white; border-color: var(--red); }
   .fail-reasons { display: flex; flex-direction: column; gap: 6px; }
@@ -177,7 +271,7 @@ let checklistResults = {}; // { itemId: 'pass'|'fail'|'na' }
 // ── Init ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   renderChecklist();
-  await loadRecentQCLog();
+  await refreshQcInspectorSelect();
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -187,9 +281,33 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   onDBUpdate(async (data) => {
-    if (data.store === 'activity_log') loadRecentQCLog();
+    if (data.store === 'personnel') {
+      await refreshQcInspectorSelect();
+    }
   });
 });
+
+async function refreshQcInspectorSelect() {
+  const sel = document.getElementById('qcInspector');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const prev = sel.value;
+  const people = await getAllPersonnel();
+  const qc = people
+    .filter(p => String(p.role || '').toLowerCase() === 'qc' && p.active !== false)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+  sel.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = qc.length ? 'Select inspector…' : 'No QC personnel — add in Admin → Personnel';
+  sel.appendChild(placeholder);
+  for (const p of qc) {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.name;
+    sel.appendChild(o);
+  }
+  if (prev && [...sel.options].some(opt => opt.value === prev)) sel.value = prev;
+}
 
 // ── Search ────────────────────────────────────────────────
 async function searchOrders() {
@@ -257,7 +375,7 @@ async function selectOrder(orderOrId) {
   document.getElementById('verdictPass').classList.remove('selected');
   document.getElementById('verdictFail').classList.remove('selected');
   document.getElementById('qcNotes').value = '';
-  document.getElementById('qcInspector').value = '';
+  await refreshQcInspectorSelect();
   document.getElementById('failOptions').style.display = 'none';
   document.getElementById('createReprintCheck').checked = false;
   document.getElementById('reprintQtySection').style.display = 'none';
@@ -325,8 +443,8 @@ function toggleReprintQty() {
 async function submitQC() {
   if (!selectedOrder) { alert('Please select an order first.'); return; }
   if (!currentVerdict) { alert('Please set a QC verdict (Pass or Fail).'); return; }
-  const inspector = document.getElementById('qcInspector').value.trim();
-  if (!inspector) { alert('Please enter your name as QC Inspector.'); return; }
+  const inspector = (document.getElementById('qcInspector').value || '').trim();
+  if (!inspector) { alert('Please select a QC Inspector from the list.'); return; }
 
   const btn = document.getElementById('submitQCBtn');
   btn.disabled = true;
@@ -407,7 +525,6 @@ async function submitQC() {
       alert(`❌ QC Failed. Order #${selectedOrder.orderId} marked as QC Failed and returned to production queue.`);
     }
 
-    await loadRecentQCLog();
     clearQCForm();
   } catch (err) {
     console.error(err);
@@ -430,34 +547,6 @@ function clearQCForm() {
   resetChecklistUI();
 }
 
-// ── Recent QC Log ─────────────────────────────────────────
-async function loadRecentQCLog() {
-  const all = await getAllActivity();
-  const qcLogs = all
-    .filter(a => a.type === 'qc-pass' || a.type === 'qc-fail')
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-    .slice(0, 20);
-
-  const container = document.getElementById('recentQCLog');
-  if (qcLogs.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No QC records yet.</div>';
-    return;
-  }
-
-  container.innerHTML = qcLogs.map(log => `
-    <div class="log-entry">
-      <div class="log-icon">${log.type === 'qc-pass' ? '✅' : '❌'}</div>
-      <div class="log-body">
-        <div class="log-title">Order #${log.orderId} — ${log.type === 'qc-pass' ? 'PASSED' : 'FAILED'}</div>
-        <div style="font-size:13px;color:var(--text-muted);">${log.message}</div>
-        <div class="log-meta">${formatDateTime(log.timestamp)} · by ${log.by}</div>
-      </div>
-      <div>
-        <a href="production-manager.html?order=${log.orderId}" class="btn btn-sm">View Order</a>
-      </div>
-    </div>
-  `).join('');
-}
 </script>
 </body>
 </html>

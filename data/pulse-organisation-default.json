@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "organisation": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Bazaar Print",
+    "short_description": "Local JSON template — replace IDs after import or edit in the browser.",
+    "website_url": "",
+    "logo_url": "",
+    "logo_data_url": ""
+  },
+  "people": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "display_name": "Example manager",
+      "role": "supervisor",
+      "active": true
+    }
+  ],
+  "facilities": [],
+  "hardwareByFacilityId": {}
+}

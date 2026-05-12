@@ -7,6 +7,7 @@
   <script src="shared.js?v=20260501-NAVFIX"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="auth.js?v=20260427-PRI240"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
     body { font-size: 14px; overflow: hidden; }
@@ -62,11 +63,6 @@
        ║        MAIN SCREEN               ║
        ╚══════════════════════════════════╝ */
     #main-screen { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
-
-    /* ── SITE NAV (from renderNav) ── */
-    .top-nav { padding: 8px 20px; }
-    .top-nav h1 { font-size: 15px; }
-    .top-nav .nav-links a { font-size: 12px; padding: 3px 7px; }
 
     /* ── OPERATOR TOP BAR ── */
     .op-topbar {
@@ -139,14 +135,23 @@
       padding: 1px 7px; font-size: 11px; font-weight: 700;
     }
     .qr-scan-bar { padding: 8px 8px 6px; border-bottom: 1px solid #eef0f3; }
-    .qr-scan-bar .scan-inner { display: flex; gap: 5px; }
+    .qr-scan-bar .scan-inner { display: flex; gap: 6px; align-items: stretch; }
     .qr-scan-bar input {
-      flex: 1; padding: 6px 9px; font-size: 13px; border-radius: 6px;
+      flex: 1; padding: 0 10px; font-size: 13px; border-radius: 6px;
+      height: 34px; box-sizing: border-box;
     }
     .qr-scan-bar .btn-scan {
-      padding: 6px 11px; font-size: 12px; font-weight: 700; border-radius: 6px;
+      height: 34px; padding: 0 14px; font-size: 13px; font-weight: 700; border-radius: 6px;
       background: var(--accent); color: #fff; border: none; cursor: pointer;
       white-space: nowrap;
+    }
+    #queue-filter,
+    #queue-sort {
+      height: 34px !important;
+      padding: 0 10px !important;
+      box-sizing: border-box;
+      font-size: 13px !important;
+      border-radius: 6px !important;
     }
     .queue-scroll { flex: 1; overflow-y: auto; padding: 6px; }
     .section-label {
@@ -179,6 +184,17 @@
       font-size: 10px; font-weight: 600; margin-top: 4px; display: inline-block;
       padding: 1px 7px; border-radius: 4px; background: #fef3cd; color: #92600a;
     }
+    .qi-ws-pill {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-top: 6px; display: inline-flex;
+      align-items: center; padding: 4px 9px; border-radius: 999px; line-height: 1.2;
+    }
+    .qi-ws-running { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .qi-ws-paused { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+    .qi-ws-pending { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .qi-ws-hold { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .qi-ws-upnext { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .qi-ws-done { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
     .queue-empty { text-align: center; padding: 36px 12px; color: var(--text-muted); }
     .queue-empty .qs-icon { font-size: 32px; margin-bottom: 8px; }
     .queue-empty p { font-size: 12px; }
@@ -846,9 +862,9 @@
         oninput="onCompleteQtyChange()" style="font-size:16px;padding:10px 12px;" />
     </div>
     <div class="modal-field">
-      <label>Waste / Loss</label>
-      <input type="number" id="cmp-waste" value="0" placeholder="0"
-        oninput="onCompleteQtyChange()" style="font-size:15px;" />
+      <label>Waste / Loss *</label>
+      <input type="number" id="cmp-waste" min="0" step="1" placeholder="Enter loss count (0 if none)"
+        oninput="onCompleteQtyChange()" style="font-size:15px;" aria-required="true" />
     </div>
     <div class="modal-field" id="cmp-overs-row" style="display:none;">
       <label>Actual Overs Printed</label>
@@ -1063,6 +1079,45 @@ async function doClockin() {
   await enterMainScreen();
 }
 
+async function applyOperatorTerminalNavAccess() {
+  const appSession = (typeof getSession === 'function') ? getSession() : null;
+  let navName = appSession?.name || currentOperator || 'Operator';
+  let navRole = appSession?.role || 'operator';
+
+  if (!appSession && currentOperator) {
+    const profile = await getOperatorProfile(currentOperator) || OPERATOR_PROFILES[currentOperator] || {};
+    navRole = String(profile.role || 'operator').replace(/_/g, '-');
+  }
+
+  const config = (typeof ROLE_CONFIG !== 'undefined' && ROLE_CONFIG[navRole])
+    ? ROLE_CONFIG[navRole]
+    : (typeof ROLE_CONFIG !== 'undefined' ? ROLE_CONFIG.operator : null);
+  const allowedPages = config?.pages || ['dashboard', 'operator-terminal'];
+
+  document.querySelectorAll('.nav-link[data-page-id]').forEach(el => {
+    const targetPage = el.dataset.pageId;
+    const canSee = allowedPages.includes('all') || allowedPages.includes(targetPage);
+    el.style.display = canSee ? '' : 'none';
+  });
+
+  const badgeSlot = document.getElementById('topNavUserSlot');
+  if (!badgeSlot) return;
+  if (appSession && typeof injectUserBadge === 'function') {
+    injectUserBadge();
+    return;
+  }
+
+  const roleConfig = config || { label: navRole, color: '#6b7280' };
+  badgeSlot.innerHTML = `
+    <div id="userBadge" class="user-badge">
+      <span class="user-badge-dot" style="background:${roleConfig.color};"></span>
+      <span class="user-badge-name">${escHtml(String(navName).split(' ')[0])}</span>
+      <span class="user-badge-role" style="color:${roleConfig.color};">${escHtml(String(roleConfig.label || navRole).toUpperCase())}</span>
+      <button class="user-badge-logout" onclick="initiateClockout()" title="Clock out">✕</button>
+    </div>
+  `;
+}
+
 // ── ENTER MAIN SCREEN ────────────────────────────────────────────────
 async function enterMainScreen() {
   document.getElementById('login-screen').style.display = 'none';
@@ -1071,6 +1126,7 @@ async function enterMainScreen() {
   // Render nav
   const navEl = document.getElementById('site-nav');
   navEl.innerHTML = renderNav('operator-terminal');
+  await applyOperatorTerminalNavAccess();
   document.getElementById('op-breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Operator Terminal' }]);
 
   // Populate top bar
@@ -1277,6 +1333,30 @@ async function refreshCoins() {
   document.getElementById('ctrl-coins-month').textContent = monthC;
 }
 
+/** Queue card: work state on the operator's current step (persisted + live selection). */
+function getQueueStepWorkState(order, step, opts) {
+  const coming = opts && opts.comingNext;
+  if (coming) {
+    return { label: 'Up next', cls: 'qi-ws-upnext' };
+  }
+  if (order.status === 'on-hold') {
+    return { label: 'On hold', cls: 'qi-ws-hold' };
+  }
+  if (!step) {
+    return { label: '—', cls: 'qi-ws-pending' };
+  }
+  if (step.status === 'completed') {
+    return { label: 'Step done', cls: 'qi-ws-done' };
+  }
+  if (step.status === 'in-progress' && step.startedAt) {
+    return { label: 'Running', cls: 'qi-ws-running' };
+  }
+  if (step.status === 'paused' && step.startedAt) {
+    return { label: 'Paused', cls: 'qi-ws-paused' };
+  }
+  return { label: 'Not started', cls: 'qi-ws-pending' };
+}
+
 // ── QUEUE REFRESH ─────────────────────────────────────────────────────
 async function refreshQueue() {
   if (!currentOperator) return;
@@ -1366,21 +1446,25 @@ async function refreshQueue() {
 
   myJobs.forEach(({ order, step }) => {
     const isActive = currentJob && currentJob.id === order.id;
+    const effOrder = isActive && currentJob ? currentJob : order;
+    const idx = effOrder.currentStep || 0;
+    const effStep = effOrder.workflowSteps?.[idx] || step;
+    const ws = getQueueStepWorkState(effOrder, effStep, { comingNext: false });
     const line = getProductionLine(order);
     const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
     const overdue   = isOverdue(order.dueDate);
-    const pausedIcon = step?.status === 'paused' || order.status === 'on-hold' ? '<span title="Paused / on hold" style="margin-left:6px;">⏸️</span>' : '';
     html += `<div class="queue-item ${isActive ? 'active' : ''}"
       style="border-left-color:${lineColor};"
       onclick="selectJob(${order.id})">
-      <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)} ${pausedIcon}</div>
+      <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
       <div class="qi-customer">${escHtml(order.customer || '—')}</div>
       <div class="qi-product">${escHtml(order.productType || '—')}</div>
       <div class="qi-meta">
         <span class="qi-qty">${(order.quantity || 0).toLocaleString()} units</span>
         <span class="qi-due ${overdue ? 'overdue' : ''}">${order.dueDate ? fmtDate(order.dueDate) : '—'}</span>
       </div>
-      <span class="qi-machine-tag">${escHtml(step.machine || '—')}</span>
+      <span class="qi-machine-tag">${escHtml(effStep?.machine || step?.machine || '—')}</span>
+      <span class="qi-ws-pill ${ws.cls}" title="Step status at your station">${escHtml(ws.label)}</span>
     </div>`;
   });
 
@@ -1389,11 +1473,11 @@ async function refreshQueue() {
     comingJobs.forEach(({ order, step }) => {
       const line = getProductionLine(order);
       const lineColor = (PRODUCTION_LINES[line] || {}).color || '#6b7280';
-      const pausedIcon = step?.status === 'paused' || order.status === 'on-hold' ? '<span title="Paused / on hold" style="margin-left:6px;">⏸️</span>' : '';
+      const ws = getQueueStepWorkState(order, step, { comingNext: true });
       html += `<div class="queue-item coming"
         style="border-left-color:${lineColor}; opacity:0.75;"
         onclick="selectJob(${order.id})">
-        <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)} ${pausedIcon}</div>
+        <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
         <div class="qi-customer">${escHtml(order.customer || '—')}</div>
         <div class="qi-product">${escHtml(order.productType || '—')}</div>
         <div class="qi-meta">
@@ -1401,6 +1485,7 @@ async function refreshQueue() {
           <span class="qi-due ${isOverdue(order.dueDate) ? 'overdue' : ''}">${order.dueDate ? fmtDate(order.dueDate) : '—'}</span>
         </div>
         <span class="qi-step-tag">Next: ${escHtml(step.machine || '—')}</span>
+        <span class="qi-ws-pill ${ws.cls}" title="Not yet at your station">${escHtml(ws.label)}</span>
       </div>`;
     });
   }
@@ -1565,6 +1650,7 @@ async function renderJobDetail(order) {
   if (order.cutMethod) details.push({ label: 'Cut Method', value: order.cutMethod });
   if (order.dieStatus) details.push({ label: 'Die Status', value: order.dieStatus });
   if (order.dieNumber) details.push({ label: 'Die #', value: order.dieNumber });
+  else if (order.dieName) details.push({ label: 'Die #', value: order.dieName });
   if (order.hasPerforation) details.push({ label: 'Perforation', value: '⚠️ YES', warn: true });
 
   html += `<div class="job-details-grid">`;
@@ -1576,36 +1662,15 @@ async function renderJobDetail(order) {
   });
   html += `</div>`;
 
-  // ── NOTES LOG (PUL-138: unified timestamped/attributed notes, immediately visible) ──
-  const notesHistory = buildNotesHistory(order);
+  // ── Current ticket notes only (no historical log) ──
   const legacyNoteText = order.specialNotes || order.notes || '';
-  if (notesHistory.length) {
-    html += `<div class="notes-log-card">
-      <div class="nl-title">📋 Notes Log</div>`;
-    notesHistory.forEach(entry => {
-      const d = new Date(entry.timestamp);
-      const dateStr = isNaN(d.getTime()) ? '' : (d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      const isCritical = (entry.type || '').toUpperCase() === 'CRITICAL' || (entry.noteType || '').toUpperCase() === 'CRITICAL';
-      const entryCls = isCritical ? ' critical' : '';
-      const metaCls = isCritical ? ' critical' : '';
-      html += `<div class="nl-entry${entryCls}">
-        <div class="nl-meta${metaCls}">${dateStr}${entry.author ? ` · ${escHtml(entry.author)}` : ''}${isCritical ? ' · <strong>CRITICAL</strong>' : ''}</div>
-        <div class="nl-text">${escHtml(entry.text)}</div>
-      </div>`;
-    });
-    html += `</div>`;
-  } else if (legacyNoteText.trim()) {
-    // Legacy fallback: show specialNotes as a Notes Log entry
+  const snTrim = legacyNoteText.trim();
+  if (snTrim) {
     const nt = (order.noteType || 'INFO').toUpperCase();
-    const isCritical = nt === 'CRITICAL';
-    const entryCls = isCritical ? ' critical' : '';
-    const metaCls = isCritical ? ' critical' : '';
-    html += `<div class="notes-log-card">
-      <div class="nl-title">📋 Notes Log</div>
-      <div class="nl-entry${entryCls}">
-        <div class="nl-meta${metaCls}">${isCritical ? '🚨 CRITICAL' : 'Note'}</div>
-        <div class="nl-text">${escHtml(legacyNoteText)}</div>
-      </div>
+    const isCrit = nt === 'CRITICAL';
+    html += `<div class="special-notes-card"${isCrit ? ' style="background:#fffbeb;border-color:#f59e0b;"' : ''}>
+      <div class="note-label">${isCrit ? '🚨 Critical note (current)' : '📝 Notes (current ticket)'}</div>
+      <div class="note-text">${escHtml(legacyNoteText)}</div>
     </div>`;
   }
 
@@ -1655,10 +1720,10 @@ async function renderJobDetail(order) {
     html += `<div class="die-scan-card" id="die-scan-card">
       <h4>🔍 Die Scan Required Before Starting</h4>
       <p style="font-size:12px;color:#7f1d1d;margin-bottom:8px;">
-        Scan the die barcode to verify the correct die before cutting.
+        Scan the die barcode, or type the <strong>Die #</strong> shown on this job ticket (must match).
       </p>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="die-input" placeholder="Scan or type die barcode…"
+        <input type="text" id="die-input" placeholder="Die # from ticket or scan barcode…"
           style="flex:1;font-size:15px;padding:9px 12px;"
           onkeydown="if(event.key==='Enter')scanDie()" />
         <button class="btn btn-danger" onclick="scanDie()" style="white-space:nowrap;padding:9px 14px;font-size:13px;">
@@ -1830,6 +1895,7 @@ async function stepAction(action) {
 
     setTimerUI();
     setActionButtonUI();
+    await refreshQueue();
 
   } else if (action === 'pause') {
     // Reset pause modal state and show
@@ -1864,6 +1930,7 @@ async function stepAction(action) {
     setTimerUI();
     setActionButtonUI();
     document.getElementById('pause-overdue-warn').classList.remove('visible');
+    await refreshQueue();
 
   } else if (action === 'complete') {
     // Guard: check required actions
@@ -1937,9 +2004,47 @@ async function confirmPause() {
 
   setTimerUI();
   setActionButtonUI();
+  await refreshQueue();
 }
 
 // ── DIE SCAN ─────────────────────────────────────────────────────────
+function normalizeDieScanToken(s) {
+  return String(s ?? '').trim().replace(/^#+/, '').toLowerCase();
+}
+
+function getOrderExpectedDieToken(order) {
+  if (!order) return '';
+  if (order.dieNumber != null && String(order.dieNumber).trim() !== '') return String(order.dieNumber).trim();
+  if (order.dieName && String(order.dieName).trim() !== '') return String(order.dieName).trim();
+  return '';
+}
+
+function dieScanMatchesTicketScan(scanned, order) {
+  if (!scanned || !order) return false;
+  const a = normalizeDieScanToken(scanned);
+  if (!a) return false;
+  const parts = [order.dieNumber, order.dieName]
+    .filter(v => v != null && String(v).trim() !== '')
+    .map(v => normalizeDieScanToken(v));
+  for (const e of parts) {
+    if (!e) continue;
+    if (a === e) return true;
+    if (a.includes(e) || e.includes(a)) return true;
+    const da = a.replace(/\D/g, '');
+    const de = e.replace(/\D/g, '');
+    if (da.length > 0 && de.length > 0 && da === de) return true;
+  }
+  return false;
+}
+
+function registryDieMatchesJobTicket(order, die) {
+  if (!die) return true;
+  const exp = getOrderExpectedDieToken(order);
+  if (!exp) return true;
+  return dieScanMatchesTicketScan(String(die.dieNumber), order)
+    || dieScanMatchesTicketScan(String(die.barcode || ''), order);
+}
+
 async function scanDie() {
   const input = document.getElementById('die-input');
   if (!input) return;
@@ -1949,12 +2054,58 @@ async function scanDie() {
   const resultEl = document.getElementById('die-result');
   resultEl.style.display = 'block';
 
+  const order = currentJob;
   let die = null;
   try { die = await getDieByBarcode(barcode); } catch (e) {}
+  if (!die) {
+    const stripped = barcode.replace(/^#+/, '').trim();
+    try { die = await getDieByNumber(stripped); } catch (e) {}
+  }
+  if (!die && /^\d+$/.test(barcode.replace(/^#+/, '').trim())) {
+    const n = parseInt(barcode.replace(/^#+/, '').trim(), 10);
+    try { die = await getDieByNumber(n); } catch (e) {}
+    if (!die) try { die = await getDieByNumber(String(n)); } catch (e) {}
+  }
+
+  const ticketDie = getOrderExpectedDieToken(order);
+  if (die && ticketDie && !registryDieMatchesJobTicket(order, die)) {
+    resultEl.className = 'die-result fail';
+    resultEl.textContent = `❌ This die does not match the job ticket (Die # ${ticketDie}). Scan or enter the correct die.`;
+    dieVerified = false;
+    return;
+  }
+
+  if (!die && dieScanMatchesTicketScan(barcode, order)) {
+    const nStr = order?.dieNumber != null && String(order.dieNumber).trim() !== ''
+      ? String(order.dieNumber).replace(/^#+/, '').trim() : '';
+    if (nStr) {
+      try { die = await getDieByNumber(nStr); } catch (e) {}
+      if (!die && /^\d+$/.test(nStr)) {
+        try { die = await getDieByNumber(parseInt(nStr, 10)); } catch (e) {}
+        if (!die) try { die = await getDieByNumber(String(parseInt(nStr, 10))); } catch (e) {}
+      }
+    }
+    dieVerified = true;
+    resultEl.className = 'die-result ok';
+    resultEl.textContent = die
+      ? `✅ Die #${die.dieNumber} verified — matches job ticket (${ticketDie}).`
+      : `✅ Verified — matches job ticket Die # (${ticketDie}).`;
+    const card = document.getElementById('die-scan-card');
+    if (card) card.classList.add('verified');
+    setActionButtonUI();
+    if (die?.id) await recordDieUsage(die.id).catch(() => {});
+    await addActivity({
+      type: 'die-scanned', orderId: order?.orderId,
+      operatorName: currentOperator, dieNumber: die?.dieNumber || ticketDie
+    });
+    return;
+  }
 
   if (!die) {
     resultEl.className = 'die-result fail';
-    resultEl.textContent = '❌ Die not found in registry. Check barcode or contact supervisor.';
+    resultEl.textContent = ticketDie
+      ? `❌ No die record matched. Enter the exact Die # from this job (ticket: ${ticketDie}).`
+      : '❌ Die not found. This job has no Die # on the ticket — contact supervisor.';
     dieVerified = false;
     return;
   }
@@ -1965,16 +2116,15 @@ async function scanDie() {
     return;
   }
 
-  // Success
   dieVerified = true;
   resultEl.className = 'die-result ok';
   resultEl.textContent = `✅ Die #${die.dieNumber} verified — ${die.customer || '—'} | ${die.description || '—'} | Uses: ${(die.usageCount || 0) + 1}`;
   const card = document.getElementById('die-scan-card');
   if (card) card.classList.add('verified');
-  setActionButtonUI(); // clear required-actions banner and re-enable Complete
+  setActionButtonUI();
   await recordDieUsage(die.id).catch(() => {});
   await addActivity({
-    type: 'die-scanned', orderId: currentJob?.orderId,
+    type: 'die-scanned', orderId: order?.orderId,
     operatorName: currentOperator, dieNumber: die.dieNumber
   });
 }
@@ -1982,10 +2132,15 @@ async function scanDie() {
 // ── COMPLETE STEP MODAL ───────────────────────────────────────────────
 function onCompleteQtyChange() {
   const qty   = parseInt(document.getElementById('cmp-qty').value) || 0;
-  const waste = parseInt(document.getElementById('cmp-waste').value) || 0;
-  const net   = qty - waste;
+  const wasteRaw = (document.getElementById('cmp-waste').value || '').trim();
+  const waste = wasteRaw === '' ? NaN : parseInt(wasteRaw, 10);
+  const net   = Number.isFinite(waste) ? qty - waste : qty;
   const ordered = currentJob?.quantity || 0;
   const warnEl  = document.getElementById('cmp-short-warning');
+  if (!Number.isFinite(waste) || waste < 0) {
+    warnEl.classList.remove('visible');
+    return;
+  }
   if (ordered && net < ordered * 0.97) {
     document.getElementById('cmp-short-msg').textContent =
       `Net output: ${net.toLocaleString()} vs ordered: ${ordered.toLocaleString()} (${Math.round((net / ordered) * 100)}%).`;
@@ -2002,7 +2157,18 @@ function closeCompleteModal() {
 async function confirmComplete() {
   if (!currentJob) return;
   const qty        = parseInt(document.getElementById('cmp-qty').value) || 0;
-  const waste      = parseInt(document.getElementById('cmp-waste').value) || 0;
+  const wasteRaw   = (document.getElementById('cmp-waste').value || '').trim();
+  if (wasteRaw === '') {
+    showToast('red', 'Waste / loss required', 'Enter how many units or sheets were lost. Use 0 if there was no waste.');
+    document.getElementById('cmp-waste').focus();
+    return;
+  }
+  const waste = parseInt(wasteRaw, 10);
+  if (Number.isNaN(waste) || waste < 0) {
+    showToast('red', 'Invalid waste / loss', 'Enter a whole number that is zero or greater.');
+    document.getElementById('cmp-waste').focus();
+    return;
+  }
   const note       = document.getElementById('cmp-note').value.trim();
   const overs      = parseInt(document.getElementById('cmp-overs').value) || 0;
   const oversReason= document.getElementById('cmp-overs-reason').value.trim();
@@ -2423,29 +2589,6 @@ async function confirmClockout() {
   document.getElementById('op-preview').style.display = 'none';
   document.getElementById('btn-clock-in').disabled    = true;
   document.getElementById('already-in-msg').style.display = 'none';
-}
-
-// ── NOTES HISTORY BUILDER (PUL-138) ──────────────────────────────────
-function buildNotesHistory(order) {
-  const seen = new Set();
-  const result = [];
-  const push = (entry) => {
-    if (!entry?.text) return;
-    const key = [entry.author, entry.timestamp, entry.text].join('||');
-    if (seen.has(key)) return;
-    seen.add(key);
-    result.push(entry);
-  };
-  if (Array.isArray(order?.conversationHistory)) order.conversationHistory.forEach(push);
-  if (order?.prepressIssueComment) push({
-    text: order.prepressIssueComment,
-    author: order.prepressIssueBy || 'Prepress',
-    timestamp: order.prepressIssueAt || order.updatedAt,
-    type: 'INFO'
-  });
-  if (Array.isArray(order?.notesLog)) order.notesLog.forEach(e => push({ ...e, type: e.type || e.noteType || 'INFO' }));
-  result.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
-  return result;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────

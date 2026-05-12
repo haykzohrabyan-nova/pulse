@@ -3,78 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Pulse Local Data</title>
+  <title>Wipe Pulse browser data — Bazaar Print</title>
+  <script src="shared.js"></script>
   <style>
     body { font-family: Inter, system-ui, sans-serif; background:#f8fafc; color:#0f172a; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-    .card { background:#fff; border:1px solid #dbe3ee; border-radius:16px; padding:28px; width:min(560px, calc(100vw - 32px)); box-shadow:0 16px 40px rgba(15,23,42,.08); }
-    h1 { margin:0 0 8px; font-size:24px; }
-    p { margin:0 0 14px; line-height:1.5; color:#475569; }
-    .status { margin-top:16px; padding:14px; border-radius:12px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .card { background:#fff; border:1px solid #dbe3ee; border-radius:16px; padding:28px; width:min(620px, calc(100vw - 32px)); box-shadow:0 16px 40px rgba(15,23,42,.08); }
+    h1 { margin:0 0 8px; font-size:22px; }
+    p, li { margin:0 0 10px; line-height:1.5; color:#475569; font-size:14px; }
+    ul { margin:0 0 14px 18px; padding:0; }
+    .status { margin-top:16px; padding:14px; border-radius:12px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:13px; }
     .ok { background:#ecfdf5; color:#166534; border-color:#86efac; }
+    .warn { background:#fffbeb; color:#92400e; border-color:#fde047; }
     .err { background:#fef2f2; color:#991b1b; border-color:#fca5a5; }
-    .actions { display:flex; gap:12px; margin-top:18px; }
+    .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
     .btn { border:none; border-radius:10px; padding:12px 16px; font-size:14px; font-weight:700; cursor:pointer; }
     .btn-primary { background:#2563eb; color:#fff; }
     .btn-secondary { background:#e2e8f0; color:#0f172a; }
-    code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
+    code { background:#f1f5f9; padding:2px 6px; border-radius:6px; font-size:12px; }
+    .muted { font-size:12px; color:#64748b; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Reset local Pulse orders</h1>
-    <p>This clears the local Pulse <code>orders</code> and <code>purchase_orders</code> stores in your browser and keeps demo reseeding off so the dashboard stays blank for testing.</p>
-    <div id="status" class="status">Opening this page will automatically wipe the local test data.</div>
+    <h1>Wipe Pulse data in this browser</h1>
+    <p>Runs <code>wipeAllPulseBrowserData()</code> from <code>shared.js</code>. This removes:</p>
+    <ul>
+      <li>All <strong>IndexedDB</strong> stores in <code>BazaarPrintDB</code> (orders, invoices, personnel, dies, inventory, …)</li>
+      <li><strong>localStorage</strong> keys starting with <code>pulse_</code>, Supabase auth tokens (<code>sb-*-auth-token</code>), and admin-next state</li>
+      <li><strong>sessionStorage</strong> <code>pulse_session</code> and <code>op_operator</code> — you’ll need to log in again</li>
+    </ul>
+    <p class="muted"><strong>Cloud / Postgres:</strong> this page does nothing on the server. In Supabase, run <code>supabase/migrations/016_clear_orders_and_audit.sql</code> (SQL Editor) to delete all job tickets, invoices, and activity rows.</p>
+    <div id="status" class="status warn">Choose an action below — or append <code>?automated=1</code> to this page URL when opened locally (<code>file://</code> or localhost) to wipe immediately without prompts.</div>
     <div class="actions">
-      <button class="btn btn-primary" onclick="resetPulseData()">Reset local Pulse data</button>
-      <button class="btn btn-secondary" onclick="location.href='dashboard.html'">Go to dashboard</button>
+      <button type="button" class="btn btn-primary" onclick="runWipe(false)">Wipe browser only</button>
+      <button type="button" class="btn btn-primary" onclick="runWipe(true)" style="background:#b45309;">Wipe browser &amp; reload</button>
+      <button type="button" class="btn btn-secondary" onclick="location.href='dashboard.html'">Cancel — go to Dashboard</button>
     </div>
   </div>
 
   <script>
-    const DB_NAME = 'BazaarPrintDB';
-    const DB_VERSION = 5;
+    let busy = false;
 
-    function setStatus(message, cls='') {
+    function setStatus(message, cls) {
       const el = document.getElementById('status');
       el.className = 'status' + (cls ? ' ' + cls : '');
-      el.innerHTML = message;
+      el.textContent = message;
     }
 
-    let resetStarted = false;
-
-    async function resetPulseData() {
-      if (resetStarted) return;
-      resetStarted = true;
-      setStatus('Clearing local Pulse data...');
-      localStorage.setItem('pulse_seed_demo', '0');
-
+    async function runWipe(reload) {
+      if (busy) return;
+      if (typeof wipeAllPulseBrowserData !== 'function') {
+        setStatus('wipeAllPulseBrowserData missing — shared.js failed to load.', 'err');
+        return;
+      }
+      if (!confirm('This permanently deletes Pulse data stored in THIS browser only. Continue?')) return;
+      busy = true;
+      setStatus('Wiping browser storage…');
       try {
-        const db = await new Promise((resolve, reject) => {
-          const req = indexedDB.open(DB_NAME, DB_VERSION);
-          req.onerror = () => reject(req.error || new Error('Could not open Pulse database'));
-          req.onsuccess = () => resolve(req.result);
-        });
-
-        await new Promise((resolve, reject) => {
-          const tx = db.transaction(['orders', 'purchase_orders'], 'readwrite');
-          tx.objectStore('orders').clear();
-          tx.objectStore('purchase_orders').clear();
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error || new Error('Could not clear Pulse stores'));
-          tx.onabort = () => reject(tx.error || new Error('Pulse reset aborted'));
-        });
-
-        db.close();
-        setStatus('Done. Local Pulse orders are cleared and demo reseeding is disabled. Redirecting to dashboard...', 'ok');
-        setTimeout(() => { location.href = 'dashboard.html?fresh=1'; }, 900);
-      } catch (error) {
-        console.error(error);
-        setStatus('Reset failed: ' + (error?.message || error), 'err');
+        await wipeAllPulseBrowserData();
+        setStatus('Done. Browser Pulse data cleared. Log in again if needed.', 'ok');
+        if (reload) setTimeout(() => { location.href = 'dashboard.html?fresh=1'; }, 600);
+      } catch (e) {
+        console.error(e);
+        setStatus('Error: ' + (e && e.message ? e.message : String(e)), 'err');
+      } finally {
+        busy = false;
       }
     }
 
-    window.addEventListener('load', () => {
-      setTimeout(resetPulseData, 150);
+    function automationAllowed() {
+      const proto = location.protocol;
+      const host = location.hostname || '';
+      if (proto === 'file:') return true;
+      if (host === 'localhost' || host === '127.0.0.1') return true;
+      return false;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      if (params.get('automated') !== '1') return;
+      if (!automationAllowed()) {
+        setStatus('Automation only for file:// or localhost.', 'err');
+        return;
+      }
+      if (typeof wipeAllPulseBrowserData !== 'function') {
+        setStatus('shared.js missing — cannot wipe.', 'err');
+        return;
+      }
+      setStatus('Automated wipe running…');
+      wipeAllPulseBrowserData()
+        .then(() => {
+          setStatus('Done. Pulse browser storage cleared.', 'ok');
+          if (params.get('reload') === '1') {
+            setTimeout(() => { location.href = 'dashboard.html?fresh=1'; }, 400);
+          }
+        })
+        .catch(e => setStatus(String(e.message || e), 'err'));
     });
   </script>
 </body>

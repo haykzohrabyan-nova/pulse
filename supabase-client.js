@@ -20,7 +20,14 @@
   const SUPA_KEY     = window.PULSE_SUPABASE_ANON_KEY || '';
   const BACKEND      = window.PULSE_STORAGE_BACKEND   || 'indexeddb';
 
-  if (BACKEND !== 'supabase' || !SUPA_URL || !SUPA_KEY) {
+  const hasPlaceholderConfig =
+    /YOUR-PROJECT-REF/i.test(SUPA_URL) ||
+    /YOUR-ANON-KEY/i.test(SUPA_KEY);
+
+  if (BACKEND !== 'supabase' || !SUPA_URL || !SUPA_KEY || hasPlaceholderConfig) {
+    if (BACKEND === 'supabase' && hasPlaceholderConfig) {
+      console.warn('[Pulse] Supabase config has placeholder values; using IndexedDB instead.');
+    }
     console.log('[Pulse] Storage backend: IndexedDB');
     return; // No-op — IndexedDB functions remain active
   }
@@ -161,10 +168,28 @@
       needsAccountManagerAction: order.needsAccountManagerAction || false,
       prepressResubmittedAt:     order.prepressResubmittedAt   || null,
       prepressResubmittedBy:     order.prepressResubmittedBy   || null,
+      prepressStartedAt:         order.prepressStartedAt       || null,
+      prepressStartedBy:         order.prepressStartedBy       || null,
+      prepressPausedAt:          order.prepressPausedAt        || null,
+      prepressPausedBy:          order.prepressPausedBy        || null,
+      prepressResumedAt:         order.prepressResumedAt       || null,
+      prepressResumedBy:         order.prepressResumedBy       || null,
+      prepressApprovedAt:        order.prepressApprovedAt      || null,
+      prepressApprovedBy:        order.prepressApprovedBy      || null,
+      prepressCompletedAt:       order.prepressCompletedAt     || null,
+      prepressCompletedBy:       order.prepressCompletedBy     || null,
+      prepressIssueAt:           order.prepressIssueAt         || null,
+      prepressIssueBy:           order.prepressIssueBy         || null,
+      prepressIssueComment:      order.prepressIssueComment    || null,
+      prepressIssueCategory:     order.prepressIssueCategory   || null,
+      prepressLastUpdatedAt:     order.prepressLastUpdatedAt   || null,
+      prepressLastUpdatedBy:     order.prepressLastUpdatedBy   || null,
+      prepressChecklist:         order.prepressChecklist       || null,
+      prepressComment:           order.prepressComment         || null,
       overtimeApproval:          order.overtimeApproval        || null,
-      // Legacy notes (migrated from IndexedDB; new records use order_comments)
-      notesLog:            order.notesLog            || [],
-      conversationHistory: order.conversationHistory || [],
+      // Order note history removed — keep specs clean
+      notesLog:            [],
+      conversationHistory: [],
     };
 
     return {
@@ -320,9 +345,27 @@
       needsAccountManagerAction: s.needsAccountManagerAction || false,
       prepressResubmittedAt:    s.prepressResubmittedAt    || null,
       prepressResubmittedBy:    s.prepressResubmittedBy    || null,
+      prepressStartedAt:        s.prepressStartedAt        || null,
+      prepressStartedBy:        s.prepressStartedBy        || null,
+      prepressPausedAt:         s.prepressPausedAt         || null,
+      prepressPausedBy:         s.prepressPausedBy         || null,
+      prepressResumedAt:        s.prepressResumedAt        || null,
+      prepressResumedBy:        s.prepressResumedBy        || null,
+      prepressApprovedAt:       s.prepressApprovedAt       || null,
+      prepressApprovedBy:       s.prepressApprovedBy       || null,
+      prepressCompletedAt:      s.prepressCompletedAt      || null,
+      prepressCompletedBy:      s.prepressCompletedBy      || null,
+      prepressIssueAt:          s.prepressIssueAt          || null,
+      prepressIssueBy:          s.prepressIssueBy          || null,
+      prepressIssueComment:     s.prepressIssueComment     || null,
+      prepressIssueCategory:    s.prepressIssueCategory    || null,
+      prepressLastUpdatedAt:    s.prepressLastUpdatedAt    || null,
+      prepressLastUpdatedBy:    s.prepressLastUpdatedBy    || null,
+      prepressChecklist:        s.prepressChecklist        || null,
+      prepressComment:          s.prepressComment          || null,
       overtimeApproval:         s.overtimeApproval         || null,
-      notesLog:            s.notesLog            || [],
-      conversationHistory: s.conversationHistory || [],
+      notesLog:            [],
+      conversationHistory: [],
     };
   }
 
@@ -437,21 +480,19 @@
   async function _updateOrder(id, changes) {
     const supa = await _getClient();
 
-    // Fetch current order so we can merge specs
-    const { data: current, error: fetchErr } = await supa
+    const { data: currentRow, error: fetchErr } = await supa
       .from('orders')
-      .select('specs, parent_order_id')
+      .select(`*, order_workflow_steps(*)`)
       .eq('id', id)
       .single();
     if (fetchErr) throw fetchErr;
 
-    // Build the update payload
-    const combined = { ...changes, id };
+    const existing = _rowToOrder(currentRow, currentRow.order_workflow_steps || []);
+    const combined = { ...existing, ...(changes || {}), id: existing.id };
     const row = _orderToRow(combined);
 
-    // Merge specs (don't obliterate existing keys not in this update)
-    if (current?.specs) {
-      row.specs = { ...current.specs, ...row.specs };
+    if (currentRow?.specs) {
+      row.specs = { ...currentRow.specs, ...row.specs };
     }
 
     const { error: updateErr } = await supa
@@ -460,9 +501,7 @@
       .eq('id', id);
     if (updateErr) throw updateErr;
 
-    // Update workflow steps if provided
     if (Array.isArray(changes.workflowSteps)) {
-      // Delete existing steps and re-insert
       await supa.from('order_workflow_steps').delete().eq('order_id', id);
       if (changes.workflowSteps.length > 0) {
         const steps = changes.workflowSteps.map((step, idx) => ({
@@ -481,7 +520,7 @@
       }
     }
 
-    return { ...current, ...changes };
+    return combined;
   }
 
   async function _getSubTickets(parentOrderId) {
@@ -498,65 +537,16 @@
 
   // ── Activity Log ─────────────────────────────────────────────
 
-  async function _addActivity(log) {
-    const supa = await _getClient();
-    const user = await _getCurrentUser();
-
-    // Resolve order UUID from orderId text
-    let orderUuid = null;
-    if (log.orderId) {
-      const { data } = await supa
-        .from('orders')
-        .select('id')
-        .eq('order_id', String(log.orderId))
-        .maybeSingle();
-      orderUuid = data?.id || null;
-    }
-
-    const entry = {
-      order_id:   orderUuid,
-      action:     log.type || log.action || 'note',
-      details:    log.message ? { message: log.message } : (log.details || null),
-      actor_id:   user?.id || null,
-      actor_name: log.by || log.actorName || null,
-    };
-    const { error } = await supa.from('activity_log').insert(entry);
-    if (error) console.error('[Pulse/Supabase] activity_log insert error:', error);
+  async function _addActivity(_log) {
+    return Promise.resolve();
   }
 
-  async function _getActivityLog(orderId) {
-    const supa = await _getClient();
-    // Resolve UUID
-    const { data: orderRow } = await supa
-      .from('orders')
-      .select('id')
-      .eq('order_id', String(orderId))
-      .maybeSingle();
-    if (!orderRow) return [];
-    const { data, error } = await supa
-      .from('activity_log')
-      .select('*')
-      .eq('order_id', orderRow.id)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    return (data || []).map(r => ({
-      id:        r.id,
-      orderId,
-      type:      r.action,
-      message:   r.details?.message || r.action,
-      by:        r.actor_name,
-      timestamp: r.created_at,
-    }));
+  async function _getActivityLog(_orderId) {
+    return [];
   }
 
   async function _getAllActivity() {
-    const supa = await _getClient();
-    const { data, error } = await supa
-      .from('activity_log')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    return [];
   }
 
   // ── Order Comments ───────────────────────────────────────────
@@ -657,9 +647,6 @@
   const _origGenerateOrderId    = window.generateOrderId;
   const _origGenerateSubTicketId = window.generateSubTicketId;
   const _origGetSubTickets      = window.getSubTickets;
-  const _origAddActivity        = window.addActivity;
-  const _origGetActivityLog     = window.getActivityLog;
-  const _origGetAllActivity     = window.getAllActivity;
 
   window.getAllOrders = async function () {
     try { return await _getAllOrders(); }
@@ -701,19 +688,16 @@
     catch (e) { console.error('[Pulse/Supabase] getSubTickets:', e); return _origGetSubTickets ? _origGetSubTickets(parentOrderId) : []; }
   };
 
-  window.addActivity = async function (log) {
-    try { return await _addActivity(log); }
-    catch (e) { console.error('[Pulse/Supabase] addActivity:', e); return _origAddActivity ? _origAddActivity(log) : null; }
+  window.addActivity = async function () {
+    return null;
   };
 
-  window.getActivityLog = async function (orderId) {
-    try { return await _getActivityLog(orderId); }
-    catch (e) { console.error('[Pulse/Supabase] getActivityLog:', e); return _origGetActivityLog ? _origGetActivityLog(orderId) : []; }
+  window.getActivityLog = async function () {
+    return [];
   };
 
   window.getAllActivity = async function () {
-    try { return await _getAllActivity(); }
-    catch (e) { console.error('[Pulse/Supabase] getAllActivity:', e); return _origGetAllActivity ? _origGetAllActivity() : []; }
+    return [];
   };
 
   // Expose comment helpers
@@ -805,6 +789,11 @@
       } catch (_) { resolve([]); }
     });
   }
+
+  /** Sync client handle for pages that call getSupabaseClient() without awaiting (after init). */
+  window.getSupabaseClient = function () {
+    return _clientReady ? _client : null;
+  };
 
   console.log('[Pulse] Supabase backend registered — awaiting client init');
 

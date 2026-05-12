@@ -29,6 +29,9 @@
         <option value="prepress-active">Started</option>
         <option value="prepress-paused">Paused</option>
         <option value="pending-account-manager">Send Back</option>
+        <option value="approved-production">Approved / In Production</option>
+        <option value="pending-review">Approved Queue</option>
+        <option value="in-production">In Production</option>
       </select>
       <select id="queueDateFilter" onchange="renderQueue()">
         <option value="all">📅 All (Created)</option>
@@ -80,6 +83,7 @@
   </div>
 
   <main class="prepress-main">
+    <div class="prepress-main-body">
     <div id="emptyState" class="empty-state">Select a prepress order to review.</div>
     <div id="detailWrap" style="display:none;">
       <div class="detail-header">
@@ -106,60 +110,49 @@
         <div id="detailSteps" class="steps-list" style="margin-top:12px;"></div>
       </section>
     </div>
+    </div>
+    <section class="detail-card prepress-history-panel" id="prepressHistoryPanel" aria-label="Prepress history">
+      <h3>Prepress history</h3>
+      <div id="prepressHistorySummary" class="prepress-history-summary" aria-live="polite"></div>
+      <div id="prepressHistoryList" class="prepress-history-list"></div>
+    </section>
   </main>
 
   <aside class="prepress-side" id="prepressSide" style="display:none;">
-    <div class="detail-card sticky-card">
+    <div id="prepressPrimaryBar" class="prepress-primary-bar">
+      <button type="button" class="btn btn-primary" id="btnStartPause" style="background:#2563eb;width:100%;box-sizing:border-box;font-weight:600;" onclick="toggleStartPause()">▶ Start Review</button>
+    </div>
+    <div id="prepressReviewCardShell" class="detail-card">
       <h3>Prepress Review</h3>
-      <div class="checklist">
-        <label><input type="checkbox" id="checkDetails" onchange="updateApproveButtonVisibility()"><span>Ticket details verified</span></label>
-        <label><input type="checkbox" id="checkArtwork" onchange="updateApproveButtonVisibility()"><span>Artwork/files checked</span></label>
-        <label><input type="checkbox" id="checkSizing" onchange="updateApproveButtonVisibility()"><span>Size / quantity / imposition checked</span></label>
-        <label><input type="checkbox" id="checkCutting" onchange="updateApproveButtonVisibility()"><span>Die / cut method checked</span></label>
-      </div>
-      <div class="field">
-        <label>Issue Category</label>
-        <select id="issueCategory" onchange="updateApproveButtonVisibility()">
-          <option value="">No issue</option>
-          <option value="artwork">Artwork issue</option>
-          <option value="copy">Ticket/detail mismatch</option>
-          <option value="sizing">Size / quantity / fit issue</option>
-          <option value="finishing">Finishing / die / cut issue</option>
-          <option value="manager-request">Manager Request</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Prepress Comment</label>
-        <textarea id="prepressComment" rows="6" placeholder="Explain what prepress found, what needs to be fixed, and any instructions for the account manager."></textarea>
+      <div id="prepressActionHint" class="prepress-action-hint" style="font-size:12px;color:#92400e;">Start Review before using Send Back to Account Manager.</div>
+      <div id="prepressReviewCollapsible">
+        <div class="checklist">
+          <label><input type="checkbox" id="checkDetails" onchange="updateApproveButtonVisibility()"><span>Ticket details verified</span></label>
+          <label><input type="checkbox" id="checkArtwork" onchange="updateApproveButtonVisibility()"><span>Artwork/files checked</span></label>
+          <label><input type="checkbox" id="checkSizing" onchange="updateApproveButtonVisibility()"><span>Size / quantity / imposition checked</span></label>
+          <label><input type="checkbox" id="checkCutting" onchange="updateApproveButtonVisibility()"><span>Die / cut method checked</span></label>
+        </div>
+        <div class="field">
+          <label>Issue Category</label>
+          <select id="issueCategory" onchange="updateApproveButtonVisibility()">
+            <option value="">No issue</option>
+            <option value="artwork">Artwork issue</option>
+            <option value="copy">Ticket/detail mismatch</option>
+            <option value="sizing">Size / quantity / fit issue</option>
+            <option value="finishing">Finishing / die / cut issue</option>
+            <option value="manager-request">Manager Request</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prepress Comment</label>
+          <textarea id="prepressComment" rows="6" placeholder="Explain what prepress found, what needs to be fixed, and any instructions for the account manager."></textarea>
+        </div>
       </div>
       <div id="lastIssueBox" class="issue-box" style="display:none;"></div>
       <div class="action-stack">
-        <button class="btn btn-primary" id="btnStartPause" style="background:#2563eb;" onclick="toggleStartPause()">▶ Start Review</button>
         <button class="btn btn-danger" id="btnSendBack" onclick="sendBackToAccountManager()">↩ Send Back to Account Manager</button>
         <button class="btn btn-success" id="btnApprove" onclick="approveToProduction()" style="display:none;">✅ Approve to Production</button>
-      </div>
-      <div id="prepressActionHint" style="font-size:12px;color:#92400e;margin-top:8px;">Start Review before using Send Back to Account Manager.</div>
-    </div>
-
-    <!-- Prepress History Log -->
-    <div class="detail-card" style="margin-top:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h3 style="margin:0;">📋 Prepress History</h3>
-        <button class="btn btn-sm" onclick="toggleHistoryPanel()" id="btnToggleHistory" style="font-size:11px;">▼ Show</button>
-      </div>
-      <div id="historyPanelBody" style="display:none;">
-        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-          <select id="historyDateFilter" onchange="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:120px;">
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="last-week">Last Week</option>
-            <option value="last-month">Last Month</option>
-          </select>
-          <input type="text" id="historySearch" placeholder="Search…" oninput="renderHistory()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:80px;">
-        </div>
-        <div id="historyList" style="max-height:340px;overflow-y:auto;display:grid;gap:8px;font-size:12px;"></div>
       </div>
     </div>
   </aside>
@@ -187,7 +180,23 @@ document.getElementById('page-styles').textContent = `
   .queue-item-title { font-weight:700; font-size:14px; color:#1d4ed8; }
   .queue-item-meta { font-size:12px; color:var(--text-muted); margin-top:4px; }
   .queue-item-issue { font-size:11px; color:#b91c1c; margin-top:6px; }
-  .prepress-main { min-width:0; }
+  .prepress-main { min-width:0; display:flex; flex-direction:column; gap:14px; min-height:min(calc(100vh - 110px), 100%); }
+  .prepress-main-body { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+  .prepress-history-panel { flex-shrink:0; margin:0 !important; }
+  .prepress-history-summary { font-size:12px; color:var(--text-muted); line-height:1.45; margin:-4px 0 10px; padding:8px 10px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; }
+  .prepress-history-summary strong { color:var(--text); }
+  .prepress-history-list { max-height:min(520px, 55vh); overflow-y:auto; font-size:12px; line-height:1.4; }
+  .prepress-history-ticket { border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; background:#fff; }
+  .prepress-history-ticket:last-child { margin-bottom:0; }
+  .prepress-history-ticket-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; padding:8px 10px; background:#f1f5f9; cursor:pointer; font-size:13px; }
+  .prepress-history-ticket-head:hover { background:#e2e8f0; }
+  .prepress-history-ticket-head.is-selected { outline:2px solid #2563eb; outline-offset:-2px; background:#eff6ff; }
+  .prepress-history-ticket-body { padding:8px 10px 10px; border-top:1px solid var(--border); }
+  .prepress-history-item { border-left:3px solid #93c5fd; padding:4px 0 10px 10px; margin:0 0 4px; }
+  .prepress-history-item:last-child { margin-bottom:0; }
+  .prepress-history-time { font-size:11px; color:var(--text-muted); }
+  .prepress-history-msg { margin-top:3px; color:#0f172a; font-weight:600; }
+  .prepress-history-note { font-size:11px; color:#64748b; margin-top:4px; white-space:pre-wrap; word-break:break-word; }
   .empty-state { background:#fff; border:1px dashed var(--border); border-radius:14px; padding:40px; color:var(--text-muted); text-align:center; }
   .detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
   .detail-title { font-size:22px; font-weight:800; }
@@ -206,8 +215,10 @@ document.getElementById('page-styles').textContent = `
   .steps-list { display:grid; gap:8px; }
   .step-card { border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; gap:12px; font-size:13px; }
   .step-card.current { border-color:#93c5fd; background:#eff6ff; }
-  .prepress-side { min-width:0; }
-  .sticky-card { position:sticky; top:14px; }
+  .prepress-side { align-self:start; min-width:0; max-height:calc(100vh - 110px); overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:0; }
+  .prepress-primary-bar { position:sticky; top:0; z-index:6; flex-shrink:0; padding-bottom:12px; margin-bottom:0; background:#f8fafc; margin-left:-4px; margin-right:-4px; padding-left:4px; padding-right:4px; padding-top:2px; }
+  .prepress-action-hint { margin-top: 0; margin-bottom: 14px; line-height: 1.35; }
+  #prepressReviewCollapsible:not([hidden]) { margin-bottom: 2px; }
   .checklist { display:grid; gap:12px; margin-bottom:14px; font-size:14px; }
   .checklist label { display:grid !important; grid-template-columns:22px 1fr; align-items:start; justify-content:start; gap:12px; color:#475569; font-weight:600; line-height:1.35; }
   .checklist input[type="checkbox"] { width:22px; height:22px; margin:1px 0 0; accent-color:#2563eb; }
@@ -215,22 +226,28 @@ document.getElementById('page-styles').textContent = `
   .field label { display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px; }
   .action-stack { display:grid; gap:8px; }
   .issue-box { margin:10px 0 14px; padding:10px 12px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; }
-  @media (max-width: 1200px) { .prepress-layout { grid-template-columns:1fr; } .sticky-card { position:static; } .detail-grid { grid-template-columns:1fr; } }
+  @media (max-width: 1200px) { .prepress-layout { grid-template-columns:1fr; } .prepress-primary-bar { position:static; } .detail-grid { grid-template-columns:1fr; } }
 `;
 
 let allOrders = [];
 let selectedOrderId = null;
+let v3Tasks = [];
+let currentV3TaskId = null;
+let currentUser_prepress = null;
+const PREPRESS_VISIBLE_STATUSES = ['prepress','prepress-active','prepress-paused','pending-account-manager','pending-review','in-production'];
+const PREPRESS_APPROVED_PRODUCTION_STATUSES = ['pending-review','in-production'];
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadOrders();
   onDBUpdate(async (data) => {
     if (data.store === 'orders') await loadOrders();
   });
+  window.addEventListener('pulse:activity-change', () => { void renderPrepressHistoryPanel(); });
 });
 
 async function loadOrders() {
   const orders = await getAllOrders();
-  allOrders = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-account-manager'].includes(o.status))
+  allOrders = orders.filter(o => PREPRESS_VISIBLE_STATUSES.includes(o.status))
     .sort(compareOrdersByRushDue);
   // PUL-137 Fix #1: Only clear selection if the previously-selected order is gone.
   // Do NOT auto-select the first order — selection must come from an explicit user click.
@@ -239,38 +256,44 @@ async function loadOrders() {
   renderDetail();
 }
 
+/** Same filters as the left sidebar (status + created date + search). */
+function getQueueFilteredOrders() {
+  const qEl = document.getElementById('queueSearch');
+  const stEl = document.getElementById('queueStatusFilter');
+  const dfEl = document.getElementById('queueDateFilter');
+  const cdEl = document.getElementById('queueCustomDate');
+  if (!qEl || !stEl || !dfEl) return [];
+  const q = (qEl.value || '').toLowerCase().trim();
+  const status = stEl.value;
+  const dateFilter = dfEl.value;
+  const customDate = cdEl ? cdEl.value : '';
+  let orders = allOrders.filter(o => {
+    if (status === 'all') return true;
+    if (status === 'approved-production') return PREPRESS_APPROVED_PRODUCTION_STATUSES.includes(o.status);
+    return o.status === status;
+  });
+  orders = orders.filter(o => pulseOrderMatchesCreatedDateFilter(o, dateFilter, customDate));
+  if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
+  return orders;
+}
+
+function getQueueDateFilterLabel() {
+  const sel = document.getElementById('queueDateFilter');
+  if (!sel) return '';
+  const t = (sel.options[sel.selectedIndex]?.textContent || sel.value || '').trim();
+  return t.replace(/^📅\s*/, '');
+}
+
 function renderQueue() {
-  const q = (document.getElementById('queueSearch').value || '').toLowerCase().trim();
-  const status = document.getElementById('queueStatusFilter').value;
   const dateFilter = document.getElementById('queueDateFilter').value;
-  const customDate = document.getElementById('queueCustomDate').value;
   document.getElementById('queueCustomDate').style.display = dateFilter === 'custom' ? '' : 'none';
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
-  const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
-
-  let orders = allOrders.filter(o => status === 'all' ? true : o.status === status);
-
-  if (dateFilter === 'today') {
-    orders = orders.filter(o => { const d = new Date(o.createdAt || o.dueDate || 0); return d >= today && d < new Date(today.getTime()+86400000); });
-  } else if (dateFilter === 'yesterday') {
-    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= yesterday && d < today; });
-  } else if (dateFilter === 'last-week') {
-    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= weekStart; });
-  } else if (dateFilter === 'last-month') {
-    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; return new Date(o.createdAt || o.dueDate) >= monthStart; });
-  } else if (dateFilter === 'custom' && customDate) {
-    const cStart = new Date(customDate+'T00:00:00'); const cEnd = new Date(customDate+'T23:59:59');
-    orders = orders.filter(o => { if (!o.createdAt && !o.dueDate) return false; const d = new Date(o.createdAt || o.dueDate); return d >= cStart && d <= cEnd; });
-  }
-
-  if (q) orders = orders.filter(o => [o.orderId, o.customerName || o.customer, o.productType, o.accountManager].join(' ').toLowerCase().includes(q));
+  const orders = getQueueFilteredOrders();
   document.getElementById('queueCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
   const list = document.getElementById('queueList');
   if (!orders.length) {
     list.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:13px;text-align:center;">No prepress orders match.</div>';
+    void renderPrepressHistoryPanel();
     return;
   }
   list.innerHTML = orders.map(order => `
@@ -288,16 +311,21 @@ function renderQueue() {
   // PUL-137 Req 12: clicking empty space in the queue list deselects the current ticket
   list.onclick = function(e) {
     if (e.target === list && selectedOrderId) {
+      currentV3TaskId = null;
       selectedOrderId = null;
       renderQueue();
+      renderV3Queue();
       renderDetail();
     }
   };
+  void renderPrepressHistoryPanel();
 }
 
 function selectOrder(id) {
+  currentV3TaskId = null;
   selectedOrderId = id;
   renderQueue();
+  renderV3Queue(); // clears V3 "active" highlight when returning to Pulse orders
   renderDetail();
 }
 
@@ -315,6 +343,207 @@ function renderArtwork(files = []) {
   `).join('')}</div>`;
 }
 
+function isApprovedOrInProductionPrepressOrder(order) {
+  return PREPRESS_APPROVED_PRODUCTION_STATUSES.includes(order?.status);
+}
+
+// ── Prepress history (panel always visible in main column) ────────────
+const _PREPRESS_ACT_RE = /prepress|account|return|approved|review|paused|started|resumed|sent back|production queue/i;
+
+function collectOrderPrepressTimeline(order) {
+  if (!order) return [];
+  const rows = [];
+  const push = (iso, title, who, note) => {
+    if (!iso) return;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return;
+    rows.push({ ts: t, iso, title, who: who || '', note: note ? String(note).slice(0, 800) : '', source: 'order' });
+  };
+  push(order.prepressStartedAt, 'Review started', order.prepressStartedBy, '');
+  push(order.prepressPausedAt, 'Review paused', order.prepressPausedBy, '');
+  push(order.prepressResumedAt, 'Review resumed', order.prepressResumedBy, '');
+  push(order.prepressApprovedAt, 'Approved to production queue', order.prepressApprovedBy, '');
+  push(order.prepressCompletedAt, 'Prepress stage completed', order.prepressCompletedBy, '');
+  push(order.prepressIssueAt, 'Sent back to account manager', order.prepressIssueBy, order.prepressIssueComment || '');
+  push(order.prepressResubmittedAt, 'Account manager resubmitted / updated ticket', order.prepressResubmittedBy, '');
+  push(order.prepressLastUpdatedAt, 'Review notes saved', order.prepressLastUpdatedBy, '');
+  return rows;
+}
+
+async function fetchSupabasePrepressActivity(order) {
+  try {
+    const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (!sb || !order?.id) return [];
+    const { data, error } = await sb.from('activity_log')
+      .select('action, actor_name, created_at, details')
+      .eq('order_id', order.id)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []).filter(r => _PREPRESS_ACT_RE.test(String(r.action || '') + JSON.stringify(r.details || {})));
+  } catch (_) {
+    return [];
+  }
+}
+
+/** Map order UUID -> activity rows (prepress-related only), one round-trip for the queue snapshot. */
+async function fetchSupabasePrepressActivityBatch(orderIds) {
+  const out = {};
+  if (!orderIds || !orderIds.length) return out;
+  try {
+    const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (!sb) return out;
+    const { data, error } = await sb.from('activity_log')
+      .select('order_id, action, actor_name, created_at, details')
+      .in('order_id', orderIds)
+      .order('created_at', { ascending: true })
+      .limit(3000);
+    if (error) throw error;
+    for (const row of data || []) {
+      if (!row.order_id) continue;
+      if (!_PREPRESS_ACT_RE.test(String(row.action || '') + JSON.stringify(row.details || {}))) continue;
+      if (!out[row.order_id]) out[row.order_id] = [];
+      out[row.order_id].push(row);
+    }
+  } catch (_) {}
+  return out;
+}
+
+function collectV3PrepressTimeline(task) {
+  if (!task) return [];
+  const rows = [];
+  const push = (iso, title, who, note) => {
+    if (!iso) return;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return;
+    rows.push({ ts: t, iso, title, who: who || '', note: note ? String(note).slice(0, 800) : '', source: 'v3' });
+  };
+  push(task.created_at, 'Proof-locked task queued', '', '');
+  push(task.prepress_confirmed_at, 'Prepress confirmed file received', '', task.run_notes || '');
+  push(task.prepress_issue_at, 'Technical issue reported to JM / Designer', '', task.prepress_issue_notes || '');
+  push(task.updated_at, 'Task updated', '', '');
+  return rows;
+}
+
+function mergePrepressHistoryEvents(localRows, dbRows) {
+  const merged = localRows.map(r => ({ ...r }));
+  for (const row of dbRows) {
+    const det = row.details && typeof row.details === 'object' ? row.details : null;
+    let note = '';
+    if (det && det.message != null) note = String(det.message);
+    else if (typeof row.details === 'string') note = row.details;
+    const t = new Date(row.created_at).getTime();
+    if (Number.isNaN(t)) continue;
+    merged.push({
+      ts: t,
+      iso: row.created_at,
+      title: row.action || 'Activity',
+      who: row.actor_name || '',
+      note,
+      source: 'activity_log'
+    });
+  }
+  merged.sort((a, b) => a.ts - b.ts);
+  const seen = new Set();
+  const out = [];
+  for (const ev of merged) {
+    const key = `${Math.floor(ev.ts / 15000)}-${ev.title}-${(ev.note || '').slice(0, 48)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(ev);
+  }
+  return out;
+}
+
+function renderPrepressHistoryHtml(events) {
+  if (!events.length) {
+    return '<div style="color:var(--text-muted);padding:6px 0;">No prepress history recorded for this job yet.</div>';
+  }
+  return events.map(ev => {
+    const when = typeof formatDateTime === 'function' ? formatDateTime(ev.iso) : (ev.iso ? new Date(ev.iso).toLocaleString() : '—');
+    const who = ev.who ? `<span> · ${escHtml_pre(ev.who)}</span>` : '';
+    const note = ev.note ? `<div class="prepress-history-note">${escHtml_pre(ev.note)}</div>` : '';
+    return `<div class="prepress-history-item">
+      <div class="prepress-history-time">${escHtml_pre(when)}${who}</div>
+      <div class="prepress-history-msg">${escHtml_pre(ev.title)}</div>${note}
+    </div>`;
+  }).join('');
+}
+
+function renderPrepressQueueSnapshotSummary(extraLine) {
+  const sumEl = document.getElementById('prepressHistorySummary');
+  if (!sumEl) return;
+  const filtered = getQueueFilteredOrders();
+  const totalQty = filtered.reduce((s, o) => s + (Number(o.quantity) || 0), 0);
+  const dateLbl = getQueueDateFilterLabel();
+  const statusSel = document.getElementById('queueStatusFilter');
+  const statusLbl = statusSel && statusSel.options[statusSel.selectedIndex]
+    ? statusSel.options[statusSel.selectedIndex].textContent.trim()
+    : '';
+  const search = (document.getElementById('queueSearch')?.value || '').trim();
+  let parts = `<strong>${filtered.length}</strong> ticket${filtered.length !== 1 ? 's' : ''} in queue (sidebar filters)`;
+  parts += ` · <strong>${totalQty.toLocaleString()}</strong> pcs total`;
+  parts += ` · Created: <strong>${escHtml_pre(dateLbl)}</strong>`;
+  if (statusLbl && statusLbl !== 'All') parts += ` · Status: <strong>${escHtml_pre(statusLbl)}</strong>`;
+  if (search) parts += ` · Search: “<strong>${escHtml_pre(search)}</strong>”`;
+  sumEl.innerHTML = `<div>${parts}</div>${extraLine ? `<div style="margin-top:6px;">${extraLine}</div>` : ''}`;
+}
+
+async function renderPrepressHistoryPanel() {
+  const el = document.getElementById('prepressHistoryList');
+  const sumEl = document.getElementById('prepressHistorySummary');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted);padding:8px 0;">Loading…</div>';
+  if (sumEl) sumEl.textContent = '';
+
+  if (currentV3TaskId) {
+    const task = v3Tasks.find(t => t.id === currentV3TaskId);
+    if (task) {
+      renderPrepressQueueSnapshotSummary('Below: <strong>V3 proof-locked</strong> task timeline.');
+      const ev = collectV3PrepressTimeline(task);
+      el.innerHTML = renderPrepressHistoryHtml(ev);
+      return;
+    }
+    currentV3TaskId = null;
+  }
+
+  const filtered = getQueueFilteredOrders();
+  renderPrepressQueueSnapshotSummary('');
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);padding:10px 0;line-height:1.45;">No tickets match the sidebar filters. Change the date range, status, or search to see prepress history here.</div>';
+    return;
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (selectedOrderId && a.id === selectedOrderId && b.id !== selectedOrderId) return -1;
+    if (selectedOrderId && b.id === selectedOrderId && a.id !== selectedOrderId) return 1;
+    return compareOrdersByRushDue(a, b);
+  });
+
+  const ids = sorted.map(o => o.id).filter(Boolean);
+  const actByOrder = await fetchSupabasePrepressActivityBatch(ids);
+
+  el.innerHTML = sorted.map(order => {
+    const local = collectOrderPrepressTimeline(order);
+    const db = actByOrder[order.id] || [];
+    const merged = mergePrepressHistoryEvents(local, db);
+    const bodyHtml = renderPrepressHistoryHtml(merged);
+    const sel = order.id === selectedOrderId;
+    const cust = order.customerName || order.customer || '—';
+    return `<div class="prepress-history-ticket">
+      <div class="prepress-history-ticket-head ${sel ? 'is-selected' : ''}" onclick="selectOrder(${order.id})" title="Open this ticket">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-weight:800;color:#1d4ed8;">#${escHtml_pre(String(order.orderId))}</span>
+          <span>${escHtml_pre(cust)}</span>
+          ${renderRushFlag(order)}${renderStatusBadge(order.status)}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${(order.quantity || 0).toLocaleString()} pcs</div>
+      </div>
+      <div class="prepress-history-ticket-body">${bodyHtml}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderDetail() {
   const order = allOrders.find(o => o.id === selectedOrderId);
   const empty = document.getElementById('emptyState');
@@ -328,19 +557,29 @@ function renderDetail() {
     document.getElementById('lastIssueBox').style.display = 'none';
     if (side) side.style.display = 'none';
     if (layout) layout.classList.remove('has-selection');
+    void renderPrepressHistoryPanel();
     return;
   }
   empty.style.display = 'none';
   wrap.style.display = 'block';
   // PUL-137 Req 10: reveal right panel and expand to 3-column grid
-  if (side) side.style.display = '';
-  if (layout) layout.classList.add('has-selection');
+  const viewOnlyProductionOrder = isApprovedOrInProductionPrepressOrder(order);
+  if (side) side.style.display = viewOnlyProductionOrder ? 'none' : '';
+  if (layout) layout.classList.toggle('has-selection', !viewOnlyProductionOrder);
+
+  ensureLegacyPrepressChecklistMarkup();
+  {
+    const icRow = document.getElementById('issueCategory')?.closest('.field');
+    const pcRow = document.getElementById('prepressComment')?.closest('.field');
+    if (icRow) icRow.style.display = '';
+    if (pcRow) pcRow.style.display = '';
+  }
 
   document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
   document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
   document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
-  const lockedNotice = ['pending-review','qc-failed','ready-to-ship','completed','shipped','received'].includes(order.status)
-    ? `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #fed7aa;background:#fff7ed;font-size:12px;color:#9a3412;">Please note you cannot edit already approved or rejected job tickets.</div>`
+  const lockedNotice = ['pending-review','in-production','qc-failed','ready-to-ship','completed','shipped','received'].includes(order.status)
+    ? `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #fed7aa;background:#fff7ed;font-size:12px;color:#9a3412;">This ticket is already approved or in production. Prepress can view it here, but edits are locked.</div>`
     : '';
   // (Open Job Ticket link removed per David's request)
 
@@ -382,7 +621,6 @@ function renderDetail() {
   document.getElementById('checkCutting').checked = !!order.prepressChecklist?.cutting;
   document.getElementById('issueCategory').value = order.prepressIssueCategory || '';
   document.getElementById('prepressComment').value = order.prepressComment || order.prepressIssueComment || '';
-  updateApproveButtonVisibility();
 
   const issueBox = document.getElementById('lastIssueBox');
   if (order.prepressIssueComment) {
@@ -392,10 +630,59 @@ function renderDetail() {
     issueBox.style.display = 'none';
     issueBox.innerHTML = '';
   }
+  updatePrepressCollapsibleVisibility();
+  updateApproveButtonVisibility();
+  void renderPrepressHistoryPanel();
 }
 
 function getSelectedOrder() {
   return allOrders.find(o => o.id === selectedOrderId);
+}
+
+/** Pulse legacy: checklist + issue + comment only after explicit Start Review (active or paused workflow). */
+function legacyPrepressFormExpanded(order) {
+  const st = order?.status;
+  return st === 'prepress-active' || st === 'prepress-paused';
+}
+
+/** Legacy Pulse orders only: rebuild checklist/issue/comment block if user switched back from V3 proof-locked UI. */
+function ensureLegacyPrepressChecklistMarkup() {
+  if (currentV3TaskId) return;
+  const order = getSelectedOrder();
+  if (!order) return;
+  let cl = document.querySelector('#prepressReviewCollapsible .checklist');
+  if (!cl) return;
+  if (document.getElementById('checkDetails')) return;
+  cl.innerHTML = `
+    <label><input type="checkbox" id="checkDetails" onchange="updateApproveButtonVisibility()"><span>Ticket details verified</span></label>
+    <label><input type="checkbox" id="checkArtwork" onchange="updateApproveButtonVisibility()"><span>Artwork/files checked</span></label>
+    <label><input type="checkbox" id="checkSizing" onchange="updateApproveButtonVisibility()"><span>Size / quantity / imposition checked</span></label>
+    <label><input type="checkbox" id="checkCutting" onchange="updateApproveButtonVisibility()"><span>Die / cut method checked</span></label>`;
+  const icRow = document.getElementById('issueCategory')?.closest('.field');
+  const pcRow = document.getElementById('prepressComment')?.closest('.field');
+  if (icRow) icRow.style.display = '';
+  if (pcRow) pcRow.style.display = '';
+}
+
+/** Hide checklist/issue/comment until Start Review (Pulse: only prepress-active/paused). V3 proof-locked: always show checklist. Uses `hidden` so theme CSS can't override display:none. */
+function updatePrepressCollapsibleVisibility() {
+  const collapsible = document.getElementById('prepressReviewCollapsible');
+  if (!collapsible) return;
+
+  const order = getSelectedOrder();
+  const v3Active = !!currentV3TaskId;
+
+  if (v3Active) {
+    collapsible.removeAttribute('hidden');
+    return;
+  }
+
+  const expand = !!(order && legacyPrepressFormExpanded(order));
+  if (expand) {
+    collapsible.removeAttribute('hidden');
+  } else {
+    collapsible.setAttribute('hidden', '');
+  }
 }
 
 async function getFreshSelectedOrder() {
@@ -409,20 +696,24 @@ async function getFreshSelectedOrder() {
 }
 
 function updateApproveButtonVisibility() {
+  const order = getSelectedOrder();
+  const formExpanded = legacyPrepressFormExpanded(order);
   const allChecked = ['checkDetails','checkArtwork','checkSizing','checkCutting'].every(id => document.getElementById(id)?.checked);
   const hasIssue = (document.getElementById('issueCategory')?.value || '') !== '';
-  const order = getSelectedOrder();
-  const reviewStarted = ['prepress-active','prepress-paused','pending-account-manager','pending-review'].includes(order?.status);
   const isPaused = order?.status === 'prepress-paused';
   const isActive = order?.status === 'prepress-active';
   const btn = document.getElementById('btnApprove');
   const sendBackBtn = document.getElementById('btnSendBack');
   const startPauseBtn = document.getElementById('btnStartPause');
   const hint = document.getElementById('prepressActionHint');
-  if (btn) btn.style.display = (allChecked && !hasIssue && reviewStarted) ? '' : 'none';
-  // PUL-137 Fix #4: Hide the button entirely when review hasn't started (not just disable it).
-  if (sendBackBtn) sendBackBtn.style.display = reviewStarted ? '' : 'none';
-  if (hint) hint.style.display = reviewStarted ? 'none' : '';
+  const primaryBar = document.getElementById('prepressPrimaryBar');
+  const cardShell = document.getElementById('prepressReviewCardShell');
+  const v3 = !!currentV3TaskId;
+
+  if (btn) btn.style.display = (formExpanded && allChecked && !hasIssue) ? '' : 'none';
+  if (sendBackBtn) sendBackBtn.style.display = formExpanded ? '' : 'none';
+  if (hint) hint.style.display = formExpanded ? 'none' : '';
+
   if (startPauseBtn) {
     if (isActive) {
       startPauseBtn.textContent = '⏸ Pause Review';
@@ -433,6 +724,19 @@ function updateApproveButtonVisibility() {
     } else {
       startPauseBtn.textContent = '▶ Start Review';
       startPauseBtn.style.background = '#2563eb';
+    }
+  }
+
+  if (primaryBar && cardShell) {
+    if (v3) {
+      primaryBar.setAttribute('hidden', '');
+      cardShell.removeAttribute('hidden');
+    } else if (order && isPaused) {
+      primaryBar.removeAttribute('hidden');
+      cardShell.setAttribute('hidden', '');
+    } else if (order) {
+      primaryBar.removeAttribute('hidden');
+      cardShell.removeAttribute('hidden');
     }
   }
 }
@@ -511,21 +815,14 @@ async function sendBackToAccountManager() {
   }
   const patch = collectReviewPatch(order);
   const issueAt = new Date().toISOString();
-  const conversationHistory = Array.isArray(order.conversationHistory) ? [...order.conversationHistory] : [];
-  conversationHistory.push({
-    text: comment,
-    author: patch.prepressLastUpdatedBy,
-    timestamp: issueAt,
-    source: 'prepress',
-    category
-  });
   patch.status = 'pending-account-manager';
   patch.needsAccountManagerAction = true;
   patch.prepressIssueComment = comment;
   patch.prepressIssueCategory = category;
   patch.prepressIssueAt = issueAt;
   patch.prepressIssueBy = patch.prepressLastUpdatedBy;
-  patch.conversationHistory = conversationHistory;
+  patch.conversationHistory = [];
+  patch.notesLog = [];
   await updateOrder(order.id, patch);
   await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
   try {
@@ -562,12 +859,6 @@ async function approveToProduction() {
 // When proof is locked in proofs.html, a production_tasks row is created
 // with status='scheduled'. Prepress confirms receipt here through Pulse.
 // ============================================================
-
-let v3Tasks = [];
-let currentV3TaskId = null;
-let currentUser_prepress = null;
-
-// Called by auth.js after successful login
 window.__pulseAuthCallback = function(user) {
   currentUser_prepress = user;
   loadProductionTasks();
@@ -719,6 +1010,7 @@ function renderV3Detail() {
   if (stepsEl) stepsEl.innerHTML = '<div style="font-size:13px;color:#6b7280;">Workflow steps tracked via V3 Proof flow.</div>';
 
   renderV3SidePanel(task);
+  void renderPrepressHistoryPanel();
 }
 
 function renderV3SidePanel(task) {
@@ -772,6 +1064,8 @@ function renderV3SidePanel(task) {
   if (lastIssueEl) lastIssueEl.style.display = 'none';
   const actionHint = document.getElementById('prepressActionHint');
   if (actionHint) actionHint.style.display = 'none';
+  updatePrepressCollapsibleVisibility();
+  updateApproveButtonVisibility();
 }
 
 function v3UpdateActions() {
@@ -880,104 +1174,6 @@ function openArtworkLightbox(dataUrl) {
   w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;display:block;margin:auto;">`);
 }
 
-// ── Prepress History Log ────────────────────────────────────
-let _historyOpen = false;
-
-function toggleHistoryPanel() {
-  _historyOpen = !_historyOpen;
-  const body = document.getElementById('historyPanelBody');
-  const btn = document.getElementById('btnToggleHistory');
-  if (body) body.style.display = _historyOpen ? '' : 'none';
-  if (btn) btn.textContent = _historyOpen ? '▲ Hide' : '▼ Show';
-  if (_historyOpen) renderHistory();
-}
-
-async function renderHistory() {
-  const listEl = document.getElementById('historyList');
-  if (!listEl) return;
-  const dateFilter = document.getElementById('historyDateFilter')?.value || 'all';
-  const search = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
-
-  // Load all activity and all orders once
-  let activity = [];
-  let ordersMap = {};
-  try { activity = await getAllActivity(); } catch (e) {}
-  try {
-    const allOrds = await getAllOrders();
-    allOrds.forEach(o => { ordersMap[o.orderId] = o; });
-  } catch (e) {}
-
-  // Filter to tickets that have real prepress activity history
-  let events = activity.filter(a => ['prepress-approved','prepress-returned','prepress-resubmitted','prepress-started','prepress-paused'].includes(a.type));
-
-  // Date filter on event timestamp
-  const now = new Date();
-  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
-  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
-  const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate()-7);
-  const monthStart = new Date(todayStart); monthStart.setDate(monthStart.getDate()-30);
-
-  if (dateFilter === 'today') {
-    events = events.filter(a => new Date(a.timestamp) >= todayStart);
-  } else if (dateFilter === 'yesterday') {
-    events = events.filter(a => { const d = new Date(a.timestamp); return d >= yesterdayStart && d < todayStart; });
-  } else if (dateFilter === 'last-week') {
-    events = events.filter(a => new Date(a.timestamp) >= weekStart);
-  } else if (dateFilter === 'last-month') {
-    events = events.filter(a => new Date(a.timestamp) >= monthStart);
-  }
-
-  // Search filter
-  if (search) {
-    events = events.filter(a => {
-      const o = ordersMap[a.orderId] || {};
-      return [a.orderId, o.customerName || o.customer, o.productType, a.by, a.message].join(' ').toLowerCase().includes(search);
-    });
-  }
-
-  // Reduce to one row per order, using the newest prepress-related event
-  const newestByOrder = new Map();
-  events.forEach(evt => {
-    const prev = newestByOrder.get(evt.orderId);
-    if (!prev || new Date(evt.timestamp) > new Date(prev.timestamp)) newestByOrder.set(evt.orderId, evt);
-  });
-  events = Array.from(newestByOrder.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  if (!events.length) {
-    listEl.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">No approved tickets found.</div>';
-    return;
-  }
-
-  listEl.innerHTML = events.map(a => {
-    const o = ordersMap[a.orderId] || {};
-    // Gather the ping-pong audit: find all prepress-related activities for this order
-    const pingPong = activity
-      .filter(x => x.orderId === a.orderId && ['prepress-started','prepress-paused','prepress-returned','prepress-resubmitted','prepress-approved'].includes(x.type))
-      .sort((x, y) => new Date(x.timestamp) - new Date(y.timestamp));
-
-    const pingPongHtml = pingPong.length > 1 ? `
-      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9;">
-        ${pingPong.map(p => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px;">
-          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatDateTime(p.timestamp)}</span>
-          <span style="font-size:11px;color:${p.type==='prepress-returned'?'#b91c1c':p.type==='prepress-approved'?'#16a34a':'#64748b'};">${
-            p.type==='prepress-started'?'▶ Started':p.type==='prepress-paused'?'⏸ Paused':p.type==='prepress-returned'?'↩ Sent back':p.type==='prepress-resubmitted'?'↪ Resubmitted':'✅ Approved'
-          }</span>
-          ${p.by ? `<span style="font-size:10px;color:var(--text-muted);">by ${p.by}</span>` : ''}
-        </div>`).join('')}
-      </div>` : '';
-
-    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#f8fafc;">
-      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-        <span style="font-weight:700;color:#1d4ed8;">#${a.orderId}</span>
-        <span style="color:${a.type==='prepress-approved' ? '#16a34a' : a.type==='prepress-returned' ? '#b91c1c' : '#64748b'};font-weight:600;font-size:11px;">${a.type==='prepress-approved' ? '✅ Approved' : a.type==='prepress-returned' ? '↩ Sent Back' : a.type==='prepress-resubmitted' ? '↪ Resubmitted' : a.type==='prepress-started' ? '▶ Started' : '⏸ Activity'} ${formatDateTime(a.timestamp)}</span>
-      </div>
-      <div style="color:#374151;margin-top:3px;">${o.customerName || o.customer || '—'}</div>
-      <div style="color:var(--text-muted);font-size:11px;">${o.productType || '—'} · ${(o.quantity||0).toLocaleString()} pcs · Rep: ${o.accountManager||'—'}</div>
-      ${a.by ? `<div style="font-size:11px;color:var(--text-muted);">Approved by: ${a.by}</div>` : ''}
-      ${pingPongHtml}
-    </div>`;
-  }).join('');
-}
 </script>
 </body>
 </html>

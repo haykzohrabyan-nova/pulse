@@ -16,17 +16,17 @@ const ROLE_CONFIG = {
   'david-review': {
     label: 'David Review',
     color: '#2563eb',
-    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','machine-issues','admin'],
+    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','machine-issues','organisation','admin'],
     canEditAllTickets: false,
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','dies','machines'],
+    adminTabs: ['personnel','machines','dies','organisation','products','roles'],
   },
   supervisor: {
     label: 'Supervisor',
     color: '#0891b2',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads'],
+    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads','organisation'],
     canEditAllTickets: true,
     canViewAdmin: false,
     canViewProduction: true,
@@ -35,17 +35,17 @@ const ROLE_CONFIG = {
   'production-manager': {
     label: 'Production Manager',
     color: '#16a34a',
-    pages: ['dashboard','prepress','production-manager','operator-terminal','qc-checkout','admin'],
+    pages: ['dashboard','prepress','production-manager','operator-terminal','qc-checkout','organisation','admin'],
     canEditAllTickets: false,
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['dies','inventory'],
+    adminTabs: ['machines','dies','organisation','products','inventory'],
   },
   'account-manager': {
     label: 'Account Manager',
     color: '#d97706',
-    pages: ['dashboard','sales-dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads'],
+    pages: ['dashboard','sales-dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads','sdr-pipeline-portal'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: true,
@@ -55,7 +55,7 @@ const ROLE_CONFIG = {
   sdr: {
     label: 'Digital SDR',
     color: '#7c3aed',
-    pages: ['dashboard','sdr-dashboard','leads','instagram-leads'],
+    pages: ['dashboard','sdr-dashboard','sdr-pipeline-portal','leads','instagram-leads'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -64,7 +64,7 @@ const ROLE_CONFIG = {
   'walkin-front-desk': {
     label: 'Walk-In / Front Desk',
     color: '#0891b2',
-    pages: ['dashboard','sdr-dashboard','leads','orders'],
+    pages: ['dashboard','sdr-dashboard','sdr-pipeline-portal','leads','orders'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -91,12 +91,12 @@ const ROLE_CONFIG = {
   'ops-manager': {
     label: 'Operations Manager',
     color: '#dc2626',
-    pages: ['dashboard','ops-manager','jm-dashboard','leads','quotes','orders','prepress','production-manager','qc-checkout','shipping','rep-tasks','proofs','machine-issues','application-dept','admin'],
+    pages: ['dashboard','ops-manager','jm-dashboard','leads','quotes','orders','prepress','production-manager','qc-checkout','shipping','rep-tasks','proofs','machine-issues','application-dept','organisation','admin','sdr-pipeline-portal'],
     canEditAllTickets: true,
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','dies','machines','inventory'],
+    adminTabs: ['personnel','machines','dies','organisation','products','inventory'],
   },
   operator: {
     label: 'Operator',
@@ -144,6 +144,7 @@ function _supaActive() {
 
 // Derive email from display name for supabase.auth.signInWithPassword
 // "Hayk Zohrabyan" → "hayk@bazaar-admin.com"
+// "Admin"          → "admin@bazaar-admin.com"
 // "QC Inspector"   → "qc@bazaar-admin.com"
 function _getUserEmail(displayName) {
   const first = String(displayName || '').trim().split(/\s+/)[0].toLowerCase();
@@ -155,6 +156,7 @@ function _getUserEmail(displayName) {
 // each person rotates it, but gating still happens via the email lookup so the
 // UI is consistent with the Supabase form.
 const LOCAL_EMAIL_USERS = {
+  'admin@bazaar-admin.com':    { name: 'Admin',            role: 'admin' },
   'hayk@bazaar-admin.com':     { name: 'Hayk Zohrabyan',   role: 'admin' },
   'david@bazaar-admin.com':    { name: 'David Zargaryan',  role: 'david-review' },
   'mauricio@bazaar-admin.com': { name: 'Mauricio',         role: 'supervisor' },
@@ -202,10 +204,31 @@ function getCurrentUser() { return getSession(); }
 function getCurrentRole() { return getSession()?.role || null; }
 function getCurrentName() { return getSession()?.name || null; }
 
+// ── Role permission overrides (written by admin, cached in localStorage) ──
+// Loaded once synchronously so canAccessPage stays synchronous.
+const PULSE_ROLE_OVERRIDES_KEY = 'pulse_role_overrides';
+let _authRoleOverrides = {};
+(function _loadRoleOverrides() {
+  try {
+    const raw = localStorage.getItem(PULSE_ROLE_OVERRIDES_KEY);
+    if (raw) _authRoleOverrides = JSON.parse(raw) || {};
+  } catch (_) {}
+})();
+
 // ── Permission helpers ─────────────────────────────────────
 function canAccessPage(pageId) {
   const role = getCurrentRole();
   if (!role) return false;
+
+  // Admin always has full access — never block via overrides
+  if (role === 'admin') return true;
+
+  // Apply saved overrides (non-empty pages array only)
+  const override = _authRoleOverrides[role];
+  if (override && Array.isArray(override.pages) && override.pages.length > 0) {
+    return override.pages.includes(pageId);
+  }
+
   const config = ROLE_CONFIG[role];
   if (!config) return false;
   if (config.pages.includes('all')) return true;
@@ -232,6 +255,7 @@ function isAdminOrSupervisor() {
 }
 
 const EXTRA_AUTH_USERS = [
+  { name: 'Admin', role: 'admin', notes: '/admin' },
   { name: 'David Zargaryan', role: 'david-review', notes: 'David review access' },
   // QC Inspector — dedicated production QC login (name TBD, pending Hayk confirmation)
   { name: 'QC Inspector', role: 'qc', notes: 'Dedicated QC role — update name once Hayk confirms person' },
@@ -265,193 +289,139 @@ function getDefaultPageForRole(role) {
   return `${first}.html`;
 }
 
-function injectLoginModal() {
+const _inputStyle = (accent) => `
+  width:100%;
+  padding:11px 13px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  font-size:14px;
+  font-family:inherit;
+  color:#0f172a;
+  background:#ffffff;
+  box-sizing:border-box;
+  outline:none;
+  transition:border-color 0.15s, box-shadow 0.15s;
+`;
+const _labelStyle = `
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  color:#334155;
+  margin-bottom:6px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+`;
+
+async function injectLoginModal() {
   const accent = '#2563eb';
+
+  // Load personnel for the dropdown — primary source is Admin > Personnel (same DB)
+  let people = [];
+  try {
+    if (typeof getAllPersonnel === 'function') {
+      people = (await getAllPersonnel()).filter(p => p.active !== false);
+    }
+  } catch (_) {}
+
+  // Only fall back to static sources when the Personnel DB has no records yet (first-time setup)
+  if (!people.length) {
+    if (typeof OPERATOR_PROFILES !== 'undefined') {
+      Object.entries(OPERATOR_PROFILES).forEach(([name, p]) => {
+        if (!people.some(x => x.name === name)) {
+          people.push({ name, role: p.role, userId: String(p.userId || '') });
+        }
+      });
+    }
+    if (typeof EXTRA_AUTH_USERS !== 'undefined') {
+      EXTRA_AUTH_USERS.forEach(u => {
+        if (!people.some(x => x.name === u.name)) {
+          people.push({ name: u.name, role: u.role, userId: '' });
+        }
+      });
+    }
+    if (!people.length) {
+      people = Object.values(LOCAL_EMAIL_USERS).map(u => ({ name: u.name, role: u.role, userId: '' }));
+    }
+  }
+  people.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  const options = people.map(p =>
+    `<option value="${p.name.replace(/"/g, '&quot;')}">${p.name}</option>`
+  ).join('');
+
   const overlay = document.createElement('div');
   overlay.id = 'loginOverlay';
   overlay.style.cssText = [
-    'position:fixed',
-    'inset:0',
-    'background:#f3f4f6',
-    'z-index:99999',
-    'display:flex',
-    'align-items:center',
-    'justify-content:center',
-    'padding:24px',
-    'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif',
+    'position:fixed', 'inset:0', 'background:#f3f4f6', 'z-index:99999',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'padding:24px', 'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif',
   ].join(';') + ';';
+
   overlay.innerHTML = `
     <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();" style="
-      background:#ffffff;
-      width:100%;
-      max-width:420px;
+      background:#ffffff; width:100%; max-width:420px;
       border-radius:16px;
       box-shadow:0 10px 30px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
-      padding:36px 32px 28px;
-      box-sizing:border-box;
+      padding:36px 32px 28px; box-sizing:border-box;
     ">
       <div style="display:flex;justify-content:center;margin-bottom:20px;">
         <img src="pulse-logo.png" alt="Pulse" style="height:40px;display:block;" onerror="this.style.display='none';">
       </div>
-      <h1 style="
-        margin:0 0 6px;
-        text-align:center;
-        font-size:22px;
-        font-weight:700;
-        color:#0f172a;
-        letter-spacing:-0.01em;
-      ">Sign in to Pulse</h1>
-      <p style="
-        margin:0 0 24px;
-        text-align:center;
-        font-size:13px;
-        color:#64748b;
-      ">Use your work email and password.</p>
+      <h1 style="margin:0 0 6px;text-align:center;font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">
+        Sign in to Pulse
+      </h1>
+      <p style="margin:0 0 24px;text-align:center;font-size:13px;color:#64748b;">
+        Select your name and enter your User ID.
+      </p>
 
-      <label for="loginEmail" style="
-        display:block;
-        font-size:12px;
-        font-weight:600;
-        color:#334155;
-        margin-bottom:6px;
-      ">Email</label>
+      <label style="${_labelStyle}">Name</label>
+      <select id="loginName" style="${_inputStyle(accent)}cursor:pointer;"
+        onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
+        onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+      >
+        <option value="">— Select your name —</option>
+        ${options}
+      </select>
+
+      <label style="${_labelStyle}margin-top:16px;">User ID</label>
       <input
-        id="loginEmail"
-        type="email"
-        autocomplete="username"
-        autocapitalize="none"
-        autocorrect="off"
-        spellcheck="false"
-        placeholder="name@bazaar-admin.com"
-        style="
-          width:100%;
-          padding:11px 13px;
-          border:1px solid #d1d5db;
-          border-radius:10px;
-          font-size:14px;
-          font-family:inherit;
-          color:#0f172a;
-          background:#ffffff;
-          box-sizing:border-box;
-          outline:none;
-          transition:border-color 0.15s, box-shadow 0.15s;
-        "
+        id="loginUserId"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="Enter your User ID"
+        style="${_inputStyle(accent)}"
         onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
         onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
       >
 
-      <label for="loginPassword" style="
-        display:block;
-        font-size:12px;
-        font-weight:600;
-        color:#334155;
-        margin:16px 0 6px;
-      ">Password</label>
-      <div style="position:relative;">
-        <input
-          id="loginPassword"
-          type="password"
-          autocomplete="current-password"
-          placeholder="Enter your password"
-          style="
-            width:100%;
-            padding:11px 44px 11px 13px;
-            border:1px solid #d1d5db;
-            border-radius:10px;
-            font-size:14px;
-            font-family:inherit;
-            color:#0f172a;
-            background:#ffffff;
-            box-sizing:border-box;
-            outline:none;
-            transition:border-color 0.15s, box-shadow 0.15s;
-          "
-          onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
-          onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
-        >
-        <button
-          type="button"
-          id="loginPasswordToggle"
-          onclick="togglePulsePassword()"
-          aria-label="Show password"
-          style="
-            position:absolute;
-            top:50%;
-            right:8px;
-            transform:translateY(-50%);
-            background:transparent;
-            border:none;
-            color:#64748b;
-            font-size:12px;
-            font-weight:600;
-            cursor:pointer;
-            padding:6px 8px;
-            border-radius:6px;
-          "
-        >Show</button>
-      </div>
-
       <div id="loginError" role="alert" style="
-        display:none;
-        margin-top:14px;
-        padding:9px 12px;
-        background:#fef2f2;
-        border:1px solid #fecaca;
-        color:#b91c1c;
-        border-radius:8px;
-        font-size:13px;
+        display:none; margin-top:14px; padding:9px 12px;
+        background:#fef2f2; border:1px solid #fecaca;
+        color:#b91c1c; border-radius:8px; font-size:13px;
       "></div>
 
-      <button
-        id="loginSubmitBtn"
-        type="submit"
-        style="
-          width:100%;
-          margin-top:20px;
-          padding:12px 16px;
-          background:${accent};
-          color:#ffffff;
-          border:none;
-          border-radius:10px;
-          font-size:14px;
-          font-weight:600;
-          font-family:inherit;
-          cursor:pointer;
-          transition:background 0.15s, opacity 0.15s;
-        "
+      <button id="loginSubmitBtn" type="submit" style="
+        width:100%; margin-top:20px; padding:12px 16px;
+        background:${accent}; color:#ffffff; border:none;
+        border-radius:10px; font-size:14px; font-weight:600;
+        font-family:inherit; cursor:pointer;
+        transition:background 0.15s, opacity 0.15s;
+      "
         onmouseover="this.style.background='#1d4ed8';"
         onmouseout="this.style.background='${accent}';"
       >Sign In</button>
 
-      <p style="
-        margin:18px 0 0;
-        text-align:center;
-        font-size:12px;
-        color:#94a3b8;
-      ">Contact your admin if you need access.</p>
+      <p style="margin:18px 0 0;text-align:center;font-size:12px;color:#94a3b8;">
+        Contact your admin if you need access.
+      </p>
     </form>
   `;
   document.body.appendChild(overlay);
-
-  // Focus email field on open
-  const emailInput = document.getElementById('loginEmail');
-  if (emailInput) emailInput.focus();
+  const nameSelect = document.getElementById('loginName');
+  if (nameSelect) nameSelect.focus();
 }
 
-function togglePulsePassword() {
-  const input = document.getElementById('loginPassword');
-  const btn = document.getElementById('loginPasswordToggle');
-  if (!input || !btn) return;
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = 'Hide';
-    btn.setAttribute('aria-label', 'Hide password');
-  } else {
-    input.type = 'password';
-    btn.textContent = 'Show';
-    btn.setAttribute('aria-label', 'Show password');
-  }
-}
 
 function _showLoginError(message) {
   const err = document.getElementById('loginError');
@@ -469,18 +439,11 @@ function _clearLoginError() {
 
 async function submitLogin() {
   _clearLoginError();
-  const emailRaw = document.getElementById('loginEmail')?.value || '';
-  const password = document.getElementById('loginPassword')?.value || '';
-  const email = emailRaw.trim().toLowerCase();
+  const selectedName = (document.getElementById('loginName')?.value || '').trim();
+  const enteredId   = (document.getElementById('loginUserId')?.value || '').trim();
 
-  if (!email || !password) {
-    _showLoginError('Enter your email and password.');
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    _showLoginError('Enter a valid email address.');
-    return;
-  }
+  if (!selectedName) { _showLoginError('Please select your name.'); return; }
+  if (!enteredId)    { _showLoginError('Please enter your User ID.'); return; }
 
   const btn = document.getElementById('loginSubmitBtn');
   const setLoading = (loading) => {
@@ -490,42 +453,72 @@ async function submitLogin() {
     btn.textContent = loading ? 'Signing in…' : 'Sign In';
   };
 
-  let resolvedName = null;
-  let resolvedRole = null;
+  // ── Validate against personnel records ────────────────
+  let personRecord = null;
+  let allPersonnel = [];
+  try {
+    if (typeof getAllPersonnel === 'function') {
+      allPersonnel = await getAllPersonnel();
+    }
+  } catch (_) {}
+
+  if (allPersonnel.length) {
+    const byName = allPersonnel.find(p => p.name === selectedName);
+    if (byName) {
+      const storedId = String(byName.userId || '').trim();
+      if (!storedId) {
+        // No userId set yet — allow login and auto-save the entered ID
+        personRecord = { ...byName, userId: enteredId };
+        try { await updatePersonnel(byName.id, { ...byName, userId: enteredId }); } catch (_) {}
+      } else if (storedId === enteredId) {
+        personRecord = byName;
+      }
+    }
+  }
+
+  // Fallback: OPERATOR_PROFILES (static, always available)
+  if (!personRecord && typeof OPERATOR_PROFILES !== 'undefined') {
+    const profile = OPERATOR_PROFILES[selectedName];
+    if (profile) {
+      const storedId = String(profile.userId || '').trim();
+      if (!storedId || storedId === enteredId) {
+        personRecord = { name: selectedName, role: profile.role, userId: enteredId };
+      }
+    }
+  }
+
+  // Fallback: LOCAL_EMAIL_USERS for admin accounts (Hayk, David, etc.)
+  if (!personRecord) {
+    const localUser = Object.values(LOCAL_EMAIL_USERS).find(u => u.name === selectedName);
+    if (localUser && (enteredId === LOCAL_DEFAULT_PASSWORD || !enteredId)) {
+      personRecord = { name: localUser.name, role: localUser.role, userId: enteredId };
+    }
+  }
+
+  if (!personRecord) {
+    _showLoginError('Incorrect User ID. Contact your admin if you need help.');
+    return;
+  }
+
+  let resolvedName = personRecord.name;
+  let resolvedRole = String(personRecord.role || 'operator').replace(/_/g, '-');
 
   if (_supaActive()) {
-    // ── Supabase real auth ────────────────────────────────
+    // ── Supabase: sign in with derived email + userId as password ──
     setLoading(true);
     try {
-      await window.supabaseSignIn(email, password);
+      const email = _getUserEmail(selectedName);
+      await window.supabaseSignIn(email, enteredId);
       const profile = await window.supabaseGetProfile();
-      if (!profile) throw new Error('Profile not found — ask admin to set up your account.');
-      // DB stores role with underscores; ROLE_CONFIG uses hyphens.
-      resolvedRole = String(profile.role || 'operator').replace(/_/g, '-');
-      resolvedName = profile.display_name || email.split('@')[0];
-    } catch (e) {
+      if (profile) {
+        resolvedRole = String(profile.role || resolvedRole).replace(/_/g, '-');
+        resolvedName = profile.display_name || resolvedName;
+      }
+    } catch (_) {
+      // Personnel record matched — allow login even if Supabase auth fails
+    } finally {
       setLoading(false);
-      const msg = e?.message || '';
-      _showLoginError(
-        /invalid|credentials|password|email/i.test(msg)
-          ? 'Incorrect email or password.'
-          : (msg || 'Sign-in failed. Try again.')
-      );
-      return;
     }
-  } else {
-    // ── Local mode: email → role/name lookup + shared password ──
-    const user = LOCAL_EMAIL_USERS[email];
-    if (!user) {
-      _showLoginError('Incorrect email or password.');
-      return;
-    }
-    if (password !== LOCAL_DEFAULT_PASSWORD) {
-      _showLoginError('Incorrect email or password.');
-      return;
-    }
-    resolvedName = user.name;
-    resolvedRole = user.role;
   }
 
   setSession(resolvedName, resolvedRole);
@@ -555,17 +548,25 @@ async function submitLogin() {
 function injectUserBadge() {
   const session = getSession();
   if (!session) return;
+  const existing = document.getElementById('userBadge');
+  if (existing) existing.remove();
   const cfg = ROLE_CONFIG[session.role] || { label: session.role, color: '#6b7280' };
   const badge = document.createElement('div');
   badge.id = 'userBadge';
-  badge.style.cssText = 'position:fixed;top:10px;right:12px;z-index:9999;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);font-size:12px;';
+  badge.className = 'user-badge';
   badge.innerHTML = `
-    <span style="width:8px;height:8px;border-radius:50%;background:${cfg.color};flex-shrink:0;"></span>
-    <span style="font-weight:600;color:#1e293b;">${session.name.split(' ')[0]}</span>
-    <span style="color:${cfg.color};font-size:10px;font-weight:600;">${cfg.label.toUpperCase()}</span>
-    <button onclick="logoutUser()" style="border:none;background:none;color:#9ca3af;cursor:pointer;font-size:11px;padding:0 0 0 4px;" title="Log out">✕</button>
+    <span class="user-badge-dot" style="background:${cfg.color};"></span>
+    <span class="user-badge-name">${session.name.split(' ')[0]}</span>
+    <span class="user-badge-role" style="color:${cfg.color};">${cfg.label.toUpperCase()}</span>
+    <button class="user-badge-logout" onclick="logoutUser()" title="Log out">✕</button>
   `;
-  document.body.appendChild(badge);
+  const userSlot = document.getElementById('topNavUserSlot');
+  if (userSlot) userSlot.appendChild(badge);
+  else {
+    const navLinks = document.querySelector('.top-nav .nav-links');
+    if (navLinks) navLinks.appendChild(badge);
+    else document.body.appendChild(badge);
+  }
 }
 
 async function logoutUser() {
@@ -600,6 +601,13 @@ function applyRoleAccess(pageId) {
     const targetPage = el.dataset.pageId;
     const canSee = allowedPages.includes('all') || allowedPages.includes(targetPage);
     el.style.display = canSee ? '' : 'none';
+  });
+
+  // Organisation: top-level for roles without Admin menu; under Admin dropdown when canViewAdmin
+  document.querySelectorAll('.nav-organisation-standalone').forEach(el => {
+    const canSee = allowedPages.includes('all') || allowedPages.includes('organisation');
+    const showStandalone = canSee && !config.canViewAdmin;
+    el.style.display = showStandalone ? '' : 'none';
   });
 
   if (pageId === 'admin') {
@@ -646,6 +654,30 @@ function applyTicketEditLock(ticket) {
 }
 
 // ── Init — called on every page load ─────────────────────
+// Apply any saved role-permission overrides to ROLE_CONFIG so access checks use the latest settings.
+// Reads from localStorage (written by admin "Save Changes") for instant, sync access.
+function _applyRoleOverrides() {
+  try {
+    const raw = localStorage.getItem('pulse_role_overrides');
+    if (!raw) return;
+    const overrides = JSON.parse(raw);
+    const allPageKeys = ['dashboard','job-ticket','pricing-calculator','quotes','orders','invoices',
+      'prepress','production-manager','operator-terminal','qc-checkout','machine-issues',
+      'application-dept','shipping','proofs','design-task','rep-tasks','leads','instagram-leads',
+      'sales-dashboard','jm-dashboard','sdr-dashboard','sdr-pipeline-portal','ops-manager',
+      'organisation','admin'];
+    Object.entries(overrides).forEach(([role, ov]) => {
+      if (!ROLE_CONFIG[role]) return;
+      if (role === 'admin') return; // admin always retains pages:['all'] — never override
+      if (Array.isArray(ov.pages) && ov.pages.length > 0) ROLE_CONFIG[role].pages = [...ov.pages];
+      ['canEditAllTickets','canViewAdmin','canViewProduction','canViewOperator'].forEach(k => {
+        if (k in ov) ROLE_CONFIG[role][k] = ov[k];
+      });
+    });
+  } catch (_) {}
+}
+_applyRoleOverrides();
+
 async function initAuth(pageId) {
   document.body.dataset.page = pageId;
 

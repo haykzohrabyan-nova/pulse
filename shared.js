@@ -3266,12 +3266,16 @@ function addOrder(order) {
   order.workflowSteps = order.workflowSteps || [];
   order.currentStep = order.currentStep ?? 0;
   order.status = order.status || 'new';
+  order.notesLog = [];
+  order.conversationHistory = [];
   return _add('orders', order);
 }
 
 function getOrder(id) { return _get('orders', id); }
 function getAllOrders() { return _getAll('orders'); }
-function updateOrder(id, changes) { return _update('orders', id, changes); }
+function updateOrder(id, changes) {
+  return _update('orders', id, { ...(changes || {}), notesLog: [], conversationHistory: [] });
+}
 
 // ── Sub-ticket helpers ────────────────────────────────────
 async function getSubTickets(parentOrderId) {
@@ -3517,24 +3521,82 @@ function getAllDevices() { return _getAll('devices'); }
 function updateDevice(id, changes) { return _update('devices', id, changes); }
 function deleteDevice(id) { return _delete('devices', id); }
 
-// ── Activity Log ───────────────────────────────────────────
+// ── Activity Log (disabled — order/Audit history removed) ──
 
-function addActivity(log) {
-  log.timestamp = log.timestamp || new Date().toISOString();
-  return _add('activity_log', log);
+function addActivity(_log) {
+  return Promise.resolve(null);
 }
 
-function getActivityLog(orderId) {
-  return openDB().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction('activity_log', 'readonly');
-    const idx = tx.objectStore('activity_log').index('orderId');
-    const req = idx.getAll(orderId);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  }));
+function getActivityLog(_orderId) {
+  return Promise.resolve([]);
 }
 
-function getAllActivity() { return _getAll('activity_log'); }
+function getAllActivity() {
+  return Promise.resolve([]);
+}
+
+/**
+ * Erase all Pulse-owned data in this browser: every IndexedDB store in BazaarPrintDB,
+ * localStorage keys starting with pulse_ plus admin-next state, Supabase-js auth tokens (sb-*-auth-token),
+ * and session keys pulse_session / op_operator. Sets pulse_seed_demo=0.
+ * Does not modify your Supabase/Postgres rows — apply supabase/migrations/016_clear_orders_and_audit.sql for that.
+ */
+function wipeAllPulseBrowserData() {
+  try {
+    localStorage.setItem('pulse_seed_demo', '0');
+  } catch (e) {}
+
+  const lsDrop = [];
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (
+      k.startsWith('pulse_') ||
+      k === 'bazaar_admin_next_state_v4' ||
+      (k.startsWith('sb-') && k.includes('auth-token'))
+    ) {
+      lsDrop.push(k);
+    }
+  }
+  lsDrop.forEach(k => {
+    try {
+      localStorage.removeItem(k);
+    } catch (e) {}
+  });
+
+  ['pulse_session', 'op_operator'].forEach(k => {
+    try {
+      sessionStorage.removeItem(k);
+    } catch (e) {}
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    req.onsuccess = () => {
+      const db = req.result;
+      const names = Array.from(db.objectStoreNames);
+      if (names.length === 0) {
+        db.close();
+        resolve(true);
+        return;
+      }
+      const tx = db.transaction(names, 'readwrite');
+      names.forEach(n => tx.objectStore(n).clear());
+      tx.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      tx.onerror = () => reject(tx.error || new Error('IndexedDB clear failed'));
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB clear aborted'));
+    };
+  });
+}
+
+/** @deprecated Use wipeAllPulseBrowserData — kept for backwards compatibility */
+function clearLocalPulseOrdersAndHistory() {
+  return wipeAllPulseBrowserData();
+}
 
 // ── Config (for admin variable overrides) ──────────────────
 
@@ -4124,6 +4186,66 @@ function formatDuration(ms) {
   return `${h}h ${m}m`;
 }
 
+/** Creation instant for queue filters — uses createdAt / created_at only (never due date). */
+function getPulseOrderCreatedDate(o) {
+  const raw = o?.createdAt ?? o?.created_at;
+  if (raw == null || raw === '') return null;
+  const d = raw instanceof Date ? new Date(raw.getTime()) : new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Parse YYYY-MM-DD from <input type="date"> as local midnight (avoids UTC off-by-one). */
+function parsePulseLocalDateYmd(ymd) {
+  if (!ymd || typeof ymd !== 'string') return null;
+  const parts = ymd.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+/**
+ * Sidebar "created" date filter for Prepress / Production queues.
+ * dateFilter: 'all' | 'today' | 'yesterday' | 'last-week' | 'last-month' | 'custom'
+ * Last week = previous ISO week Mon 00:00 — Sun 23:59:59. Last month = full previous calendar month.
+ */
+function pulseOrderMatchesCreatedDateFilter(o, dateFilter, customDateYmd) {
+  if (!dateFilter || dateFilter === 'all') return true;
+  const created = getPulseOrderCreatedDate(o);
+  if (!created) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const dowMon0 = (today.getDay() + 6) % 7;
+  const thisMonday = new Date(today);
+  thisMonday.setDate(thisMonday.getDate() - dowMon0);
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setDate(lastMonday.getDate() - 7);
+  const lastSundayEnd = new Date(lastMonday);
+  lastSundayEnd.setDate(lastSundayEnd.getDate() + 6);
+  lastSundayEnd.setHours(23, 59, 59, 999);
+
+  const monthStartCurr = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthStartPrev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+  if (dateFilter === 'today') return created >= today && created < tomorrow;
+  if (dateFilter === 'yesterday') return created >= yesterday && created < today;
+  if (dateFilter === 'last-week') return created >= lastMonday && created <= lastSundayEnd;
+  if (dateFilter === 'last-month') return created >= monthStartPrev && created < monthStartCurr;
+  if (dateFilter === 'custom' && customDateYmd) {
+    const cStart = parsePulseLocalDateYmd(customDateYmd);
+    if (!cStart) return false;
+    const cEnd = new Date(cStart);
+    cEnd.setHours(23, 59, 59, 999);
+    return created >= cStart && created <= cEnd;
+  }
+  return true;
+}
+
 function formatDateTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -4265,16 +4387,70 @@ const THEME_CSS = `
 
   /* Navigation */
   .top-nav {
-    display: flex; align-items: flex-start; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     gap: 16px;
-    padding: 12px 24px; background: #fff; border-bottom: 2px solid #e5e7eb;
+    flex-wrap: wrap;
+    padding: 10px 24px; background: #fff; border-bottom: 2px solid #e5e7eb;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .top-nav h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+  .top-nav-leading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .top-nav-brand { flex-shrink: 0; display: flex; align-items: center; }
+  .top-nav-pricing-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    line-height: 1.2;
+    border: 1px solid #86efac;
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #047857;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    letter-spacing: 0.01em;
+  }
+  .top-nav-pricing-btn:hover {
+    background: linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%);
+    border-color: #4ade80;
+    color: #065f46;
+  }
+  .top-nav-pricing-btn.active {
+    background: linear-gradient(180deg, #bbf7d0 0%, #86efac 100%);
+    border-color: #22c55e;
+    color: #14532d;
+    box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+  }
+  .top-nav-logo-link {
+    display: inline-flex; align-items: center; gap: 10px;
+    text-decoration: none; color: inherit;
+  }
+  .top-nav-logo-link:hover { opacity: 0.92; }
+  .top-nav-logo-img {
+    height: 48px; width: auto; display: block;
+  }
+  .top-nav-version {
+    display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
+  }
   .top-nav .nav-links {
     display: flex; flex-wrap: wrap; gap: 8px 14px;
     align-items: center; flex: 1 1 auto; min-width: 0;
     max-width: 100%;
+    justify-content: flex-end;
+    overflow: visible;
   }
   .top-nav .nav-links a {
     font-size: 13px; color: var(--text-muted);
@@ -4286,9 +4462,108 @@ const THEME_CSS = `
     color: var(--accent); background: #e0edff; text-decoration: none;
     border-color: #bfdbfe;
   }
+  .nav-admin-submenu {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+  }
+  .nav-admin-submenu .nav-dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-muted);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  .nav-admin-submenu .nav-dropdown-toggle:hover,
+  .nav-admin-submenu:focus-within .nav-dropdown-toggle {
+    color: var(--accent);
+    background: #e0edff;
+    border-color: #bfdbfe;
+  }
+  .nav-admin-submenu .nav-dropdown-toggle.active {
+    color: var(--accent);
+    background: #e0edff;
+    text-decoration: none;
+    border-color: #bfdbfe;
+  }
+  .nav-admin-submenu .nav-dropdown-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 200px;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    z-index: 2000;
+  }
+  .nav-admin-submenu:hover .nav-dropdown-panel,
+  .nav-admin-submenu:focus-within .nav-dropdown-panel {
+    display: flex;
+  }
+  .nav-admin-submenu .nav-dropdown-panel .nav-link {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: flex-start;
+  }
+  .top-nav-user-slot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+  }
+  .top-nav-user-slot:empty { display: none; }
+  .top-nav .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 29px;
+    padding: 0 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    white-space: nowrap;
+  }
+  .top-nav .user-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .top-nav .user-badge-name { font-weight: 600; }
+  .top-nav .user-badge-role {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .top-nav .user-badge-logout {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0 0 0 2px;
+  }
   @media (max-width: 1100px) {
-    .top-nav { flex-wrap: wrap; }
-    .top-nav .nav-links { width: 100%; }
+    .top-nav .nav-links { width: 100%; justify-content: flex-start; }
   }
 
   /* Modal */
@@ -4325,6 +4600,8 @@ const THEME_CSS = `
   .rt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
 
   /* ── P4-C: Breadcrumb navigation ── */
+  #breadcrumb:empty,
+  #op-breadcrumb:empty { display: none; }
   .breadcrumb {
     display: flex; align-items: center; gap: 4px;
     padding: 6px 20px; background: var(--bg); border-bottom: 1px solid var(--border);
@@ -4370,13 +4647,6 @@ const THEME_CSS = `
   .note-type-badge.CRITICAL { background:#fde8e8; color:#b91c1c; }
   .note-type-badge.INSTRUCTIONS { background:#fef3cd; color:#92600a; }
 
-  /* ── Preview build indicator ── */
-  .preview-build-tag {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:3px 10px; border-radius:999px;
-    background:#fef9c3; border:1px solid #fde047; color:#854d0e;
-    font-size:11px; font-weight:700; letter-spacing:0.02em;
-  }
 `;
 
 function injectThemeCSS() {
@@ -4401,7 +4671,6 @@ function renderNav(activePage) {
   const pages = [
     { id: 'dashboard',          label: '\uD83C\uDFE0 Dashboard',         href: 'dashboard.html',           access: 'all' },
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
-    { id: 'pricing-calculator', label: '\uD83D\uDCB2 Pricing',            href: 'pricing-calculator.html',  access: 'all' },
     { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
     { id: 'orders',             label: '\uD83D\uDCE6 Orders',             href: 'orders.html',              access: 'all' },
     { id: 'invoices',           label: '\uD83D\uDCCB Invoices',           href: 'invoice.html',             access: 'all' },
@@ -4415,25 +4684,37 @@ function renderNav(activePage) {
     { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
     { id: 'leads',              label: '\uD83D\uDCCB Leads',              href: 'leads.html',               access: 'all' },
     { id: 'sdr-dashboard',      label: '\uD83C\uDFAF SDR Inbox',          href: 'sdr-dashboard.html',       access: 'all' },
+    { id: 'sdr-pipeline-portal', label: '\uD83D\uDDA5\uFE0F SDR Pipeline', href: 'sdr-pipeline-portal.html', access: 'all' },
     { id: 'walkin-dashboard',   label: '\uD83D\uDEAA Walk-In',            href: 'walkin-dashboard.html',    access: 'all' },
     { id: 'proofs',             label: '\uD83D\uDDBC\uFE0F Proofs',             href: 'proofs.html',              access: 'all' },
     { id: 'design-task',       label: '\uD83C\uDFA8 Design Tasks',       href: 'design-task.html',         access: 'all' },
     { id: 'instagram-leads',    label: '\uD83D\uDCF8 Instagram',           href: 'instagram-leads.html',     access: 'all' },
-    { id: 'machine-issues',     label: '\uD83D\uDD27 Machines',           href: 'machine-issues.html',      access: 'production' },
+    { id: 'machine-issues',     label: '\uD83D\uDD27 Report Issue',       href: 'machine-issues.html',      access: 'production' },
     { id: 'ops-manager',        label: '\uD83C\uDFC1 Ops Manager',        href: 'ops-manager.html',         access: 'admin' },
-    { id: 'admin',              label: '\u2699\uFE0F Admin',              href: 'admin.html',               access: 'admin' },
   ];
   const accessClass = { 'all': '', 'admin': 'nav-admin-only', 'production': 'nav-production-only', 'operator': 'nav-operator-only' };
+  const adminMenuActive = activePage === 'admin';
   return `
     <nav class="top-nav">
-      <a href="dashboard.html" style="display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;gap:6px;">
-        <img src="pulse-logo.png" alt="Pulse" style="height:88px;width:auto;display:block;">
-        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:0.02em;">${PULSE_UI_VERSION}</span>
-        <span class="preview-build-tag">🔍 UX Preview</span>
-      </a>
+      <div class="top-nav-leading">
+        <div class="top-nav-brand">
+          <a href="dashboard.html" class="top-nav-logo-link" title="Pulse ${PULSE_UI_VERSION}">
+            <img src="pulse-logo.png" alt="Pulse" class="top-nav-logo-img">
+            <span class="top-nav-version">${PULSE_UI_VERSION}</span>
+          </a>
+        </div>
+        <a href="${safeHref('pricing-calculator.html')}" data-page-id="pricing-calculator" class="nav-link top-nav-pricing-btn ${activePage === 'pricing-calculator' ? 'active' : ''}">$ Pricing</a>
+      </div>
       <div class="nav-links">
         ${pages.map(p => `<a href="${safeHref(p.href)}" data-page-id="${p.id}" class="nav-link ${p.id === activePage ? 'active' : ''} ${accessClass[p.access]||''}">${p.label}</a>`).join('')}
+        <div class="nav-admin-submenu nav-admin-only">
+          <button type="button" class="nav-dropdown-toggle ${adminMenuActive ? 'active' : ''}" aria-haspopup="true" aria-expanded="false">\u2699\uFE0F Admin \u25BE</button>
+          <div class="nav-dropdown-panel" role="menu">
+            <a href="${safeHref('admin.html')}" role="menuitem" data-page-id="admin" class="nav-link ${activePage === 'admin' ? 'active' : ''}">Admin</a>
+          </div>
+        </div>
       </div>
+      <div class="top-nav-user-slot" id="topNavUserSlot"></div>
     </nav>
   `;
 }
@@ -4475,15 +4756,8 @@ function renderMaterialOptions() {
 
 // ── P4-C: Breadcrumb navigation ─────────────────────────────
 // items: [{label, href?}] — last item has no href (current page)
-function renderBreadcrumb(items) {
-  const all = [{ label: '🏠 Dashboard', href: 'dashboard.html' }, ...items];
-  return `<nav class="breadcrumb" aria-label="Breadcrumb">` +
-    all.map((c, i) =>
-      i < all.length - 1
-        ? `<a href="${c.href}" class="bc-link">${c.label}</a><span class="bc-sep">›</span>`
-        : `<span class="bc-current">${c.label}</span>`
-    ).join('') +
-  `</nav>`;
+function renderBreadcrumb(_items) {
+  return '';
 }
 
 // ── P4-D: Global page toast ──────────────────────────────────

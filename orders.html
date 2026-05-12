@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orders — Bazaar Print</title>
   <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="auth.js?v=20260422-PUL258"></script>
   <style id="page-styles"></style>
 </head>
@@ -48,8 +49,6 @@
       </select>
       <select id="filterFacility" onchange="renderList()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--card);color:var(--text);">
         <option value="">All Facilities</option>
-        <option value="16th-street">16th Street</option>
-        <option value="boyd-street">Boyd Street</option>
       </select>
       <input id="searchInput" type="text" placeholder="🔍 Search order # or customer..." oninput="renderList()"
         style="padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--card);color:var(--text);width:220px;outline:none;">
@@ -341,13 +340,54 @@
     hold: ['on-hold'],
   };
 
-  const FACILITY_LABELS = {
-    '16th-street': '16th St',
-    'boyd-street':  'Boyd St',
-  };
+  // ── Dynamic facility helpers ──────────────────────────────
+  function _getOrdOrgFacilities() {
+    if (window.PulseOrgJsonStore) {
+      try {
+        const bundle = PulseOrgJsonStore.loadRaw();
+        if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
+          return bundle.facilities
+            .filter(f => f.slug && f.name)
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        }
+      } catch (_) {}
+    }
+    if (typeof FACILITIES !== 'undefined') {
+      return Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
+    }
+    return [];
+  }
+
+  function getFacilityLabel(slug) {
+    if (!slug) return '—';
+    const found = _getOrdOrgFacilities().find(f => f.slug === slug);
+    return found ? found.name : slug;
+  }
+
+  // Short label (first word or first segment before "—") for chips
+  function getFacilityShortLabel(slug) {
+    const full = getFacilityLabel(slug);
+    const dash = full.indexOf(' —');
+    return dash > 0 ? full.slice(0, dash).trim() : full.split(' ')[0] || full;
+  }
+
+  function populateFacilityFilter() {
+    const sel = document.getElementById('filterFacility');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All Facilities</option>';
+    _getOrdOrgFacilities().forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.slug;
+      opt.textContent = f.name;
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  }
 
   // ── Bootstrap ──────────────────────────────────────────────
   async function init() {
+    populateFacilityFilter();
     await loadPersonnel();
     await loadOrders();
   }
@@ -514,7 +554,7 @@
       const am   = o.accountManager || '—';
       const fac  = o.facility || '';
       const facChip = fac
-        ? `<span class="facility-chip ${fac === '16th-street' ? 'fac-16th' : 'fac-boyd'}">${FACILITY_LABELS[fac] || fac}</span>`
+        ? `<span class="facility-chip">${getFacilityShortLabel(fac)}</span>`
         : '—';
 
       let dueHtml = '—';
@@ -583,7 +623,7 @@
       <div class="detail-grid">
         <div class="detail-field"><span class="detail-label">Customer</span><span class="detail-value">${escHtml(cust)}</span></div>
         <div class="detail-field"><span class="detail-label">Account Manager</span><span class="detail-value">${escHtml(o.accountManager || '—')}</span></div>
-        <div class="detail-field"><span class="detail-label">Facility</span><span class="detail-value">${FACILITY_LABELS[o.facility] || o.facility || '—'}</span></div>
+        <div class="detail-field"><span class="detail-label">Facility</span><span class="detail-value">${getFacilityLabel(o.facility)}</span></div>
         <div class="detail-field"><span class="detail-label">Due Date</span><span class="detail-value ${isOverdue ? 'due-overdue' : ''}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span></div>
         <div class="detail-field"><span class="detail-label">Product</span><span class="detail-value">${escHtml(product)}</span></div>
         <div class="detail-field"><span class="detail-label">Quantity</span><span class="detail-value">${o.quantity ? Number(o.quantity).toLocaleString() : '—'}</span></div>
@@ -651,33 +691,6 @@
     } catch(e) {}
 
     if (subHtml) html += subHtml;
-
-    // Activity log
-    let actHtml = '';
-    try {
-      const log = await getActivityLog(o.id);
-      if (log && log.length > 0) {
-        const recent = log.slice(-20).reverse();
-        actHtml = `<div>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">Activity Log (${log.length} entries)</div>
-          <div style="max-height:200px;overflow-y:auto;">
-          ${recent.map(a => `
-            <div class="activity-row">
-              <div class="activity-dot"></div>
-              <div style="flex:1;">
-                <span style="font-weight:600;">${escHtml(a.message || a.type || '')}</span>
-                ${a.by ? `<span style="color:var(--text-muted);"> · ${escHtml(a.by)}</span>` : ''}
-                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;">${formatDateTime(a.timestamp)}</div>
-              </div>
-            </div>
-          `).join('')}
-          </div>
-        </div>`;
-      }
-    } catch(e) {}
-
-    if (actHtml) html += actHtml;
-    else html += `<div style="color:var(--text-muted);font-size:12px;">No activity log entries yet.</div>`;
 
     document.getElementById('modalContent').innerHTML = html;
     document.getElementById('detailModal').classList.add('open');
@@ -774,7 +787,7 @@
 
     // By facility
     const byFac = {};
-    allOrders.forEach(o => { const f = FACILITY_LABELS[o.facility] || o.facility || 'Unknown'; byFac[f] = (byFac[f] || 0) + 1; });
+    allOrders.forEach(o => { const f = getFacilityLabel(o.facility) || 'Unknown'; byFac[f] = (byFac[f] || 0) + 1; });
     const maxFac = Math.max(...Object.values(byFac), 1);
     document.getElementById('reportByFacility').innerHTML =
       Object.entries(byFac).sort((a,b) => b[1]-a[1]).map(([f, n]) => `

@@ -23,7 +23,18 @@ window.PULSE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR-ANON
 // Switch to 'supabase' only after running migration and verifying data in Supabase
 window.PULSE_STORAGE_BACKEND = 'indexeddb';
 
+// Organisation page only (organisation.html):
+// - Omit or leave unset: use local JSON in the browser when Supabase URL/key are placeholders or STORAGE is not supabase.
+// - 'supabase': Organisation always uses Supabase (shows errors if misconfigured).
+// - 'local-json': Organisation always uses local JSON (Export / Import), even if Supabase is configured.
+// window.PULSE_ORG_STORAGE = 'local-json';
+// window.PULSE_ORG_STORAGE = 'supabase';
+
 // NEVER put these here — keep in Supabase Vault / Edge Function env only:
 // - Database password
 // - Service role key
 // - Cloudflare R2 credentials
+
+// Organisation logos (organisation.html): migration 017 creates a public
+// storage bucket `org-assets`. Upload uses the anon key; RLS allows admin,
+// supervisor, production_manager, david_review, and ops_manager.

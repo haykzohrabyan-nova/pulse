@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAZAARPRINTING: — SDR Pipeline</title>
+  <script src="shared.js?v=20260503-PUL685"></script>
+  <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260430-PRI262"></script>
+  <script src="auth.js?v=20260503-PUL685"></script>
+  <style id="page-styles"></style>
+  <style>
+    :root {
+      --bp-bg: #f4f5fb;
+      --bp-card: #fff;
+      --bp-border: #e2e8f0;
+      --bp-text: #0f172a;
+      --bp-muted: #64748b;
+      --bp-accent: #7c3aed;
+      --bp-green: #16a34a;
+      --bp-pink: #e11d48;
+      --bp-blue: #2563eb;
+    }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bp-bg); color: var(--bp-text); min-height: 100vh; }
+    .bp-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; background: var(--bp-card); border-bottom: 1px solid var(--bp-border);
+      flex-wrap: wrap; gap: 10px;
+    }
+    .bp-brand { font-size: 18px; font-weight: 800; letter-spacing: 0.02em; }
+    .bp-top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .bp-top-actions a, .bp-top-actions button {
+      padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; border: none; cursor: pointer;
+    }
+    .bp-logout { background: #ffe4e6; color: var(--bp-pink); }
+    .bp-sdr { background: #e0f2fe; color: #0369a1; }
+    .bp-scripts { background: #ede9fe; color: var(--bp-accent); }
+    .bp-calc { background: #dbeafe; color: var(--bp-blue); }
+    .bp-tabs {
+      display: flex; gap: 4px; padding: 0 16px; background: var(--bp-card); border-bottom: 1px solid var(--bp-border);
+      overflow-x: auto; flex-wrap: nowrap;
+    }
+    .bp-tab {
+      padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--bp-muted); border: none; background: none;
+      cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+    }
+    .bp-tab.active { color: var(--bp-accent); border-bottom-color: var(--bp-accent); }
+    .bp-main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 40px; }
+    .bp-section-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; }
+    .bp-toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px;
+    }
+    .bp-toolbar input[type="search"] {
+      flex: 1; min-width: 200px; padding: 9px 12px; border: 1px solid var(--bp-border); border-radius: 8px; font-size: 13px;
+    }
+    .bp-toolbar select { padding: 9px 10px; border-radius: 8px; border: 1px solid var(--bp-border); font-size: 12px; background: #fff; }
+    .bp-btn-add {
+      background: var(--bp-accent); color: #fff; border: none; padding: 9px 16px; border-radius: 8px;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .bp-table-wrap { background: var(--bp-card); border: 1px solid var(--bp-border); border-radius: 12px; overflow: auto; }
+    table.bp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .bp-table th {
+      text-align: left; padding: 12px 14px; background: #1e293b; color: #fff; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .bp-table td { padding: 12px 14px; border-bottom: 1px solid var(--bp-border); vertical-align: middle; }
+    .bp-table tr:last-child td { border-bottom: none; }
+    .bp-chip {
+      display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .bp-chip-med { background: #fef3c7; color: #92400e; }
+    .bp-chip-high { background: #fee2e2; color: #b91c1c; }
+    .bp-chip-low { background: #dbeafe; color: #1e40af; }
+    .bp-chip-undef { background: #f1f5f9; color: #64748b; }
+    .bp-verify {
+      background: var(--bp-green); color: #fff; border: none; padding: 6px 14px; border-radius: 6px;
+      font-weight: 700; font-size: 12px; cursor: pointer;
+    }
+    .bp-verify:hover { filter: brightness(1.05); }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 300; padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .bp-modal {
+      background: #fff; border-radius: 14px; max-width: 520px; width: 100%; max-height: 90vh; overflow: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid var(--bp-border);
+    }
+    .bp-modal-h { padding: 16px 20px; border-bottom: 1px solid var(--bp-border); display: flex; justify-content: space-between; align-items: center; }
+    .bp-modal-h h2 { margin: 0; font-size: 17px; font-weight: 800; }
+    .bp-modal-body { padding: 18px 20px; }
+    .bp-field { margin-bottom: 14px; }
+    .bp-field label { display: block; font-size: 11px; font-weight: 700; color: var(--bp-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .bp-field input, .bp-field select, .bp-field textarea {
+      width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--bp-border); border-radius: 8px; font-size: 14px;
+    }
+    .bp-field textarea { min-height: 72px; resize: vertical; }
+    .bp-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    .bp-btn-ghost { background: #f1f5f9; color: var(--bp-text); border: 1px solid var(--bp-border); padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .bp-btn-primary { background: var(--bp-accent); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="bp-topbar">
+  <div class="bp-brand">BAZAARPRINTING:</div>
+  <div class="bp-top-actions">
+    <button type="button" class="bp-logout" onclick="logoutPulse()">Logout</button>
+    <a class="bp-sdr" href="sdr-dashboard.html">SDR PORTAL</a>
+    <a class="bp-scripts" href="leads.html">Leads board</a>
+    <a class="bp-calc" href="pricing-calculator.html">Calculator</a>
+  </div>
+</div>
+
+<div class="bp-tabs" role="tablist">
+  <button type="button" class="bp-tab active" data-tab="pipeline">Pipeline</button>
+  <button type="button" class="bp-tab" data-tab="hold">On Hold</button>
+  <button type="button" class="bp-tab" data-tab="sales">Directed to Sales</button>
+  <button type="button" class="bp-tab" data-tab="rejected">Rejected</button>
+  <button type="button" class="bp-tab" data-tab="crm">CRM</button>
+  <button type="button" class="bp-tab" data-tab="project">Project</button>
+  <button type="button" class="bp-tab" data-tab="orders">Orders</button>
+  <button type="button" class="bp-tab" data-tab="stats">Stats</button>
+</div>
+
+<div class="bp-main">
+  <h1 class="bp-section-title">🤖 Automated AI Leads</h1>
+
+  <div class="bp-toolbar">
+    <input type="search" id="bpSearch" placeholder="Search name, phone, etc..." autocomplete="off">
+    <select id="bpSort"><option>Newest First</option><option>Oldest First</option></select>
+    <select id="bpDate"><option>All Time</option><option>Last 7 days</option><option>Last 30 days</option></select>
+    <select id="bpSource"><option>All Sources</option><option>Email</option><option>Instagram</option><option>Referral</option><option>Google</option><option>Website Form</option></select>
+    <button type="button" class="bp-btn-add" onclick="addLeadManual()">+ Add Lead Manually</button>
+  </div>
+
+  <div class="bp-table-wrap">
+    <table class="bp-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Company Name</th>
+          <th>Name</th>
+          <th>Phone Number</th>
+          <th>Interest</th>
+          <th>Urgency</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="bpTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="verifyModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="verifyTitle">
+  <div class="bp-modal">
+    <div class="bp-modal-h">
+      <h2 id="verifyTitle">Verify Lead</h2>
+      <button type="button" class="bp-btn-ghost" onclick="closeVerify()">✕</button>
+    </div>
+    <div class="bp-modal-body">
+      <div class="bp-field"><label>Source</label><input id="vfSource" readonly></div>
+      <div class="bp-field"><label>Company Name</label><input id="vfBrand"></div>
+      <div class="bp-field"><label>Name</label><input id="vfName"></div>
+      <div class="bp-field"><label>Phone Number</label><input id="vfPhone"></div>
+      <div class="bp-field"><label>Interest</label><input id="vfInterest" placeholder="e.g. Jars, Roll labels"></div>
+      <div class="bp-field">
+        <label>Urgency</label>
+        <select id="vfUrgency">
+          <option>Not Defined</option>
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+        </select>
+      </div>
+      <div class="bp-field"><label>Created</label><input id="vfCreated" readonly></div>
+      <div class="bp-field"><label>Notes</label><textarea id="vfNotes" placeholder="Internal verification notes…"></textarea></div>
+      <div class="bp-modal-actions">
+        <button type="button" class="bp-btn-ghost" onclick="closeVerify()">Cancel</button>
+        <button type="button" class="bp-btn-primary" onclick="saveVerify()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_KEY = 'bazaar_sdr_pipeline_ai_leads_v1';
+
+const DEFAULT_ROWS = [
+  { id: '1', source: 'Email', brand: 'TestCo', name: 'Eve Review', phone: '5551001005', interest: 'Jars', urgency: 'Medium', created: '2026-05-03T08:00:00.000Z' },
+  { id: '2', source: 'Instagram', brand: 'TestCo', name: 'Dan Inbox', phone: '5551001005', interest: 'Stickers', urgency: 'High', created: '2026-05-03T08:00:00.000Z' },
+  { id: '3', source: 'Referral', brand: 'TestCo', name: 'Cara Pending', phone: '5551001005', interest: 'Flyers', urgency: 'Not Defined', created: '2026-05-03T08:00:00.000Z' },
+  { id: '4', source: 'Google', brand: 'TestCo', name: 'Ben Queue', phone: '5551001005', interest: 'Boxes', urgency: 'Low', created: '2026-05-03T08:00:00.000Z' },
+  { id: '5', source: 'Website Form', brand: 'TestCo', name: 'Ada Verify', phone: '5551001005', interest: 'Labels', urgency: 'Medium', created: '2026-05-03T08:00:00.000Z' },
+];
+
+let rows = [];
+let editingId = null;
+
+function loadRows() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    rows = raw ? JSON.parse(raw) : [...DEFAULT_ROWS];
+  } catch (e) {
+    rows = [...DEFAULT_ROWS];
+  }
+}
+
+function saveRows() {
+  localStorage.setItem(LS_KEY, JSON.stringify(rows));
+}
+
+function urgencyChip(u) {
+  const t = (u || '').toLowerCase();
+  let cls = 'bp-chip-undef';
+  if (t === 'high') cls = 'bp-chip-high';
+  else if (t === 'medium') cls = 'bp-chip-med';
+  else if (t === 'low') cls = 'bp-chip-low';
+  return `<span class="bp-chip ${cls}">${escapeHtml(u || '—')}</span>`;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderTable() {
+  const q = (document.getElementById('bpSearch').value || '').toLowerCase().trim();
+  const srcF = document.getElementById('bpSource').value;
+  const list = rows.filter(r => {
+    if (q) {
+      const intr = r.interest || r.order || '';
+      const hay = [r.name, r.phone, intr, r.brand, r.source].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (srcF && srcF !== 'All Sources' && r.source !== srcF) return false;
+    return true;
+  });
+  const tb = document.getElementById('bpTbody');
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--bp-muted);">No leads match filters.</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(r => `
+    <tr>
+      <td>${escapeHtml(r.source)}</td>
+      <td>${escapeHtml(r.brand)}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.phone)}</td>
+      <td>${escapeHtml(r.interest || r.order || '—')}</td>
+      <td>${urgencyChip(r.urgency)}</td>
+      <td style="font-size:12px;color:var(--bp-muted);">${escapeHtml(r.created)}</td>
+      <td><button type="button" class="bp-verify" onclick="openVerify(${JSON.stringify(String(r.id))})">Verify</button></td>
+    </tr>
+  `).join('');
+}
+
+function openVerify(id) {
+  const r = rows.find(x => String(x.id) === String(id));
+  if (!r) return;
+  editingId = id;
+  document.getElementById('vfSource').value = r.source || '';
+  document.getElementById('vfBrand').value = r.brand || '';
+  document.getElementById('vfName').value = r.name || '';
+  document.getElementById('vfPhone').value = r.phone || '';
+  const intr = (r.interest != null && String(r.interest).trim() !== '') ? String(r.interest).trim() : (r.order != null ? String(r.order).trim() : '');
+  document.getElementById('vfInterest').value = intr;
+  document.getElementById('vfUrgency').value = r.urgency || 'Not Defined';
+  document.getElementById('vfCreated').value = r.created || '';
+  document.getElementById('vfNotes').value = r.notes || '';
+  document.getElementById('verifyModal').classList.add('open');
+}
+
+function closeVerify() {
+  document.getElementById('verifyModal').classList.remove('open');
+  editingId = null;
+}
+
+function saveVerify() {
+  if (!editingId) return;
+  const r = rows.find(x => String(x.id) === String(editingId));
+  if (!r) return;
+  r.brand = document.getElementById('vfBrand').value.trim();
+  r.name = document.getElementById('vfName').value.trim();
+  r.phone = document.getElementById('vfPhone').value.trim();
+  r.interest = document.getElementById('vfInterest').value.trim();
+  r.urgency = document.getElementById('vfUrgency').value;
+  r.notes = document.getElementById('vfNotes').value.trim();
+  saveRows();
+  renderTable();
+  closeVerify();
+  if (typeof showPageToast === 'function') showPageToast('Lead saved.', 'success');
+}
+
+function addLeadManual() {
+  const id = String(Date.now());
+  rows.unshift({
+    id, source: 'Email', brand: 'TestCo', name: 'New Lead', phone: '', interest: '', urgency: 'Not Defined',
+    created: new Date().toISOString(),
+  });
+  saveRows();
+  renderTable();
+  openVerify(id);
+}
+
+function logoutPulse() {
+  try { sessionStorage.removeItem('pulse_session'); } catch (e) {}
+  window.location.href = 'dashboard.html';
+}
+
+document.getElementById('bpSearch').addEventListener('input', renderTable);
+document.getElementById('bpSource').addEventListener('change', renderTable);
+document.querySelectorAll('.bp-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.bp-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+document.getElementById('verifyModal').addEventListener('click', e => {
+  if (e.target.id === 'verifyModal') closeVerify();
+});
+
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('sdr-pipeline-portal');
+document.getElementById('breadcrumb').innerHTML = typeof renderBreadcrumb === 'function'
+  ? renderBreadcrumb([{ label: 'SDR Pipeline' }]) : '';
+initAuth('sdr-pipeline-portal');
+
+loadRows();
+renderTable();
+</script>
+</body>
+</html>
