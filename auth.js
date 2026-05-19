@@ -21,7 +21,7 @@ const ROLE_CONFIG = {
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','machines','dies','organisation','products','roles'],
+    adminTabs: ['personnel','machines','dies','organisation','products','product-workflows','roles'],
   },
   supervisor: {
     label: 'Supervisor',
@@ -40,7 +40,7 @@ const ROLE_CONFIG = {
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['machines','dies','organisation','products','inventory'],
+    adminTabs: ['machines','dies','organisation','products','product-workflows','inventory'],
   },
   'account-manager': {
     label: 'Account Manager',
@@ -96,7 +96,7 @@ const ROLE_CONFIG = {
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','machines','dies','organisation','products','inventory'],
+    adminTabs: ['personnel','machines','dies','organisation','products','product-workflows','inventory'],
   },
   operator: {
     label: 'Operator',
@@ -673,6 +673,9 @@ function _applyRoleOverrides() {
       ['canEditAllTickets','canViewAdmin','canViewProduction','canViewOperator'].forEach(k => {
         if (k in ov) ROLE_CONFIG[role][k] = ov[k];
       });
+      if (Array.isArray(ov.adminTabs) && ov.adminTabs.length > 0) {
+        ROLE_CONFIG[role].adminTabs = [...ov.adminTabs];
+      }
     });
   } catch (_) {}
 }

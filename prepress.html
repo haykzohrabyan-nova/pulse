@@ -212,6 +212,26 @@ document.getElementById('page-styles').textContent = `
   .art-thumb img { width:100%; height:100%; object-fit:cover; cursor:pointer; }
   .art-pdf { font-size:26px; }
   .art-name { font-size:10px; color:var(--text-muted); text-align:center; max-width:82px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .prepress-notes { font-size:13px; margin:0 0 14px; line-height:1.5; }
+  .prepress-sku-wrap { margin-bottom:14px; }
+  .prepress-sku-wrap-title { font-size:12px; font-weight:700; color:var(--text); margin-bottom:10px; }
+  .prepress-sku-wrap-title span { font-weight:500; color:var(--text-muted); }
+  .prepress-sku-block {
+    border:1px solid var(--border); border-radius:10px; padding:12px;
+    margin-bottom:10px; background:#f8fafc;
+  }
+  .prepress-sku-block:last-child { margin-bottom:0; }
+  .prepress-sku-hdr {
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;
+  }
+  .prepress-sku-hdr strong { font-size:13px; color:var(--text); }
+  .prepress-sku-hdr span { font-size:12px; color:var(--text-muted); font-weight:600; }
+  .prepress-art-block { margin-top:12px; }
+  .prepress-art-block-title {
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--text-muted); margin-bottom:8px;
+  }
   .steps-list { display:grid; gap:8px; }
   .step-card { border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; gap:12px; font-size:13px; }
   .step-card.current { border-color:#93c5fd; background:#eff6ff; }
@@ -333,14 +353,127 @@ function detailLine(label, value) {
   return `<div class="detail-line"><span class="detail-label">${label}</span><span>${value || '—'}</span></div>`;
 }
 
+let _prepressArtworkUrls = [];
+
+function isArtImageFile(f) {
+  if (f?.type?.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|tif|tiff|bmp)$/i.test(f?.name || '');
+}
+
+function getSkuArtFiles(sku) {
+  if (!sku) return [];
+  const files = [];
+  if (sku.artworkDataUrl) {
+    files.push({ name: sku.artworkName || 'Main artwork', type: sku.artworkType || '', dataUrl: sku.artworkDataUrl });
+  }
+  if (sku.whiteDataUrl) {
+    files.push({ name: sku.whiteName || 'White layer', type: '', dataUrl: sku.whiteDataUrl });
+  }
+  if (sku.uvDataUrl) {
+    files.push({ name: sku.uvName || 'UV layer', type: '', dataUrl: sku.uvDataUrl });
+  }
+  if (sku.foilDataUrl) {
+    files.push({ name: sku.foilName || 'Foil layer', type: '', dataUrl: sku.foilDataUrl });
+  }
+  return files;
+}
+
+function collectOrderArtworkFiles(order) {
+  const files = [];
+  const seen = new Set();
+  const add = (f) => {
+    if (!f?.dataUrl) return;
+    const key = String(f.dataUrl).slice(0, 96) + '|' + (f.name || '');
+    if (seen.has(key)) return;
+    seen.add(key);
+    files.push(f);
+  };
+  (order.artworkFiles || []).forEach(f => add({ name: f.name || 'Main artwork', type: f.type || '', dataUrl: f.dataUrl }));
+  if (order.whiteLayerFile?.dataUrl) {
+    add({ name: order.whiteLayerFile.name || 'White layer', type: order.whiteLayerFile.type || '', dataUrl: order.whiteLayerFile.dataUrl });
+  }
+  if (order.uvFile?.dataUrl) {
+    add({ name: order.uvFile.name || 'UV layer', type: order.uvFile.type || '', dataUrl: order.uvFile.dataUrl });
+  }
+  if (order.foilFile?.dataUrl) {
+    add({ name: order.foilFile.name || 'Foil layer', type: order.foilFile.type || '', dataUrl: order.foilFile.dataUrl });
+  }
+  return files;
+}
+
 function renderArtwork(files = []) {
-  if (!files.length) return '<div style="font-size:13px;color:var(--text-muted);">No artwork uploaded.</div>';
-  return `<div class="art-grid">${files.map(f => `
+  if (!files.length) return '';
+  const start = _prepressArtworkUrls.length;
+  files.forEach(f => { if (f?.dataUrl) _prepressArtworkUrls.push(f.dataUrl); });
+  return `<div class="art-grid">${files.map((f, i) => {
+    const idx = start + i;
+    const isImage = isArtImageFile(f);
+    const name = escHtml_pre(f.name || 'file');
+    return `
     <div>
-      <div class="${f.type?.startsWith('image/') ? 'art-thumb' : 'art-pdf'}">${f.type?.startsWith('image/') ? `<img src="${f.dataUrl}" alt="${f.name}" onclick="openArtworkLightbox('${f.dataUrl}')">` : '📄'}</div>
-      <div class="art-name" title="${f.name}">${f.name}</div>
-    </div>
-  `).join('')}</div>`;
+      <div class="${isImage ? 'art-thumb' : 'art-pdf'}">${isImage
+        ? `<img src="${f.dataUrl}" alt="${name}" onclick="openArtworkLightboxByIndex(${idx})">`
+        : '📄'}</div>
+      <div class="art-name" title="${name}">${name}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderSkuArtworkBlocks(skus) {
+  return skus.map((sku, i) => {
+    const files = getSkuArtFiles(sku);
+    const label = escHtml_pre(sku.name || `SKU ${i + 1}`);
+    const qty = (sku.quantity || 0).toLocaleString();
+    return `
+      <div class="prepress-sku-block">
+        <div class="prepress-sku-hdr">
+          <strong>#${i + 1} ${label}</strong>
+          <span>${qty} pcs</span>
+        </div>
+        ${files.length
+          ? renderArtwork(files)
+          : '<div style="font-size:12px;color:var(--text-muted);">No artwork uploaded for this SKU.</div>'
+        }
+      </div>`;
+  }).join('');
+}
+
+function renderArtworkAndNotes(order, lockedNotice = '') {
+  _prepressArtworkUrls = [];
+  const chunks = [];
+  if (lockedNotice) chunks.push(lockedNotice);
+  if (order.specialNotes) {
+    chunks.push(`<div class="prepress-notes"><strong>Notes:</strong> ${escHtml_pre(order.specialNotes)}</div>`);
+  }
+
+  const skus = (order.skus || []).filter(s => s && (s.name || s.quantity || getSkuArtFiles(s).length));
+  if (skus.length) {
+    chunks.push(`
+      <div class="prepress-sku-wrap">
+        <div class="prepress-sku-wrap-title">📦 SKU versions <span>(${skus.length})</span></div>
+        ${renderSkuArtworkBlocks(skus)}
+      </div>`);
+  }
+
+  const globalFiles = collectOrderArtworkFiles(order);
+  if (globalFiles.length) {
+    const title = skus.length ? 'Order-level artwork & layers' : 'Artwork';
+    chunks.push(`
+      <div class="prepress-art-block">
+        <div class="prepress-art-block-title">${title}</div>
+        ${renderArtwork(globalFiles)}
+      </div>`);
+  }
+
+  if (!chunks.length) {
+    return '<div style="font-size:13px;color:var(--text-muted);">No artwork uploaded.</div>';
+  }
+  return chunks.join('');
+}
+
+function openArtworkLightboxByIndex(idx) {
+  const url = _prepressArtworkUrls[idx];
+  if (url) openArtworkLightbox(url);
 }
 
 function isApprovedOrInProductionPrepressOrder(order) {
@@ -595,17 +728,7 @@ function renderDetail() {
     detailLine('Due Date', order.dueDate ? formatDate(order.dueDate) : '—')
   ].join('');
 
-  const artworkFiles = [
-    ...(order.artworkFiles || []),
-    ...(order.whiteLayerFile ? [order.whiteLayerFile] : []),
-    ...(order.uvFile ? [order.uvFile] : []),
-    ...(order.foilFile ? [order.foilFile] : [])
-  ];
-  document.getElementById('detailArtwork').innerHTML = `
-    ${lockedNotice}
-    ${order.specialNotes ? `<div style="font-size:13px;margin:0 0 12px;line-height:1.5;"><strong>Notes:</strong> ${order.specialNotes}</div>` : ''}
-    ${renderArtwork(artworkFiles)}
-  `;
+  document.getElementById('detailArtwork').innerHTML = renderArtworkAndNotes(order, lockedNotice);
 
   const currentStep = order.currentStep || 0;
   document.getElementById('detailSteps').innerHTML = (order.workflowSteps || []).map((step, i) => `

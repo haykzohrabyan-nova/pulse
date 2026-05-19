@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260518-SKU"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
@@ -1244,7 +1244,7 @@ async function refreshDoneToday() {
     const myMachines = (profile ? profile.machines : null) || (OPERATOR_PROFILES[currentOperator] || {}).machines || [];
     // Show all completed tickets that this operator worked on (any step)
     const done = allOrders.filter(order => {
-      if (!['completed','shipped','received','waiting-pickup','ready-to-ship'].includes(order.status) && !order.workflowSteps?.every(s => s.status === 'completed')) return false;
+      if (!['completed','shipped','received','waiting-pickup','delivery-ready','ready-to-ship'].includes(order.status) && !order.workflowSteps?.every(s => s.status === 'completed')) return false;
       if (!order.workflowSteps) return false;
       return order.workflowSteps.some(s =>
         s.status === 'completed' &&
@@ -1375,7 +1375,7 @@ async function refreshQueue() {
   orders.forEach(order => {
     if (!order.workflowSteps || !order.workflowSteps.length) return;
     // Skip terminal statuses
-    if (['completed','shipped','received','waiting-pickup','qc-checkout','ready-to-ship'].includes(order.status)) return;
+    if (['completed','shipped','received','waiting-pickup','delivery-ready','qc-checkout','ready-to-ship'].includes(order.status)) return;
     const idx  = order.currentStep || 0;
     const step = order.workflowSteps[idx];
     if (!step) return;
@@ -1661,6 +1661,9 @@ async function renderJobDetail(order) {
     </div>`;
   });
   html += `</div>`;
+
+  const skuSectionHtml = renderOrderSkuSection(order);
+  if (skuSectionHtml) html += skuSectionHtml;
 
   // ── Current ticket notes only (no historical log) ──
   const legacyNoteText = order.specialNotes || order.notes || '';

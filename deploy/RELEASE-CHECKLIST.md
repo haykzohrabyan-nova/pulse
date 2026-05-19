@@ -31,7 +31,7 @@ Staging deployments (`pulse-staging.bazaar-admin.com`) only require the **Stagin
   ```bash
   supabase functions list --project-ref <prod-project-ref>
   ```
-- [ ] **Database migrations**: confirm all migrations are applied to production DB
+- [ ] **Database migrations**: confirm all migrations are applied to production DB (includes `022_product_workflows.sql` — machines + product_workflows, and `023_workflow_override_log.sql` — PM swap audit)
   ```bash
   supabase db diff --project-ref <prod-project-ref>
   # should show no pending changes

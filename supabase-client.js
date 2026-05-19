@@ -187,6 +187,19 @@
       prepressChecklist:         order.prepressChecklist       || null,
       prepressComment:           order.prepressComment         || null,
       overtimeApproval:          order.overtimeApproval        || null,
+      // Shipping / fulfillment (stored in specs JSONB)
+      carrier:                   order.carrier                 || null,
+      trackingNumber:            order.trackingNumber          || null,
+      packingSlip:               order.packingSlip             || null,
+      shippedAt:                 order.shippedAt               || null,
+      waitingPickupAt:           order.waitingPickupAt         || null,
+      deliveryReadyAt:           order.deliveryReadyAt         || null,
+      pickupCompletedAt:         order.pickupCompletedAt       || null,
+      pickupCompletedBy:         order.pickupCompletedBy       || null,
+      pickupHandoffBy:           order.pickupHandoffBy         || null,
+      pickupCompleteNotes:       order.pickupCompleteNotes     || null,
+      receivedAt:                order.receivedAt              || null,
+      qcPassedAt:                order.qcPassedAt              || null,
       // Order note history removed — keep specs clean
       notesLog:            [],
       conversationHistory: [],
@@ -364,6 +377,18 @@
       prepressChecklist:        s.prepressChecklist        || null,
       prepressComment:          s.prepressComment          || null,
       overtimeApproval:         s.overtimeApproval         || null,
+      carrier:                  s.carrier                  || null,
+      trackingNumber:           s.trackingNumber           || null,
+      packingSlip:              s.packingSlip              || null,
+      shippedAt:                s.shippedAt                || null,
+      waitingPickupAt:          s.waitingPickupAt          || null,
+      deliveryReadyAt:          s.deliveryReadyAt          || null,
+      pickupCompletedAt:        s.pickupCompletedAt        || null,
+      pickupCompletedBy:        s.pickupCompletedBy        || null,
+      pickupHandoffBy:          s.pickupHandoffBy          || null,
+      pickupCompleteNotes:      s.pickupCompleteNotes      || null,
+      receivedAt:               s.receivedAt               || null,
+      qcPassedAt:               s.qcPassedAt               || null,
       notesLog:            [],
       conversationHistory: [],
     };
@@ -477,15 +502,52 @@
     return inserted.id;
   }
 
+  function _formatPulseDbError(err) {
+    const msg = err?.message || err?.details || String(err || 'Unknown error');
+    if (/invalid input value for enum order_status/i.test(msg)) {
+      if (/delivery-ready/i.test(msg)) {
+        return 'The database does not support the “delivery-ready” status yet. Run Supabase migration 021_delivery_ready_status.sql, then try again.';
+      }
+      if (/waiting-pickup/i.test(msg)) {
+        return 'The database does not support the “waiting-pickup” status yet. Run Supabase migration 021_delivery_ready_status.sql, then try again.';
+      }
+      return 'This status is not allowed in the database yet. Ask an admin to apply the latest Supabase migrations.';
+    }
+    if (/PGRST116|0 rows|not found/i.test(msg)) {
+      return 'Order not found or you do not have permission to update it. Refresh the page and try again.';
+    }
+    if (/permission denied|row-level security|42501/i.test(msg)) {
+      return 'You do not have permission to update this order. Ask an admin to grant shipping access (migration 022).';
+    }
+    return msg;
+  }
+
   async function _updateOrder(id, changes) {
     const supa = await _getClient();
 
-    const { data: currentRow, error: fetchErr } = await supa
+    let lookupId = id;
+    let { data: currentRow, error: fetchErr } = await supa
       .from('orders')
       .select(`*, order_workflow_steps(*)`)
-      .eq('id', id)
-      .single();
+      .eq('id', lookupId)
+      .maybeSingle();
     if (fetchErr) throw fetchErr;
+    if (!currentRow && id != null && String(id) !== '') {
+      const ref = String(id);
+      const { data: byOrderId, error: oidErr } = await supa
+        .from('orders')
+        .select(`*, order_workflow_steps(*)`)
+        .eq('order_id', ref)
+        .maybeSingle();
+      if (oidErr) throw oidErr;
+      if (byOrderId) {
+        currentRow = byOrderId;
+        lookupId = byOrderId.id;
+      }
+    }
+    if (!currentRow) {
+      throw new Error('Order not found');
+    }
 
     const existing = _rowToOrder(currentRow, currentRow.order_workflow_steps || []);
     const combined = { ...existing, ...(changes || {}), id: existing.id };
@@ -495,17 +557,22 @@
       row.specs = { ...currentRow.specs, ...row.specs };
     }
 
-    const { error: updateErr } = await supa
+    const { data: updatedRow, error: updateErr } = await supa
       .from('orders')
       .update(row)
-      .eq('id', id);
+      .eq('id', lookupId)
+      .select('id')
+      .maybeSingle();
     if (updateErr) throw updateErr;
+    if (!updatedRow) {
+      throw new Error('Order update was blocked (not found or insufficient permissions).');
+    }
 
     if (Array.isArray(changes.workflowSteps)) {
-      await supa.from('order_workflow_steps').delete().eq('order_id', id);
+      await supa.from('order_workflow_steps').delete().eq('order_id', lookupId);
       if (changes.workflowSteps.length > 0) {
         const steps = changes.workflowSteps.map((step, idx) => ({
-          order_id:    id,
+          order_id:    lookupId,
           step_index:  step.stepIndex ?? idx,
           machine:     step.machine,
           operation:   step.operation || null,
@@ -670,7 +737,10 @@
 
   window.updateOrder = async function (id, changes) {
     try { return await _updateOrder(id, changes); }
-    catch (e) { console.error('[Pulse/Supabase] updateOrder:', e); return _origUpdateOrder ? _origUpdateOrder(id, changes) : null; }
+    catch (e) {
+      console.error('[Pulse/Supabase] updateOrder:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
   };
 
   window.generateOrderId = async function () {
@@ -793,6 +863,238 @@
   /** Sync client handle for pages that call getSupabaseClient() without awaiting (after init). */
   window.getSupabaseClient = function () {
     return _clientReady ? _client : null;
+  };
+
+  // ── Product workflows (admin) ────────────────────────────────
+
+  function _mapMachineRow(row) {
+    const facility = row.facility === 'boyd' || row.facility === 'boyd-street' ? 'boyd' : '16th';
+    return {
+      id: row.id,
+      name: row.name,
+      displayName: row.display_name || row.name,
+      facility,
+      category: row.category || null,
+      capabilities: row.capabilities || [],
+    };
+  }
+
+  function _mapProductWorkflowRow(row) {
+    return {
+      id: row.id,
+      productCatalogId: row.product_catalog_id,
+      productName: row.product_name,
+      primaryFacility: row.primary_facility,
+      steps: Array.isArray(row.steps) ? row.steps : [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  function _productWorkflowToRow(wf) {
+    return {
+      id: wf.id || undefined,
+      product_catalog_id: wf.productCatalogId,
+      product_name: wf.productName,
+      primary_facility: wf.primaryFacility,
+      steps: wf.steps || [],
+    };
+  }
+
+  async function _getAllMachines() {
+    const supa = await _getClient();
+    const { data, error } = await supa.from('machines').select('*').order('facility').order('category').order('name');
+    if (error) throw error;
+    const rows = (data || []).map(_mapMachineRow);
+    // Workflow steps use slug ids (migration 022). Legacy UUID rows are mapped by display name when possible.
+    if (typeof MACHINE_SLUG_TO_DISPLAY === 'undefined') return rows;
+    const slugByDisplay = Object.fromEntries(Object.entries(MACHINE_SLUG_TO_DISPLAY));
+    const out = new Map();
+    for (const m of rows) {
+      if (slugByDisplay[m.id]) {
+        out.set(m.id, { ...m, id: m.id, displayName: m.displayName || slugByDisplay[m.id] });
+        continue;
+      }
+      const slug = typeof displayNameToMachineSlug === 'function'
+        ? displayNameToMachineSlug(m.displayName || m.name)
+        : null;
+      if (slug && slugByDisplay[slug]) {
+        out.set(slug, {
+          id: slug,
+          name: m.name || slugByDisplay[slug],
+          displayName: slugByDisplay[slug],
+          facility: m.facility === 'boyd' ? 'boyd' : '16th',
+          category: m.category || (typeof MACHINE_SLUG_CATEGORY !== 'undefined' ? MACHINE_SLUG_CATEGORY[slug] : undefined),
+          capabilities: m.capabilities || [],
+        });
+      }
+    }
+    for (const [id, displayName] of Object.entries(MACHINE_SLUG_TO_DISPLAY)) {
+      if (!out.has(id)) {
+        out.set(id, {
+          id,
+          name: displayName,
+          displayName,
+          facility: ['canon-colorado', 'roland', 'graphtec-vinyl', 'graphtec-flatbed', 'boyd-laminator'].includes(id) ? 'boyd' : '16th',
+          category: typeof MACHINE_SLUG_CATEGORY !== 'undefined' ? MACHINE_SLUG_CATEGORY[id] : 'cutting',
+          capabilities: [],
+        });
+      }
+    }
+    return Array.from(out.values());
+  }
+
+  async function _getAllProductWorkflows() {
+    const supa = await _getClient();
+    const { data, error } = await supa.from('product_workflows').select('*').order('product_name');
+    if (error) throw error;
+    return (data || []).map(_mapProductWorkflowRow);
+  }
+
+  async function _getProductWorkflowByCatalogId(catalogId) {
+    const supa = await _getClient();
+    const { data, error } = await supa
+      .from('product_workflows')
+      .select('*')
+      .eq('product_catalog_id', catalogId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? _mapProductWorkflowRow(data) : null;
+  }
+
+  async function _upsertProductWorkflow(wf) {
+    const supa = await _getClient();
+    const row = _productWorkflowToRow(wf);
+    const { data, error } = await supa
+      .from('product_workflows')
+      .upsert(row, { onConflict: 'product_catalog_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return _mapProductWorkflowRow(data);
+  }
+
+  async function _deleteProductWorkflow(id) {
+    const supa = await _getClient();
+    const { error } = await supa.from('product_workflows').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async function _seedProductWorkflowsFromDefaults(catProducts) {
+    if (!Array.isArray(catProducts) || !catProducts.length) return { seeded: 0 };
+    const existing = await _getAllProductWorkflows();
+    const byCatalog = new Map(existing.map(w => [w.productCatalogId, w]));
+    let seeded = 0;
+    const getDefault = typeof getDefaultProductWorkflowForCatalogName === 'function'
+      ? getDefaultProductWorkflowForCatalogName
+      : () => ({ primaryFacility: '16th', steps: [] });
+
+    for (const prod of catProducts) {
+      if (!prod?.id || byCatalog.has(prod.id)) continue;
+      const def = getDefault(prod.name);
+      await _upsertProductWorkflow({
+        productCatalogId: prod.id,
+        productName: prod.name,
+        primaryFacility: def.primaryFacility || '16th',
+        steps: def.steps || [],
+      });
+      seeded++;
+    }
+    return { seeded };
+  }
+
+  /** Overwrite every catalogue product workflow with built-in defaults (by product name). */
+  async function _resetAllProductWorkflowsFromDefaults(catProducts) {
+    if (!Array.isArray(catProducts) || !catProducts.length) return { updated: 0 };
+    const supa = await _getClient();
+    const { error: delErr } = await supa.from('product_workflows').delete().not('id', 'is', null);
+    if (delErr) throw delErr;
+    const getDefault = typeof getDefaultProductWorkflowForCatalogName === 'function'
+      ? getDefaultProductWorkflowForCatalogName
+      : () => ({ primaryFacility: '16th', steps: [] });
+    let updated = 0;
+    for (const prod of catProducts) {
+      if (!prod?.id || !prod.name) continue;
+      const def = getDefault(prod.name);
+      await _upsertProductWorkflow({
+        productCatalogId: prod.id,
+        productName: prod.name,
+        primaryFacility: def.primaryFacility || '16th',
+        steps: def.steps || [],
+      });
+      updated++;
+    }
+    return { updated };
+  }
+
+  window.getAllMachines = async function () {
+    try { return await _getAllMachines(); }
+    catch (e) { console.error('[Pulse/Supabase] getAllMachines:', e); return []; }
+  };
+
+  window.getAllProductWorkflows = async function () {
+    try { return await _getAllProductWorkflows(); }
+    catch (e) { console.error('[Pulse/Supabase] getAllProductWorkflows:', e); return []; }
+  };
+
+  window.getProductWorkflowByCatalogId = async function (catalogId) {
+    try { return await _getProductWorkflowByCatalogId(catalogId); }
+    catch (e) { console.error('[Pulse/Supabase] getProductWorkflowByCatalogId:', e); return null; }
+  };
+
+  window.upsertProductWorkflow = async function (wf) {
+    try { return await _upsertProductWorkflow(wf); }
+    catch (e) {
+      console.error('[Pulse/Supabase] upsertProductWorkflow:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
+  };
+
+  async function _logWorkflowOverride(entry) {
+    const supa = await _getClient();
+    const row = {
+      order_id: entry.orderDbId,
+      step_index: entry.stepIndex,
+      original_machine_id: entry.originalMachineId || null,
+      new_machine_id: entry.newMachineId || null,
+      original_machine: entry.originalMachine || null,
+      new_machine: entry.newMachine,
+      changed_by: entry.changedBy || null,
+      reason: entry.reason || null,
+    };
+    const { error } = await supa.from('workflow_override_log').insert(row);
+    if (error) throw error;
+  }
+
+  window.logWorkflowOverride = async function (entry) {
+    try { return await _logWorkflowOverride(entry); }
+    catch (e) {
+      console.warn('[Pulse/Supabase] logWorkflowOverride:', e);
+    }
+  };
+
+  window.deleteProductWorkflow = async function (id) {
+    try { return await _deleteProductWorkflow(id); }
+    catch (e) {
+      console.error('[Pulse/Supabase] deleteProductWorkflow:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
+  };
+
+  window.seedProductWorkflowsFromDefaults = async function (catProducts) {
+    try { return await _seedProductWorkflowsFromDefaults(catProducts); }
+    catch (e) {
+      console.error('[Pulse/Supabase] seedProductWorkflowsFromDefaults:', e);
+      return { seeded: 0, error: e.message };
+    }
+  };
+
+  window.resetAllProductWorkflowsFromDefaults = async function (catProducts) {
+    try { return await _resetAllProductWorkflowsFromDefaults(catProducts); }
+    catch (e) {
+      console.error('[Pulse/Supabase] resetAllProductWorkflowsFromDefaults:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
   };
 
   console.log('[Pulse] Supabase backend registered — awaiting client init');

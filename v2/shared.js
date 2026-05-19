@@ -1964,21 +1964,21 @@ const THEME_CSS = `
     display: inline-block; padding: 2px 8px; border-radius: 12px;
     font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .badge-waiting-approval { background: #f1f3f5; color: #5f6b7a; }
-  .badge-new { background: #e0edff; color: #1d4ed8; }
-  .badge-pending-confirmation { background: #fff1e6; color: #c2410c; }
-  .badge-pending-overtime-approval { background: #fff1e6; color: #c2410c; }
-  .badge-pending-review { background: #fef3cd; color: #92600a; }
-  .badge-in-production { background: #d4edda; color: #0f6b2d; }
-  .badge-on-hold { background: #fde8e8; color: #b91c1c; }
+  .badge-waiting-approval { background: #f1f5f9; color: #64748b; }
+  .badge-new { background: #e0f2fe; color: #0369a1; }
+  .badge-pending-confirmation { background: #fff7ed; color: #c2410c; }
+  .badge-pending-overtime-approval { background: #fef3c7; color: #a16207; }
+  .badge-pending-review { background: #fef3c7; color: #b45309; }
+  .badge-in-production { background: #dcfce7; color: #15803d; }
+  .badge-on-hold { background: #fce7f3; color: #be185d; }
   .badge-qc-checkout { background: #ede9fe; color: #6d28d9; }
-  .badge-ready-to-ship { background: #d4edda; color: #0f6b2d; }
-  .badge-shipped { background: #f1f3f5; color: #5f6b7a; }
-  .badge-waiting-pickup { background: #fef3cd; color: #92600a; }
-  .badge-received { background: #d4edda; color: #0f6b2d; }
-  .badge-completed { background: #ede9fe; color: #6d28d9; }
-  .badge-qc-failed { background: #fde8e8; color: #b91c1c; }
-  .badge-reprint { background: #fff7ed; color: #c2410c; }
+  .badge-ready-to-ship { background: #ccfbf1; color: #0f766e; }
+  .badge-shipped { background: #e2e8f0; color: #475569; }
+  .badge-waiting-pickup { background: #fef9c3; color: #a16207; }
+  .badge-received { background: #d1fae5; color: #065f46; }
+  .badge-completed { background: #f3e8ff; color: #7c3aed; }
+  .badge-qc-failed { background: #fee2e2; color: #dc2626; }
+  .badge-reprint { background: #ffedd5; color: #ea580c; }
 
   /* Navigation */
   .top-nav {
