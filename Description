@@ -20,8 +20,11 @@ Primary user-facing metaphor: an **order** is identified by a human-readable **`
 | Shared logic | **`shared.js`** — navigation, theme CSS, status badges, breadcrumbs, toasts, formatting helpers, IndexedDB data access, and many domain helpers. |
 | Auth / RBAC | **`auth.js`** — roles, `sessionStorage` session (`pulse_session`), `initAuth(pageId)`, nav visibility by role. |
 | Backend (optional) | **`supabase-client.js`** — when `PULSE_STORAGE_BACKEND` is `supabase`, wraps Supabase for orders, workflow steps, auth alignment. Otherwise **IndexedDB** in the browser (legacy / offline-style). |
-| Config | **`pulse-config.local.js`** (often gitignored) — Supabase URL, keys, storage backend flag. |
-| Schema | **`supabase/migrations/*.sql`** — Postgres enums, `orders`, `order_workflow_steps`, `profiles`, etc. |
+| Organisation store | **`organisation-local-store.js`** — `window.PulseOrgJsonStore`, a localStorage-backed JSON bundle (`pulse_organisation_bundle_v1`) used by `organisation.html` when Supabase is unavailable or `PULSE_ORG_STORAGE` is `'local-json'`. Provides `loadRaw()`, `saveRaw()`, `exportDownload()`, `normalizeBundle()`. |
+| Config | **`pulse-config.local.js`** (gitignored; template at `pulse-config.local.js.example`) — Supabase URL, keys, storage backend flag, and optional `PULSE_ORG_STORAGE` override (`'supabase'` \| `'local-json'`). |
+| Schema | **`supabase/migrations/*.sql`** — Postgres enums, `orders`, `order_workflow_steps`, `profiles`, `organisations`, `organisation_facilities`, `organisation_hardware`, etc. |
+| Seed data | **`data/pulse-organisation-default.json`** — default local-JSON bundle template for `organisation.html` offline mode. Import via the page's Import button to seed a new local store. |
+| Dev utilities | **`scripts/wipe-pulse-browser-macos.command`** — macOS double-click script; opens `reset-pulse-local-data.html?automated=1&reload=1` to clear all IndexedDB + localStorage in one step. |
 
 **Important:** The **same order object shape** is used whether data comes from IndexedDB or Supabase (`_rowToOrder` / `_orderToRow` in `supabase-client.js` mirror specs into a JSON **`specs`** column on persisted rows).
 
@@ -104,7 +107,9 @@ Each page typically: loads `shared.js`, `auth.js`, optional `supabase-client.js`
 | application-dept | application-dept.html | Application services |
 | jm-dashboard | jm-dashboard.html | Job managers |
 | rep-tasks, leads, proofs, design-task | respective html | Sales / design workflows |
-| sdr-dashboard, walk-in | lead intake | SDR / front desk |
+| sdr-dashboard | sdr-dashboard.html | SDR daily view — lead pipeline summary |
+| sdr-pipeline-portal | sdr-pipeline-portal.html | Full SDR pipeline CRM — tabbed lead/deal stages, priority chips, verify actions |
+| walk-in | walkin-dashboard.html | Front desk / walk-in intake |
 | ops-manager | ops-manager.html | Admin-heavy ops |
 | machine-issues | machine-issues.html | Maintenance |
 
@@ -184,15 +189,26 @@ The admin panel is a tabbed single-page shell. Tab visibility is controlled per-
 | `roles` | 🔐 Roles & Permissions matrix |
 | `settings` | System settings |
 | `products` | Product catalogue |
+| `product-workflows` | **Product Workflow Configuration** — per-product manufacturing routes (machines, conditions, alternatives) |
 
-### 9.2 Personnel tab (updated 2026-05)
+### 9.2 Product Workflow Configuration (`product-workflows`)
+
+Defines **how** each catalog product is manufactured (ordered machine sequence), not what materials/options the product offers (see **Products** tab).
+
+- **Data:** Supabase tables `machines` + `product_workflows` (migration `022`); PM swap audit `workflow_override_log` (migration `023`). Steps stored as JSONB on `product_workflows.steps`.
+- **Defaults:** `PRODUCT_WORKFLOW_DEFAULTS` in `shared.js`; auto-seeded for catalog products on first tab load via `seedProductWorkflowsFromDefaults()`.
+- **Job tickets:** Resolve route from DB + job options (`lamination`, `cutMethod`, `materialFinish`, Scodix flags); preview under Cutting; save builds `workflowSteps[]` with display names. Legacy `WORKFLOW_TEMPLATES` used if config missing.
+- **Production Manager:** **Swap** only when step has configured alternatives; logged to `workflow_override_log`.
+- **Full reference:** [`PRODUCT-WORKFLOW-CONFIG.md`](PRODUCT-WORKFLOW-CONFIG.md).
+
+### 9.3 Personnel tab (updated 2026-05)
 
 - Modal title: **Add Personnel** / **Edit Personnel**; button: **+ Add Personnel**.
 - Required fields: **Name \***, **Role \*** (select — no Account Manager or Admin options), **Facility \***, **User ID \***.
 - **Facility dropdown** is populated dynamically from `organisation_facilities` (Supabase), with `FACILITIES` constant as fallback. Uses `_waitForSupabaseClient()` polling to wait for client readiness. Values stored as the facility's full name (not slug).
 - **Bulk Set User IDs** button: sets all personnel `userId` fields to a user-specified value (with confirmation prompt). Used for initial ID assignment.
 
-### 9.3 Roles & Permissions matrix (updated 2026-05)
+### 9.4 Roles & Permissions matrix (updated 2026-05)
 
 - Replaces the static read-only table with an **interactive checkbox matrix**.
 - **Rows** = every role in `ROLE_CONFIG` (plus any custom roles added via **+ Add Role**).
@@ -205,16 +221,31 @@ The admin panel is a tabbed single-page shell. Tab visibility is controlled per-
 - `pages: ['all']` roles (Admin) always render with all page checkboxes checked; empty override arrays are treated as "inherit defaults" to prevent accidental lock-out.
 - Changes propagate to all pages via `_applyRoleOverrides()` running in `initAuth()`.
 
-### 9.4 Organisation tab
+### 9.5 Organisation tab
 
 - Loaded as an embedded `<iframe src="organisation.html?embedded=admin">`.
-- Manages company profile, facilities (`organisation_facilities` table), and hardware (`organisation_hardware` table).
-- Facility slugs/names defined here are the source of truth for the Personnel facility dropdown.
+- **`organisation.html`** is also a standalone page (role: `organisation`); it detects `?embedded=admin` to suppress its own nav.
+- **Storage mode** — auto-detected at runtime:
+  - **Supabase** (`PULSE_STORAGE_BACKEND === 'supabase'` and valid URL/key): reads/writes `organisations`, `organisation_facilities`, `organisation_hardware` tables; logo uploads to `org-assets` storage bucket.
+  - **Local JSON** (fallback or `PULSE_ORG_STORAGE === 'local-json'`): uses `PulseOrgJsonStore` (localStorage key `pulse_organisation_bundle_v1`); Export / Import buttons allow syncing the bundle as a `.json` file; `data/pulse-organisation-default.json` is the seed template.
+- **Sections:** Company profile (name, description, website, logo upload), Facilities list (add / edit / delete; each facility has slug, name, description, address, manager), Hardware per facility (machine name, operations array, daily capacity, notes).
+- Facility slugs/names defined here are the **source of truth** for the Personnel facility dropdown (polled via `_waitForSupabaseClient()`; falls back to `FACILITIES` constant).
 
 ### 9.5 Seeds and migrations
 
-- SQL under **`supabase/migrations/`** — includes `organisation_facilities`, `organisation_hardware` tables (migration 017+).
-- Seed scripts (`008_seed_auth_users.sql`, `015_secondary_admin_auth_user.sql`, etc.) align demo users with `auth.js` patterns.
+SQL under **`supabase/migrations/`** — run in numeric order:
+
+| Migration | Purpose |
+|-----------|---------|
+| 001–007 | Core schema: enums, `orders`, `order_workflow_steps`, `profiles`, `machines`, `materials`, RLS policies. |
+| 008 | Seed auth users for demo/dev (operators + admin). |
+| 009–014 | Incremental column additions and RLS refinements. |
+| 015 | Add secondary admin auth user (`admin@bazaar-admin.com`). Idempotent. |
+| 016 | **Destructive utility** — wipes all orders and order-related audit rows (`activity_log`, `invoices`, `orders` + cascades). Preserves profiles, customers, machines, leads. Apply only for a clean-slate reset. |
+| 017 | Add `organisations`, `organisation_facilities`, `organisation_hardware` tables with RLS + `org-assets` storage bucket. Seeds two default facilities and all known machines with capacity defaults. |
+| 018 | Add `organisations.website_url TEXT` column. |
+| 019 | Add `organisation_facilities.address TEXT NOT NULL DEFAULT ''` column. |
+| 020 | Add `organisation_facilities.manager_id UUID` FK → `profiles(id) ON DELETE SET NULL`; creates index. |
 
 ---
 
@@ -228,6 +259,8 @@ The admin panel is a tabbed single-page shell. Tab visibility is controlled per-
 6. **Reproduce** **`dashboard.html`** grouping of parent/sub orders and operational widgets.
 7. **Match operator / QC / shipping** transitions to the same **`status`** strings expected across reports and filters.
 8. **Admin personnel modal**: facility dropdown must query `organisation_facilities` (Supabase) via a client-ready polling helper; fall back to `FACILITIES` constant. Required fields: Name, Role (no Admin/Account Manager options), Facility, User ID.
+9. **Organisation page dual-storage**: detect `PULSE_ORG_STORAGE` + Supabase config at runtime; when Supabase unavailable, delegate all reads/writes to `PulseOrgJsonStore` (localStorage). Expose Export / Import for JSON bundle portability. Seed with `data/pulse-organisation-default.json` as starting template.
+10. **Config template**: ship `pulse-config.local.js.example` as a committed reference; gitignore `pulse-config.local.js`. Document `PULSE_ORG_STORAGE` override and the security boundary (anon key safe in browser; service role / R2 credentials never here).
 
 ---
 
@@ -243,11 +276,18 @@ The admin panel is a tabbed single-page shell. Tab visibility is controlled per-
 
 | Date | Change |
 |------|--------|
+| 2026-05-18 | **Product Workflow Configuration** — Admin tab to define per-product manufacturing routes (`machines`, `product_workflows`, migrations 022–023). Job tickets resolve routes from DB + options; PM swap limited to alternatives with audit log. See [`PRODUCT-WORKFLOW-CONFIG.md`](PRODUCT-WORKFLOW-CONFIG.md). |
 | 2026-05-12 | **Login redesigned** — email+password replaced with Name dropdown + User ID. Personnel sourced from DB; static fallbacks (`OPERATOR_PROFILES`, `EXTRA_AUTH_USERS`, `LOCAL_EMAIL_USERS`). Auto-saves userId on first login if not set. |
 | 2026-05-12 | **Roles & Permissions matrix** — replaced static table with interactive checkbox grid (rows=roles, columns=pages+special perms). Editable, saved to `rolePermissions` config + `localStorage`. Changes applied globally via `_applyRoleOverrides()` in `initAuth()`. |
 | 2026-05-12 | **Personnel modal hardened** — required: Name, Role, User ID, Facility. Role dropdown removes Admin/Account Manager. Facility options loaded live from `organisation_facilities` (Supabase). Bulk Set User IDs action added. |
 | 2026-05-12 | **david-review `adminTabs`** updated to include `roles` — David Zargaryan can now see the Roles & Permissions tab. |
-| 2026-05-12 | **Organisation tab** embedded as iframe in admin; facilities from `organisation_facilities` are the source of truth for the Personnel facility selector. |
+| 2026-05-12 | **Organisation tab** embedded as iframe in admin; `organisation.html` manages company profile, facilities (address, manager), and hardware. Dual storage: Supabase (migrations 017–020) or local JSON via `PulseOrgJsonStore` (`organisation-local-store.js`). |
+| 2026-05-12 | **`organisation-local-store.js`** added — localStorage bundle store for offline / local-JSON mode. Exported type `PulseOrgJsonStore` with `loadRaw`, `saveRaw`, `exportDownload`, `normalizeBundle`. |
+| 2026-05-12 | **`data/pulse-organisation-default.json`** added — seed template for organisation offline mode. |
+| 2026-05-12 | **`pulse-config.local.js.example`** added — documented config template with `PULSE_ORG_STORAGE` instructions and security notes. |
+| 2026-05-12 | **`scripts/wipe-pulse-browser-macos.command`** added — macOS utility to clear all local Pulse data in one double-click. |
+| 2026-05-12 | **Migrations 015–020** — secondary admin seed (015), orders wipe utility (016), organisation tables + storage bucket (017), website_url (018), facility address (019), facility manager FK (020). |
+| 2026-05-12 | **`sdr-pipeline-portal.html`** added — full SDR CRM pipeline: tabbed stages (New Leads, Contacted, Qualified, Proposal, Won/Lost), priority chips, verify actions, search/filter toolbar. |
 
 ---
 

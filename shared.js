@@ -100,6 +100,502 @@ const WORKFLOW_TEMPLATES = {
   'boyd-sheet-matte': { name: 'Sheet Cards Matte (Boyd)', steps: ['Roland Printers', 'Laminator (Boyd)', 'Graphtec Flatbed (Large) x2'] },
 };
 
+// ── Product workflow config (admin Product Workflows tab) ───
+
+/** DB machine slug → display name key in MACHINES */
+/** Workflow machine slug → category (matches migration 022). */
+const MACHINE_SLUG_CATEGORY = {
+  'press-6k': 'press',
+  'press-15k': 'press',
+  'nobelus': 'lamination',
+  'scodix': 'finishing',
+  'karlville': 'pouching',
+  'gm-die-cutter': 'cutting',
+  'gm-laser-cutter': 'cutting',
+  'moll-cutter': 'cutting',
+  'moll-folder': 'folding',
+  'duplo': 'cutting',
+  'guillotine': 'cutting',
+  'uv-coater': 'finishing',
+  'booklet-folder': 'folding',
+  'canon-colorado': 'press',
+  'roland': 'press',
+  'graphtec-vinyl': 'cutting',
+  'graphtec-flatbed': 'cutting',
+  'boyd-laminator': 'lamination',
+};
+
+const MACHINE_SLUG_TO_DISPLAY = {
+  'press-6k': 'HP Indigo 6K',
+  'press-15k': 'HP Indigo 15K',
+  'nobelus': 'Laminator (Nobelus)',
+  'scodix': 'Scodix',
+  'karlville': 'Karlville Poucher',
+  'gm-die-cutter': 'GM Die Cutter w/ JetFX',
+  'gm-laser-cutter': 'GM Laser Cutter w/ JetFX',
+  'moll-cutter': 'Moll Brothers Cutter',
+  'moll-folder': 'Moll Brothers Folder-Gluer',
+  'duplo': 'Duplo',
+  'guillotine': 'Guillotine Cutter',
+  'uv-coater': 'UV Coater',
+  'booklet-folder': 'Booklet Folder',
+  'canon-colorado': 'Canon Colorado',
+  'roland': 'Roland Printers',
+  'graphtec-vinyl': 'Graphtec Vinyl Cutter x4',
+  'graphtec-flatbed': 'Graphtec Flatbed (Large) x2',
+  'boyd-laminator': 'Laminator (Boyd)',
+};
+
+function _defaultOperationForMachineDisplay(displayName) {
+  const ops = (displayName && MACHINES[displayName]?.operations) || [];
+  return ops[0] || 'Processing';
+}
+
+function _defaultOperationForMachineSlug(machineId) {
+  return _defaultOperationForMachineDisplay(machineSlugToDisplayName(machineId));
+}
+
+function normalizeWorkflowAlternativeEntry(alt) {
+  if (!alt) return null;
+  if (typeof alt === 'string') {
+    return { machineId: alt, operation: _defaultOperationForMachineSlug(alt) };
+  }
+  const machineId = alt.machineId || alt.id;
+  if (!machineId) return null;
+  return {
+    machineId,
+    operation: alt.operation || _defaultOperationForMachineSlug(machineId),
+  };
+}
+
+function normalizeWorkflowAlternatives(alternatives) {
+  return (alternatives || []).map(normalizeWorkflowAlternativeEntry).filter(Boolean);
+}
+
+function _workflowStep(machineId, sortOrder, opts = {}) {
+  const operation = opts.operation ?? _defaultOperationForMachineSlug(machineId);
+  const alternatives = normalizeWorkflowAlternatives(opts.alternatives);
+  const stepType = opts.stepType || 'default';
+  const defaultMachineId = opts.defaultMachineId ?? null;
+  const defaultOperation = opts.defaultOperation
+    ?? (defaultMachineId ? _defaultOperationForMachineSlug(defaultMachineId) : null);
+  return {
+    machineId,
+    operation,
+    stepType,
+    sortOrder,
+    defaultMachineId,
+    defaultOperation,
+    alternatives,
+    conditionField: opts.conditionField ?? null,
+    conditionOp: opts.conditionOp ?? null,
+    conditionValue: opts.conditionValue ?? null,
+    notes: opts.notes ?? null,
+  };
+}
+
+function _cloneWorkflowDefault(def) {
+  return {
+    primaryFacility: def.primaryFacility,
+    unmapped: !!def.unmapped,
+    steps: (def.steps || []).map(s => ({
+      ...s,
+      operation: s.operation || _defaultOperationForMachineSlug(s.machineId),
+      defaultOperation: s.defaultOperation
+        || (s.defaultMachineId ? _defaultOperationForMachineSlug(s.defaultMachineId) : null),
+      alternatives: normalizeWorkflowAlternatives(s.alternatives),
+    })),
+  };
+}
+
+const PRODUCT_WORKFLOW_DEFAULTS = {
+  'labels-roll': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-6k', 1),
+      _workflowStep('gm-die-cutter', 2, {
+        stepType: 'conditional',
+        defaultMachineId: 'gm-laser-cutter',
+        conditionField: 'cutMethod',
+        conditionOp: 'equals',
+        conditionValue: 'die',
+        alternatives: ['gm-laser-cutter'],
+      }),
+    ],
+  },
+  'labels-sheet': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-6k', 1, { alternatives: ['press-15k'] }),
+      _workflowStep('guillotine', 2, { alternatives: ['duplo', 'graphtec-flatbed'] }),
+    ],
+  },
+  'pouches': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-6k', 1),
+      _workflowStep('gm-die-cutter', 2, {
+        stepType: 'conditional',
+        defaultMachineId: 'gm-laser-cutter',
+        conditionField: 'cutMethod',
+        conditionOp: 'equals',
+        conditionValue: 'die',
+        alternatives: ['gm-laser-cutter'],
+      }),
+      _workflowStep('karlville', 3),
+    ],
+  },
+  'boxes': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-15k', 1),
+      _workflowStep('nobelus', 2, {
+        stepType: 'conditional',
+        conditionField: 'lamination',
+        conditionOp: 'not_equals',
+        conditionValue: 'none',
+      }),
+      _workflowStep('scodix', 3, {
+        stepType: 'conditional',
+        conditionField: 'hasScodixFinishing',
+        conditionOp: 'equals',
+        conditionValue: 'true',
+      }),
+      _workflowStep('moll-cutter', 4, { alternatives: ['duplo', 'graphtec-flatbed'] }),
+      _workflowStep('moll-folder', 5),
+    ],
+  },
+  'business-cards': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-15k', 1, { alternatives: ['canon-colorado', 'roland'] }),
+      _workflowStep('nobelus', 2, {
+        stepType: 'conditional',
+        conditionField: 'lamination',
+        conditionOp: 'not_equals',
+        conditionValue: 'none',
+        alternatives: ['boyd-laminator'],
+      }),
+      _workflowStep('duplo', 3, { alternatives: ['guillotine', 'graphtec-flatbed'] }),
+    ],
+  },
+  'flyers': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-15k', 1),
+      _workflowStep('nobelus', 2, {
+        stepType: 'conditional',
+        conditionField: 'lamination',
+        conditionOp: 'not_equals',
+        conditionValue: 'none',
+      }),
+      _workflowStep('guillotine', 3, { alternatives: ['duplo', 'graphtec-flatbed'] }),
+    ],
+  },
+  'booklets': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-15k', 1),
+      _workflowStep('nobelus', 2, {
+        stepType: 'conditional',
+        conditionField: 'lamination',
+        conditionOp: 'not_equals',
+        conditionValue: 'none',
+      }),
+      _workflowStep('booklet-folder', 3),
+      _workflowStep('guillotine', 4),
+    ],
+  },
+  'diecut-stickers': {
+    primaryFacility: '16th',
+    steps: [
+      _workflowStep('press-6k', 1),
+      _workflowStep('gm-laser-cutter', 2, { alternatives: ['gm-die-cutter'] }),
+    ],
+  },
+  'vinyl-labels': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('canon-colorado', 1, {
+        stepType: 'conditional',
+        conditionField: 'materialFinish',
+        conditionOp: 'equals',
+        conditionValue: 'gloss',
+        alternatives: ['roland'],
+      }),
+      _workflowStep('roland', 2, {
+        stepType: 'conditional',
+        conditionField: 'materialFinish',
+        conditionOp: 'equals',
+        conditionValue: 'matte',
+        alternatives: ['canon-colorado'],
+      }),
+      _workflowStep('graphtec-vinyl', 3),
+    ],
+  },
+  'vinyl-signage': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('canon-colorado', 1, {
+        stepType: 'conditional',
+        conditionField: 'materialFinish',
+        conditionOp: 'equals',
+        conditionValue: 'gloss',
+        alternatives: ['roland'],
+      }),
+      _workflowStep('roland', 2, {
+        stepType: 'conditional',
+        conditionField: 'materialFinish',
+        conditionOp: 'equals',
+        conditionValue: 'matte',
+        alternatives: ['canon-colorado'],
+      }),
+      _workflowStep('graphtec-vinyl', 3),
+    ],
+  },
+  'banners': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('canon-colorado', 1, { alternatives: ['roland'] }),
+    ],
+  },
+  'window-decals': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('roland', 1, { alternatives: ['canon-colorado'] }),
+      _workflowStep('graphtec-vinyl', 2),
+    ],
+  },
+  'wallpaper': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('canon-colorado', 1, { alternatives: ['roland'] }),
+    ],
+  },
+  'boyd-sheets': {
+    primaryFacility: 'boyd',
+    steps: [
+      _workflowStep('canon-colorado', 1, {
+        stepType: 'conditional',
+        conditionField: 'materialFinish',
+        conditionOp: 'equals',
+        conditionValue: 'gloss',
+        alternatives: ['roland'],
+      }),
+      _workflowStep('boyd-laminator', 2, {
+        stepType: 'conditional',
+        conditionField: 'lamination',
+        conditionOp: 'not_equals',
+        conditionValue: 'none',
+      }),
+      _workflowStep('graphtec-flatbed', 3, { alternatives: ['duplo'] }),
+    ],
+  },
+  placeholder: {
+    primaryFacility: '16th',
+    unmapped: true,
+    steps: [
+      _workflowStep('press-15k', 1),
+      _workflowStep('guillotine', 2),
+    ],
+  },
+};
+
+const CATALOG_NAME_TO_DEFAULT_KEY = {
+  'labels (roll)': 'labels-roll',
+  'labels (sheet)': 'labels-sheet',
+  'pouches': 'pouches',
+  'folding cartons / boxes': 'boxes',
+  'business cards': 'business-cards',
+  'flyers / postcards': 'flyers',
+  'booklets': 'booklets',
+  'diecut stickers': 'diecut-stickers',
+  'vinyl labels / 54\'\' rolls': 'vinyl-labels',
+  'vinyl signage': 'vinyl-signage',
+  'banners / large format': 'banners',
+  'window decals': 'window-decals',
+  'wallpaper': 'wallpaper',
+  'sheet products (boyd)': 'boyd-sheets',
+};
+
+const CATALOG_PARTIAL_DEFAULT_KEYS = [
+  [/labels.*roll/i, 'labels-roll'],
+  [/labels.*sheet/i, 'labels-sheet'],
+  [/pouch/i, 'pouches'],
+  [/folding carton|\/ boxes/i, 'boxes'],
+  [/business card/i, 'business-cards'],
+  [/flyer|postcard/i, 'flyers'],
+  [/booklet/i, 'booklets'],
+  [/diecut|die.?cut.*sticker/i, 'diecut-stickers'],
+  [/vinyl label|54.*roll/i, 'vinyl-labels'],
+  [/vinyl signage/i, 'vinyl-signage'],
+  [/banner|large format/i, 'banners'],
+  [/window decal/i, 'window-decals'],
+  [/wallpaper/i, 'wallpaper'],
+  [/sheet products.*boyd/i, 'boyd-sheets'],
+];
+
+function getDefaultProductWorkflowForCatalogName(productName) {
+  const norm = (productName || '').trim().toLowerCase();
+  const key = CATALOG_NAME_TO_DEFAULT_KEY[norm];
+  if (key && PRODUCT_WORKFLOW_DEFAULTS[key]) return _cloneWorkflowDefault(PRODUCT_WORKFLOW_DEFAULTS[key]);
+  for (const [pattern, k] of CATALOG_PARTIAL_DEFAULT_KEYS) {
+    if (pattern.test(productName || '') && PRODUCT_WORKFLOW_DEFAULTS[k]) {
+      return _cloneWorkflowDefault(PRODUCT_WORKFLOW_DEFAULTS[k]);
+    }
+  }
+  return _cloneWorkflowDefault(PRODUCT_WORKFLOW_DEFAULTS.placeholder);
+}
+
+function _evalWorkflowCondition(step, jobOptions) {
+  if (step.stepType !== 'conditional') return true;
+  const field = step.conditionField;
+  if (!field || !step.conditionOp) return false;
+  const raw = jobOptions?.[field];
+  const val = raw == null ? '' : String(raw);
+  const expected = step.conditionValue == null ? '' : String(step.conditionValue);
+  switch (step.conditionOp) {
+    case 'equals':
+      return val === expected || val.toLowerCase() === expected.toLowerCase();
+    case 'not_equals':
+      return val !== expected && val.toLowerCase() !== expected.toLowerCase();
+    case 'in': {
+      const parts = expected.split(',').map(s => s.trim().toLowerCase());
+      return parts.includes(val.toLowerCase());
+    }
+    default:
+      return true;
+  }
+}
+
+/** Resolve configured steps for a job (phase 2 — job ticket wiring). */
+function resolveProductWorkflowSteps(steps, jobOptions = {}, opts = {}) {
+  if (!Array.isArray(steps)) return [];
+  const includeOptional = opts.includeOptional || [];
+  const optionalIds = new Set(
+    Array.isArray(includeOptional) ? includeOptional : []
+  );
+  const sorted = [...steps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  return sorted.map(step => {
+    if (step.stepType === 'optional') {
+      return optionalIds.has(step.machineId) ? step : null;
+    }
+    if (step.stepType !== 'conditional') return step;
+    if (_evalWorkflowCondition(step, jobOptions)) return step;
+    if (step.defaultMachineId) {
+      return {
+        ...step,
+        machineId: step.defaultMachineId,
+        operation: step.defaultOperation || _defaultOperationForMachineSlug(step.defaultMachineId),
+      };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+function machineSlugToDisplayName(machineId) {
+  if (!machineId) return '';
+  return MACHINE_SLUG_TO_DISPLAY[machineId] || machineId;
+}
+
+function displayNameToMachineSlug(displayName) {
+  if (!displayName) return null;
+  const entry = Object.entries(MACHINE_SLUG_TO_DISPLAY).find(([, name]) => name === displayName);
+  return entry ? entry[0] : null;
+}
+
+function normalizeWorkflowCutMethod(cutMethod) {
+  const v = String(cutMethod || '').toLowerCase();
+  if (['gm-die', 'die-cut', 'die'].includes(v)) return 'die';
+  if (['gm-laser', 'laser', 'kiss-cut', 'karlville'].includes(v)) return 'laser';
+  return v || 'laser';
+}
+
+/** Map job-ticket form values to product-workflow condition fields. */
+function buildProductWorkflowJobOptions(input = {}) {
+  const lamRaw = input.lamination;
+  const hasLam = input.hasLamination !== false && lamRaw && String(lamRaw).toLowerCase() !== 'none';
+  const lamination = hasLam ? String(lamRaw).toLowerCase().replace(/\s+/g, '-') : 'none';
+  const material = String(input.material || '').toLowerCase();
+  let materialFinish = input.materialFinish || null;
+  if (!materialFinish) {
+    if (/matte/i.test(material)) materialFinish = 'matte';
+    else if (/gloss|cast|calendar/i.test(material)) materialFinish = 'gloss';
+  }
+  const hasScodix = !!(input.hasUV || input.hasFoil || input.hasEmboss);
+  return {
+    cutMethod: normalizeWorkflowCutMethod(input.cutMethod),
+    lamination,
+    materialFinish,
+    hasScodixFinishing: hasScodix ? 'true' : 'false',
+    spotUV: input.hasUV ? 'true' : 'false',
+    foil: input.hasFoil ? 'true' : 'false',
+    emboss: input.hasEmboss ? 'true' : 'false',
+  };
+}
+
+/** Build order.workflowSteps[] from resolved admin workflow steps. */
+function workflowStepsFromResolvedConfig(resolvedSteps, generateStepId) {
+  const genId = typeof generateStepId === 'function' ? generateStepId : () => `step-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return (resolvedSteps || []).map((step, i) => {
+    const machineId = step.machineId || displayNameToMachineSlug(step.machine);
+    const machine = machineSlugToDisplayName(machineId) || step.machine || machineId;
+    const altEntries = normalizeWorkflowAlternatives(step.alternatives);
+    const altSlugs = altEntries.map(a => a.machineId);
+    return {
+      id: genId(),
+      machineId,
+      machine,
+      operation: step.operation || (MACHINES[machine]?.operations?.[0]) || 'Processing',
+      status: 'pending',
+      assignedTo: null,
+      startedAt: null,
+      completedAt: null,
+      unitsLost: 0,
+      notes: step.notes || '',
+      stepIndex: i,
+      alternatives: [...altSlugs],
+      alternativeMachines: altSlugs.map(machineSlugToDisplayName).filter(Boolean),
+    };
+  });
+}
+
+/** Display names the PM may swap to (primary + configured alternatives). */
+function getAllowedMachineDisplaysForWorkflowStep(step) {
+  if (!step) return [];
+  const primary = step.machine || machineSlugToDisplayName(step.machineId);
+  const fromAlts = (step.alternativeMachines && step.alternativeMachines.length)
+    ? step.alternativeMachines
+    : (step.alternatives || []).map(machineSlugToDisplayName);
+  const allowed = [primary, ...fromAlts].filter(Boolean);
+  return [...new Set(allowed)];
+}
+
+function isProductWorkflowDefaultUnmapped(productName) {
+  return !!getDefaultProductWorkflowForCatalogName(productName).unmapped;
+}
+
+if (typeof window !== 'undefined') {
+  window.MACHINE_SLUG_TO_DISPLAY = MACHINE_SLUG_TO_DISPLAY;
+  window.MACHINE_SLUG_CATEGORY = MACHINE_SLUG_CATEGORY;
+  window.PRODUCT_WORKFLOW_DEFAULTS = PRODUCT_WORKFLOW_DEFAULTS;
+  window.getDefaultProductWorkflowForCatalogName = getDefaultProductWorkflowForCatalogName;
+  window.resolveProductWorkflowSteps = resolveProductWorkflowSteps;
+  window.machineSlugToDisplayName = machineSlugToDisplayName;
+  window.displayNameToMachineSlug = displayNameToMachineSlug;
+  window.buildProductWorkflowJobOptions = buildProductWorkflowJobOptions;
+  window.workflowStepsFromResolvedConfig = workflowStepsFromResolvedConfig;
+  window.getAllowedMachineDisplaysForWorkflowStep = getAllowedMachineDisplaysForWorkflowStep;
+  window.isProductWorkflowDefaultUnmapped = isProductWorkflowDefaultUnmapped;
+  window.getOperationsForMachineSlug = function (machineId) {
+    const name = machineSlugToDisplayName(machineId);
+    return (name && MACHINES[name]?.operations) ? [...MACHINES[name].operations] : ['Processing'];
+  };
+  window.normalizeWorkflowAlternatives = normalizeWorkflowAlternatives;
+  window.normalizeWorkflowAlternativeEntry = normalizeWorkflowAlternativeEntry;
+  window.defaultOperationForMachineSlug = _defaultOperationForMachineSlug;
+}
+
 // ── Production Lines ───────────────────────────────────────
 // Classify which production line an order belongs to based on its workflow
 const PRODUCTION_LINES = {
@@ -758,7 +1254,7 @@ async function checkProductionCapacity(newOrder, workflowSteps) {
 
     // Calculate existing queue load on this machine
     const queuedOrders = allOrders.filter(o => {
-      if (['completed','shipped','received','waiting-pickup','cancelled'].includes(o.status)) return false;
+      if (['completed','shipped','received','waiting-pickup','delivery-ready','cancelled'].includes(o.status)) return false;
       const steps = o.workflowSteps || [];
       const currentIdx = o.currentStep || 0;
       // Check if any pending/active step uses this machine
@@ -1215,7 +1711,7 @@ const POINTS_RULES = {
 const ORDER_STATUSES = [
   'waiting-approval', 'new', 'pending-confirmation', 'pending-review', 'prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'on-hold',
   'in-production', 'reprint', 'qc-checkout', 'qc-failed', 'ready-to-ship',
-  'shipped', 'waiting-pickup', 'received', 'completed'
+  'shipped', 'waiting-pickup', 'delivery-ready', 'received', 'completed'
 ];
 
 const MATERIALS = [
@@ -2961,6 +3457,7 @@ const STATUS_LABELS = {
   'ready-to-ship': 'Ready to Ship',
   'shipped': 'Shipped',
   'waiting-pickup': 'Waiting Pickup',
+  'delivery-ready': 'Delivery Ready',
   'received': 'Received',
   'completed': 'Completed',
   'qc-failed': 'QC Failed',
@@ -2972,29 +3469,30 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  'waiting-approval': '#8b949e',
-  'new': '#58a6ff',
+  'waiting-approval': '#64748b',
+  'new': '#0284c7',
   'pending-confirmation': '#ea580c',
-  'pending-review': '#d29922',
+  'pending-review': '#b45309',
   'prepress': '#2563eb',
-  'prepress-active': '#16a34a',
-  'prepress-paused': '#d97706',
-  'step-paused': '#d97706',
+  'prepress-active': '#059669',
+  'prepress-paused': '#c2410c',
+  'step-paused': '#9a3412',
   'pending-account-manager': '#dc2626',
-  'in-production': '#3fb950',
-  'on-hold': '#f85149',
-  'qc-checkout': '#bc8cff',
-  'ready-to-ship': '#3fb950',
-  'shipped': '#8b949e',
-  'waiting-pickup': '#d29922',
-  'received': '#3fb950',
-  'completed': '#8b949e',
-  'qc-failed': '#f85149',
-  'reprint': '#f97316',
+  'in-production': '#16a34a',
+  'on-hold': '#db2777',
+  'qc-checkout': '#7c3aed',
+  'ready-to-ship': '#0d9488',
+  'shipped': '#475569',
+  'waiting-pickup': '#ca8a04',
+  'delivery-ready': '#0891b2',
+  'received': '#047857',
+  'completed': '#6d28d9',
+  'qc-failed': '#dc2626',
+  'reprint': '#d97706',
   // PUL-713/714: Order form statuses
   'order-pending':   '#64748b',
-  'order-priced':    '#2563eb',
-  'order-confirmed': '#16a34a',
+  'order-priced':    '#1d4ed8',
+  'order-confirmed': '#15803d',
 };
 
 // ── BroadcastChannel ───────────────────────────────────────
@@ -3191,10 +3689,23 @@ function _add(storeName, data) {
   }));
 }
 
+const _AUTO_INC_STORES = new Set([
+  'orders', 'personnel', 'devices', 'activity_log', 'knowledge_base', 'reprints',
+  'dies', 'operator_sessions', 'operator_points', 'inventory', 'purchase_orders', 'invoices',
+]);
+
+/** IndexedDB auto-increment keys are numbers; onclick handlers often pass string ids. */
+function _normalizeStoreKey(storeName, id) {
+  if (!_AUTO_INC_STORES.has(storeName) || id == null || id === '') return id;
+  const s = String(id).trim();
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return id;
+}
+
 function _get(storeName, id) {
   return openDB().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readonly');
-    const req = tx.objectStore(storeName).get(id);
+    const req = tx.objectStore(storeName).get(_normalizeStoreKey(storeName, id));
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   }));
@@ -3210,10 +3721,11 @@ function _getAll(storeName) {
 }
 
 function _update(storeName, id, changes) {
+  const key = _normalizeStoreKey(storeName, id);
   return openDB().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
-    const getReq = store.get(id);
+    const getReq = store.get(key);
     getReq.onsuccess = () => {
       const existing = getReq.result;
       if (!existing) { reject(new Error('Not found')); return; }
@@ -3229,7 +3741,7 @@ function _update(storeName, id, changes) {
 function _delete(storeName, id) {
   return openDB().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
-    const req = tx.objectStore(storeName).delete(id);
+    const req = tx.objectStore(storeName).delete(_normalizeStoreKey(storeName, id));
     req.onsuccess = () => { broadcastUpdate(storeName, id); resolve(); };
     req.onerror = () => reject(req.error);
   }));
@@ -3609,6 +4121,145 @@ function setConfig(key, value) {
     req.onsuccess = () => { broadcastUpdate('config', key); resolve(); };
     req.onerror = () => reject(req.error);
   }));
+}
+
+// ── Product workflows (IndexedDB / local config fallback) ─
+// Used when PULSE_STORAGE_BACKEND is not Supabase. supabase-client.js overrides these when active.
+
+const PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY = 'productWorkflows';
+
+function _configStoredValue(record) {
+  if (record == null) return null;
+  if (Array.isArray(record)) return record;
+  return record.value ?? record;
+}
+
+async function _readLocalProductWorkflows() {
+  const rec = await getConfig(PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY);
+  const v = _configStoredValue(rec);
+  return Array.isArray(v) ? v : [];
+}
+
+async function _writeLocalProductWorkflows(rows) {
+  await setConfig(PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY, rows);
+}
+
+function _normalizeLocalProductWorkflow(wf) {
+  const now = new Date().toISOString();
+  const steps = (wf.steps || []).map((s, i) => ({
+    ...s,
+    sortOrder: s.sortOrder ?? i + 1,
+    operation: s.operation || _defaultOperationForMachineSlug(s.machineId),
+    defaultOperation: s.defaultOperation
+      || (s.defaultMachineId ? _defaultOperationForMachineSlug(s.defaultMachineId) : null),
+    alternatives: normalizeWorkflowAlternatives(s.alternatives),
+  }));
+  return {
+    id: wf.id || `pw_${wf.productCatalogId}`,
+    productCatalogId: wf.productCatalogId,
+    productName: wf.productName,
+    primaryFacility: wf.primaryFacility || '16th',
+    steps,
+    createdAt: wf.createdAt || now,
+    updatedAt: now,
+  };
+}
+
+async function getAllProductWorkflowsIndexedDB() {
+  return _readLocalProductWorkflows();
+}
+
+async function getProductWorkflowByCatalogIdIndexedDB(catalogId) {
+  const all = await _readLocalProductWorkflows();
+  return all.find(w => w.productCatalogId === catalogId) || null;
+}
+
+async function upsertProductWorkflowIndexedDB(wf) {
+  const all = await _readLocalProductWorkflows();
+  const saved = _normalizeLocalProductWorkflow(wf);
+  const idx = all.findIndex(w => w.productCatalogId === saved.productCatalogId);
+  if (idx >= 0) {
+    saved.id = all[idx].id;
+    saved.createdAt = all[idx].createdAt || saved.createdAt;
+    all[idx] = saved;
+  } else {
+    all.push(saved);
+  }
+  await _writeLocalProductWorkflows(all);
+  return saved;
+}
+
+async function deleteProductWorkflowIndexedDB(id) {
+  const all = await _readLocalProductWorkflows();
+  await _writeLocalProductWorkflows(all.filter(w => w.id !== id));
+}
+
+async function seedProductWorkflowsFromDefaultsIndexedDB(catProducts) {
+  if (!Array.isArray(catProducts) || !catProducts.length) return { seeded: 0 };
+  const existing = await _readLocalProductWorkflows();
+  const byCatalog = new Set(existing.map(w => w.productCatalogId));
+  const getDefault = typeof getDefaultProductWorkflowForCatalogName === 'function'
+    ? getDefaultProductWorkflowForCatalogName
+    : () => ({ primaryFacility: '16th', steps: [] });
+  let seeded = 0;
+  for (const prod of catProducts) {
+    if (!prod?.id || byCatalog.has(prod.id)) continue;
+    const def = getDefault(prod.name);
+    await upsertProductWorkflowIndexedDB({
+      productCatalogId: prod.id,
+      productName: prod.name,
+      primaryFacility: def.primaryFacility || '16th',
+      steps: def.steps || [],
+    });
+    seeded++;
+  }
+  return { seeded };
+}
+
+async function resetAllProductWorkflowsFromDefaultsIndexedDB(catProducts) {
+  if (!Array.isArray(catProducts) || !catProducts.length) return { updated: 0 };
+  const getDefault = typeof getDefaultProductWorkflowForCatalogName === 'function'
+    ? getDefaultProductWorkflowForCatalogName
+    : () => ({ primaryFacility: '16th', steps: [] });
+  const rows = [];
+  for (const prod of catProducts) {
+    if (!prod?.id || !prod.name) continue;
+    const def = getDefault(prod.name);
+    rows.push(_normalizeLocalProductWorkflow({
+      productCatalogId: prod.id,
+      productName: prod.name,
+      primaryFacility: def.primaryFacility || '16th',
+      steps: def.steps || [],
+    }));
+  }
+  await _writeLocalProductWorkflows(rows);
+  return { updated: rows.length };
+}
+
+async function getAllMachinesIndexedDB() {
+  if (typeof MACHINE_SLUG_TO_DISPLAY === 'undefined') return [];
+  return Object.entries(MACHINE_SLUG_TO_DISPLAY).map(([id, displayName]) => ({
+    id,
+    name: displayName,
+    displayName,
+    facility: ['canon-colorado', 'roland', 'graphtec-vinyl', 'graphtec-flatbed', 'boyd-laminator'].includes(id) ? 'boyd' : '16th',
+    category: id.includes('press') ? 'press' : id.includes('laminat') ? 'lamination' : 'cutting',
+    capabilities: [],
+  }));
+}
+
+if (typeof window !== 'undefined') {
+  if (typeof window.getAllProductWorkflows !== 'function') {
+    window.getAllProductWorkflows = getAllProductWorkflowsIndexedDB;
+    window.getProductWorkflowByCatalogId = getProductWorkflowByCatalogIdIndexedDB;
+    window.upsertProductWorkflow = upsertProductWorkflowIndexedDB;
+    window.deleteProductWorkflow = deleteProductWorkflowIndexedDB;
+    window.seedProductWorkflowsFromDefaults = seedProductWorkflowsFromDefaultsIndexedDB;
+    window.resetAllProductWorkflowsFromDefaults = resetAllProductWorkflowsFromDefaultsIndexedDB;
+  }
+  if (typeof window.getAllMachines !== 'function') {
+    window.getAllMachines = getAllMachinesIndexedDB;
+  }
 }
 
 // ── Knowledge Base (Operator Alerts) ──────────────────────
@@ -4366,24 +5017,29 @@ const THEME_CSS = `
     display: inline-block; padding: 2px 8px; border-radius: 12px;
     font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .badge-waiting-approval { background: #f1f3f5; color: #5f6b7a; }
-  .badge-new { background: #e0edff; color: #1d4ed8; }
-  .badge-pending-confirmation { background: #fff1e6; color: #c2410c; }
-  .badge-pending-review { background: #fef3cd; color: #92600a; }
-  .badge-prepress { background: #e0edff; color: #1d4ed8; }
-  .badge-prepress-active { background: #d4edda; color: #0f6b2d; }
-  .badge-prepress-paused { background: #fef3cd; color: #92600a; }
+  .badge-waiting-approval { background: #f1f5f9; color: #64748b; }
+  .badge-new { background: #e0f2fe; color: #0369a1; }
+  .badge-pending-confirmation { background: #fff7ed; color: #c2410c; }
+  .badge-pending-review { background: #fef3c7; color: #b45309; }
+  .badge-prepress { background: #dbeafe; color: #1d4ed8; }
+  .badge-prepress-active { background: #d1fae5; color: #047857; }
+  .badge-prepress-paused { background: #ffedd5; color: #c2410c; }
+  .badge-step-paused { background: #fed7aa; color: #9a3412; }
   .badge-pending-account-manager { background: #fee2e2; color: #b91c1c; }
-  .badge-in-production { background: #d4edda; color: #0f6b2d; }
-  .badge-on-hold { background: #fde8e8; color: #b91c1c; }
+  .badge-in-production { background: #dcfce7; color: #15803d; }
+  .badge-on-hold { background: #fce7f3; color: #be185d; }
   .badge-qc-checkout { background: #ede9fe; color: #6d28d9; }
-  .badge-ready-to-ship { background: #d4edda; color: #0f6b2d; }
-  .badge-shipped { background: #f1f3f5; color: #5f6b7a; }
-  .badge-waiting-pickup { background: #fef3cd; color: #92600a; }
-  .badge-received { background: #d4edda; color: #0f6b2d; }
-  .badge-completed { background: #ede9fe; color: #6d28d9; }
-  .badge-qc-failed { background: #fde8e8; color: #b91c1c; }
-  .badge-reprint { background: #fff7ed; color: #c2410c; }
+  .badge-ready-to-ship { background: #ccfbf1; color: #0f766e; }
+  .badge-shipped { background: #e2e8f0; color: #475569; }
+  .badge-waiting-pickup { background: #fef9c3; color: #a16207; }
+  .badge-delivery-ready { background: #cffafe; color: #0e7490; }
+  .badge-received { background: #d1fae5; color: #065f46; }
+  .badge-completed { background: #f3e8ff; color: #7c3aed; }
+  .badge-qc-failed { background: #fee2e2; color: #dc2626; }
+  .badge-reprint { background: #ffedd5; color: #ea580c; }
+  .badge-order-pending { background: #f1f5f9; color: #475569; }
+  .badge-order-priced { background: #dbeafe; color: #1e40af; }
+  .badge-order-confirmed { background: #dcfce7; color: #166534; }
 
   /* Navigation */
   .top-nav {
@@ -4647,6 +5303,38 @@ const THEME_CSS = `
   .note-type-badge.CRITICAL { background:#fde8e8; color:#b91c1c; }
   .note-type-badge.INSTRUCTIONS { background:#fef3cd; color:#92600a; }
 
+  /* ── SKU versions & artwork (production manager, operator, etc.) ── */
+  .pulse-sku-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pulse-sku-section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-muted); margin: 0 0 10px;
+  }
+  .pulse-sku-section-title span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .pulse-sku-block {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+    margin-bottom: 10px; background: #f8fafc;
+  }
+  .pulse-sku-block:last-child { margin-bottom: 0; }
+  .pulse-sku-hdr {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;
+  }
+  .pulse-sku-hdr strong { font-size: 13px; color: var(--text); }
+  .pulse-sku-hdr span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .pulse-sku-layers { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+  .pulse-sku-empty { font-size: 12px; color: var(--text-muted); }
+  .pulse-art-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .pulse-art-thumb, .pulse-art-pdf {
+    width: 72px; height: 72px; border-radius: 8px; border: 1px solid var(--border);
+    overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff;
+  }
+  .pulse-art-thumb img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+  .pulse-art-pdf { font-size: 24px; cursor: default; }
+  .pulse-art-name {
+    font-size: 10px; color: var(--text-muted); text-align: center; max-width: 72px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;
+  }
+
 `;
 
 function injectThemeCSS() {
@@ -4735,6 +5423,7 @@ const STATUS_ICONS = {
   'ready-to-ship':          '✅',
   'shipped':                '🚚',
   'waiting-pickup':         '📦',
+  'delivery-ready':         '🚚',
   'received':               '✔️',
   'completed':              '✔️',
   'qc-failed':              '❌',
@@ -4744,6 +5433,144 @@ const STATUS_ICONS = {
   'order-priced':           '🔒',
   'order-confirmed':        '✅',
 };
+
+// ── SKU versions & artwork (production manager, operator terminal, etc.) ──
+let _pulseArtworkUrls = [];
+
+function pulseEscapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function isPulseArtImageFile(f) {
+  if (f?.type?.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|tif|tiff|bmp)$/i.test(f?.name || '');
+}
+
+function getOrderSkuArtFiles(sku) {
+  if (!sku) return [];
+  const files = [];
+  if (sku.artworkDataUrl) {
+    files.push({ name: sku.artworkName || 'Main artwork', type: sku.artworkType || '', dataUrl: sku.artworkDataUrl });
+  }
+  if (sku.whiteDataUrl) {
+    files.push({ name: sku.whiteName || 'White layer', type: '', dataUrl: sku.whiteDataUrl });
+  }
+  if (sku.uvDataUrl) {
+    files.push({ name: sku.uvName || 'UV layer', type: '', dataUrl: sku.uvDataUrl });
+  }
+  if (sku.foilDataUrl) {
+    files.push({ name: sku.foilName || 'Foil layer', type: '', dataUrl: sku.foilDataUrl });
+  }
+  return files;
+}
+
+function collectOrderArtworkFiles(order) {
+  const files = [];
+  const seen = new Set();
+  const add = (f) => {
+    if (!f?.dataUrl) return;
+    const key = String(f.dataUrl).slice(0, 96) + '|' + (f.name || '');
+    if (seen.has(key)) return;
+    seen.add(key);
+    files.push(f);
+  };
+  (order.artworkFiles || []).forEach(f => add({ name: f.name || 'Main artwork', type: f.type || '', dataUrl: f.dataUrl }));
+  if (order.whiteLayerFile?.dataUrl) {
+    add({ name: order.whiteLayerFile.name || 'White layer', type: order.whiteLayerFile.type || '', dataUrl: order.whiteLayerFile.dataUrl });
+  }
+  if (order.uvFile?.dataUrl) {
+    add({ name: order.uvFile.name || 'UV layer', type: order.uvFile.type || '', dataUrl: order.uvFile.dataUrl });
+  }
+  if (order.foilFile?.dataUrl) {
+    add({ name: order.foilFile.name || 'Foil layer', type: order.foilFile.type || '', dataUrl: order.foilFile.dataUrl });
+  }
+  return files;
+}
+
+function renderPulseArtThumbGrid(files = []) {
+  if (!files.length) return '';
+  const start = _pulseArtworkUrls.length;
+  files.forEach(f => { if (f?.dataUrl) _pulseArtworkUrls.push(f.dataUrl); });
+  return `<div class="pulse-art-grid">${files.map((f, i) => {
+    const idx = start + i;
+    const isImage = isPulseArtImageFile(f);
+    const name = pulseEscapeHtml(f.name || 'file');
+    return `<div>
+      <div class="${isImage ? 'pulse-art-thumb' : 'pulse-art-pdf'}">${isImage
+        ? `<img src="${f.dataUrl}" alt="${name}" onclick="openPulseArtworkByIndex(${idx})">`
+        : '📄'}</div>
+      <div class="pulse-art-name" title="${name}">${name}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderPulseSkuBlock(sku, index) {
+  const files = getOrderSkuArtFiles(sku);
+  const label = pulseEscapeHtml(sku.name || `SKU ${index + 1}`);
+  const qty = (sku.quantity || 0).toLocaleString();
+  const layers = [];
+  if (sku.whiteDataUrl) layers.push('White');
+  if (sku.uvDataUrl) layers.push('UV');
+  if (sku.foilDataUrl) layers.push('Foil');
+  const layersHtml = layers.length
+    ? `<span class="pulse-sku-layers">Layers: ${layers.map(pulseEscapeHtml).join(' · ')}</span>`
+    : '';
+  return `
+    <div class="pulse-sku-block">
+      <div class="pulse-sku-hdr">
+        <strong>#${index + 1} ${label}</strong>
+        <span>${qty} pcs</span>
+      </div>
+      ${layersHtml}
+      ${files.length
+        ? renderPulseArtThumbGrid(files)
+        : '<div class="pulse-sku-empty">No artwork files for this SKU.</div>'
+      }
+    </div>`;
+}
+
+/** SKU versions + artwork for production manager / operator job detail */
+function renderOrderSkuSection(order) {
+  if (!order) return '';
+  _pulseArtworkUrls = [];
+  const skus = (order.skus || []).filter(s => s && (s.name || s.quantity || getOrderSkuArtFiles(s).length));
+  const globalFiles = collectOrderArtworkFiles(order);
+  if (!skus.length && !globalFiles.length) return '';
+
+  const parts = [];
+  if (skus.length) {
+    parts.push(`
+      <div class="pulse-sku-section">
+        <h4 class="pulse-sku-section-title">📦 SKU versions <span>(${skus.length})</span></h4>
+        ${skus.map((sku, i) => renderPulseSkuBlock(sku, i)).join('')}
+      </div>`);
+  }
+  if (globalFiles.length) {
+    const title = skus.length ? 'Order-level artwork &amp; layers' : 'Artwork';
+    parts.push(`
+      <div class="pulse-sku-section">
+        <h4 class="pulse-sku-section-title">${title}</h4>
+        ${renderPulseArtThumbGrid(globalFiles)}
+      </div>`);
+  }
+  return parts.join('');
+}
+
+function openPulseArtworkByIndex(idx) {
+  const url = _pulseArtworkUrls[idx];
+  if (!url) return;
+  if (typeof openArtworkLightbox === 'function') {
+    openArtworkLightbox(url);
+    return;
+  }
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (w) w.document.write(`<img src="${url}" style="max-width:100%;max-height:100vh;">`);
+}
 
 function renderStatusBadge(status) {
   const icon = STATUS_ICONS[status] || '';

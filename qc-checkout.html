@@ -109,7 +109,7 @@
       <!-- Submit bar — flex-shrink:0 child of #qcFormSection, always visible regardless of scroll -->
       <div class="save-bar">
         <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
-        <button class="btn btn-primary" id="submitQCBtn" onclick="submitQC()">Submit QC Result</button>
+        <button class="btn btn-primary" id="submitQCBtn" type="button" disabled onclick="submitQC()">Submit QC Result</button>
       </div>
     </div>
   </div>
@@ -345,6 +345,7 @@ document.getElementById('page-styles').textContent = `
   .cb-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
   .cb-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
   .save-bar { flex-shrink: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 10px 0 12px; border-top: 1px solid var(--border); margin-top: 4px; }
+  #submitQCBtn:disabled { opacity: 0.45; cursor: not-allowed; }
   .field { display: flex; flex-direction: column; }
 
   /* ── Right panel ── */
@@ -438,6 +439,8 @@ async function refreshQcInspectorSelect() {
     sel.appendChild(o);
   }
   if (prev && [...sel.options].some(opt => opt.value === prev)) sel.value = prev;
+  sel.onchange = updateSubmitQcButtonState;
+  updateSubmitQcButtonState();
 }
 
 // ── Left panel ────────────────────────────────────────────
@@ -509,9 +512,6 @@ async function selectOrder(orderOrId) {
     </div>
     <div>
       ${renderStatusBadge(selectedOrder.status)}
-      <div style="margin-top:8px;">
-        <button class="btn btn-sm" onclick="clearQCForm()">Change Order</button>
-      </div>
     </div>
   `;
 
@@ -526,6 +526,7 @@ async function selectOrder(orderOrId) {
   document.getElementById('reprintQtySection').style.display = 'none';
   document.querySelectorAll('.fail-reasons input[type=checkbox]').forEach(cb => cb.checked = false);
   resetChecklistUI();
+  updateSubmitQcButtonState();
 
   // Highlight active card in left panel
   renderLeftPanel();
@@ -569,9 +570,10 @@ function setCheckItem(itemId, verdict) {
   if (notesRow) notesRow.style.display = verdict === 'fail' ? 'block' : 'none';
 
   const hasAnyFail = Object.values(checklistResults).some(v => v === 'fail');
-  const allChecked = QC_CHECKLIST_ITEMS.every(item => checklistResults[item.id]);
+  const allChecked = isQcChecklistComplete();
   if (hasAnyFail) setVerdict('fail');
   else if (allChecked) setVerdict('pass');
+  else updateSubmitQcButtonState();
 }
 
 function setVerdict(v) {
@@ -579,6 +581,29 @@ function setVerdict(v) {
   document.getElementById('verdictPass').classList.toggle('selected', v === 'pass');
   document.getElementById('verdictFail').classList.toggle('selected', v === 'fail');
   document.getElementById('failOptions').style.display = v === 'fail' ? 'block' : 'none';
+  updateSubmitQcButtonState();
+}
+
+function isQcChecklistComplete() {
+  return QC_CHECKLIST_ITEMS.every(item => {
+    const v = checklistResults[item.id];
+    return v === 'pass' || v === 'fail' || v === 'na';
+  });
+}
+
+function isQcFormReady() {
+  if (!selectedOrder) return false;
+  if (!isQcChecklistComplete()) return false;
+  if (currentVerdict !== 'pass' && currentVerdict !== 'fail') return false;
+  return !!(document.getElementById('qcInspector')?.value || '').trim();
+}
+
+function updateSubmitQcButtonState() {
+  const btn = document.getElementById('submitQCBtn');
+  if (!btn || btn.textContent === 'Submitting…') return;
+  const ready = isQcFormReady();
+  btn.disabled = !ready;
+  btn.title = ready ? '' : 'Complete every checklist item, choose Pass or Fail, and select an inspector';
 }
 
 function toggleReprintQty() {
@@ -589,6 +614,10 @@ function toggleReprintQty() {
 // ── Submit QC ─────────────────────────────────────────────
 async function submitQC() {
   if (!selectedOrder) { showPageToast('Please select an order first.', 'warning'); return; }
+  if (!isQcChecklistComplete()) {
+    showPageToast('Please complete every checklist item (Pass, Fail, or N/A).', 'warning');
+    return;
+  }
   if (!currentVerdict) { showPageToast('Please set a QC verdict (Pass or Fail).', 'warning'); return; }
   const inspector = (document.getElementById('qcInspector').value || '').trim();
   if (!inspector) { showPageToast('Please select a QC Inspector from the list.', 'warning'); return; }
@@ -628,8 +657,8 @@ async function submitQC() {
         `Confirm: defects have been resolved and the product is ready to ship?`
       );
       if (!confirmed) {
-        btn.disabled = false;
         btn.textContent = 'Submit QC Result';
+        updateSubmitQcButtonState();
         return;
       }
     }
@@ -702,8 +731,8 @@ async function submitQC() {
     console.error(err);
     showPageToast('Error submitting QC: ' + err.message, 'error');
   } finally {
-    btn.disabled = false;
     btn.textContent = 'Submit QC Result';
+    updateSubmitQcButtonState();
   }
 }
 

@@ -90,6 +90,15 @@ machines
 
 workflow_templates (step definitions stored as JSONB steps[])
 
+machines (workflow registry — slug id, facility, category; migration 022)
+  └── referenced by product_workflows.steps[].machineId
+
+product_workflows (per catalog product; steps JSONB; migration 022)
+  └── keyed by product_catalog_id (Admin Products catalog id)
+
+workflow_override_log (PM machine swap audit; migration 023)
+  └── orders (order_id)
+
 dies (customer_id → customers)
 
 materials
@@ -153,6 +162,37 @@ new → pending-review → pending-confirmation → waiting-approval
   OR → on-hold (from any status) → (previous status)
   OR → completed / cancelled
 ```
+
+### `machines` (migration 022)
+
+Workflow configuration registry (distinct from legacy capacity `machines` name list in seed.sql if both exist — workflow table uses **slug** `id`).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | TEXT PK | e.g. `press-6k`, `gm-laser-cutter` |
+| display_name | TEXT | Matches `MACHINES` / operator UI names |
+| facility | TEXT | `16th` \| `boyd` |
+| category | TEXT | press, lamination, cutting, finishing, pouching, folding |
+
+### `product_workflows` (migration 022)
+
+Admin-configured route per product catalog entry.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| product_catalog_id | TEXT UNIQUE | Admin Products `id` |
+| primary_facility | TEXT | `16th` \| `boyd` |
+| steps | JSONB | See [`PRODUCT-WORKFLOW-CONFIG.md`](../PRODUCT-WORKFLOW-CONFIG.md) |
+
+### `workflow_override_log` (migration 023)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| order_id | UUID FK | → orders.id |
+| step_index | INT | Step swapped |
+| original_machine / new_machine | TEXT | Display names |
+| changed_by | TEXT | User name |
+| reason | TEXT | PM notes |
 
 ### `order_workflow_steps`
 One row per production step per order. Steps are numbered by `step_index`.

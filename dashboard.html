@@ -466,7 +466,7 @@
     const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
     const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
       .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
-    const completedRecent = filtered.filter(o => ['shipped', 'waiting-pickup', 'received', 'completed'].includes(o.status))
+    const completedRecent = filtered.filter(o => ['shipped', 'waiting-pickup', 'delivery-ready', 'received', 'completed'].includes(o.status))
       .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
 
     // ── Stats ──
@@ -678,7 +678,7 @@
 
   // ─── Orders View ───────────────────────────────────────────────────────────
   function renderOrders(allOrders) {
-    const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
+    const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup','delivery-ready'];
     const activeStatuses = ['new','prepress','prepress-active','prepress-paused','pending-account-manager','pending-review','in-production','on-hold','qc-checkout','qc-failed','pending-confirmation','waiting-approval'];
 
     // Group: parents + their sub-tickets; standalone orders treated as own group

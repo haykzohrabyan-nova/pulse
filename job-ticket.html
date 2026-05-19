@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260518-PW"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI239"></script>
@@ -141,7 +141,7 @@
         <div class="form-row">
           <div class="field jt-field-label-left">
             <label>Material *</label>
-            <select id="material" required>
+            <select id="material" required onchange="autoDetectWorkflow()">
               <option value="">— Select Material —</option>
             </select>
           </div>
@@ -311,8 +311,9 @@
     <!-- SECTION: Quantity, artwork, cutting & due date         -->
     <!-- ═══════════════════════════════════════════════════════ -->
     <div class="form-section">
-      <h3 class="section-title">
+      <h3 class="section-title jt-qty-section-title">
         <span>🔢 Quantity &amp; <span id="frameSheetLabel">Frames</span>, artwork, cutting &amp; due</span>
+        <button type="button" class="btn btn-sm" id="addSkuBtn" onclick="addSKU()">+ Add SKU</button>
       </h3>
 
       <div class="label-size-box">
@@ -336,7 +337,7 @@
             <label id="gussetLabel">Gusset (in)</label>
             <input type="number" id="pouchGusset" step="0.01" min="0" placeholder='e.g. 2' oninput="calcLabelFit()">
           </div>
-          <div class="field jt-field-label-left">
+          <div class="field jt-field-label-left" id="jtQtyField">
             <label>Qty (units) *</label>
             <input type="number" id="quantity" min="1" placeholder="1000" oninput="calcFrames(); checkDueDate(); calcOrderTotal();" required>
           </div>
@@ -364,7 +365,7 @@
       <div id="singleSkuSection">
         <div id="singleSkuFiles" class="attachment-area jt-qty-files jt-artcut-strip" style="margin-top:12px;">
           <div class="jt-artcut-strip-inner">
-            <div class="jt-artcut-grow">
+            <div id="singleSkuArtwork" class="jt-artcut-grow">
               <div class="jt-artcut-minihead">📎 Artwork &amp; layer attachments</div>
               <div class="jt-art-files-layout">
                 <div id="fileGrid" class="field jt-field-label-left jt-art-file-line">
@@ -394,9 +395,15 @@
               <div id="uvFilePreview" class="inline-preview"></div>
               <div id="foilFilePreview" class="inline-preview"></div>
             </div>
+            <div id="multiSkuSection" class="jt-artcut-grow" style="display:none;">
+              <div class="jt-artcut-minihead">📦 SKU versions <span class="jt-sku-size-hint">(same size for all — set above)</span></div>
+              <div id="skuList"></div>
+              <div id="skuSummary" class="jt-sku-summary" style="display:none;"></div>
+            </div>
             <div class="jt-artcut-cutting">
               <div class="jt-artcut-minihead">✂️ Cutting &amp; die</div>
               <div id="productionHints" style="display:none;"></div>
+              <div id="workflowRoutePreview" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;"></div>
               <div class="jt-cutting-fields-stack">
                 <div class="field jt-field-label-left">
                   <label>Cut method</label>
@@ -1161,20 +1168,130 @@ document.getElementById('page-styles').textContent = `
   .artwork-pdf { width: 80px; height: 80px; background: #f0f0f5; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 28px; color: var(--text-muted); }
 
   /* SKU rows */
-  .sku-row { margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); }
-  .sku-header { display: grid; grid-template-columns: 50px 1fr 100px 40px; gap: 8px; align-items: end; }
-  .sku-version-num { text-align: center; font-weight: 700; font-size: 16px; color: var(--accent); padding-top: 16px; }
-  .sku-files { display: grid; gap: 8px; margin-top: 8px; padding-left: 50px; }
-  .sku-file-slot label { font-size: 10px; }
-  .sku-file-thumb { display: flex; align-items: center; gap: 4px; }
-  .sku-file-thumb img { width: 32px; height: 32px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); }
-  .sku-file-thumb span { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+  .sku-row { margin-bottom: 10px; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); }
+  .sku-header {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) minmax(96px, 120px) 36px;
+    gap: 10px 12px;
+    align-items: start;
+  }
+  .sku-version-num {
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 22px;
+    line-height: 1.2;
+  }
+  .sku-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .sku-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.25;
+  }
+  .sku-field input[type="text"],
+  .sku-field input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    font-size: 13px;
+    padding: 7px 10px;
+  }
+  .sku-field input[type="number"] { text-align: center; }
+  .sku-qty-meta { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 2px; line-height: 1.3; }
+  .sku-header .btn-danger { margin-top: 20px; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .sku-files {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+    padding-left: 0;
+  }
+  .sku-file-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .sku-file-slot label { font-size: 11px; font-weight: 600; color: var(--text-muted); line-height: 1.25; }
+  .sku-file-slot input[type="file"] { width: 100%; max-width: 100%; font-size: 12px; box-sizing: border-box; }
+  .sku-file-thumb-wrap {
+    position: relative; display: flex; align-items: center; gap: 6px; min-width: 0;
+    padding: 4px 22px 4px 0;
+  }
+  .sku-file-thumb-wrap img,
+  .sku-file-thumb-wrap .sku-file-pdf {
+    width: 36px; height: 36px; border-radius: 4px; border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sku-file-thumb-wrap img { object-fit: cover; cursor: pointer; }
+  .sku-file-thumb-wrap .sku-file-pdf {
+    background: #f0f0f5; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--text-muted); cursor: pointer;
+  }
+  .sku-file-thumb-wrap span {
+    font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0; flex: 1;
+  }
+  .sku-file-thumb-wrap .remove-sku-file {
+    position: absolute; top: 0; right: 0;
+    background: rgba(220,38,38,0.9); color: #fff; border: none; border-radius: 50%;
+    width: 18px; height: 18px; cursor: pointer; font-size: 10px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .sku-file-thumb-wrap .remove-sku-file:hover { background: #dc2626; }
+  #multiSkuSection { min-width: 0; }
+  .jt-artcut-strip.jt-multi-sku-layout .jt-artcut-strip-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .jt-artcut-strip.jt-multi-sku-layout #multiSkuSection {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+  .jt-artcut-strip.jt-multi-sku-layout .jt-artcut-cutting {
+    flex: none;
+    width: 100%;
+    max-width: 480px;
+  }
+  .jt-artcut-strip.jt-multi-sku-layout .jt-artcut-minihead {
+    line-height: 1.35;
+  }
+  .jt-qty-section-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .jt-sku-size-hint {
+    display: inline-block;
+    font-weight: 400;
+    text-transform: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .jt-sku-summary { margin-top: 8px; padding: 8px 12px; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: var(--radius); font-size: 13px; line-height: 1.45; }
+  @media (max-width: 720px) {
+    .sku-header {
+      grid-template-columns: 32px 1fr 36px;
+      grid-template-areas:
+        "num name del"
+        "num qty del";
+    }
+    .sku-version-num { grid-area: num; grid-row: span 2; padding-top: 8px; align-self: start; }
+    .sku-header .sku-field-name { grid-area: name; }
+    .sku-header .sku-field-qty { grid-area: qty; }
+    .sku-header .btn-danger { grid-area: del; margin-top: 0; align-self: center; }
+  }
 
   /* Size + quantity compact row */
   .jt-size-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
   .jt-compact-metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 10px 12px;
     align-items: start;
   }
@@ -1192,8 +1309,15 @@ document.getElementById('page-styles').textContent = `
   /* Frame calc */
   .label-size-box { background: #f0f4ff; border: 1px solid #c7d7f7; border-radius: 6px; padding: 10px 14px 14px; margin-bottom: 14px; }
   .label-size-box .field.jt-field-label-left label {
-    width: 7.25rem;
-    max-width: 48%;
+    width: 6.5rem;
+    max-width: 42%;
+  }
+  .label-size-box .field.jt-field-label-left > input,
+  .label-size-box .field.jt-field-label-left > select {
+    min-width: 4.5rem;
+  }
+  .label-size-box #sheetCount {
+    font-size: 12px;
   }
   .label-size-box .jt-metric-hint {
     padding-left: calc(7.25rem + 10px);
@@ -1240,6 +1364,7 @@ let editingOrderId = null;
 let editingDbId = null;
 let artworkDataList = []; // { name, type, dataUrl, role }
 let singleFileData = { white: null, uv: null, foil: null };
+let skuList = []; // multi-SKU: { name, quantity, artworkDataUrl, artworkName, ... }
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
 let _formDirty = false; // tracks unsaved changes for beforeunload guard
@@ -1363,6 +1488,9 @@ function syncJtTicketReadOnlyDom() {
 // ─────────────────────────────────────────────────────────────
 // ── Admin catalog caches ───────────────────────────────────
 let _jtProductCatalog  = null;
+let _jtWorkflowConfig = null;
+let _jtResolvedMachineNames = [];
+let _jtWorkflowSource = 'none';
 let _jtColorModes      = null; // from catalogColorModes
 let _jtCatalogFinishing = null; // from catalogFinishing
 let _jtCatalogMaterials = null; // from catalogMaterials
@@ -1483,26 +1611,50 @@ function populateColorModes(allowedModes) {
   }
 }
 
-// Build material optgroup HTML from the catalog materials store (with fallback)
+// Build material optgroup HTML from the catalog materials store (with fallback).
+// catalogProd.materials can be either:
+//   • category names  (old format): ['BOPP', 'Label Sheets']
+//   • individual item names (new format): ['Clear BOPP', 'White BOPP', ...]
 function buildMaterialOptions(productType, facility, catalogProd) {
-  // Determine which categories are allowed for this product
-  const allowedCategories = catalogProd?.materials?.length ? catalogProd.materials : null;
-
-  // Prefer catalog materials if loaded
   const matSource = _jtCatalogMaterials && _jtCatalogMaterials.length
     ? _jtCatalogMaterials
     : (typeof MATERIALS !== 'undefined' ? MATERIALS : []);
 
-  const filtered = allowedCategories
-    ? matSource.filter(g => allowedCategories.includes(g.category))
-    : matSource;
+  const allowed = catalogProd?.materials?.length ? catalogProd.materials : null;
+
+  let filtered;
+  if (!allowed) {
+    filtered = matSource;
+  } else {
+    const categoryNames = new Set(matSource.map(g => g.category));
+    const isCategoryMode = allowed.some(m => categoryNames.has(m));
+
+    if (isCategoryMode) {
+      // Old format — filter whole categories
+      const allowedSet = new Set(allowed);
+      filtered = matSource
+        .filter(g => allowedSet.has(g.category))
+        .map(g => ({ category: g.category, items: [...(g.items || [])] }));
+    } else {
+      // New format — filter individual items within each category
+      const allowedSet = new Set(allowed);
+      filtered = matSource
+        .map(g => ({ category: g.category, items: (g.items || []).filter(i => allowedSet.has(i)) }))
+        .filter(g => g.items.length > 0);
+
+      // If none of the allowed items matched any category, render as a flat list
+      if (!filtered.length) {
+        return allowed.map(i => `<option value="${i}">${i}</option>`).join('')
+          || renderFilteredMaterialOptions(productType, facility);
+      }
+    }
+  }
 
   const html = filtered
     .filter(g => g.items && g.items.length)
     .map(g => `<optgroup label="${g.category}">${g.items.map(i => `<option value="${i}">${i}</option>`).join('')}</optgroup>`)
     .join('');
 
-  // Last fallback: static renderFilteredMaterialOptions
   return html || renderFilteredMaterialOptions(productType, facility);
 }
 
@@ -1631,7 +1783,7 @@ async function renderOrderNavigator(parentId, currentOrderId) {
   const parent = await getOrderByOrderId(parentId);
   const subs   = await getSubTickets(parentId);
   const customer = parent?.customerName || parent?.customer || '';
-  const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup'];
+  const doneStatuses = ['completed','shipped','received','ready-to-ship','waiting-pickup','delivery-ready'];
 
   // Build ticket list: parent first, then subs
   const allTickets = [];
@@ -2215,6 +2367,262 @@ function checkLabelFitMismatch(expectedPerFrame) {
 function onPpsInput() {
   document.getElementById('piecesPerSheet').dataset.manualOverride = '1';
   calcFrames();
+  if (skuList.length > 0) renderSKUs();
+}
+
+// ─────────────────────────────────────────────────────────────
+// SKU / Version Management (shared size; per-SKU name, qty, artwork)
+// ─────────────────────────────────────────────────────────────
+function _skuSnapshotFromForm() {
+  const mainArt = artworkDataList.find(a => a.role === 'main');
+  return {
+    name: '',
+    quantity: parseInt(document.getElementById('quantity').value) || 0,
+    artworkDataUrl: mainArt?.dataUrl || null,
+    artworkName: mainArt?.name || '',
+    artworkType: mainArt?.type || '',
+    whiteDataUrl: singleFileData.white?.dataUrl || null,
+    whiteName: singleFileData.white?.name || '',
+    uvDataUrl: singleFileData.uv?.dataUrl || null,
+    uvName: singleFileData.uv?.name || '',
+    foilDataUrl: singleFileData.foil?.dataUrl || null,
+    foilName: singleFileData.foil?.name || '',
+  };
+}
+
+function _restoreSingleSkuFromEntry(sku) {
+  if (!sku) return;
+  document.getElementById('quantity').value = sku.quantity || '';
+  artworkDataList = [];
+  if (sku.artworkDataUrl) {
+    artworkDataList.push({ name: sku.artworkName || 'artwork', type: sku.artworkType || '', dataUrl: sku.artworkDataUrl, role: 'main' });
+    renderArtworkThumbs();
+  }
+  if (sku.whiteDataUrl) {
+    singleFileData.white = { name: sku.whiteName || 'White', type: '', dataUrl: sku.whiteDataUrl, role: 'white' };
+    renderInlinePreview('whiteLayerPreview', singleFileData.white, 'white');
+  }
+  if (sku.uvDataUrl) {
+    singleFileData.uv = { name: sku.uvName || 'UV', type: '', dataUrl: sku.uvDataUrl, role: 'uv' };
+    renderInlinePreview('uvFilePreview', singleFileData.uv, 'uv');
+  }
+  if (sku.foilDataUrl) {
+    singleFileData.foil = { name: sku.foilName || 'Foil', type: '', dataUrl: sku.foilDataUrl, role: 'foil' };
+    renderInlinePreview('foilFilePreview', singleFileData.foil, 'foil');
+  }
+  calcFrames();
+}
+
+function _emptySkuEntry() {
+  return {
+    name: '', quantity: 0,
+    artworkDataUrl: null, artworkName: '', artworkType: '',
+    whiteDataUrl: null, whiteName: '',
+    uvDataUrl: null, uvName: '',
+    foilDataUrl: null, foilName: '',
+  };
+}
+
+function addSKU() {
+  if (skuList.length === 0) {
+    skuList.push(_skuSnapshotFromForm());
+    skuList.push(_emptySkuEntry());
+  } else {
+    skuList.push(_emptySkuEntry());
+  }
+  showMultiSkuMode();
+  renderSKUs();
+}
+
+function removeSKU(idx) {
+  skuList.splice(idx, 1);
+  if (skuList.length <= 1) {
+    if (skuList.length === 1) _restoreSingleSkuFromEntry(skuList[0]);
+    skuList = [];
+    showSingleSkuMode();
+  } else {
+    renderSKUs();
+  }
+}
+
+function showMultiSkuMode() {
+  const art = document.getElementById('singleSkuArtwork');
+  if (art) art.style.display = 'none';
+  const multi = document.getElementById('multiSkuSection');
+  if (multi) multi.style.display = 'block';
+  const strip = document.getElementById('singleSkuFiles');
+  if (strip) strip.classList.add('jt-multi-sku-layout');
+  const qf = document.getElementById('jtQtyField');
+  if (qf) qf.style.display = 'none';
+  const qtyEl = document.getElementById('quantity');
+  if (qtyEl) qtyEl.removeAttribute('required');
+}
+
+function showSingleSkuMode() {
+  const art = document.getElementById('singleSkuArtwork');
+  if (art) art.style.display = '';
+  const multi = document.getElementById('multiSkuSection');
+  if (multi) multi.style.display = 'none';
+  const strip = document.getElementById('singleSkuFiles');
+  if (strip) strip.classList.remove('jt-multi-sku-layout');
+  const summary = document.getElementById('skuSummary');
+  if (summary) summary.style.display = 'none';
+  const qf = document.getElementById('jtQtyField');
+  if (qf) qf.style.display = '';
+  const qtyEl = document.getElementById('quantity');
+  if (qtyEl) qtyEl.setAttribute('required', '');
+}
+
+function updateSKU(idx, field, value) {
+  skuList[idx][field] = field === 'quantity' ? (parseInt(value) || 0) : value;
+  updateSKUSummary();
+}
+
+function handleSKUFile(idx, type, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if (type === 'artwork') {
+      skuList[idx].artworkDataUrl = e.target.result;
+      skuList[idx].artworkName = file.name;
+      skuList[idx].artworkType = file.type || '';
+    } else {
+      skuList[idx][type + 'DataUrl'] = e.target.result;
+      skuList[idx][type + 'Name'] = file.name;
+    }
+    renderSKUs();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeSKUFile(idx, type) {
+  if (!skuList[idx]) return;
+  if (type === 'artwork') {
+    skuList[idx].artworkDataUrl = null;
+    skuList[idx].artworkName = '';
+    skuList[idx].artworkType = '';
+  } else {
+    skuList[idx][type + 'DataUrl'] = null;
+    skuList[idx][type + 'Name'] = '';
+  }
+  renderSKUs();
+}
+
+function skuFileThumbHTML(skuIdx, fileType) {
+  const sku = skuList[skuIdx];
+  if (!sku) return '';
+  const url = fileType === 'artwork' ? sku.artworkDataUrl : sku[fileType + 'DataUrl'];
+  const name = fileType === 'artwork' ? (sku.artworkName || '') : (sku[fileType + 'Name'] || '');
+  const mime = fileType === 'artwork' ? (sku.artworkType || '') : '';
+  if (!url) return '';
+  const isImage = mime.startsWith('image/') || (!mime && /\.(png|jpe?g|gif|webp|tif|tiff)$/i.test(name));
+  const safeName = escHtmlJT(name);
+  const previewClick = isImage ? `onclick="openLightbox('${url.replace(/'/g, '%27')}')"` : '';
+  return `
+    <div class="sku-file-thumb-wrap">
+      ${isImage
+        ? `<img src="${url}" alt="${safeName}" ${previewClick}>`
+        : `<div class="sku-file-pdf" title="${safeName}">📄</div>`
+      }
+      <span title="${safeName}">${safeName}</span>
+      <button type="button" class="remove-sku-file" onclick="removeSKUFile(${skuIdx},'${fileType}')" title="Delete file" aria-label="Delete ${fileType} file">✕</button>
+    </div>`;
+}
+
+function renderSKUs() {
+  const container = document.getElementById('skuList');
+  if (!container || skuList.length === 0) { if (container) container.innerHTML = ''; return; }
+
+  const hasWhite = document.getElementById('colorMode')?.value === 'CMYK+White';
+  const hasUV = document.getElementById('hasUV')?.checked || false;
+  const hasFoil = document.getElementById('hasFoil')?.checked || false;
+  const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
+  const facility = document.getElementById('facility').value;
+  const fw = facility === '16th-street' ? 'frames' : 'sheets';
+
+  let fileCols = 1;
+  if (hasWhite) fileCols++;
+  if (hasUV) fileCols++;
+  if (hasFoil) fileCols++;
+
+  container.innerHTML = skuList.map((sku, i) => {
+    const frameCount = sku.quantity > 0 ? Math.ceil(sku.quantity / pps) : 0;
+    const safeName = escHtmlJT(sku.name || '');
+
+    return `
+    <div class="sku-row">
+      <div class="sku-header">
+        <div class="sku-version-num">#${i + 1}</div>
+        <div class="sku-field sku-field-name">
+          <label>SKU name</label>
+          <input type="text" value="${safeName}" placeholder="e.g. Strawberry" onchange="updateSKU(${i},'name',this.value)">
+        </div>
+        <div class="sku-field sku-field-qty">
+          <label>Qty</label>
+          <input type="number" value="${sku.quantity || ''}" min="0" placeholder="0" onchange="updateSKU(${i},'quantity',this.value)">
+          ${frameCount > 0 ? `<div class="sku-qty-meta">${frameCount} ${fw}</div>` : ''}
+        </div>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" title="Remove SKU">✕</button>
+      </div>
+      <div class="sku-files" style="grid-template-columns:repeat(${fileCols}, minmax(0, 1fr));">
+        <div class="sku-file-slot">
+          <label>🎨 Main artwork *</label>
+          ${sku.artworkDataUrl
+            ? skuFileThumbHTML(i, 'artwork')
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg,.tif,.tiff,.psd" onchange="handleSKUFile(${i},'artwork',this)">`
+          }
+        </div>
+        ${hasWhite ? `<div class="sku-file-slot">
+          <label>⬜ White</label>
+          ${sku.whiteDataUrl
+            ? skuFileThumbHTML(i, 'white')
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'white',this)">`
+          }
+        </div>` : ''}
+        ${hasUV ? `<div class="sku-file-slot">
+          <label>☀️ UV</label>
+          ${sku.uvDataUrl
+            ? skuFileThumbHTML(i, 'uv')
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'uv',this)">`
+          }
+        </div>` : ''}
+        ${hasFoil ? `<div class="sku-file-slot">
+          <label>✨ Foil</label>
+          ${sku.foilDataUrl
+            ? skuFileThumbHTML(i, 'foil')
+            : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg" onchange="handleSKUFile(${i},'foil',this)">`
+          }
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateSKUSummary();
+}
+
+function updateSKUSummary() {
+  const summary = document.getElementById('skuSummary');
+  if (!summary || skuList.length === 0) { if (summary) summary.style.display = 'none'; return; }
+
+  const totalSkuQty = skuList.reduce((s, sku) => s + (sku.quantity || 0), 0);
+  const pps = parseInt(document.getElementById('piecesPerSheet').value) || 1;
+  const totalFrames = totalSkuQty > 0 ? Math.ceil(totalSkuQty / pps) : 0;
+  const facility = document.getElementById('facility').value;
+  const fw = facility === '16th-street' ? 'frames' : 'sheets';
+
+  document.getElementById('quantity').value = totalSkuQty || '';
+  document.getElementById('sheetCount').value = totalFrames || '';
+  calcFrames();
+  checkDueDate();
+  calcOrderTotal();
+
+  summary.style.display = 'block';
+  summary.innerHTML = `
+    <strong>${skuList.length} SKU${skuList.length > 1 ? 's' : ''}</strong> |
+    Total: <strong style="color:var(--accent);">${totalSkuQty.toLocaleString()} pcs</strong> |
+    <strong>${totalFrames.toLocaleString()} ${fw}</strong>
+  `;
 }
 
 function calcFrames() {
@@ -2248,9 +2656,8 @@ function updateETAHeader() {
   const etaTxt = document.getElementById('etaHeaderText');
   if (!etaEl || !etaTxt) return;
 
-  const workflowKey = document.getElementById('workflowTemplate')?.value;
-  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
-  if (!tpl || !tpl.steps || !tpl.steps.length) { etaEl.style.display = 'none'; return; }
+  const machines = getResolvedWorkflowMachineNames();
+  if (!machines.length) { etaEl.style.display = 'none'; return; }
 
   const quantity = parseInt(document.getElementById('quantity')?.value) || 0;
   const sheetCount = parseInt(document.getElementById('sheetCount')?.value) ||
@@ -2267,7 +2674,7 @@ function updateETAHeader() {
   };
 
   let totalMinutes = 0;
-  tpl.steps.forEach(machine => {
+  machines.forEach(machine => {
     const mt = calculateMachineTime(machine, fakeOrder);
     if (mt) totalMinutes += mt.totalMinutes;
     else totalMinutes += 60;
@@ -2366,6 +2773,7 @@ function calcOrderTotal() {
 function onColorModeChange() {
   const isWhite = document.getElementById('colorMode').value === 'CMYK+White';
   document.getElementById('whiteFileSlot').style.display = isWhite ? 'flex' : 'none';
+  if (skuList.length > 0) renderSKUs();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2394,6 +2802,8 @@ function onFinishingChange() {
 
   updateJetFXNote();
   calcFrames();
+  if (skuList.length > 0) renderSKUs();
+  applyProductWorkflowFromConfig();
 }
 
 function onPerforationChange() {
@@ -2497,10 +2907,9 @@ async function updateFinishEta() {
   const facility = document.getElementById('facility').value;
   const productType = document.getElementById('productType').value;
   const quantity = parseInt(document.getElementById('quantity').value) || 0;
-  const workflowKey = document.getElementById('workflowTemplate').value;
-  const workflowTpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  const workflowMachines = getResolvedWorkflowMachineNames();
 
-  if (!facility || !productType || !quantity || !workflowTpl?.steps?.length) {
+  if (!facility || !productType || !quantity || !workflowMachines.length) {
     hintEl.innerHTML = '';
     if (leadTimeEl) leadTimeEl.textContent = '';
     return;
@@ -2520,14 +2929,14 @@ async function updateFinishEta() {
   };
 
   try {
-    const finishSummary = await getFinishSummary(orderShape, workflowTpl.steps.map(machine => ({ machine })));
+    const finishSummary = await getFinishSummary(orderShape, workflowMachines.map(machine => ({ machine })));
     if (!finishSummary) {
       hintEl.innerHTML = '';
       if (leadTimeEl) leadTimeEl.textContent = '';
       return;
     }
     const finishAt = finishSummary.finishAt;
-    const schedule = await estimateOrderSchedule(orderShape, workflowTpl.steps.map(machine => ({ machine })));
+    const schedule = await estimateOrderSchedule(orderShape, workflowMachines.map(machine => ({ machine })));
     const dueDate = document.getElementById('dueDate').value ? new Date(document.getElementById('dueDate').value + 'T23:59:59') : null;
     const meetsDueDate = !dueDate || finishAt.getTime() <= dueDate.getTime();
     if (leadTimeEl) leadTimeEl.textContent = `Estimated workload: ${schedule.totalOrderHours.toFixed(1)} hrs`;
@@ -2630,10 +3039,9 @@ async function updateCapacityHint() {
   const quantity = parseInt(document.getElementById('quantity').value) || 0;
   if (!dueDate || !productType || !quantity) { hintEl.innerHTML = ''; return; }
 
-  // Determine primary machine from workflow template, or guess from product type
-  const workflowKey = document.getElementById('workflowTemplate').value;
-  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
-  let primaryMachine = tpl?.steps?.[0] || null;
+  // Determine primary machine from resolved route, or guess from product type
+  const resolvedMachines = getResolvedWorkflowMachineNames();
+  let primaryMachine = resolvedMachines[0] || null;
   if (!primaryMachine) {
     // Fallback: guess machine from product type
     const pt = productType;
@@ -2793,27 +3201,65 @@ function onDieStatusChange() {
 
 function updateJetFXNote() {
   const productType = document.getElementById('productType').value;
-  const hasUV = document.getElementById('hasUV')?.checked || false;
-  const hasFoil = document.getElementById('hasFoil')?.checked || false;
+  const facility = document.getElementById('facility')?.value || '';
+  const hasPerforation = document.getElementById('hasPerforation')?.checked || false;
   const cutMethod = document.getElementById('cutMethod')?.value || '';
-  const is6K = ['Labels (Roll)', 'Labels (Sheet)', 'Pouches', 'Diecut Stickers'].includes(productType);
   const hintsDiv = document.getElementById('productionHints');
   const hints = [];
 
-  // JetFX, Foil Process, UV+Foil hints removed — operator-only info
-  // Scodix two-pass hint removed — operator-only info
   if (productType === 'Pouches') hints.push({ icon: '📋', title: 'Pouch Production', text: 'Cosmetic Web only. Process: 6K Print → GM Cut/Finish → Karlville Poucher.' });
   if (cutMethod === 'gm-die' || cutMethod === 'die-cut') hints.push({ icon: '🎯', title: 'Die Required', text: 'Operator must scan die barcode before starting the cutting step.' });
+  if (facility === 'boyd-street' && hasPerforation) {
+    hints.push({
+      icon: '⚠️',
+      title: 'MANUAL SETUP REQUIRED',
+      text: 'Boyd Graphtec: manually set perforation condition and adjust knife position before running.',
+    });
+  }
 
+  if (!hintsDiv) return;
   if (hints.length === 0) { hintsDiv.style.display = 'none'; return; }
   hintsDiv.style.display = 'block';
   hintsDiv.innerHTML = hints.map(h => `<div class="info-note" style="margin-bottom:6px;">${h.icon} <strong>${h.title}:</strong> ${h.text}</div>`).join('');
 }
 
 // ─────────────────────────────────────────────────────────────
-// Workflow auto-detection (internal — not shown to rep)
+// Product workflow (admin config + resolve; legacy fallback)
 // ─────────────────────────────────────────────────────────────
-function autoDetectWorkflow() {
+function getJobOptionsForProductWorkflow() {
+  if (typeof buildProductWorkflowJobOptions !== 'function') return {};
+  return buildProductWorkflowJobOptions({
+    cutMethod: document.getElementById('cutMethod')?.value,
+    hasLamination: document.getElementById('hasLamination')?.checked,
+    lamination: document.getElementById('hasLamination')?.checked ? document.getElementById('lamination')?.value : 'None',
+    hasUV: document.getElementById('hasUV')?.checked,
+    hasFoil: document.getElementById('hasFoil')?.checked,
+    material: document.getElementById('material')?.value,
+  });
+}
+
+function getResolvedWorkflowMachineNames() {
+  if (_jtResolvedMachineNames?.length) return _jtResolvedMachineNames;
+  const workflowKey = document.getElementById('workflowTemplate')?.value || '';
+  if (workflowKey.startsWith('product-workflow:')) return [];
+  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
+  return tpl?.steps || [];
+}
+
+async function loadProductWorkflowConfig(catalogProd) {
+  const productName = catalogProd?.name || document.getElementById('productType')?.value || '';
+  if (catalogProd?.id && typeof getProductWorkflowByCatalogId === 'function') {
+    const row = await getProductWorkflowByCatalogId(catalogProd.id);
+    if (row?.steps?.length) return row;
+  }
+  if (typeof getDefaultProductWorkflowForCatalogName === 'function') {
+    const def = getDefaultProductWorkflowForCatalogName(productName);
+    return { steps: def.steps || [], primaryFacility: def.primaryFacility || '16th' };
+  }
+  return null;
+}
+
+function legacyAutoDetectWorkflowKey() {
   const productType = document.getElementById('productType').value;
   const cutMethod = document.getElementById('cutMethod').value;
   const facility = document.getElementById('facility').value;
@@ -2821,43 +3267,126 @@ function autoDetectWorkflow() {
   const sheetCount = parseInt(document.getElementById('sheetCount').value) || 0;
   const material = document.getElementById('material').value;
 
-  let detectedKey = '';
+  if (!productType || productType === 'Other') return '';
 
-  if (productType === 'Other') {
-    document.getElementById('workflowTemplate').value = '';
+  if (facility === 'boyd-street') {
+    if (printType === 'Roll') return (material && material.toLowerCase().includes('matte')) ? 'boyd-vinyl-matte' : 'boyd-vinyl-gloss';
+    return (material && material.toLowerCase().includes('matte')) ? 'boyd-sheet-matte' : 'boyd-sheet';
+  }
+  if (productType === 'Pouches') return cutMethod === 'gm-die' ? '6k-pouches-die' : '6k-pouches-laser';
+  if (productType === 'Labels (Sheet)') {
+    if (cutMethod === 'die-cut') return '6k-sheet-die';
+    if (cutMethod === 'duplo') return '6k-sheet-duplo';
+    if (cutMethod === 'graphtec-large') return '6k-sheet-boyd';
+    return '6k-sheet-guillotine';
+  }
+  if (['Labels (Roll)', 'Stickers'].includes(productType)) return cutMethod === 'gm-die' ? '6k-labels-die' : '6k-labels-laser';
+  if (productType === 'Folding Cartons / Boxes') {
+    if (cutMethod === 'die-cut') return '15k-box-die';
+    if (cutMethod === 'duplo') return '15k-box-duplo';
+    if (cutMethod === 'graphtec-large') return '15k-box-boyd';
+    return sheetCount > 0 && sheetCount <= 200 ? '15k-box-duplo' : '15k-box-die';
+  }
+  if (['Business Cards', 'Flyers / Postcards'].includes(productType)) {
+    return cutMethod === 'guillotine' ? '15k-flat-guillotine' : '15k-flat-die';
+  }
+  if (productType === 'Booklets') return '15k-booklet';
+  return '';
+}
+
+function renderWorkflowRoutePreview() {
+  const el = document.getElementById('workflowRoutePreview');
+  if (!el) return;
+  const names = getResolvedWorkflowMachineNames();
+  if (!names.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  const srcLabel = _jtWorkflowSource === 'db' ? 'Admin config'
+    : (_jtWorkflowSource === 'default' ? 'Default template' : 'Legacy auto-detect');
+  el.style.display = 'block';
+  el.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;font-size:10px;letter-spacing:0.05em;">Production route · ${srcLabel}</div>
+    <ol style="margin:0;padding-left:18px;">${names.map(m => `<li style="margin:4px 0;">${escHtmlJT(m)}</li>`).join('')}</ol>`;
+}
+
+async function applyProductWorkflowFromConfig() {
+  const productType = document.getElementById('productType')?.value;
+  const tplInput = document.getElementById('workflowTemplate');
+  if (!productType || productType === 'Other') {
+    _jtWorkflowConfig = null;
+    _jtResolvedMachineNames = [];
+    _jtWorkflowSource = 'none';
+    if (tplInput) tplInput.value = '';
+    renderWorkflowRoutePreview();
     return;
   }
 
-  if (facility === 'boyd-street') {
-    if (printType === 'Roll') {
-      detectedKey = (material && material.toLowerCase().includes('matte')) ? 'boyd-vinyl-matte' : 'boyd-vinyl-gloss';
-    } else {
-      detectedKey = (material && material.toLowerCase().includes('matte')) ? 'boyd-sheet-matte' : 'boyd-sheet';
+  const catalogProd = _jtProductCatalog?.find(p => p.name === productType);
+  try {
+    const config = await loadProductWorkflowConfig(catalogProd);
+    if (config?.steps?.length && typeof resolveProductWorkflowSteps === 'function') {
+      const resolved = resolveProductWorkflowSteps(config.steps, getJobOptionsForProductWorkflow());
+      _jtWorkflowConfig = config;
+      _jtResolvedMachineNames = resolved.map(s => (
+        typeof machineSlugToDisplayName === 'function' ? machineSlugToDisplayName(s.machineId) : s.machineId
+      ));
+      _jtWorkflowSource = config.id ? 'db' : 'default';
+      if (tplInput) tplInput.value = `product-workflow:${catalogProd?.id || productType}`;
+      renderWorkflowRoutePreview();
+      updateJetFXNote();
+      updateCapacityHint();
+      updateFinishEta();
+      updateETAHeader();
+      return;
     }
-  } else if (productType === 'Pouches') {
-    detectedKey = cutMethod === 'gm-die' ? '6k-pouches-die' : '6k-pouches-laser';
-  } else if (productType === 'Labels (Sheet)') {
-    if (cutMethod === 'die-cut') detectedKey = '6k-sheet-die';
-    else if (cutMethod === 'duplo') detectedKey = '6k-sheet-duplo';
-    else if (cutMethod === 'graphtec-large') detectedKey = '6k-sheet-boyd';
-    else detectedKey = '6k-sheet-guillotine';
-  } else if (['Labels (Roll)', 'Stickers'].includes(productType)) {
-    detectedKey = cutMethod === 'gm-die' ? '6k-labels-die' : '6k-labels-laser';
-  } else if (productType === 'Folding Cartons / Boxes') {
-    if (cutMethod === 'die-cut') detectedKey = '15k-box-die';
-    else if (cutMethod === 'duplo') detectedKey = '15k-box-duplo';
-    else if (cutMethod === 'graphtec-large') detectedKey = '15k-box-boyd';
-    else detectedKey = sheetCount > 0 && sheetCount <= 200 ? '15k-box-duplo' : '15k-box-die';
-  } else if (['Business Cards', 'Flyers / Postcards'].includes(productType)) {
-    detectedKey = cutMethod === 'guillotine' ? '15k-flat-guillotine' : '15k-flat-die';
-  } else if (productType === 'Booklets') {
-    detectedKey = '15k-booklet';
+  } catch (e) {
+    console.warn('[Product workflow]', e);
   }
 
-  document.getElementById('workflowTemplate').value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
-  // update capacity hint now that workflow is known
+  const detectedKey = legacyAutoDetectWorkflowKey();
+  _jtWorkflowConfig = null;
+  _jtWorkflowSource = 'legacy';
+  if (tplInput) tplInput.value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
+  const tpl = detectedKey ? WORKFLOW_TEMPLATES[detectedKey] : null;
+  _jtResolvedMachineNames = tpl?.steps || [];
+  renderWorkflowRoutePreview();
+  updateJetFXNote();
   updateCapacityHint();
   updateFinishEta();
+  updateETAHeader();
+}
+
+function autoDetectWorkflow() {
+  applyProductWorkflowFromConfig();
+}
+
+async function buildWorkflowStepsForSave() {
+  if (_jtWorkflowConfig?.steps?.length && _jtWorkflowSource !== 'legacy' && typeof resolveProductWorkflowSteps === 'function') {
+    const resolved = resolveProductWorkflowSteps(_jtWorkflowConfig.steps, getJobOptionsForProductWorkflow());
+    if (typeof workflowStepsFromResolvedConfig === 'function') {
+      return workflowStepsFromResolvedConfig(resolved, generateStepId);
+    }
+  }
+
+  const workflowKey = document.getElementById('workflowTemplate')?.value || '';
+  const workflowTpl = (workflowKey && !workflowKey.startsWith('product-workflow:'))
+    ? WORKFLOW_TEMPLATES[workflowKey]
+    : null;
+  if (!workflowTpl?.steps?.length) return [];
+
+  return workflowTpl.steps.map((machine, i) => ({
+    id: generateStepId(),
+    machine,
+    operation: (MACHINES[machine]?.operations?.[0]) || 'Processing',
+    status: 'pending',
+    assignedTo: null,
+    startedAt: null,
+    completedAt: null,
+    unitsLost: 0,
+    notes: '',
+    stepIndex: i,
+  }));
 }
 
 // Artwork — main files (single SKU mode)
@@ -2877,16 +3406,19 @@ function handleArtworkUpload(input) {
 
 function renderArtworkThumbs() {
   const container = document.getElementById('artworkThumbnails');
-  container.innerHTML = artworkDataList.filter(a => a.role === 'main').map((art, idx) => {
-    const isImage = art.type && art.type.startsWith('image/');
+  const mainArt = artworkDataList.filter(a => a.role === 'main');
+  container.innerHTML = mainArt.map((art, idx) => {
+    const isImage = (art.type && art.type.startsWith('image/'))
+      || (!art.type && /\.(png|jpe?g|gif|webp|tif|tiff)$/i.test(art.name || ''));
+    const safeName = escHtmlJT(art.name || '');
     return `
       <div class="artwork-thumb">
         ${isImage
-          ? `<img src="${art.dataUrl}" alt="${art.name}" onclick="openLightbox('${art.dataUrl}')">`
-          : `<div class="artwork-pdf" onclick="openLightbox('${art.dataUrl}')">📄</div>`
+          ? `<img src="${art.dataUrl}" alt="${safeName}" onclick="openLightbox('${String(art.dataUrl).replace(/'/g, '%27')}')">`
+          : `<div class="artwork-pdf" title="${safeName}">📄</div>`
         }
-        <div class="thumb-name" title="${art.name}">${art.name}</div>
-        <button type="button" class="remove-thumb" onclick="removeArtwork(${idx})" title="Remove">✕</button>
+        <div class="thumb-name" title="${safeName}">${safeName}</div>
+        <button type="button" class="remove-thumb" onclick="removeArtwork(${idx})" title="Delete artwork" aria-label="Delete artwork">✕</button>
       </div>
     `;
   }).join('');
@@ -2979,7 +3511,24 @@ async function saveTicket(suppressRedirect = false) {
   if (!quantity) { alert('Please enter Quantity.'); return; }
 
   // Artwork check
-  {
+  if (skuList.length > 0) {
+    for (let i = 0; i < skuList.length; i++) {
+      const sku = skuList[i];
+      const label = sku.name?.trim() || `SKU #${i + 1}`;
+      if (!sku.name?.trim()) {
+        alert(`Please enter a name for SKU #${i + 1}.`);
+        return;
+      }
+      if (!sku.quantity) {
+        alert(`Please enter quantity for "${label}".`);
+        return;
+      }
+      if (!sku.artworkDataUrl) {
+        alert(`Please upload main artwork for "${label}".`);
+        return;
+      }
+    }
+  } else {
     const mainArtFiles = artworkDataList.filter(a => a.role === 'main');
     if (mainArtFiles.length === 0) {
       alert('📎 Please upload at least one artwork file before saving.');
@@ -3008,21 +3557,7 @@ async function saveTicket(suppressRedirect = false) {
   btn.textContent = 'Saving...';
 
   try {
-    const workflowKey = document.getElementById('workflowTemplate').value;
-    const workflowTpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
-
-    const workflowSteps = workflowTpl ? workflowTpl.steps.map((machine, i) => ({
-      id: generateStepId(),
-      machine,
-      operation: (MACHINES[machine]?.operations?.[0]) || 'Processing',
-      status: 'pending',
-      assignedTo: null,
-      startedAt: null,
-      completedAt: null,
-      unitsLost: 0,
-      notes: '',
-      stepIndex: i
-    })) : [];
+    let workflowSteps = await buildWorkflowStepsForSave();
 
     // Auto-insert Application Dept step when application service is active
     if (document.getElementById('applicationService')?.checked && workflowSteps.length > 0) {
@@ -3205,8 +3740,8 @@ async function saveTicket(suppressRedirect = false) {
       whiteLayerFile: singleFileData.white || null,
       uvFile: singleFileData.uv || null,
       foilFile: singleFileData.foil || null,
-      skus: null,
-      skuCount: 0,
+      skus: skuList.length > 0 ? skuList : null,
+      skuCount: skuList.length || 0,
       // Sales & Billing
       customerPO: document.getElementById('customerPO').value.trim(),
       quoteRef: document.getElementById('quoteRef').value.trim(),
@@ -3228,10 +3763,6 @@ async function saveTicket(suppressRedirect = false) {
       if (!order.whiteLayerFile && previousOrder?.whiteLayerFile) order.whiteLayerFile = previousOrder.whiteLayerFile;
       if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
       if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
-      if (previousOrder?.skus?.length) {
-        order.skus = previousOrder.skus;
-        order.skuCount = previousOrder.skuCount || previousOrder.skus.length;
-      }
       if (previousOrder?.status === 'pending-account-manager') {
         const resubmittedAt = new Date().toISOString();
         order.status = 'prepress';
@@ -3491,26 +4022,11 @@ async function loadOrderIntoForm(order) {
     renderInlinePreview('foilFilePreview', order.foilFile, 'foil');
   }
 
-  // Legacy multi-SKU: expose first SKU's files when top-level attachments are missing.
+  // Multi-SKU mode
   if (order.skus && Array.isArray(order.skus) && order.skus.length > 0) {
-    const first = order.skus[0];
-    const hasMain = order.artworkFiles && order.artworkFiles.length > 0;
-    if (!hasMain && first?.artworkDataUrl) {
-      artworkDataList.push({ name: first.artworkName || 'artwork', type: '', dataUrl: first.artworkDataUrl, role: 'main' });
-      renderArtworkThumbs();
-    }
-    if (!singleFileData.white?.dataUrl && first?.whiteDataUrl) {
-      singleFileData.white = { name: first.whiteName || 'White layer', type: '', dataUrl: first.whiteDataUrl, role: 'white' };
-      renderInlinePreview('whiteLayerPreview', singleFileData.white, 'white');
-    }
-    if (!singleFileData.uv?.dataUrl && first?.uvDataUrl) {
-      singleFileData.uv = { name: first.uvName || 'UV', type: '', dataUrl: first.uvDataUrl, role: 'uv' };
-      renderInlinePreview('uvFilePreview', singleFileData.uv, 'uv');
-    }
-    if (!singleFileData.foil?.dataUrl && first?.foilDataUrl) {
-      singleFileData.foil = { name: first.foilName || 'Foil', type: '', dataUrl: first.foilDataUrl, role: 'foil' };
-      renderInlinePreview('foilFilePreview', singleFileData.foil, 'foil');
-    }
+    skuList = order.skus.map(s => ({ ...s }));
+    showMultiSkuMode();
+    renderSKUs();
   }
 
   // Sales & Billing
@@ -3743,7 +4259,7 @@ async function renderQueuePane() {
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
   const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);
   const monthStart = new Date(today); monthStart.setDate(monthStart.getDate() - 30);
-  const doneStatuses = ['completed','shipped','received','waiting-pickup'];
+  const doneStatuses = ['completed','shipped','received','waiting-pickup','delivery-ready'];
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
   const customDate = document.getElementById('queueCustomDate')?.value || '';
   const dateFilter = document.getElementById('queueDateFilter')?.value || 'all';

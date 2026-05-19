@@ -335,7 +335,7 @@
     prepress: ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager'],
     production: ['in-production'],
     qc: ['qc-checkout', 'qc-failed', 'reprint'],
-    ready: ['ready-to-ship', 'shipped', 'waiting-pickup', 'received'],
+    ready: ['ready-to-ship', 'shipped', 'waiting-pickup', 'delivery-ready', 'received'],
     done: ['completed'],
     hold: ['on-hold'],
   };
@@ -894,7 +894,7 @@
 
     // Uninvoiced closed orders (shipped/completed/received but not invoiced)
     const uninvoiced = allOrders.filter(o =>
-      ['completed','shipped','received','waiting-pickup'].includes(o.status) &&
+      ['completed','shipped','received','waiting-pickup','delivery-ready'].includes(o.status) &&
       (!o.invoiceStatus || o.invoiceStatus === 'not-invoiced')
     ).sort((a,b) => (a.dueDate||'').localeCompare(b.dueDate||''));
     document.getElementById('reportUninvoiced').innerHTML = uninvoiced.length === 0

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260518-PW"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
@@ -75,37 +75,6 @@
       <span class="olh-col olh-expand"></span>
     </div>
     <div id="orderList"></div>
-  </div>
-</div>
-
-<!-- Order Detail Modal -->
-<!-- Packing Slip Editor Modal -->
-<div class="modal-overlay" id="packingSlipModal">
-  <div class="modal" style="max-width:800px;max-height:90vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2>📋 Packing Slip Editor</h2>
-      <button class="btn btn-sm" onclick="closePackingSlipModal()">✕ Close</button>
-    </div>
-    <div id="psOrderInfo" style="padding:10px;background:#f8f9fb;border-radius:var(--radius);margin-bottom:12px;font-size:14px;"></div>
-
-    <div id="psShipments"></div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
-      <button class="btn" onclick="addShipment()">+ Add Shipment (Different Address)</button>
-      <div style="font-size:14px;">
-        Total shipped: <strong id="psTotalShipped">0</strong> units
-      </div>
-    </div>
-
-    <div class="field" style="margin-top:12px;">
-      <label>General Packing Notes</label>
-      <textarea rows="2" placeholder="General notes for all shipments..." onchange="packingSlipData.notes=this.value"></textarea>
-    </div>
-
-    <div class="modal-actions" style="margin-top:16px;">
-      <button class="btn" onclick="closePackingSlipModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="printPackingSlips()">🖨️ Generate & Print Packing Slips</button>
-    </div>
   </div>
 </div>
 
@@ -646,7 +615,7 @@ function renderOrderBody(order) {
         ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
         <div class="step-status ${step.status}">${step.status}</div>
         <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Redirect</button>
+          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Swap</button>` : ''}
           <button class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="openAssignModal(${order.id},'${step.id || i}')">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
           <button class="btn btn-sm btn-danger" onclick="removeStepByIndex(${order.id},${i})">✕</button>
         </div>
@@ -676,13 +645,10 @@ function renderOrderBody(order) {
         ${di('Die Name', order.dieName || '—')}
         <h4 style="margin-top:12px;">Notes</h4>
         <div style="font-size:13px;color:var(--text);">${order.specialNotes || '—'}</div>
-        ${order.artworkFiles?.length ? `
-          <h4 style="margin-top:12px;">Artwork Files</h4>
-          <div class="artwork-preview-row">
-            ${order.artworkFiles.map(f => f.type?.startsWith('image/') ? `<img class="art-thumb" src="${f.dataUrl}" alt="${f.name}" onclick="openArtworkLightbox('${f.dataUrl}')">` : `<div class="art-thumb-pdf" title="${f.name}">📄</div>`).join('')}
-          </div>` : ''}
       </div>
     </div>
+
+    ${renderOrderSkuSection(order)}
 
     <div class="workflow-steps-section">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -737,7 +703,7 @@ function getActionButtons(order) {
     btns.push(`<button class="btn btn-sm btn-primary" onclick="returnToProductionFromQCFail(${order.id})">↩ Return to Production</button>`);
   }
   if (order.status === 'ready-to-ship') {
-    btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
+    btns.push(`<a href="shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
     btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'shipped')">📦 Mark Shipped</button>`);
     btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'waiting-pickup')">🏪 Waiting Pickup</button>`);
   }
@@ -748,7 +714,7 @@ function getActionButtons(order) {
     btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'completed')">✅ Mark Completed</button>`);
   }
   if (['shipped', 'waiting-pickup', 'received', 'completed'].includes(order.status)) {
-    btns.push(`<button class="btn btn-sm" onclick="generatePackingSlip(${order.id})">📋 Packing Slip</button>`);
+    btns.push(`<a href="shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
   }
   if (!['ready-to-ship', 'shipped', 'received', 'completed'].includes(order.status)) {
     btns.push(`<button class="btn btn-sm btn-warning" onclick="openReprintModal(${order.id})">🖨 Reprint/Shortage</button>`);
@@ -1131,21 +1097,20 @@ function openRedirectModal(dbId, stepId, stepIndex) {
     <strong>Quantity:</strong> ${(order.quantity || 0).toLocaleString()} units | ${order.sheetCount || '—'} sheets
   `;
 
-  // Populate machine dropdown — show compatible alternatives
+  // Populate machine dropdown — only admin-configured alternatives
   const machineSel = document.getElementById('redirectMachine');
   machineSel.innerHTML = '<option value="">— Select Machine —</option>';
   const currentMachine = step.machine;
-
-  // Get all machines, group by facility
-  for (const [facKey, fac] of Object.entries(FACILITIES)) {
-    const facMachines = fac.machines.filter(m => m !== currentMachine);
-    if (facMachines.length > 0) {
-      machineSel.innerHTML += `<optgroup label="${getPmFacilityLabel(facKey)}">`;
-      facMachines.forEach(m => {
-        machineSel.innerHTML += `<option value="${m}">${m}</option>`;
-      });
-      machineSel.innerHTML += `</optgroup>`;
-    }
+  const allowed = typeof getAllowedMachineDisplaysForWorkflowStep === 'function'
+    ? getAllowedMachineDisplaysForWorkflowStep(step)
+    : [currentMachine];
+  const swapOptions = allowed.filter(m => m && m !== currentMachine);
+  if (!swapOptions.length) {
+    machineSel.innerHTML = '<option value="">No allowed alternatives for this step</option>';
+  } else {
+    swapOptions.forEach(m => {
+      machineSel.innerHTML += `<option value="${m}">${m}</option>`;
+    });
   }
 
   // Reset form
@@ -1191,19 +1156,55 @@ async function confirmRedirect() {
   const newMachine = document.getElementById('redirectMachine').value;
   if (!newMachine) { showPageToast('Please select a machine to redirect to.', 'warning'); return; }
 
+  const stepIdx = order.workflowSteps.findIndex(s => s.id === redirectTargetStepId || s.stepId === redirectTargetStepId);
+  const resolvedIdx = stepIdx >= 0 ? stepIdx : redirectTargetStepIndex;
+  const step = order.workflowSteps[resolvedIdx];
+  if (!step) return;
+
+  const allowed = typeof getAllowedMachineDisplaysForWorkflowStep === 'function'
+    ? getAllowedMachineDisplaysForWorkflowStep(step)
+    : [step.machine];
+  if (!allowed.includes(newMachine)) {
+    showPageToast('That machine is not an allowed alternative for this step.', 'warning');
+    return;
+  }
+
   const newOp = document.getElementById('redirectOperation').value || (MACHINES[newMachine]?.operations?.[0]) || 'Processing';
   const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
   const notes = document.getElementById('redirectNotes').value;
+  const originalMachine = step.machine;
+
+  async function _logSwap() {
+    if (typeof logWorkflowOverride !== 'function' || !order.id) return;
+    await logWorkflowOverride({
+      orderDbId: order.id,
+      stepIndex: resolvedIdx,
+      originalMachineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(originalMachine) : null,
+      newMachineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : null,
+      originalMachine,
+      newMachine,
+      changedBy: typeof getCurrentName === 'function' ? getCurrentName() : 'Manager',
+      reason: notes,
+    });
+  }
 
   if (redirectType === 'full') {
     // Full redirect: just change the machine on the existing step
     const steps = order.workflowSteps.map((s, idx) => {
       if (s.id === redirectTargetStepId || s.stepId === redirectTargetStepId || idx === redirectTargetStepIndex) {
-        return { ...s, machine: newMachine, operation: newOp, redirectedFrom: s.machine, redirectNotes: notes };
+        return {
+          ...s,
+          machine: newMachine,
+          machineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : s.machineId,
+          operation: newOp,
+          redirectedFrom: s.machine,
+          redirectNotes: notes,
+        };
       }
       return s;
     });
     await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await _logSwap();
     await addActivity({
       orderId: order.orderId,
       type: 'redirect',
@@ -1229,6 +1230,7 @@ async function confirmRedirect() {
     const splitStep = {
       id: generateStepId(),
       machine: newMachine,
+      machineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : null,
       operation: newOp,
       status: 'pending',
       assignedTo: null,
@@ -1258,6 +1260,7 @@ async function confirmRedirect() {
     steps.forEach((s, i) => { s.stepIndex = i; });
 
     await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await _logSwap();
     await addActivity({
       orderId: order.orderId,
       type: 'redirect-split',
@@ -1270,440 +1273,11 @@ async function confirmRedirect() {
   }
 }
 
-// ── Packing Slip Editor ───────────────────────────────────
-let packingSlipOrderId = null;
-let packingSlipData = null;
+// ── Packing Slip → handled by shipping.html ───────────────
+// (Removed: modal, generatePackingSlip, renderPackingSlipEditor,
+//  renderShipments, addShipment, removeShipment, addBox, removeBox,
+//  updatePSTotals, printPackingSlips, closePackingSlipModal, _packingSlipLegacy)
 
-function generatePackingSlip(dbId) {
-  const order = allOrders.find(o => o.id === dbId);
-  if (!order) return;
-  packingSlipOrderId = dbId;
-
-  // Initialize packing slip data
-  packingSlipData = {
-    shipments: [{
-      address: '',
-      carrier: '',
-      trackingNumber: '',
-      pickupInfo: '',
-      shippingMethod: 'shipping', // shipping | pickup | uber | other
-      boxes: [{
-        boxNumber: 1,
-        contents: order.jobDescription || order.productType || 'Order items',
-        quantity: order.quantity || 0,
-        notes: ''
-      }]
-    }],
-    totalShipped: order.quantity || 0,
-    notes: ''
-  };
-
-  renderPackingSlipEditor(order);
-}
-
-function renderPackingSlipEditor(order) {
-  const customerName = order.customer || order.customerName || '—';
-  const totalLoss = (order.workflowSteps || []).reduce((s, st) => s + (st.unitsLost || 0), 0);
-  const piecesPerFrame = order.piecesPerSheet || 1;
-  const availableQty = Math.max(0, (order.quantity || 0) - (totalLoss * piecesPerFrame) + ((order.actualOversPrinted || 0) * piecesPerFrame));
-
-  const modal = document.getElementById('packingSlipModal');
-  document.getElementById('psOrderInfo').innerHTML = `
-    <strong>#${order.orderId}</strong> — ${customerName} | ${order.productType || ''} | ${order.material || ''}
-    <br><span style="font-size:12px;color:var(--text-muted);">Ordered: ${(order.quantity || 0).toLocaleString()} | Available: ~${availableQty.toLocaleString()} (after losses)</span>
-  `;
-
-  renderShipments();
-  modal.classList.add('active');
-}
-
-function renderShipments() {
-  const container = document.getElementById('psShipments');
-  container.innerHTML = packingSlipData.shipments.map((shipment, si) => `
-    <div class="ps-shipment" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <strong style="font-size:14px;">📦 Shipment ${si + 1}</strong>
-        ${packingSlipData.shipments.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="removeShipment(${si})">Remove</button>` : ''}
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div class="field">
-          <label>Shipping Method</label>
-          <select onchange="packingSlipData.shipments[${si}].shippingMethod=this.value;renderShipments()">
-            <option value="shipping" ${shipment.shippingMethod === 'shipping' ? 'selected' : ''}>📫 Shipping (Carrier)</option>
-            <option value="pickup" ${shipment.shippingMethod === 'pickup' ? 'selected' : ''}>🏪 Customer Pickup</option>
-            <option value="uber" ${shipment.shippingMethod === 'uber' ? 'selected' : ''}>🚗 Uber / Delivery Service</option>
-            <option value="other" ${shipment.shippingMethod === 'other' ? 'selected' : ''}>Other</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Ship To Address</label>
-          <input type="text" value="${shipment.address}" placeholder="Delivery address" onchange="packingSlipData.shipments[${si}].address=this.value">
-        </div>
-      </div>
-
-      ${shipment.shippingMethod === 'shipping' ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-          <div class="field">
-            <label>Carrier</label>
-            <select onchange="packingSlipData.shipments[${si}].carrier=this.value">
-              <option value="">— Select —</option>
-              <option value="UPS" ${shipment.carrier === 'UPS' ? 'selected' : ''}>UPS</option>
-              <option value="FedEx" ${shipment.carrier === 'FedEx' ? 'selected' : ''}>FedEx</option>
-              <option value="USPS" ${shipment.carrier === 'USPS' ? 'selected' : ''}>USPS</option>
-              <option value="DHL" ${shipment.carrier === 'DHL' ? 'selected' : ''}>DHL</option>
-              <option value="Freight" ${shipment.carrier === 'Freight' ? 'selected' : ''}>Freight / LTL</option>
-              <option value="Other" ${shipment.carrier === 'Other' ? 'selected' : ''}>Other</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Tracking Number</label>
-            <input type="text" value="${shipment.trackingNumber}" placeholder="Tracking #" onchange="packingSlipData.shipments[${si}].trackingNumber=this.value">
-          </div>
-        </div>
-      ` : shipment.shippingMethod === 'uber' ? `
-        <div class="field" style="margin-bottom:10px;">
-          <label>Driver / Service Info</label>
-          <input type="text" value="${shipment.pickupInfo}" placeholder="Driver name, plate #, Uber order #" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
-        </div>
-      ` : shipment.shippingMethod === 'pickup' ? `
-        <div class="field" style="margin-bottom:10px;">
-          <label>Pickup Details</label>
-          <input type="text" value="${shipment.pickupInfo}" placeholder="Who is picking up, vehicle info" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
-        </div>
-      ` : `
-        <div class="field" style="margin-bottom:10px;">
-          <label>Details</label>
-          <input type="text" value="${shipment.pickupInfo}" placeholder="Delivery details" onchange="packingSlipData.shipments[${si}].pickupInfo=this.value">
-        </div>
-      `}
-
-      <div style="margin-top:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <strong style="font-size:12px;text-transform:uppercase;color:var(--text-muted);">Boxes / Packages</strong>
-          <button class="btn btn-sm" onclick="addBox(${si})">+ Add Box</button>
-        </div>
-        ${shipment.boxes.map((box, bi) => `
-          <div style="display:grid;grid-template-columns:60px 1fr 100px 1fr 40px;gap:8px;align-items:end;margin-bottom:6px;">
-            <div class="field">
-              <label>Box #</label>
-              <input type="text" value="${box.boxNumber}" style="text-align:center;font-weight:700;" onchange="packingSlipData.shipments[${si}].boxes[${bi}].boxNumber=this.value">
-            </div>
-            <div class="field">
-              <label>Contents / SKU / Version</label>
-              <input type="text" value="${box.contents}" placeholder="e.g. Version A - Strawberry" onchange="packingSlipData.shipments[${si}].boxes[${bi}].contents=this.value">
-            </div>
-            <div class="field">
-              <label>Qty</label>
-              <input type="number" value="${box.quantity}" min="0" style="text-align:center;" onchange="packingSlipData.shipments[${si}].boxes[${bi}].quantity=parseInt(this.value)||0;updatePSTotals()">
-            </div>
-            <div class="field">
-              <label>Notes</label>
-              <input type="text" value="${box.notes}" placeholder="Notes" onchange="packingSlipData.shipments[${si}].boxes[${bi}].notes=this.value">
-            </div>
-            <div>${shipment.boxes.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="removeBox(${si},${bi})" style="padding:6px 8px;">✕</button>` : ''}</div>
-          </div>
-        `).join('')}
-        <div style="text-align:right;font-size:13px;color:var(--text-muted);margin-top:4px;">
-          Shipment total: <strong>${shipment.boxes.reduce((s, b) => s + (b.quantity || 0), 0).toLocaleString()}</strong> units in <strong>${shipment.boxes.length}</strong> box${shipment.boxes.length > 1 ? 'es' : ''}
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  updatePSTotals();
-}
-
-function addShipment() {
-  packingSlipData.shipments.push({
-    address: '', carrier: '', trackingNumber: '', pickupInfo: '',
-    shippingMethod: 'shipping',
-    boxes: [{ boxNumber: packingSlipData.shipments.length + 1, contents: '', quantity: 0, notes: '' }]
-  });
-  renderShipments();
-}
-
-function removeShipment(si) {
-  if (!confirm('Remove this shipment?')) return;
-  packingSlipData.shipments.splice(si, 1);
-  renderShipments();
-}
-
-function addBox(si) {
-  const boxes = packingSlipData.shipments[si].boxes;
-  boxes.push({ boxNumber: boxes.length + 1, contents: '', quantity: 0, notes: '' });
-  renderShipments();
-}
-
-function removeBox(si, bi) {
-  packingSlipData.shipments[si].boxes.splice(bi, 1);
-  renderShipments();
-}
-
-function updatePSTotals() {
-  const total = packingSlipData.shipments.reduce((s, sh) => s + sh.boxes.reduce((s2, b) => s2 + (b.quantity || 0), 0), 0);
-  packingSlipData.totalShipped = total;
-  const el = document.getElementById('psTotalShipped');
-  if (el) el.textContent = total.toLocaleString();
-}
-
-function printPackingSlips() {
-  const order = allOrders.find(o => o.id === packingSlipOrderId);
-  if (!order) return;
-  const customerName = order.customer || order.customerName || '—';
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  // Generate one page per shipment
-  const slipPages = packingSlipData.shipments.map((shipment, si) => {
-    const shipTotal = shipment.boxes.reduce((s, b) => s + (b.quantity || 0), 0);
-    const methodLabel = { shipping: '📫 Shipped via ' + (shipment.carrier || 'Carrier'), pickup: '🏪 Customer Pickup', uber: '🚗 Uber/Delivery', other: 'Other' }[shipment.shippingMethod] || '';
-    const trackingLine = shipment.trackingNumber ? `<tr><td style="padding:4px 8px;font-weight:600;">Tracking #</td><td style="padding:4px 8px;font-family:monospace;font-size:15px;">${shipment.trackingNumber}</td></tr>` : '';
-    const pickupLine = shipment.pickupInfo ? `<tr><td style="padding:4px 8px;font-weight:600;">${shipment.shippingMethod === 'pickup' ? 'Picked up by' : shipment.shippingMethod === 'uber' ? 'Driver/Service' : 'Details'}</td><td style="padding:4px 8px;">${shipment.pickupInfo}</td></tr>` : '';
-
-    return `
-    <div class="slip" style="page-break-after:always;">
-      <div class="slip-header">
-        <h1>PACKING SLIP</h1>
-        <div class="slip-id">#${order.orderId}${packingSlipData.shipments.length > 1 ? ` (${si + 1}/${packingSlipData.shipments.length})` : ''}</div>
-      </div>
-      <div class="slip-body">
-        <div class="slip-row">
-          <div class="slip-col">
-            <div class="slip-label">Customer</div>
-            <div class="slip-val" style="font-size:18px;font-weight:700;">${customerName}</div>
-          </div>
-          <div class="slip-col" style="text-align:right;">
-            <div class="slip-label">Date</div>
-            <div class="slip-val">${today}</div>
-          </div>
-        </div>
-        ${shipment.address ? `<div class="slip-row"><div class="slip-col"><div class="slip-label">Ship To</div><div class="slip-val">${shipment.address}</div></div></div>` : ''}
-        <div class="slip-row">
-          <div class="slip-col"><div class="slip-label">Method</div><div class="slip-val">${methodLabel}</div></div>
-          <div class="slip-col"><div class="slip-label">Order #</div><div class="slip-val">${order.orderId}</div></div>
-          <div class="slip-col" style="text-align:right;"><div class="slip-label">Due Date</div><div class="slip-val">${order.dueDate ? formatDate(order.dueDate) : '—'}</div></div>
-        </div>
-
-        <table class="slip-table">
-          <thead><tr><th>Box</th><th>Contents / SKU</th><th style="text-align:right;">Quantity</th><th>Notes</th></tr></thead>
-          <tbody>
-            ${shipment.boxes.map(box => `<tr>
-              <td style="text-align:center;font-weight:700;">${box.boxNumber}</td>
-              <td>${box.contents || '—'}</td>
-              <td style="text-align:right;font-weight:700;font-size:15px;">${(box.quantity || 0).toLocaleString()}</td>
-              <td style="font-size:12px;color:#666;">${box.notes || ''}</td>
-            </tr>`).join('')}
-            <tr style="border-top:2px solid #1a2233;">
-              <td colspan="2" style="text-align:right;font-weight:700;">TOTAL THIS SHIPMENT:</td>
-              <td style="text-align:right;font-weight:800;font-size:16px;">${shipTotal.toLocaleString()}</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table class="slip-table" style="margin-top:12px;">
-          <tbody>
-            <tr><td style="padding:4px 8px;font-weight:600;">Product</td><td style="padding:4px 8px;">${order.productType || ''} · ${order.material || ''}</td></tr>
-            <tr><td style="padding:4px 8px;font-weight:600;">Description</td><td style="padding:4px 8px;">${order.jobDescription || '—'}</td></tr>
-            ${trackingLine}
-            ${pickupLine}
-            ${order.specialNotes ? `<tr><td style="padding:4px 8px;font-weight:600;">Notes</td><td style="padding:4px 8px;">${order.specialNotes}</td></tr>` : ''}
-          </tbody>
-        </table>
-
-        <div style="display:flex;justify-content:space-between;margin-top:32px;">
-          <div><div class="sig-line">Packed by (Name / Date)</div></div>
-          <div><div class="sig-line">Received by (Signature)</div></div>
-        </div>
-      </div>
-      <div class="slip-footer">
-        <span>Bazaar Printing · ${getPmFacilityLabel(order.facility)}</span>
-        <span>#${order.orderId} · ${today}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  const win = window.open('', '_blank', 'width=800,height=900');
-  win.document.write(`<!DOCTYPE html><html><head><title>Packing Slip — #${order.orderId}</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:32px;color:#1a2233;font-size:14px;}
-    .slip{max-width:700px;margin:0 auto 24px;border:2px solid #1a2233;}
-    .slip-header{background:#1a2233;color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;}
-    .slip-header h1{font-size:20px;font-weight:700;}.slip-header .slip-id{font-size:16px;font-weight:600;}
-    .slip-body{padding:24px;}.slip-row{display:flex;justify-content:space-between;margin-bottom:12px;}.slip-col{flex:1;}
-    .slip-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:600;margin-bottom:2px;}
-    .slip-val{font-size:14px;font-weight:500;}
-    .slip-table{width:100%;border-collapse:collapse;margin-top:12px;}
-    .slip-table th{background:#f4f6f9;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:2px solid #d8dee6;}
-    .slip-table td{padding:8px 12px;border-bottom:1px solid #eee;}
-    .sig-line{border-top:1px solid #999;width:200px;margin-top:40px;padding-top:4px;font-size:11px;color:#666;}
-    .slip-footer{border-top:1px solid #d8dee6;padding:12px 24px;display:flex;justify-content:space-between;font-size:12px;color:#666;}
-    .no-print{text-align:center;margin-bottom:16px;}
-    @media print{body{padding:0;}.no-print{display:none;}}
-  </style></head><body>
-  <div class="no-print">
-    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;font-weight:600;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨️ Print</button>
-    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;margin-left:8px;background:#eee;border:1px solid #ccc;border-radius:6px;cursor:pointer;">Close</button>
-  </div>
-  ${slipPages}
-  </body></html>`);
-  win.document.close();
-}
-
-function closePackingSlipModal() {
-  document.getElementById('packingSlipModal').classList.remove('active');
-  packingSlipOrderId = null;
-  packingSlipData = null;
-}
-
-// Legacy — keep for reference, not called
-function _packingSlipLegacy(dbId) {
-  const order = allOrders.find(o => o.id === dbId);
-  if (!order) return;
-
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const customerName = order.customer || order.customerName || '—';
-  const steps = order.workflowSteps || [];
-  const totalLoss = steps.reduce((s, st) => s + (st.unitsLost || 0), 0);
-  const piecesPerFrame = order.piecesPerSheet || 1;
-  const finalQty = Math.max(0, (order.quantity || 0) - (totalLoss * piecesPerFrame));
-  const overs = order.actualOversPrinted || order.extraFrames || 0;
-  const oversUnits = overs * piecesPerFrame;
-
-  // Custom batching info
-  let batchingInfo = '';
-  if (order.unitsPerRoll) batchingInfo += `<tr><td style="padding:4px 8px;font-weight:600;">Units per Roll:</td><td style="padding:4px 8px;">${order.unitsPerRoll}</td></tr>`;
-  if (order.packagingInstructions) batchingInfo += `<tr><td style="padding:4px 8px;font-weight:600;">Packaging:</td><td style="padding:4px 8px;">${order.packagingInstructions}</td></tr>`;
-
-  const slipHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Packing Slip — #${order.orderId}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #1a2233; font-size: 14px; }
-    .slip { max-width: 700px; margin: 0 auto; border: 2px solid #1a2233; }
-    .slip-header { background: #1a2233; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .slip-header h1 { font-size: 20px; font-weight: 700; }
-    .slip-header .slip-id { font-size: 16px; font-weight: 600; }
-    .slip-body { padding: 24px; }
-    .slip-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
-    .slip-col { flex: 1; }
-    .slip-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; font-weight: 600; margin-bottom: 2px; }
-    .slip-val { font-size: 14px; font-weight: 500; }
-    .slip-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    .slip-table th { background: #f4f6f9; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #d8dee6; }
-    .slip-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-    .qty-box { border: 2px solid #1a2233; padding: 12px 20px; text-align: center; margin-top: 16px; }
-    .qty-box .qty-num { font-size: 32px; font-weight: 800; }
-    .qty-box .qty-label { font-size: 11px; text-transform: uppercase; color: #666; }
-    .slip-footer { border-top: 1px solid #d8dee6; padding: 16px 24px; display: flex; justify-content: space-between; font-size: 12px; color: #666; }
-    .sig-line { border-top: 1px solid #999; width: 200px; margin-top: 40px; padding-top: 4px; font-size: 11px; color: #666; }
-    @media print { body { padding: 0; } .no-print { display: none; } }
-  </style>
-</head>
-<body>
-  <div class="no-print" style="text-align:center;margin-bottom:16px;">
-    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;font-weight:600;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨️ Print Packing Slip</button>
-    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;margin-left:8px;background:#eee;border:1px solid #ccc;border-radius:6px;cursor:pointer;">Close</button>
-  </div>
-  <div class="slip">
-    <div class="slip-header">
-      <h1>PACKING SLIP</h1>
-      <div class="slip-id">#${order.orderId}</div>
-    </div>
-    <div class="slip-body">
-      <div class="slip-row">
-        <div class="slip-col">
-          <div class="slip-label">Customer</div>
-          <div class="slip-val" style="font-size:18px;font-weight:700;">${customerName}</div>
-        </div>
-        <div class="slip-col" style="text-align:right;">
-          <div class="slip-label">Date</div>
-          <div class="slip-val">${today}</div>
-        </div>
-      </div>
-      <div class="slip-row">
-        <div class="slip-col">
-          <div class="slip-label">Order Date</div>
-          <div class="slip-val">${order.entryDate ? formatDate(order.entryDate) : '—'}</div>
-        </div>
-        <div class="slip-col">
-          <div class="slip-label">Due Date</div>
-          <div class="slip-val">${order.dueDate ? formatDate(order.dueDate) : '—'}</div>
-        </div>
-        <div class="slip-col" style="text-align:right;">
-          <div class="slip-label">Facility</div>
-          <div class="slip-val">${getPmFacilityLabel(order.facility)}</div>
-        </div>
-      </div>
-
-      <table class="slip-table">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td style="font-weight:600;">Product Type</td><td>${order.productType || '—'}</td></tr>
-          <tr><td style="font-weight:600;">Job Description</td><td>${order.jobDescription || '—'}</td></tr>
-          <tr><td style="font-weight:600;">Material</td><td>${order.material || '—'}</td></tr>
-          <tr><td style="font-weight:600;">Colors</td><td>${order.colorMode || order.colors || 'CMYK'}${order.hasWhiteLayer ? ' + White' : ''}</td></tr>
-          ${order.lamination && order.lamination !== 'None' ? `<tr><td style="font-weight:600;">Lamination</td><td>${order.lamination}</td></tr>` : ''}
-          ${order.hasUV ? '<tr><td style="font-weight:600;">UV Coating</td><td>Yes</td></tr>' : ''}
-          ${order.foilType && order.foilType !== 'None' ? `<tr><td style="font-weight:600;">Foil</td><td>${order.foilType}${order.foilColor ? ' — ' + order.foilColor : ''}</td></tr>` : ''}
-          ${order.cutMethod && order.cutMethod !== 'none' ? `<tr><td style="font-weight:600;">Cut Method</td><td>${order.cutMethod}${order.dieName ? ' — Die: ' + order.dieName : ''}</td></tr>` : ''}
-          ${order.labelWidth ? `<tr><td style="font-weight:600;">Label Size</td><td>${order.labelWidth}" × ${order.labelHeight}"</td></tr>` : ''}
-          ${order.rollDirection ? `<tr><td style="font-weight:600;">Roll Direction</td><td>Direction ${order.rollDirection}</td></tr>` : ''}
-          ${batchingInfo}
-          ${order.specialNotes ? `<tr><td style="font-weight:600;">Special Notes</td><td>${order.specialNotes}</td></tr>` : ''}
-        </tbody>
-      </table>
-
-      <div style="display:flex;gap:16px;margin-top:16px;">
-        <div class="qty-box" style="flex:1;">
-          <div class="qty-label">Ordered</div>
-          <div class="qty-num">${(order.quantity || 0).toLocaleString()}</div>
-        </div>
-        <div class="qty-box" style="flex:1;">
-          <div class="qty-label">Shipped</div>
-          <div class="qty-num">${finalQty.toLocaleString()}</div>
-        </div>
-        ${totalLoss > 0 ? `
-        <div class="qty-box" style="flex:1;border-color:#dc2626;">
-          <div class="qty-label" style="color:#dc2626;">Production Loss</div>
-          <div class="qty-num" style="color:#dc2626;">${(totalLoss * piecesPerFrame).toLocaleString()}</div>
-        </div>` : ''}
-        ${oversUnits > 0 ? `
-        <div class="qty-box" style="flex:1;border-color:#16a34a;">
-          <div class="qty-label" style="color:#16a34a;">Overs Included</div>
-          <div class="qty-num" style="color:#16a34a;">${oversUnits.toLocaleString()}</div>
-        </div>` : ''}
-      </div>
-
-      <div style="display:flex;justify-content:space-between;margin-top:32px;">
-        <div>
-          <div class="sig-line">Packed by (Name / Date)</div>
-        </div>
-        <div>
-          <div class="sig-line">Received by (Customer Signature)</div>
-        </div>
-      </div>
-    </div>
-    <div class="slip-footer">
-      <span>Bazaar Printing • ${getPmFacilityLabel(order.facility)}</span>
-      <span>Order #${order.orderId} • ${today}</span>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  const win = window.open('', '_blank', 'width=800,height=900');
-  win.document.write(slipHTML);
-  win.document.close();
-}
 
 // ── Detail Modal ──────────────────────────────────────────
 function openDetail(dbId) {

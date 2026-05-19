@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260518-PW4"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
@@ -25,12 +25,13 @@
     <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
     <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
     <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
-    <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="tab-btn" data-tab="products" onclick="switchTab('products')">🗂 Products</button>
+    <button class="tab-btn" data-tab="product-workflows" onclick="switchTab('product-workflows')">🔀 Product Workflow Configuration</button>
+    <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
   </div>
 
-  <div class="admin-content">
+  <main class="admin-content">
     <div id="adminAlerts" style="display:none;margin-bottom:16px;"></div>
 
     <!-- ═══════════════════════════════════════════ PERSONNEL ══ -->
@@ -95,7 +96,7 @@
       <div class="table-wrap" id="dieTableWrap">
         <table class="data-table">
           <thead><tr>
-            <th>Die #</th><th>Dieline</th><th>Description</th><th>Type</th><th>Machine</th><th>Status</th><th>Uses</th><th>Last Used</th><th>Actions</th>
+            <th>Die #</th><th>Dieline</th><th>Description</th><th>Cut sizes</th><th>Type</th><th>Machine</th><th>Status</th><th>Uses</th><th>Last Used</th><th>Actions</th>
           </tr></thead>
           <tbody id="dieTableBody"></tbody>
         </table>
@@ -190,7 +191,7 @@
     <!-- ══════════════════════════════════════ SETTINGS ══ -->
     <!-- ═══ QA SIGN-OFF RULES TAB ═════════════════════════════════ -->
 
-<div class="tab-pane" id="tab-qa-rules">
+    <div class="tab-pane" id="tab-qa-rules">
   <div class="pane-header" style="display:flex;justify-content:space-between;align-items:center;">
     <div>
       <h2>✅ QA Sign-off Rules</h2>
@@ -204,10 +205,10 @@
   </div>
 
   <div id="qaRulesList"></div>
-</div>
+    </div>
 
-<!-- ═══ ROLES & PERMISSIONS TAB ═══════════════════════════════ -->
-<div class="tab-pane" id="tab-roles">
+    <!-- ═══ ROLES & PERMISSIONS TAB ═══════════════════════════════ -->
+    <div class="tab-pane" id="tab-roles">
   <div class="pane-header">
     <h2>🔐 Roles & Permissions</h2>
     <div style="display:flex;align-items:center;gap:10px;">
@@ -218,6 +219,9 @@
   </div>
   <p style="color:#6b7280;font-size:13px;margin:0 0 14px;">Check a cell to grant access, uncheck to revoke. Changes take effect on next login.</p>
   <div id="rolesMatrixWrap" style="overflow-x:auto;"></div>
+  <h3 style="font-size:15px;font-weight:700;margin:24px 0 10px;">Admin tab access</h3>
+  <p style="color:#6b7280;font-size:13px;margin:0 0 10px;">Which tabs appear on the Admin page for each role (requires <strong>View Admin</strong>).</p>
+  <div id="rolesAdminTabsWrap" style="overflow-x:auto;"></div>
   <div style="margin-top:28px;">
     <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Current User Assignments</h3>
     <div id="roleUserList"></div>
@@ -231,7 +235,7 @@
       <div class="settings-grid">
         <div class="card settings-card">
           <h3 class="settings-section-title">Application Department Capacity</h3>
-          <div class="field-row">
+          <div class="field-row field-row-3">
             <div class="field">
               <label>People per Shift</label>
               <input type="number" id="appDeptPeople" min="1" value="3" onchange="saveSettingDebounced()">
@@ -273,11 +277,16 @@
     <!-- ══════════════════════════════════════ PRODUCTS CATALOGUE ══ -->
     <div class="tab-pane" id="tab-products">
       <div class="pane-header">
-        <h2>Product Catalogue</h2>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div>
+          <h2>Product Catalogue</h2>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Materials, finishing, color modes, and product types used on job tickets.</p>
+        </div>
+        <div class="cat-toolbar">
           <input type="file" id="catalogImportFile" accept=".json" style="display:none" onchange="catalogImportAll(this)">
-          <button class="btn" onclick="document.getElementById('catalogImportFile').click()">Import JSON</button>
-          <button class="btn" onclick="catalogExportAll()">Export JSON</button>
+          <button type="button" class="btn" onclick="document.getElementById('catalogImportFile').click()">Import JSON</button>
+          <button type="button" class="btn" onclick="catalogExportAll()">Export JSON</button>
+          <button type="button" class="btn cat-btn-reset" onclick="resetAllCatalogToDefaults()">↺ Reset All to Defaults</button>
+          <button type="button" class="btn" onclick="switchTab('product-workflows')">🔀 Workflow Configuration</button>
         </div>
       </div>
 
@@ -368,7 +377,53 @@
       </div>
     </div>
 
-  </div>
+    <!-- ══════════════════════════════════════ PRODUCT WORKFLOWS ══ -->
+    <div class="tab-pane" id="tab-product-workflows">
+      <div class="pane-header">
+        <div>
+          <h2>Product Workflow Configuration</h2>
+        </div>
+        <button type="button" class="btn cat-btn-reset" onclick="resetAllWorkflowsToDefaults()">↺ Reset All Workflows to Defaults</button>
+      </div>
+      <div class="pw-layout">
+        <aside class="pw-sidebar">
+          <p class="pw-sidebar-title">Catalogue products</p>
+          <input type="text" id="pwProductSearch" class="pw-search" placeholder="Search products…" oninput="renderPwProductList()">
+          <div id="pwProductList" class="pw-product-list" role="listbox" aria-label="Products"></div>
+        </aside>
+        <section class="pw-editor" id="pwEditor">
+          <div class="pw-editor-empty" id="pwEditorEmpty">Select a product to configure its workflow.</div>
+          <div class="pw-editor-body" id="pwEditorBody" style="display:none;">
+            <div class="pw-editor-header">
+              <div>
+                <h3 id="pwEditorTitle">—</h3>
+                <div class="pw-meta-row">
+                  <span class="pw-meta-label">Primary facility</span>
+                  <span class="pw-facility-badge" id="pwEditorFacility">—</span>
+                  <select id="pwPrimaryFacility" class="pw-facility-select" onchange="onPwPrimaryFacilityChange()">
+                    <option value="16th">16th Street</option>
+                    <option value="boyd">Boyd Street</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="btn" onclick="resetPwWorkflow()">Reset to Default</button>
+                <button type="button" class="btn btn-primary" onclick="savePwWorkflow()">Save</button>
+              </div>
+            </div>
+            <div class="pw-step-legend" aria-label="Step type legend">
+              <span class="pw-legend-item pw-legend-default"><strong>Default</strong> — always uses selected machinery</span>
+              <span class="pw-legend-item pw-legend-conditional"><strong>Conditional</strong> — swaps machinery when the rule matches</span>
+            </div>
+            <p class="pw-meta-label" style="margin:12px 0 10px;">Workflow steps</p>
+            <div id="pwStepsList" class="pw-steps-list"></div>
+            <button type="button" class="btn btn-primary" style="margin-top:4px;" onclick="openPwMachinePicker(-1)">+ Add Step</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 <!-- ══════════════════════════════════════════════════ MODALS ══ -->
@@ -398,7 +453,7 @@
       <div class="field"><label>Phone</label><input type="text" id="pPhone" placeholder="(555) 555-5555"></div>
       <div class="field"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="pActive" checked style="width:16px;height:16px;"> Active</label></div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions pw-step-modal-actions">
       <button class="btn" onclick="closeModal('personnelModal')">Cancel</button>
       <button class="btn btn-primary" onclick="savePersonnel()">Save</button>
     </div>
@@ -431,11 +486,11 @@
 
 <!-- Die Modal -->
 <div class="modal-overlay" id="dieModal">
-  <div class="modal" style="max-width:600px;">
+  <div class="modal die-modal" style="max-width:680px;">
     <h2 id="dieModalTitle">Add Die</h2>
     <input type="hidden" id="dieDbId">
-    <div class="modal-form">
-      <div class="field-row">
+    <div class="modal-form die-modal-form">
+      <div class="field-row field-row-3">
         <div class="field"><label>Die Number *</label><input type="text" id="dNumber" placeholder="e.g. 42 or GM-7" required></div>
         <div class="field"><label>Type *</label>
           <select id="dType" required>
@@ -470,12 +525,13 @@
         </div>
       </div>
       <div class="field"><label>Description</label><input type="text" id="dDescription" placeholder="e.g. Standard 2oz Bag Label"></div>
-      <div class="field-row">
-        <div class="field"><label>Customer</label><input type="text" id="dCustomer" placeholder="Customer (if die-specific)"></div>
+      <div class="field"><label>Die cut sizes</label><input type="text" id="dCutSizes" placeholder="e.g. 3.5 × 2.5 in or 4×6 in"></div>
+      <div class="field-row field-row-2">
+        <div class="field"><label>Customer</label><input type="text" id="dCustomer" placeholder="Optional — die-specific customer"></div>
         <div class="field"><label>Machine</label>
           <select id="dMachine">
-            <option value="Moll Brothers Cutter">Moll Brothers Cutter (Sheet)</option>
-            <option value="GM Die-Cutter w/ JetFX">GM Die-Cutter w/ JetFX (Roll)</option>
+            <option value="Moll Brothers Cutter">Moll Brothers — Sheet</option>
+            <option value="GM Die-Cutter w/ JetFX">GM Die-Cutter — Roll</option>
           </select>
         </div>
       </div>
@@ -713,6 +769,104 @@
   </div>
 </div>
 
+<!-- Product Workflow — machine picker -->
+<div class="modal-overlay" id="pwMachineModal">
+  <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto;">
+    <h2>Select Machine</h2>
+    <div id="pwMachinePickerBody"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn" onclick="closeModal('pwMachineModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Workflow — step editor -->
+<div class="modal-overlay" id="pwStepModal">
+  <div class="modal pw-step-modal">
+    <h2 class="pw-step-modal-title">Edit Step</h2>
+    <input type="hidden" id="pwStepEditIndex">
+    <input type="hidden" id="pwStepType" value="default">
+    <div class="pw-step-modal-body modal-form">
+      <p class="pw-step-type-hint">Choose how this step behaves on the job ticket route.</p>
+      <div class="pw-step-type-picker" role="group" aria-label="Step type">
+        <button type="button" class="pw-type-option pw-type-default active" data-pw-type="default" onclick="pwSetStepType('default')">
+          Default<small>Always in the route</small>
+        </button>
+        <button type="button" class="pw-type-option pw-type-conditional" data-pw-type="conditional" onclick="pwSetStepType('conditional')">
+          Conditional<small>Only when rule matches</small>
+        </button>
+      </div>
+      <div id="pwConditionFields" class="pw-condition-panel">
+        <p class="pw-cond-panel-title">When this job matches</p>
+        <div class="pw-cond-row">
+          <div class="field"><label>Field</label>
+            <select id="pwCondField">
+              <option value="cutMethod">cutMethod</option>
+              <option value="lamination">lamination</option>
+              <option value="materialFinish">materialFinish</option>
+              <option value="hasScodixFinishing">hasScodixFinishing</option>
+              <option value="finishing">finishing</option>
+            </select>
+          </div>
+          <div class="field"><label>Operator</label>
+            <select id="pwCondOp">
+              <option value="equals">equals</option>
+              <option value="not_equals">not_equals</option>
+              <option value="in">in</option>
+            </select>
+          </div>
+          <div class="field"><label>Value</label><input type="text" id="pwCondValue" placeholder="die, none, gloss"></div>
+        </div>
+      </div>
+      <div id="pwMachineSections">
+        <div class="pw-machine-sub-nav">
+          <button type="button" class="pw-machine-sub-btn active" data-pw-machine-tab="route" onclick="pwSwitchMachineTab('route')">
+            <span id="pwRouteTabLabel">Machinery</span>
+          </button>
+          <button type="button" class="pw-machine-sub-btn" data-pw-machine-tab="swap" onclick="pwSwitchMachineTab('swap')">PM swap alternatives</button>
+        </div>
+        <div id="pwTabRoute" class="pw-machine-tab-pane active">
+          <div id="pwDefaultRoutePanel" class="pw-machine-section pw-machine-section-primary">
+            <p id="pwDefaultRouteHint" class="pw-machine-section-hint" style="margin:0 0 8px;">Select machinery and its function.</p>
+            <div class="pw-machinery-fields">
+              <div class="field"><label>Machinery</label><select id="pwRouteMachineSelect" onchange="pwOnRouteMachineSelectChange()"></select></div>
+              <div class="field pw-fn-field"><label>Function</label><select id="pwRouteOperationSelect"></select></div>
+            </div>
+          </div>
+          <div id="pwConditionalRoutePanel" style="display:none;">
+            <div class="pw-machine-section" style="margin-bottom:12px;padding:10px;border:2px solid #93c5fd;background:#f8fafc;border-radius:8px;">
+              <p class="pw-machine-section-hint" style="margin:0 0 8px;font-weight:600;color:#1e3a8a;">Default machinery for this step (when condition does not match)</p>
+              <div class="pw-machinery-fields">
+                <div class="field"><label>Machinery</label><select id="pwStepDefaultMachineSelect" onchange="pwOnStepDefaultMachineSelectChange()"></select></div>
+                <div class="field pw-fn-field"><label>Function</label><select id="pwStepDefaultOperationSelect"></select></div>
+              </div>
+            </div>
+            <div class="pw-machine-section pw-machine-section-primary">
+              <p class="pw-machine-section-hint" style="margin:0 0 8px;">Machinery when condition matches (instead of default)</p>
+              <div class="pw-machinery-fields">
+                <div class="field"><label>Machinery</label><select id="pwConditionalMachineSelect" onchange="pwOnConditionalMachineSelectChange()"></select></div>
+                <div class="field pw-fn-field"><label>Function</label><select id="pwConditionalOperationSelect"></select></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pwTabSwap" class="pw-machine-tab-pane">
+          <div class="pw-machine-section pw-machine-section-alt">
+            <p class="pw-machine-section-hint" style="margin:0 0 8px;">PM may swap to these (same category). Pick machinery and function for each.</p>
+            <div id="pwAltAlternativesList"></div>
+            <button type="button" class="btn btn-sm" style="margin-top:8px;" onclick="pwAddAlternativeRow()">+ Add alternative</button>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="pwStepNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-actions pw-step-modal-actions">
+      <button type="button" class="btn" onclick="closeModal('pwStepModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="savePwStepEdit()">Apply</button>
+    </div>
+  </div>
+</div>
+
 <script>
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('admin');
@@ -737,8 +891,27 @@ document.getElementById('page-styles').textContent = `
 
   /* Modal form */
   .modal-form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; margin-bottom: 8px; }
-  .field { display: flex; flex-direction: column; }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .field-row { display: grid; gap: 12px 14px; }
+  .field-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .field-row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .die-modal-form { gap: 12px; }
+  .die-modal-form .field label {
+    font-size: 11px; line-height: 1.3; margin-bottom: 5px;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .die-modal-form input,
+  .die-modal-form select {
+    width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0;
+  }
+  .die-modal-form select {
+    padding-right: 2rem;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 640px) {
+    .die-modal-form .field-row-3 { grid-template-columns: 1fr; }
+    .die-modal-form .field-row-2 { grid-template-columns: 1fr; }
+  }
 
   /* Settings */
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -762,7 +935,18 @@ document.getElementById('page-styles').textContent = `
   .kb-severity-warning { color: var(--yellow); font-weight: 700; }
   .kb-severity-info { color: var(--accent); }
 
-  /* Product Catalogue sub-nav */
+  /* Product Catalogue */
+  .cat-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .cat-btn-reset { color:#f59e0b; border-color:#f59e0b; }
+  .cat-btn-reset:hover { background:rgba(245,158,11,0.08); }
+  .cat-info-box {
+    margin:0 0 16px; padding:12px 14px; font-size:13px; line-height:1.5;
+    color:var(--text-muted); background:var(--bg); border:1px solid var(--border);
+    border-radius:8px;
+  }
+  .cat-info-box strong { color:var(--text); }
+  .cat-tag-cell { display:flex; flex-wrap:wrap; gap:4px; max-width:220px; }
+  .cat-actions-cell { display:flex; flex-wrap:wrap; gap:4px; }
   .cat-sub-nav { display:flex; gap:4px; border-bottom:2px solid var(--border); margin-bottom:4px; }
   .cat-sub-btn { padding:8px 16px; border:none; background:transparent; color:var(--text-muted); font-size:13px; font-weight:500; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.15s; white-space:nowrap; }
   .cat-sub-btn:hover { color:var(--text); background:var(--card-hover); }
@@ -810,6 +994,228 @@ document.getElementById('page-styles').textContent = `
   .die-card-actions { padding:8px 12px; border-top:1px solid var(--border); display:flex; gap:6px; flex-wrap:wrap; }
   .die-card-actions .btn { font-size:11px; padding:3px 8px; }
   .die-type-pill { display:inline-block; font-size:10px; padding:1px 7px; border-radius:20px; background:var(--bg); border:1px solid var(--border); color:var(--text-muted); font-weight:600; }
+  /* Product workflows */
+  .pw-layout { display:flex; gap:20px; min-height:520px; margin-top:16px; align-items:flex-start; }
+  .pw-sidebar {
+    width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:10px;
+    border:1px solid var(--border); border-radius:var(--radius); background:var(--card);
+    padding:12px; max-height:calc(100vh - 220px);
+  }
+  .pw-sidebar-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin:0; }
+  .pw-search { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff; }
+  .pw-product-list {
+    flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:2px;
+    min-height:120px; margin:0 -4px; padding:0 4px;
+  }
+  .pw-product-item {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    width:100%; padding:9px 10px; border:none; border-radius:6px;
+    background:transparent; color:var(--text); font-size:13px; font-weight:500;
+    font-family:inherit; text-align:left; cursor:pointer;
+    appearance:none; -webkit-appearance:none; box-shadow:none;
+    transition:background 0.12s;
+  }
+  .pw-product-item:hover { background:var(--card-hover); }
+  .pw-product-item.active {
+    background:#eff6ff; color:var(--accent); font-weight:600;
+    box-shadow:inset 3px 0 0 var(--accent);
+  }
+  .pw-product-item:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .pw-product-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pw-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+  .pw-badge.ok { background:#dcfce7; color:#166534; }
+  .pw-badge.missing { background:#fef3c7; color:#92400e; }
+  .pw-badge.pending { background:#fee2e2; color:#991b1b; }
+  .pw-editor {
+    flex:1; min-width:0; border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; background:var(--card); min-height:400px;
+  }
+  .pw-editor-empty {
+    color:var(--text-muted); padding:48px 24px; text-align:center; font-size:14px;
+    border:1px dashed var(--border); border-radius:8px; background:var(--bg);
+  }
+  .pw-editor-header {
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+    margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  .pw-editor-header h3 { margin:0 0 10px; font-size:18px; font-weight:700; }
+  .pw-meta-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .pw-meta-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); }
+  .pw-facility-badge {
+    display:inline-block; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;
+    background:var(--bg); border:1px solid var(--border); color:var(--text);
+  }
+  .pw-facility-select { width:auto; min-width:140px; padding:6px 10px; font-size:13px; }
+  .pw-empty-steps {
+    padding:24px; text-align:center; color:var(--text-muted); font-size:13px;
+    border:1px dashed var(--border); border-radius:8px; background:var(--bg); margin-bottom:12px;
+  }
+  .pw-step-legend {
+    display:flex; flex-wrap:wrap; gap:8px 16px; margin-bottom:4px; padding:10px 12px;
+    background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--text-muted);
+  }
+  .pw-legend-item { display:inline-flex; align-items:center; gap:6px; }
+  .pw-legend-item::before {
+    content:''; width:10px; height:10px; border-radius:3px; flex-shrink:0;
+  }
+  .pw-legend-default::before { background:#dbeafe; border:2px solid #2563eb; }
+  .pw-legend-conditional::before { background:#fef3c7; border:2px solid #d97706; }
+  .pw-legend-optional::before { background:#f1f5f9; border:2px solid #64748b; }
+  .pw-legend-item strong { color:var(--text); font-weight:600; }
+  .pw-steps-list { display:flex; flex-direction:column; gap:10px; }
+  .pw-step-card {
+    border:1px solid var(--border); border-radius:8px; padding:12px 12px 12px 14px;
+    background:var(--card); border-left-width:4px;
+  }
+  .pw-step-card.step-default { border-left-color:#2563eb; background:#f8fafc; }
+  .pw-step-card.step-conditional { border-left-color:#d97706; background:#fffbeb; }
+  .pw-step-card.step-optional { border-left-color:#64748b; background:#f8fafc; }
+  .pw-type-badge {
+    font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+    padding:3px 8px; border-radius:20px;
+  }
+  .pw-type-badge.default { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+  .pw-type-badge.conditional { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
+  .pw-type-badge.optional { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+  .pw-step-card-head { display:flex; align-items:flex-start; gap:10px; }
+  .pw-step-order { display:flex; flex-direction:column; gap:2px; }
+  .pw-step-order button { padding:2px 6px; font-size:11px; line-height:1; }
+  .pw-step-title { font-weight:700; font-size:14px; }
+  .pw-step-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .pw-pill { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(--card); border:1px solid var(--border); color:var(--text-muted); }
+  .pw-pill.facility-16th { color:#1d4ed8; border-color:#93c5fd; }
+  .pw-pill.facility-boyd { color:#6d28d9; border-color:#c4b5fd; }
+  .pw-step-actions { margin-left:auto; display:flex; gap:6px; flex-shrink:0; }
+  .pw-machine-group { margin-bottom:14px; }
+  .pw-machine-group h4 { margin:0 0 8px; font-size:12px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; }
+  .pw-machine-btn { display:block; width:100%; text-align:left; padding:8px 10px; margin-bottom:4px; border:1px solid var(--border); border-radius:6px; background:var(--bg); cursor:pointer; font-size:13px; }
+  .pw-machine-btn:hover { background:var(--card-hover); border-color:var(--accent); }
+  /* Step editor modal — fit viewport */
+  #pwStepModal .pw-step-modal {
+    width: min(520px, 94vw);
+    max-width: 520px;
+    max-height: min(90vh, calc(100dvh - 32px));
+    display: flex;
+    flex-direction: column;
+    padding: 14px 18px;
+    overflow: hidden;
+    margin: auto;
+  }
+  #pwStepModal .pw-step-modal-title { margin: 0 0 10px; font-size: 18px; flex-shrink: 0; }
+  #pwStepModal .pw-step-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    gap: 8px;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-right: 2px;
+  }
+  #pwStepModal .pw-step-modal-actions {
+    flex-shrink: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  #pwStepModal .modal-form .field { margin-bottom: 0; }
+  #pwStepModal .modal-form .field label { margin-bottom: 2px; font-size: 10px; }
+  #pwStepModal .modal-form input,
+  #pwStepModal .modal-form select,
+  #pwStepModal .modal-form textarea { padding: 6px 10px; font-size: 13px; }
+  #pwStepModal .pw-step-type-hint { font-size:12px; color:var(--text-muted); margin:0 0 6px; line-height:1.45; }
+  .pw-step-type-picker { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .pw-type-option {
+    flex:1; min-width:90px; padding:8px 10px; border:2px solid var(--border); border-radius:8px;
+    background:var(--card); cursor:pointer; font-size:12px; font-weight:600; text-align:left;
+    font-family:inherit; transition:all 0.12s;
+  }
+  .pw-type-option small { display:block; font-weight:400; color:var(--text-muted); margin-top:2px; font-size:11px; }
+  .pw-type-option:hover { border-color:var(--text-muted); }
+  .pw-type-option.active { box-shadow:0 0 0 1px currentColor; }
+  .pw-type-option.pw-type-default.active { border-color:#2563eb; background:#eff6ff; color:#1d4ed8; }
+  .pw-type-option.pw-type-conditional.active { border-color:#d97706; background:#fffbeb; color:#b45309; }
+  .pw-type-option.pw-type-optional.active { border-color:#64748b; background:#f1f5f9; color:#475569; }
+  .pw-condition-panel {
+    padding:10px; border-radius:8px; border:1px solid #fcd34d; background:#fffbeb; margin-bottom:8px;
+  }
+  .pw-cond-panel-title { font-size:12px; color:#92400e; margin:0 0 8px; font-weight:600; }
+  .pw-cond-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  @media (max-width: 520px) { .pw-cond-row { grid-template-columns:1fr; } }
+  .pw-condition-panel .field label { color:#92400e; }
+  #pwStepModal.pw-modal-conditional .pw-condition-panel { display:block; }
+  #pwStepModal:not(.pw-modal-conditional) .pw-condition-panel { display:none !important; }
+  #pwStepModal.pw-modal-conditional .pw-machine-sub-nav { display:none; }
+  #pwStepModal.pw-modal-conditional #pwTabSwap { display:none !important; }
+  #pwStepModal.pw-modal-conditional #pwTabRoute { display:block !important; }
+  #pwStepModal.modal-overlay.active { align-items: center; padding: 16px; box-sizing: border-box; }
+  .pw-machine-sub-nav {
+    display:flex; gap:4px; margin-bottom:8px; border-bottom:2px solid var(--border);
+  }
+  .pw-machine-sub-btn {
+    padding:6px 12px; border:none; background:transparent; color:var(--text-muted);
+    font-size:13px; font-weight:500; cursor:pointer; border-bottom:3px solid transparent;
+    margin-bottom:-2px; font-family:inherit;
+  }
+  .pw-machine-sub-btn:hover { color:var(--text); background:var(--card-hover); }
+  .pw-machine-sub-btn.active { color:var(--accent); font-weight:700; border-bottom-color:var(--accent); }
+  .pw-machine-tab-pane { display:none; }
+  .pw-machine-tab-pane.active { display:block; }
+  .pw-default-set-display {
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    border:2px solid #93c5fd; background:#f1f5f9;
+  }
+  .pw-default-set-name { margin:0; font-size:14px; font-weight:700; color:#1e3a8a; }
+  .pw-machine-section { margin-bottom:0; padding:10px; border-radius:8px; }
+  .pw-machine-pick-scroll {
+    max-height: min(200px, 32vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-top: 6px;
+    padding: 2px 4px 2px 0;
+  }
+  .pw-machine-section-primary { border:2px solid #2563eb; background:#eff6ff; }
+  .pw-machine-section-alt { border:2px solid #d97706; background:#fffbeb; }
+  .pw-machine-section-head { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
+  .pw-machine-section-title { margin:0; font-size:14px; font-weight:700; color:var(--text); }
+  .pw-machine-section-hint { margin:2px 0 0; font-size:12px; color:var(--text-muted); line-height:1.4; }
+  .pw-machine-section-badge {
+    flex-shrink:0; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;
+    padding:4px 8px; border-radius:6px;
+  }
+  .pw-badge-primary { background:#2563eb; color:#fff; }
+  .pw-badge-alt { background:#d97706; color:#fff; }
+  .pw-machine-pick-grid { display:flex; flex-direction:column; gap:4px; }
+  .pw-machinery-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  @media (max-width: 420px) { .pw-machinery-fields { grid-template-columns:1fr; } }
+  .pw-machinery-fields .field { margin-bottom:0; }
+  .pw-fn-field.pw-fn-single .field label { color:var(--text-muted); }
+  .pw-alt-row {
+    display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end;
+    margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(217,119,6,0.25);
+  }
+  .pw-alt-row:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  @media (max-width: 480px) { .pw-alt-row { grid-template-columns:1fr; } }
+  .pw-pick-primary {
+    display:flex; align-items:center; gap:8px; padding:6px 10px; margin:0; width:100%;
+    border:1px solid #93c5fd; border-radius:6px; background:#fff; cursor:pointer;
+    font-size:12px; font-weight:500; color:var(--text); box-sizing:border-box;
+  }
+  .pw-pick-primary:has(input:checked) {
+    border-color:#2563eb; background:#dbeafe; color:#1d4ed8; font-weight:700;
+    box-shadow:0 0 0 1px #2563eb;
+  }
+  .pw-pick-primary input[type="radio"] { width:16px; height:16px; accent-color:#2563eb; flex-shrink:0; }
+  .pw-pick-alt {
+    display:flex; align-items:center; gap:8px; padding:6px 10px; margin:0; width:100%;
+    border:1px solid #fcd34d; border-radius:6px; background:#fff; cursor:pointer;
+    font-size:12px; font-weight:500; color:var(--text); box-sizing:border-box;
+  }
+  .pw-pick-alt:has(input:checked) {
+    border-color:#d97706; background:#fef3c7; color:#92400e; font-weight:700;
+    box-shadow:0 0 0 1px #d97706;
+  }
+  .pw-pick-alt input[type="checkbox"] { width:16px; height:16px; accent-color:#d97706; flex-shrink:0; }
 `;
 
 // Populate KB machine options
@@ -849,6 +1255,7 @@ async function loadTab(tab) {
   else if (tab === 'qa-rules') renderQARules();
   else if (tab === 'roles') await renderRoles();
   else if (tab === 'products') await loadProductsTab();
+  else if (tab === 'product-workflows') await loadProductWorkflowsTab();
 }
 
 async function renderAdminAlerts() {
@@ -1111,6 +1518,21 @@ const ROLES_SPECIAL = [
   { key: 'canViewOperator',    label: 'View Operator' },
 ];
 
+const ROLES_ADMIN_TABS = [
+  { key: 'personnel', label: 'Personnel' },
+  { key: 'machines', label: 'Machines' },
+  { key: 'dies', label: 'Dies' },
+  { key: 'organisation', label: 'Organisation' },
+  { key: 'inventory', label: 'Inventory' },
+  { key: 'purchase-orders', label: 'Purchase Orders' },
+  { key: 'knowledge', label: 'Knowledge' },
+  { key: 'qa-rules', label: 'QA Rules' },
+  { key: 'settings', label: 'Settings' },
+  { key: 'products', label: 'Products' },
+  { key: 'product-workflows', label: 'Workflow Config' },
+  { key: 'roles', label: 'Roles' },
+];
+
 let _roleOverrides = {};
 
 // ── Custom Roles List (merged from ROLE_CONFIG + user additions) ──────────────
@@ -1282,6 +1704,8 @@ async function renderRoles() {
   html += `</tbody></table></div>`;
   wrap.innerHTML = html;
 
+  renderRolesAdminTabsMatrix();
+
   // User assignments list
   const el = document.getElementById('roleUserList');
   if (!el) return;
@@ -1300,10 +1724,56 @@ async function renderRoles() {
   el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows || '<div style="padding:16px;color:#9ca3af;font-size:13px;">No users found.</div>'}</div>`;
 }
 
+function _baseAdminTabsForRole(roleKey, baseCfg) {
+  if (baseCfg.adminTabs === 'all' || (roleKey === 'admin' && baseCfg.canViewAdmin)) {
+    return ROLES_ADMIN_TABS.map(t => t.key);
+  }
+  if (Array.isArray(baseCfg.adminTabs) && baseCfg.adminTabs.length) return [...baseCfg.adminTabs];
+  return baseCfg.canViewAdmin ? ROLES_ADMIN_TABS.map(t => t.key) : [];
+}
+
+function renderRolesAdminTabsMatrix() {
+  const wrap = document.getElementById('rolesAdminTabsWrap');
+  if (!wrap) return;
+  const thBase = 'padding:6px 3px;border-bottom:2px solid #e2e8f0;min-width:42px;max-width:42px;background:#f8fafc;text-align:center;vertical-align:bottom;';
+  const rotLabel = (text) =>
+    `<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;font-weight:600;color:#374151;padding:4px 0;margin:0 auto;">${text}</div>`;
+  let html = `<div style="border:1px solid #e2e8f0;border-radius:12px;background:#fff;">
+    <table style="border-collapse:collapse;font-size:12px;min-width:max-content;width:100%;">
+      <thead><tr>
+        <th style="position:sticky;left:0;z-index:3;background:#f8fafc;padding:10px 16px;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;min-width:200px;text-align:left;">Role</th>
+        ${ROLES_ADMIN_TABS.map(t => `<th style="${thBase}">${rotLabel(t.label)}</th>`).join('')}
+      </tr></thead><tbody>`;
+  _customRoles.forEach((role, ri) => {
+    const roleKey = role.key;
+    const baseCfg = ROLE_CONFIG[roleKey] || {};
+    const overrides = _roleOverrides[roleKey] || {};
+    const baseTabs = _baseAdminTabsForRole(roleKey, baseCfg);
+    const tabs = Array.isArray(overrides.adminTabs) && overrides.adminTabs.length
+      ? overrides.adminTabs
+      : baseTabs;
+    const bg = ri % 2 === 0 ? '#fff' : '#f9fafb';
+    const isAdminRole = roleKey === 'admin';
+    html += `<tr><td style="position:sticky;left:0;z-index:1;background:${bg};padding:7px 16px;border-bottom:1px solid #f1f5f9;border-right:2px solid #e2e8f0;font-weight:600;">${role.label || roleKey}</td>`;
+    ROLES_ADMIN_TABS.forEach(t => {
+      const checked = tabs.includes(t.key) ? 'checked' : '';
+      const disabled = isAdminRole ? 'disabled title="Admin has all admin tabs"' : '';
+      html += `<td style="padding:3px;text-align:center;border-bottom:1px solid #f1f5f9;background:${bg};">
+        <input type="checkbox" ${checked} ${disabled} data-role="${roleKey}" data-admin-tab="${t.key}"
+          onchange="roleMatrixChange(this)" style="width:15px;height:15px;accent-color:#6366f1;">
+      </td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+}
+
 function roleMatrixChange(cb) {
   const role = cb.dataset.role;
   const page = cb.dataset.page;
   const special = cb.dataset.special;
+  const adminTab = cb.dataset.adminTab;
   if (!_roleOverrides[role]) _roleOverrides[role] = {};
 
   if (page) {
@@ -1319,6 +1789,16 @@ function roleMatrixChange(cb) {
     }
   } else if (special) {
     _roleOverrides[role][special] = cb.checked;
+  } else if (adminTab) {
+    const baseCfg = ROLE_CONFIG[role] || {};
+    if (!Array.isArray(_roleOverrides[role].adminTabs) || _roleOverrides[role].adminTabs.length === 0) {
+      _roleOverrides[role].adminTabs = [..._baseAdminTabsForRole(role, baseCfg)];
+    }
+    if (cb.checked) {
+      if (!_roleOverrides[role].adminTabs.includes(adminTab)) _roleOverrides[role].adminTabs.push(adminTab);
+    } else {
+      _roleOverrides[role].adminTabs = _roleOverrides[role].adminTabs.filter(t => t !== adminTab);
+    }
   }
 
   const status = document.getElementById('rolesSaveStatus');
@@ -1342,8 +1822,10 @@ async function saveRolePermissions() {
   Object.entries(_roleOverrides).forEach(([role, ov]) => {
     if (!ROLE_CONFIG[role]) return;
     if (Array.isArray(ov.pages) && ov.pages.length > 0) ROLE_CONFIG[role].pages = [...ov.pages];
+    if (Array.isArray(ov.adminTabs) && ov.adminTabs.length > 0) ROLE_CONFIG[role].adminTabs = [...ov.adminTabs];
     ROLES_SPECIAL.forEach(s => { if (s.key in ov) ROLE_CONFIG[role][s.key] = ov[s.key]; });
   });
+  if (activeTab === 'admin' && typeof applyRoleAccess === 'function') applyRoleAccess('admin');
   const status = document.getElementById('rolesSaveStatus');
   if (status) { status.textContent = '✓ Saved'; status.style.color = '#16a34a'; setTimeout(() => { status.textContent = ''; }, 3000); }
 }
@@ -1740,7 +2222,7 @@ function getFilteredDies() {
   const statusF  = document.getElementById('dieStatusFilter')?.value || 'all';
 
   return allDies.filter(d => {
-    if (q && !([d.dieNumber, d.barcode, d.customer, d.description, d.die_type, d.template_pdf].join(' ').toLowerCase().includes(q))) return false;
+    if (q && !([d.dieNumber, d.barcode, d.customer, d.description, d.cut_sizes, d.die_type, d.template_pdf].join(' ').toLowerCase().includes(q))) return false;
     if (machine === 'moll' && !(d.machine || '').toLowerCase().includes('moll')) return false;
     if (machine === 'gm'   && !(d.machine || '').toLowerCase().includes('gm'))   return false;
     if (typeF !== 'all') {
@@ -1777,7 +2259,7 @@ function renderDies() {
 function renderDieTable(filtered) {
   const tbody = document.getElementById('dieTableBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No dies found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px;">No dies found.</td></tr>';
     return;
   }
   tbody.innerHTML = filtered.map(d => {
@@ -1792,6 +2274,7 @@ function renderDieTable(filtered) {
       <td style="font-weight:700;font-family:monospace;">${d.dieNumber}</td>
       <td>${driveBtn}</td>
       <td>${d.description || '—'}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(d.cut_sizes || '')}">${d.cut_sizes ? escHtml(d.cut_sizes) : '—'}</td>
       <td><span class="die-type-pill">${d.die_type || '—'}</span></td>
       <td style="font-size:12px;">${machineBadge}</td>
       <td><span class="status-${d.status || 'active'}">${d.status || 'active'}</span></td>
@@ -1844,6 +2327,7 @@ function renderDieCards(filtered) {
       <div class="die-card-body">
         <div class="die-card-name">${d.description || d.dieNumber}</div>
         <div class="die-card-meta">#${d.dieNumber} &nbsp;·&nbsp; <span class="die-type-pill">${d.die_type || '?'}</span></div>
+        ${d.cut_sizes ? `<div class="die-card-meta">📐 ${d.cut_sizes}</div>` : ''}
         ${d.template_pdf ? `<div class="die-card-meta" style="font-size:10px;" title="${d.template_pdf}">📎 ${d.template_pdf.length > 28 ? d.template_pdf.slice(0,26)+'…' : d.template_pdf}</div>` : ''}
       </div>
       <div class="die-card-actions">
@@ -1860,6 +2344,7 @@ function openDieModal(die) {
   document.getElementById('dieDbId').value      = die?.id || '';
   document.getElementById('dNumber').value      = die?.dieNumber || '';
   document.getElementById('dDescription').value = die?.description || '';
+  document.getElementById('dCutSizes').value    = die?.cut_sizes || '';
   document.getElementById('dCustomer').value    = die?.customer || '';
   document.getElementById('dMachine').value     = die?.machine || 'Moll Brothers Cutter';
   document.getElementById('dStatus').value      = die?.status || 'active';
@@ -1912,6 +2397,7 @@ async function saveDie() {
   const data = {
     dieNumber,
     description:  document.getElementById('dDescription').value.trim(),
+    cut_sizes:    document.getElementById('dCutSizes').value.trim(),
     customer:     document.getElementById('dCustomer').value.trim(),
     machine:      document.getElementById('dMachine').value,
     status:       dieStatus,
@@ -2404,59 +2890,292 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Product catalogue default data ─────────────────────────
+function buildDefaultColorModes() {
+  return [
+    { id: catalogUID(), name: 'CMYK',         description: 'Standard 4-color process' },
+    { id: catalogUID(), name: 'CMYK + White', description: 'CMYK with white underbase' },
+  ];
+}
+
+function buildDefaultMaterials() {
+  return (typeof MATERIALS !== 'undefined' ? MATERIALS : []).map(g => ({
+    id: catalogUID(), category: g.category, items: [...g.items],
+  }));
+}
+
+function buildDefaultFinishing() {
+  return [
+    { id: catalogUID(), name: 'Lamination',  description: 'Gloss, Matte, Soft Touch, Holo, Coating' },
+    { id: catalogUID(), name: 'Spot UV',      description: 'UV coating on selected areas' },
+    { id: catalogUID(), name: 'Foil',         description: 'Gold, Silver, Rose Gold, Holographic, Custom' },
+    { id: catalogUID(), name: 'Scodix',       description: 'Scodix UV and foil digital effects' },
+    { id: catalogUID(), name: 'Embossing',    description: 'Raised emboss effect' },
+    { id: catalogUID(), name: 'Perforation',  description: 'Tear-off perforation line' },
+  ];
+}
+
+function buildDefaultProductCatalog() {
+  const u = catalogUID;
+  return [
+    {
+      id: u(), name: 'Labels (Roll)',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet','Semi Gloss'],
+      finishing: ['Lamination','Spot UV','Foil','Scodix'],
+      sides: ['1-sided'],
+      rollDirection: true,
+      notes: 'Roll labels — HP Indigo 6K → GM Die/Laser Cutter. NOT Cosmetic Web.'
+    },
+    {
+      id: u(), name: 'Labels (Sheet)',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Gloss Label Sheet','Matte Label Sheet','Semi Gloss'],
+      finishing: ['Lamination','Spot UV','Foil'],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Sheet labels — HP Indigo 6K → Duplo or Guillotine.'
+    },
+    {
+      id: u(), name: 'Pouches',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web'],
+      finishing: ['Lamination'],
+      sides: ['1-sided'],
+      rollDirection: true,
+      notes: 'Pouches — ONLY Cosmetic Web. HP Indigo 6K → GM Die/Laser → Karlville Poucher.'
+    },
+    {
+      id: u(), name: 'Folding Cartons / Boxes',
+      facilities: ['16th-street','boyd-street'],
+      colorModes: ['CMYK'],
+      materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S'],
+      finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing'],
+      sides: ['2-sided'],
+      rollDirection: false,
+      notes: 'Boxes — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer.'
+    },
+    {
+      id: u(), name: 'Business Cards',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK'],
+      materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','80lb Cover','100lb Cover','110lb Cover'],
+      finishing: ['Lamination','Spot UV','Foil','Scodix'],
+      sides: ['1-sided','2-sided'],
+      rollDirection: false,
+      notes: 'Business Cards — HP Indigo 15K → Lamination → Duplo or Guillotine. No text stock.'
+    },
+    {
+      id: u(), name: 'Flyers / Postcards',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK'],
+      materials: ['80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','14pt C1S','16pt C1S'],
+      finishing: ['Lamination','Spot UV'],
+      sides: ['1-sided','2-sided'],
+      rollDirection: false,
+      notes: 'Flat sheets — HP Indigo 15K → Lamination → Guillotine.'
+    },
+    {
+      id: u(), name: 'Booklets',
+      facilities: ['16th-street'],
+      colorModes: ['CMYK'],
+      materials: ['80lb Cover','100lb Cover','80lb Text','100lb Text'],
+      finishing: ['Lamination'],
+      sides: ['2-sided'],
+      rollDirection: false,
+      notes: 'Booklets — HP Indigo 15K → Lamination → Booklet Folder → Guillotine.'
+    },
+    {
+      id: u(), name: 'Diecut Stickers',
+      facilities: ['16th-street','boyd-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet'],
+      finishing: ['Lamination','Spot UV'],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Diecut stickers — sheet or roll. 6K → GM Die/Laser Cutter or Graphtec at Boyd.'
+    },
+    {
+      id: u(), name: 'Vinyl Labels / 54\'\' Rolls',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['White Vinyl','White Vinyl - Aggressive Glue','Holographic Vinyl'],
+      finishing: ['Lamination'],
+      sides: ['1-sided'],
+      rollDirection: true,
+      notes: 'Boyd vinyl label roll — Canon Colorado or Roland → Graphtec vinyl cutters.'
+    },
+    {
+      id: u(), name: 'Vinyl Signage',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK'],
+      materials: ['White Vinyl','White Vinyl - Aggressive Glue','Holographic Vinyl'],
+      finishing: ['Lamination'],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Vinyl signage — Canon Colorado (gloss) or Roland (matte) → Graphtec vinyl cutters.'
+    },
+    {
+      id: u(), name: 'Banners / Large Format',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK'],
+      materials: ['Banner Material'],
+      finishing: [],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Large format banners — Canon Colorado or Roland. No post-finishing.'
+    },
+    {
+      id: u(), name: 'Window Decals',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Window Decal'],
+      finishing: [],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Window decals — print + contour cut on Graphtec.'
+    },
+    {
+      id: u(), name: 'Wallpaper',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK'],
+      materials: ['Self-Adhesive (Peel-and-Stick)','Traditional / Unpasted'],
+      finishing: [],
+      sides: ['1-sided'],
+      rollDirection: false,
+      notes: 'Wallpaper — Canon Colorado or Roland.'
+    },
+    {
+      id: u(), name: 'Sheet Products (Boyd)',
+      facilities: ['boyd-street'],
+      colorModes: ['CMYK'],
+      materials: ['18pt (Boyd)','20pt (Boyd)','24pt (Boyd)'],
+      finishing: ['Lamination','Spot UV'],
+      sides: ['1-sided','2-sided'],
+      rollDirection: false,
+      notes: 'Boyd sheet products — Lamination → Graphtec Flatbed.'
+    },
+    {
+      id: u(), name: 'Other',
+      facilities: ['16th-street','boyd-street'],
+      colorModes: ['CMYK', 'CMYK + White'],
+      materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web','Gloss Label Sheet','Matte Label Sheet','Semi Gloss','14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','24pt C1S','80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','White Vinyl','Banner Material','Window Decal','Vinyl'],
+      finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing','Perforation'],
+      sides: ['1-sided','2-sided'],
+      rollDirection: false,
+      notes: ''
+    },
+  ];
+}
+
+async function resetProductCatalogToDefaults() {
+  if (!confirm('Reset products only to built-in defaults?\n\nThis will overwrite all current products.')) return;
+  catProducts = buildDefaultProductCatalog();
+  await setConfig(CAT_KEYS.products, catProducts);
+  renderCatProducts();
+  alert(`✓ Products reset — ${catProducts.length} product(s) loaded.`);
+}
+
+async function resetAllCatalogToDefaults() {
+  if (!confirm(
+    'Reset the entire product catalogue to built-in defaults?\n\n' +
+    'This overwrites color modes, materials, special finishing, and all products. ' +
+    'Product workflows will also be reset to defaults.'
+  )) return;
+  catColorModes = buildDefaultColorModes();
+  catMaterials = buildDefaultMaterials();
+  catFinishing = buildDefaultFinishing();
+  catProducts = buildDefaultProductCatalog();
+  await Promise.all([
+    setConfig(CAT_KEYS.colorModes, catColorModes),
+    setConfig(CAT_KEYS.materials, catMaterials),
+    setConfig(CAT_KEYS.finishing, catFinishing),
+    setConfig(CAT_KEYS.products, catProducts),
+  ]);
+  renderCatColorModes();
+  renderCatMaterials();
+  renderCatFinishing();
+  renderCatProducts();
+  let wfMsg = '';
+  if (typeof resetAllProductWorkflowsFromDefaults === 'function') {
+    try {
+      const r = await resetAllProductWorkflowsFromDefaults(catProducts);
+      wfMsg = ` Workflows reset: ${r.updated} route(s).`;
+    } catch (e) {
+      wfMsg = ` Workflow reset failed: ${e.message || e}`;
+    }
+  }
+  if (typeof showPageToast === 'function') {
+    showPageToast(`Catalogue reset — ${catProducts.length} products.${wfMsg}`, 'success');
+  } else {
+    alert(`✓ Catalogue reset to defaults — ${catProducts.length} products.${wfMsg}`);
+  }
+}
+
+async function resetAllWorkflowsToDefaults() {
+  await ensureCatProductsForPw();
+  if (!catProducts?.length) {
+    alert('No catalogue products found. Reset the Products catalogue first.');
+    return;
+  }
+  if (!confirm(
+    `Reset ALL product workflows (${catProducts.length} products) to built-in defaults and save?\n\n` +
+    'This overwrites every saved route.'
+  )) return;
+  if (typeof resetAllProductWorkflowsFromDefaults !== 'function') {
+    alert('Workflow storage is not available. Check that shared.js loaded correctly.');
+    return;
+  }
+  try {
+    const r = await resetAllProductWorkflowsFromDefaults(catProducts);
+    pwSelectedCatalogId = catProducts[0]?.id || null;
+    await loadProductWorkflowsTab();
+    if (pwSelectedCatalogId) {
+      const row = pwWorkflowByCatalog.get(pwSelectedCatalogId);
+      pwEditorSteps = pwCloneSteps(row?.steps || []);
+      pwDbRowId = row?.id || null;
+      renderPwEditor();
+    }
+    const msg = `Reset and saved ${r.updated} workflow(s) to defaults.`;
+    if (typeof showPageToast === 'function') showPageToast(msg, 'success');
+    else alert('✓ ' + msg);
+  } catch (e) {
+    alert('Workflow reset failed: ' + (e.message || e));
+  }
+}
+
 // ── Load & seed ────────────────────────────────────────────
 async function loadProductsTab() {
   // Color Modes
   const cmCfg = await getConfig(CAT_KEYS.colorModes);
   catColorModes = cmCfg?.value ?? null;
   if (!catColorModes) {
-    catColorModes = [
-      { id: catalogUID(), name: 'CMYK',         description: 'Standard 4-color process' },
-      { id: catalogUID(), name: 'CMYK + White',  description: 'CMYK with white underbase' },
-    ];
+    catColorModes = buildDefaultColorModes();
     await setConfig(CAT_KEYS.colorModes, catColorModes);
   }
 
-  // Materials — seed from shared.js MATERIALS constant
   const matCfg = await getConfig(CAT_KEYS.materials);
   catMaterials = matCfg?.value ?? null;
   if (!catMaterials) {
-    catMaterials = (typeof MATERIALS !== 'undefined' ? MATERIALS : []).map(g => ({
-      id: catalogUID(), category: g.category, items: [...g.items],
-    }));
+    catMaterials = buildDefaultMaterials();
     await setConfig(CAT_KEYS.materials, catMaterials);
   }
 
-  // Special Finishing
   const finCfg = await getConfig(CAT_KEYS.finishing);
   catFinishing = finCfg?.value ?? null;
   if (!catFinishing) {
-    catFinishing = [
-      { id: catalogUID(), name: 'Lamination',  description: 'Gloss, Matte, Soft Touch, Holo, Coating' },
-      { id: catalogUID(), name: 'Spot UV',      description: 'UV coating on selected areas' },
-      { id: catalogUID(), name: 'Foil',         description: 'Gold, Silver, Rose Gold, Holographic, Custom' },
-      { id: catalogUID(), name: 'Scodix',       description: 'Scodix UV and foil digital effects' },
-      { id: catalogUID(), name: 'Embossing',    description: 'Raised emboss effect' },
-      { id: catalogUID(), name: 'Perforation',  description: 'Tear-off perforation line' },
-    ];
+    catFinishing = buildDefaultFinishing();
     await setConfig(CAT_KEYS.finishing, catFinishing);
   }
 
-  // Products — seed from shared.js PRODUCT_TYPES constant
+  // Products — seed with full material / finishing / color mode data per product
   const prodCfg = await getConfig(CAT_KEYS.products);
   catProducts = prodCfg?.value ?? null;
   if (!catProducts) {
-    catProducts = (typeof PRODUCT_TYPES !== 'undefined' ? Object.entries(PRODUCT_TYPES) : []).map(([name, pt]) => ({
-      id:           catalogUID(),
-      name,
-      facilities:   pt.facilities   || [],
-      colorModes:   ['CMYK'],
-      materials:    pt.materials    || [],
-      finishing:    [],
-      sides:        ['1-sided', '2-sided'],
-      rollDirection: pt.defaultPrintType === 'Roll',
-      notes:        pt.notes        || '',
-    }));
+    catProducts = buildDefaultProductCatalog();
     await setConfig(CAT_KEYS.products, catProducts);
   }
 
@@ -2647,6 +3366,21 @@ async function deleteCatFinishing(id) {
 }
 
 // ── Products ───────────────────────────────────────────────
+function catFacilityLabel(slug) {
+  if (typeof FACILITIES !== 'undefined' && FACILITIES[slug]) return FACILITIES[slug].name;
+  return String(slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function catTagsHtml(items, max = 3) {
+  if (!items?.length) return '<span style="color:var(--text-muted);">—</span>';
+  const list = items.map(String);
+  const show = list.slice(0, max);
+  const more = list.length > max
+    ? `<span class="cat-tag" title="${escHtml(list.join(', '))}">+${list.length - max}</span>`
+    : '';
+  return show.map(t => `<span class="cat-tag">${escHtml(t)}</span>`).join('') + more;
+}
+
 function renderCatProducts() {
   const tbody = document.getElementById('catProductsBody');
   if (!tbody) return;
@@ -2654,20 +3388,25 @@ function renderCatProducts() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No products yet. Add one above.</td></tr>';
     return;
   }
-  tbody.innerHTML = catProducts.map(p => `
+  tbody.innerHTML = catProducts.map(p => {
+    const facLabels = (p.facilities || []).map(catFacilityLabel);
+    const sides = (p.sides || []).join(', ') || '—';
+    return `
     <tr>
       <td style="font-weight:600;">${escHtml(p.name)}</td>
-      <td style="font-size:12px;">${(p.facilities || []).map(f => (typeof FACILITIES !== 'undefined' && FACILITIES[f]) ? FACILITIES[f].name : f).join(', ') || '—'}</td>
-      <td style="font-size:12px;">${(p.materials || []).join(', ') || '—'}</td>
-      <td style="font-size:12px;">${(p.colorModes || []).join(', ') || '—'}</td>
-      <td style="font-size:12px;">${(p.finishing || []).join(', ') || '—'}</td>
-      <td style="font-size:12px;">${(p.sides || []).join(', ') || '—'}</td>
+      <td><div class="cat-tag-cell">${catTagsHtml(facLabels, 2)}</div></td>
+      <td><div class="cat-tag-cell">${catTagsHtml(p.materials, 2)}</div></td>
+      <td><div class="cat-tag-cell">${catTagsHtml(p.colorModes, 2)}</div></td>
+      <td><div class="cat-tag-cell">${catTagsHtml(p.finishing, 2)}</div></td>
+      <td style="font-size:12px;color:var(--text-muted);">${escHtml(sides)}</td>
       <td style="text-align:center;">${p.rollDirection ? '✓' : '—'}</td>
-      <td>
-        <button class="btn btn-sm" onclick="openCatProductModal('${p.id}')">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteCatProduct('${p.id}')">Delete</button>
+      <td class="cat-actions-cell">
+        <button type="button" class="btn btn-sm" onclick="openProductWorkflowForCatalog('${p.id}')">Workflow</button>
+        <button type="button" class="btn btn-sm" onclick="openCatProductModal('${p.id}')">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteCatProduct('${p.id}')">Delete</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function openCatProductModal(id) {
@@ -2839,6 +3578,832 @@ async function catalogImportAll(input) {
     if (typeof showPageToast === 'function') showPageToast('Catalog imported successfully.', 'success');
   } catch (e) { alert('Import failed: ' + e.message); }
   input.value = '';
+}
+
+async function openProductWorkflowForCatalog(catalogId) {
+  if (catalogId) pwSelectedCatalogId = catalogId;
+  switchTab('product-workflows');
+}
+
+// ── PRODUCT WORKFLOWS ─────────────────────────────────────
+let pwMachines = [];
+let pwWorkflowByCatalog = new Map();
+let pwSelectedCatalogId = null;
+let pwEditorSteps = [];
+let pwDbRowId = null;
+let pwMachinePickerAt = -1;
+let pwPrimaryFacility = '16th';
+
+function pwInferSlugCategory(slug) {
+  if (typeof MACHINE_SLUG_CATEGORY !== 'undefined' && MACHINE_SLUG_CATEGORY[slug]) {
+    return MACHINE_SLUG_CATEGORY[slug];
+  }
+  if (slug.includes('press')) return 'press';
+  if (slug.includes('laminat')) return 'lamination';
+  if (slug.includes('folder')) return 'folding';
+  if (slug === 'scodix' || slug === 'uv-coater') return 'finishing';
+  if (slug === 'karlville') return 'pouching';
+  return 'cutting';
+}
+
+/** Merge DB machines with slug registry so workflow step IDs always resolve. */
+function pwEnsureMachines() {
+  if (typeof MACHINE_SLUG_TO_DISPLAY === 'undefined') return;
+  const byId = new Map();
+  for (const m of pwMachines) {
+    if (!m?.id) continue;
+    if (MACHINE_SLUG_TO_DISPLAY[m.id]) {
+      byId.set(m.id, { ...m, category: m.category || pwInferSlugCategory(m.id) });
+      continue;
+    }
+    const slug = typeof displayNameToMachineSlug === 'function'
+      ? displayNameToMachineSlug(m.displayName || m.name)
+      : null;
+    if (slug && MACHINE_SLUG_TO_DISPLAY[slug]) {
+      byId.set(slug, {
+        id: slug,
+        name: m.name || MACHINE_SLUG_TO_DISPLAY[slug],
+        displayName: MACHINE_SLUG_TO_DISPLAY[slug],
+        facility: m.facility === 'boyd' ? 'boyd' : '16th',
+        category: m.category || pwInferSlugCategory(slug),
+        capabilities: m.capabilities || [],
+      });
+    } else {
+      byId.set(m.id, m);
+    }
+  }
+  for (const [id, displayName] of Object.entries(MACHINE_SLUG_TO_DISPLAY)) {
+    if (byId.has(id)) {
+      const cur = byId.get(id);
+      if (!cur.category) byId.set(id, { ...cur, category: pwInferSlugCategory(id) });
+      continue;
+    }
+    byId.set(id, {
+      id,
+      name: displayName,
+      displayName,
+      facility: ['canon-colorado', 'roland', 'graphtec-vinyl', 'graphtec-flatbed', 'boyd-laminator'].includes(id) ? 'boyd' : '16th',
+      category: pwInferSlugCategory(id),
+      capabilities: [],
+    });
+  }
+  pwMachines = Array.from(byId.values());
+}
+
+function pwMachineById(id) {
+  if (!id) return null;
+  pwEnsureMachines();
+  const direct = pwMachines.find(m => m.id === id);
+  if (direct) return direct;
+  const slug = typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(id) : null;
+  if (slug) return pwMachines.find(m => m.id === slug) || null;
+  return null;
+}
+
+function pwMachineLabel(machineId) {
+  const m = pwMachineById(machineId);
+  if (m) return m.displayName || m.name;
+  return (typeof MACHINE_SLUG_TO_DISPLAY !== 'undefined' && MACHINE_SLUG_TO_DISPLAY[machineId]) || machineId;
+}
+
+function pwFormatMachineryLabel(machineId, operation) {
+  if (!machineId) return '—';
+  const name = pwMachineLabel(machineId);
+  const op = operation || pwDefaultOp(machineId);
+  return op ? `${name} — ${op}` : name;
+}
+
+function pwMigrateLegacyConditionalStep(step, allSteps) {
+  if (pwNormalizeStepType(step.stepType) !== 'conditional') return step;
+  const out = { ...step };
+  if (out.defaultMachineId) {
+    if (!out.defaultOperation) out.defaultOperation = pwDefaultOp(out.defaultMachineId);
+    return out;
+  }
+  const alts = (out.alternatives || []).map(pwNormalizeAlt).filter(Boolean);
+  if (alts.length && alts[0].machineId) {
+    out.defaultMachineId = alts[0].machineId;
+    out.defaultOperation = alts[0].operation || pwDefaultOp(alts[0].machineId);
+  } else {
+    const sorted = [...(allSteps || [])].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const idx = sorted.findIndex(s => s === step || (s.sortOrder === step.sortOrder && s.machineId === step.machineId));
+    const sibling = sorted.find((s, i) => i > idx && pwNormalizeStepType(s.stepType) === 'conditional'
+      && s.machineId !== step.machineId && s.conditionField === step.conditionField);
+    if (sibling) {
+      out.defaultMachineId = sibling.machineId;
+      out.defaultOperation = sibling.operation || pwDefaultOp(sibling.machineId);
+    } else {
+      out.defaultMachineId = out.machineId;
+      out.defaultOperation = out.operation || pwDefaultOp(out.machineId);
+    }
+  }
+  return out;
+}
+
+function pwCloneSteps(steps) {
+  const arr = steps || [];
+  return arr.map(s => {
+    let step = { ...s };
+    const machineId = step.machineId;
+    step.operation = step.operation || (typeof defaultOperationForMachineSlug === 'function'
+      ? defaultOperationForMachineSlug(machineId)
+      : 'Processing');
+    step.alternatives = typeof normalizeWorkflowAlternatives === 'function'
+      ? normalizeWorkflowAlternatives(step.alternatives)
+      : (step.alternatives || []);
+    if (pwNormalizeStepType(step.stepType) === 'conditional') {
+      step = pwMigrateLegacyConditionalStep(step, arr);
+    } else {
+      step.defaultMachineId = null;
+      step.defaultOperation = null;
+    }
+    return step;
+  });
+}
+
+async function ensureCatProductsForPw() {
+  if (typeof catProducts !== 'undefined' && catProducts?.length) return;
+  const prodCfg = await getConfig(CAT_KEYS.products);
+  catProducts = Array.isArray(prodCfg) ? prodCfg : (prodCfg?.value ?? null);
+  if (!catProducts) {
+    catProducts = buildDefaultProductCatalog();
+    await setConfig(CAT_KEYS.products, catProducts);
+  }
+}
+
+async function loadProductWorkflowsTab() {
+  const listEl = document.getElementById('pwProductList');
+  try {
+    await ensureCatProductsForPw();
+    if (!Array.isArray(catProducts)) catProducts = [];
+    pwMachines = typeof getAllMachines === 'function' ? await getAllMachines() : [];
+    pwEnsureMachines();
+    if (typeof seedProductWorkflowsFromDefaults === 'function') {
+      try {
+        const seed = await seedProductWorkflowsFromDefaults(catProducts);
+        if (seed?.seeded > 0 && typeof showPageToast === 'function') {
+          showPageToast(`Seeded ${seed.seeded} product workflow(s) from defaults.`, 'success');
+        }
+      } catch (seedErr) {
+        console.warn('[Product Workflows] Seed skipped:', seedErr);
+      }
+    }
+    const workflows = typeof getAllProductWorkflows === 'function' ? await getAllProductWorkflows() : [];
+    pwWorkflowByCatalog = new Map(workflows.map(w => [w.productCatalogId, w]));
+    if (!pwSelectedCatalogId && catProducts.length) {
+      pwSelectedCatalogId = catProducts[0].id;
+      const row = pwWorkflowByCatalog.get(pwSelectedCatalogId);
+      pwEditorSteps = pwCloneSteps(row?.steps || []);
+      pwDbRowId = row?.id || null;
+      const prod0 = catProducts[0];
+      const def0 = typeof getDefaultProductWorkflowForCatalogName === 'function'
+        ? getDefaultProductWorkflowForCatalogName(prod0?.name || '')
+        : { primaryFacility: '16th' };
+      pwPrimaryFacility = row?.primaryFacility || def0.primaryFacility || '16th';
+    }
+    renderPwProductList();
+    renderPwEditor();
+  } catch (e) {
+    console.error('[Product Workflows]', e);
+    if (listEl) {
+      listEl.innerHTML = `<div style="padding:16px;color:var(--red);font-size:13px;">Failed to load workflows: ${escHtml(e.message || String(e))}. If tables are missing, apply migration <code>022_product_workflows.sql</code>.</div>`;
+    }
+  }
+}
+
+function renderPwProductList() {
+  const el = document.getElementById('pwProductList');
+  if (!el || !catProducts) return;
+  const q = (document.getElementById('pwProductSearch')?.value || '').trim().toLowerCase();
+  const items = catProducts.filter(p => !q || (p.name || '').toLowerCase().includes(q));
+  if (!items.length) {
+    el.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">No products match.</div>';
+    return;
+  }
+  el.innerHTML = items.map(p => {
+    const configured = pwWorkflowByCatalog.has(p.id) && (pwWorkflowByCatalog.get(p.id).steps || []).length;
+    const pending = typeof isProductWorkflowDefaultUnmapped === 'function' && isProductWorkflowDefaultUnmapped(p.name);
+    const active = p.id === pwSelectedCatalogId ? ' active' : '';
+    const badgeClass = pending ? 'pending' : (configured ? 'ok' : 'missing');
+    const badgeLabel = pending ? 'Pending route' : (configured ? 'Configured' : 'Not configured');
+    return `<div role="option" tabindex="0" aria-selected="${p.id === pwSelectedCatalogId ? 'true' : 'false'}" class="pw-product-item${active}" onclick="selectPwProduct('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPwProduct('${p.id}');}">
+      <span class="pw-product-name">${escHtml(p.name)}</span>
+      <span class="pw-badge ${badgeClass}">${badgeLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectPwProduct(catalogId) {
+  pwSelectedCatalogId = catalogId;
+  const row = pwWorkflowByCatalog.get(catalogId);
+  pwEditorSteps = pwCloneSteps(row?.steps || []);
+  pwDbRowId = row?.id || null;
+  const prod = catProducts.find(p => p.id === catalogId);
+  const def = typeof getDefaultProductWorkflowForCatalogName === 'function'
+    ? getDefaultProductWorkflowForCatalogName(prod?.name || '')
+    : { primaryFacility: '16th' };
+  pwPrimaryFacility = row?.primaryFacility || def.primaryFacility || '16th';
+  renderPwProductList();
+  renderPwEditor();
+}
+
+function renderPwEditor() {
+  const empty = document.getElementById('pwEditorEmpty');
+  const body = document.getElementById('pwEditorBody');
+  if (!pwSelectedCatalogId) {
+    if (empty) empty.style.display = '';
+    if (body) body.style.display = 'none';
+    return;
+  }
+  const prod = catProducts.find(p => p.id === pwSelectedCatalogId);
+  if (empty) empty.style.display = 'none';
+  if (body) body.style.display = 'block';
+  document.getElementById('pwEditorTitle').textContent = prod?.name || '—';
+  const facEl = document.getElementById('pwEditorFacility');
+  facEl.textContent = pwPrimaryFacility === 'boyd' ? 'Boyd Street' : '16th Street';
+  facEl.className = 'pw-facility-badge';
+  const facSel = document.getElementById('pwPrimaryFacility');
+  if (facSel) facSel.value = pwPrimaryFacility === 'boyd' ? 'boyd' : '16th';
+  renderPwStepsList();
+}
+
+function onPwPrimaryFacilityChange() {
+  const sel = document.getElementById('pwPrimaryFacility');
+  pwPrimaryFacility = sel?.value === 'boyd' ? 'boyd' : '16th';
+  const facEl = document.getElementById('pwEditorFacility');
+  if (facEl) facEl.textContent = pwPrimaryFacility === 'boyd' ? 'Boyd Street' : '16th Street';
+}
+
+
+function pwNormalizeStepType(stepType) {
+  const t = (stepType || 'default').toLowerCase();
+  if (t === 'conditional') return 'conditional';
+  return 'default';
+}
+
+function pwStepTypeLabel(stepType) {
+  const t = pwNormalizeStepType(stepType);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function pwSetStepType(type) {
+  const t = pwNormalizeStepType(type);
+  const hidden = document.getElementById('pwStepType');
+  if (hidden) hidden.value = t;
+  document.querySelectorAll('.pw-type-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pwType === t);
+  });
+  const modal = document.getElementById('pwStepModal');
+  if (modal) modal.classList.toggle('pw-modal-conditional', t === 'conditional');
+  pwSwitchMachineTab('route');
+  pwOnStepTypeChange();
+  const index = parseInt(document.getElementById('pwStepEditIndex')?.value, 10);
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const step = sorted[index];
+  if (step) {
+    const prevType = pwNormalizeStepType(step.stepType);
+    if (t === 'conditional' && prevType !== 'conditional') {
+      if (!step.defaultMachineId) {
+        step.defaultMachineId = step.machineId;
+        step.defaultOperation = step.operation || pwDefaultOp(step.machineId);
+      }
+    } else if (t === 'default' && prevType === 'conditional') {
+      step.machineId = step.defaultMachineId || step.machineId;
+      step.operation = step.defaultOperation || step.operation || pwDefaultOp(step.machineId);
+      step.defaultMachineId = null;
+      step.defaultOperation = null;
+    }
+    step.stepType = t;
+    pwRenderMachineSections(step);
+  }
+}
+
+function pwSortedMachines(pool) {
+  pwEnsureMachines();
+  const list = pool && pool.length ? pool : [...pwMachines];
+  return [...list].sort((a, b) => (a.displayName || a.name || '').localeCompare(b.displayName || b.name || ''));
+}
+
+function pwOpsForMachine(machineId) {
+  if (typeof getOperationsForMachineSlug === 'function') return getOperationsForMachineSlug(machineId);
+  return ['Processing'];
+}
+
+function pwDefaultOp(machineId) {
+  if (typeof defaultOperationForMachineSlug === 'function') return defaultOperationForMachineSlug(machineId);
+  return pwOpsForMachine(machineId)[0] || 'Processing';
+}
+
+function pwFillMachineSelect(selectEl, selectedId, pool) {
+  if (!selectEl) return;
+  const list = pwSortedMachines(pool);
+  if (!list.length) {
+    selectEl.innerHTML = '<option value="">No machinery</option>';
+    return;
+  }
+  selectEl.innerHTML = list.map(m => {
+    const id = m.id;
+    const name = m.displayName || m.name || id;
+    return `<option value="${escHtml(id)}"${id === selectedId ? ' selected' : ''}>${escHtml(name)}</option>`;
+  }).join('');
+  if (!selectedId || !list.some(m => m.id === selectedId)) selectEl.value = list[0].id;
+}
+
+function pwFillOperationSelect(selectEl, machineId, selectedOp) {
+  if (!selectEl) return;
+  const ops = pwOpsForMachine(machineId);
+  const op = selectedOp && ops.includes(selectedOp) ? selectedOp : (ops[0] || 'Processing');
+  selectEl.innerHTML = ops.map(o =>
+    `<option value="${escHtml(o)}"${o === op ? ' selected' : ''}>${escHtml(o)}</option>`
+  ).join('');
+  const wrap = selectEl.closest('.pw-fn-field');
+  if (wrap) wrap.style.display = ops.length > 1 ? '' : 'none';
+  return op;
+}
+
+function pwGetEditingStep() {
+  const index = parseInt(document.getElementById('pwStepEditIndex')?.value, 10);
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  return { index, sorted, step: sorted[index] };
+}
+
+function pwNormalizeAlt(alt) {
+  if (typeof normalizeWorkflowAlternativeEntry === 'function') return normalizeWorkflowAlternativeEntry(alt);
+  if (typeof alt === 'string') return { machineId: alt, operation: pwDefaultOp(alt) };
+  if (alt?.machineId) return { machineId: alt.machineId, operation: alt.operation || pwDefaultOp(alt.machineId) };
+  return null;
+}
+
+function pwSwitchMachineTab(tab) {
+  document.querySelectorAll('.pw-machine-sub-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pwMachineTab === tab);
+  });
+  document.getElementById('pwTabRoute')?.classList.toggle('active', tab === 'route');
+  document.getElementById('pwTabSwap')?.classList.toggle('active', tab === 'swap');
+}
+
+function pwUpdateMachineSectionLabels() {
+  const t = pwNormalizeStepType(document.getElementById('pwStepType')?.value);
+  const routeLabel = document.getElementById('pwRouteTabLabel');
+  const routeHint = document.getElementById('pwDefaultRouteHint');
+  const defaultPanel = document.getElementById('pwDefaultRoutePanel');
+  const conditionalPanel = document.getElementById('pwConditionalRoutePanel');
+  if (routeLabel) {
+    routeLabel.textContent = t === 'conditional' ? 'When condition matches' : 'Machinery';
+  }
+  if (routeHint) {
+    if (t === 'conditional') routeHint.style.display = 'none';
+    else {
+      routeHint.style.display = '';
+      routeHint.textContent = 'Select machinery and its function.';
+    }
+  }
+  if (defaultPanel) defaultPanel.style.display = t === 'conditional' ? 'none' : '';
+  if (conditionalPanel) conditionalPanel.style.display = t === 'conditional' ? '' : 'none';
+  if (t === 'conditional') pwSwitchMachineTab('route');
+}
+
+function renderPwStepsList() {
+  const el = document.getElementById('pwStepsList');
+  if (!el) return;
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  if (!sorted.length) {
+    el.innerHTML = '<div class="pw-empty-steps">No workflow steps yet. Use <strong>+ Add Step</strong> to add the first machine.</div>';
+    return;
+  }
+  el.innerHTML = sorted.map((step, idx) => {
+    const m = pwMachineById(step.machineId);
+    const fac = m?.facility || '16th';
+    const cat = m?.category || '—';
+    const type = pwNormalizeStepType(step.stepType);
+    const cond = type === 'conditional' && step.conditionField
+      ? `${step.conditionField} ${step.conditionOp || ''} ${step.conditionValue ?? ''}`.trim()
+      : '';
+    const alts = (step.alternatives || []).map(a => {
+      const entry = pwNormalizeAlt(a);
+      if (!entry) return '';
+      const op = entry.operation && entry.operation !== pwDefaultOp(entry.machineId) ? ` (${entry.operation})` : '';
+      return pwMachineLabel(entry.machineId) + op;
+    }).filter(Boolean).join(', ');
+    const defaultRouteLine = type === 'conditional' && step.defaultMachineId
+      ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Usually: ${escHtml(pwFormatMachineryLabel(step.defaultMachineId, step.defaultOperation))}</div>`
+      : '';
+    return `<div class="pw-step-card step-${type}">
+      <div class="pw-step-card-head">
+        <div class="pw-step-order">
+          <button type="button" class="btn btn-sm" onclick="movePwStep(${idx},-1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="btn btn-sm" onclick="movePwStep(${idx},1)" ${idx === sorted.length - 1 ? 'disabled' : ''}>↓</button>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="pw-step-title">${idx + 1}. ${escHtml(pwMachineLabel(step.machineId))}${step.operation ? ' — ' + escHtml(step.operation) : ''}</div>
+          ${defaultRouteLine}
+          <div class="pw-step-meta">
+            ${type === 'default' ? '<span class="pw-type-badge default">Default</span>' : ''}
+            <span class="pw-pill facility-${fac}">${fac === 'boyd' ? 'Boyd' : '16th'}</span>
+            <span class="pw-pill">${escHtml(cat)}</span>
+            ${cond ? `<span class="pw-pill" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;" title="Condition">if ${escHtml(cond)}</span>` : ''}
+            ${alts ? `<span class="pw-pill" title="Alternatives">alt: ${escHtml(alts)}</span>` : ''}
+          </div>
+        </div>
+        <div class="pw-step-actions">
+          <button type="button" class="btn btn-sm" onclick="openPwStepEdit(${idx})">Edit</button>
+          <button type="button" class="btn btn-sm" onclick="removePwStep(${idx})" style="color:var(--red);">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  pwEditorSteps = sorted.map((s, i) => ({ ...s, sortOrder: i + 1 }));
+}
+
+function movePwStep(index, delta) {
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const next = index + delta;
+  if (next < 0 || next >= sorted.length) return;
+  [sorted[index], sorted[next]] = [sorted[next], sorted[index]];
+  pwEditorSteps = sorted.map((s, i) => ({ ...s, sortOrder: i + 1 }));
+  renderPwStepsList();
+}
+
+function removePwStep(index) {
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  sorted.splice(index, 1);
+  pwEditorSteps = sorted.map((s, i) => ({ ...s, sortOrder: i + 1 }));
+  renderPwStepsList();
+}
+
+function openPwMachinePicker(atIndex) {
+  pwEnsureMachines();
+  pwMachinePickerAt = atIndex;
+  const body = document.getElementById('pwMachinePickerBody');
+  const byFac = {};
+  pwMachines.forEach(m => {
+    const f = m.facility === 'boyd' ? 'Boyd Street' : '16th Street';
+    const c = m.category || 'other';
+    byFac[f] = byFac[f] || {};
+    byFac[f][c] = byFac[f][c] || [];
+    byFac[f][c].push(m);
+  });
+  let html = '';
+  Object.keys(byFac).sort().forEach(fac => {
+    html += `<div class="pw-machine-group"><h4>${escHtml(fac)}</h4>`;
+    Object.keys(byFac[fac]).sort().forEach(cat => {
+      html += `<div style="margin-bottom:8px;"><span class="pw-pill">${escHtml(cat)}</span></div>`;
+      byFac[fac][cat].forEach(m => {
+        html += `<button type="button" class="pw-machine-btn" onclick="pickPwMachine('${m.id}')">${escHtml(m.displayName || m.name)}</button>`;
+      });
+    });
+    html += '</div>';
+  });
+  body.innerHTML = html || '<p style="color:var(--text-muted);">No machines in registry. Run migration 022.</p>';
+  document.getElementById('pwMachineModal').classList.add('active');
+}
+
+function pickPwMachine(machineId) {
+  closeModal('pwMachineModal');
+  if (pwMachinePickerAt >= 0) {
+    const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    if (sorted[pwMachinePickerAt]) {
+      sorted[pwMachinePickerAt].machineId = machineId;
+      sorted[pwMachinePickerAt].operation = pwDefaultOp(machineId);
+      pwEditorSteps = sorted;
+    }
+  } else {
+    pwEditorSteps.push({
+      machineId,
+      operation: pwDefaultOp(machineId),
+      stepType: 'default',
+      sortOrder: pwEditorSteps.length + 1,
+      alternatives: [],
+      conditionField: null,
+      conditionOp: null,
+      conditionValue: null,
+      notes: null,
+    });
+  }
+  pwEditorSteps = pwEditorSteps.map((s, i) => ({ ...s, sortOrder: i + 1 }));
+  renderPwStepsList();
+  if (pwMachinePickerAt < 0) openPwStepEdit(pwEditorSteps.length - 1);
+}
+
+function openPwStepEdit(index) {
+  pwEnsureMachines();
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  let step = sorted[index];
+  if (!step) return;
+  if (pwNormalizeStepType(step.stepType) === 'conditional') {
+    step = pwMigrateLegacyConditionalStep(step, sorted);
+    sorted[index] = step;
+    pwEditorSteps = sorted;
+  }
+  document.getElementById('pwStepEditIndex').value = String(index);
+  pwSetStepType(step.stepType || 'default');
+  document.getElementById('pwCondField').value = step.conditionField || 'cutMethod';
+  document.getElementById('pwCondOp').value = step.conditionOp || 'equals';
+  document.getElementById('pwCondValue').value = step.conditionValue ?? '';
+  document.getElementById('pwStepNotes').value = step.notes || '';
+  pwSwitchMachineTab('route');
+  pwOnStepTypeChange();
+  pwRenderMachineSections(step);
+  document.getElementById('pwStepModal').classList.add('active');
+}
+
+function pwOnStepTypeChange() {
+  const t = pwNormalizeStepType(document.getElementById('pwStepType')?.value);
+  const panel = document.getElementById('pwConditionFields');
+  if (panel) panel.style.display = t === 'conditional' ? '' : 'none';
+  pwUpdateMachineSectionLabels();
+  const { step } = pwGetEditingStep();
+  if (step) pwRenderMachineSections(step);
+}
+
+function pwCategoryForMachineId(machineId) {
+  const m = pwMachineById(machineId);
+  if (m?.category) return m.category;
+  if (machineId && typeof MACHINE_SLUG_CATEGORY !== 'undefined' && MACHINE_SLUG_CATEGORY[machineId]) {
+    return MACHINE_SLUG_CATEGORY[machineId];
+  }
+  if (machineId && MACHINE_SLUG_TO_DISPLAY?.[machineId]) return pwInferSlugCategory(machineId);
+  return null;
+}
+
+function pwAllMachines() {
+  pwEnsureMachines();
+  return [...pwMachines];
+}
+
+function pwSameCategoryMachines(machineId) {
+  pwEnsureMachines();
+  const cat = pwCategoryForMachineId(machineId);
+  if (!cat) return pwAllMachines();
+  const pool = pwMachines.filter(m => m.category === cat);
+  return pool.length ? pool : pwAllMachines();
+}
+
+function pwOnRouteMachineSelectChange() {
+  const machineId = document.getElementById('pwRouteMachineSelect')?.value;
+  if (!machineId) return;
+  pwFillOperationSelect(document.getElementById('pwRouteOperationSelect'), machineId, null);
+  const { step } = pwGetEditingStep();
+  if (!step) return;
+  step.machineId = machineId;
+  step.operation = document.getElementById('pwRouteOperationSelect')?.value || pwDefaultOp(machineId);
+  step.alternatives = (step.alternatives || []).map(pwNormalizeAlt).filter(a => a && a.machineId !== machineId);
+  pwRenderAlternativesList(step, pwSameCategoryMachines(machineId));
+}
+
+function pwOnConditionalMachineSelectChange() {
+  const machineId = document.getElementById('pwConditionalMachineSelect')?.value;
+  if (!machineId) return;
+  pwFillOperationSelect(document.getElementById('pwConditionalOperationSelect'), machineId, null);
+  const { step } = pwGetEditingStep();
+  if (!step) return;
+  step.machineId = machineId;
+  step.operation = document.getElementById('pwConditionalOperationSelect')?.value || pwDefaultOp(machineId);
+  step.alternatives = (step.alternatives || []).map(pwNormalizeAlt).filter(a => a && a.machineId !== machineId);
+  pwRenderAlternativesList(step, pwSameCategoryMachines(machineId));
+}
+
+function pwOnStepDefaultMachineSelectChange() {
+  const machineId = document.getElementById('pwStepDefaultMachineSelect')?.value;
+  if (!machineId) return;
+  pwFillOperationSelect(document.getElementById('pwStepDefaultOperationSelect'), machineId, null);
+  const { step } = pwGetEditingStep();
+  if (!step) return;
+  step.defaultMachineId = machineId;
+  step.defaultOperation = document.getElementById('pwStepDefaultOperationSelect')?.value || pwDefaultOp(machineId);
+}
+
+function pwRenderRouteMachinery(step, pool, machineSelectId, operationSelectId) {
+  const machineSel = document.getElementById(machineSelectId);
+  const opSel = document.getElementById(operationSelectId);
+  if (!machineSel) return;
+  pwFillMachineSelect(machineSel, step.machineId, pool);
+  const machineId = machineSel.value;
+  const op = step.operation || pwDefaultOp(machineId);
+  pwFillOperationSelect(opSel, machineId, op);
+}
+
+function pwAltRowHtml(entry, pool, primaryId) {
+  const machineId = entry?.machineId || '';
+  const op = entry?.operation || pwDefaultOp(machineId);
+  const candidates = pwSortedMachines(pool.filter(m => m.id !== primaryId));
+  const machineOpts = candidates.map(m =>
+    `<option value="${escHtml(m.id)}"${m.id === machineId ? ' selected' : ''}>${escHtml(m.displayName || m.name)}</option>`
+  ).join('');
+  const ops = pwOpsForMachine(machineId || candidates[0]?.id);
+  const opOpts = ops.map(o =>
+    `<option value="${escHtml(o)}"${o === op ? ' selected' : ''}>${escHtml(o)}</option>`
+  ).join('');
+  const fnHidden = ops.length <= 1 ? ' style="display:none"' : '';
+  return `<div class="pw-alt-row">
+    <div class="field"><label>Machinery</label>
+      <select class="pw-alt-machine" onchange="pwOnAltMachineChange(this)">${machineOpts}</select>
+    </div>
+    <div class="field pw-fn-field pw-alt-fn"${fnHidden}><label>Function</label>
+      <select class="pw-alt-operation">${opOpts}</select>
+    </div>
+    <button type="button" class="btn btn-sm" style="color:var(--red);" onclick="pwRemoveAlternativeRow(this)">Remove</button>
+  </div>`;
+}
+
+function pwOnAltMachineChange(selectEl) {
+  const row = selectEl.closest('.pw-alt-row');
+  const opSel = row?.querySelector('.pw-alt-operation');
+  const fnWrap = row?.querySelector('.pw-alt-fn');
+  if (!opSel) return;
+  const machineId = selectEl.value;
+  const ops = pwOpsForMachine(machineId);
+  opSel.innerHTML = ops.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
+  if (fnWrap) fnWrap.style.display = ops.length > 1 ? '' : 'none';
+}
+
+function pwRenderAlternativesList(step, pool) {
+  const list = document.getElementById('pwAltAlternativesList');
+  if (!list) return;
+  const primaryId = step.machineId;
+  const alts = (step.alternatives || []).map(pwNormalizeAlt).filter(a => a && a.machineId !== primaryId);
+  const candidates = pool.filter(m => m.id !== primaryId);
+  if (!candidates.length) {
+    list.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">No other machinery in this category.</span>';
+    return;
+  }
+  if (!alts.length) {
+    list.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">No alternatives yet. Use + Add alternative.</span>';
+    return;
+  }
+  list.innerHTML = alts.map(a => pwAltRowHtml(a, pool, primaryId)).join('');
+}
+
+function pwAddAlternativeRow() {
+  const { step } = pwGetEditingStep();
+  if (!step) return;
+  const pool = pwSameCategoryMachines(step.machineId).filter(m => m.id !== step.machineId);
+  if (!pool.length) {
+    alert('No other machinery in this category.');
+    return;
+  }
+  const list = document.getElementById('pwAltAlternativesList');
+  if (!list) return;
+  const empty = list.querySelector('span');
+  if (empty) list.innerHTML = '';
+  const used = new Set(pwCollectAlternativesFromDom().map(a => a.machineId));
+  const pick = pool.find(m => !used.has(m.id)) || pool[0];
+  list.insertAdjacentHTML('beforeend', pwAltRowHtml({ machineId: pick.id, operation: pwDefaultOp(pick.id) }, pool, step.machineId));
+}
+
+function pwRemoveAlternativeRow(btn) {
+  btn.closest('.pw-alt-row')?.remove();
+  const list = document.getElementById('pwAltAlternativesList');
+  if (list && !list.querySelector('.pw-alt-row')) {
+    list.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">No alternatives yet. Use + Add alternative.</span>';
+  }
+}
+
+function pwCollectAlternativesFromDom() {
+  return Array.from(document.querySelectorAll('#pwAltAlternativesList .pw-alt-row')).map(row => {
+    const machineId = row.querySelector('.pw-alt-machine')?.value;
+    const operation = row.querySelector('.pw-alt-operation')?.value;
+    if (!machineId) return null;
+    return { machineId, operation: operation || pwDefaultOp(machineId) };
+  }).filter(Boolean);
+}
+
+function pwRenderMachineSections(step) {
+  pwEnsureMachines();
+  const stepType = pwNormalizeStepType(step.stepType || document.getElementById('pwStepType')?.value);
+  pwUpdateMachineSectionLabels();
+  const allPool = pwAllMachines();
+  const altPool = pwSameCategoryMachines(step.machineId || step.defaultMachineId);
+
+  if (stepType === 'conditional') {
+    const defaultPick = {
+      machineId: step.defaultMachineId || step.machineId,
+      operation: step.defaultOperation || pwDefaultOp(step.defaultMachineId || step.machineId),
+    };
+    pwRenderRouteMachinery(defaultPick, allPool, 'pwStepDefaultMachineSelect', 'pwStepDefaultOperationSelect');
+    pwRenderRouteMachinery(step, allPool, 'pwConditionalMachineSelect', 'pwConditionalOperationSelect');
+  } else {
+    pwRenderRouteMachinery(step, allPool, 'pwRouteMachineSelect', 'pwRouteOperationSelect');
+  }
+
+  if (stepType !== 'conditional') {
+    pwRenderAlternativesList(step, altPool);
+  } else {
+    const list = document.getElementById('pwAltAlternativesList');
+    if (list) list.innerHTML = '';
+  }
+}
+
+function savePwStepEdit() {
+  const index = parseInt(document.getElementById('pwStepEditIndex').value, 10);
+  const sorted = [...pwEditorSteps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const step = sorted[index];
+  if (!step) return;
+  step.stepType = pwNormalizeStepType(document.getElementById('pwStepType').value);
+  if (step.stepType === 'conditional') {
+    step.conditionField = document.getElementById('pwCondField').value;
+    step.conditionOp = document.getElementById('pwCondOp').value;
+    step.conditionValue = document.getElementById('pwCondValue').value;
+  } else {
+    step.conditionField = null;
+    step.conditionOp = null;
+    step.conditionValue = null;
+  }
+  step.notes = document.getElementById('pwStepNotes').value.trim() || null;
+  if (step.stepType === 'conditional') {
+    step.defaultMachineId = document.getElementById('pwStepDefaultMachineSelect')?.value || step.defaultMachineId;
+    step.defaultOperation = document.getElementById('pwStepDefaultOperationSelect')?.value
+      || pwDefaultOp(step.defaultMachineId);
+    step.machineId = document.getElementById('pwConditionalMachineSelect')?.value || step.machineId;
+    step.operation = document.getElementById('pwConditionalOperationSelect')?.value || pwDefaultOp(step.machineId);
+  } else {
+    step.machineId = document.getElementById('pwRouteMachineSelect')?.value || step.machineId;
+    step.operation = document.getElementById('pwRouteOperationSelect')?.value || pwDefaultOp(step.machineId);
+    step.defaultMachineId = null;
+    step.defaultOperation = null;
+  }
+  step.alternatives = step.stepType === 'conditional'
+    ? []
+    : pwCollectAlternativesFromDom().filter(a => a.machineId !== step.machineId);
+  pwEditorSteps = sorted;
+  closeModal('pwStepModal');
+  renderPwStepsList();
+}
+
+function validatePwWorkflow() {
+  if (!pwEditorSteps.length) return 'Add at least one production step.';
+  for (const step of pwEditorSteps) {
+    if (step.stepType === 'conditional') {
+      if (!step.conditionField || !step.conditionOp || (step.conditionValue == null || step.conditionValue === '')) {
+        return 'Conditional steps require field, operator, and value.';
+      }
+      if (!step.defaultMachineId) {
+        return 'Conditional steps require default machinery for this step (when the rule does not match).';
+      }
+    }
+    const primary = pwMachineById(step.machineId);
+    if (!primary) return `Unknown machine: ${step.machineId}`;
+    for (const alt of (step.alternatives || []).map(pwNormalizeAlt).filter(Boolean)) {
+      const altM = pwMachineById(alt.machineId);
+      if (!altM) return `Unknown alternative machine: ${alt.machineId}`;
+      if (altM.category !== primary.category) {
+        return `Alternative "${altM.displayName || altM.name}" must be same category as ${primary.displayName || primary.name}.`;
+      }
+    }
+  }
+  return null;
+}
+
+async function resetPwWorkflow() {
+  const prod = catProducts.find(p => p.id === pwSelectedCatalogId);
+  if (!prod) return;
+  if (!confirm(`Reset workflow for "${prod.name}" to built-in defaults and save?`)) return;
+  const def = typeof getDefaultProductWorkflowForCatalogName === 'function'
+    ? getDefaultProductWorkflowForCatalogName(prod.name)
+    : { primaryFacility: '16th', steps: [] };
+  pwEditorSteps = pwCloneSteps(def.steps);
+  pwPrimaryFacility = def.primaryFacility || '16th';
+  if (def.unmapped && typeof showPageToast === 'function') {
+    showPageToast('No exact default route — using placeholder steps.', 'warning');
+  }
+  renderPwEditor();
+  await savePwWorkflow();
+}
+
+async function savePwWorkflow() {
+  const prod = catProducts.find(p => p.id === pwSelectedCatalogId);
+  if (!prod) return;
+  const err = validatePwWorkflow();
+  if (err) {
+    alert(err);
+    return;
+  }
+  const def = typeof getDefaultProductWorkflowForCatalogName === 'function'
+    ? getDefaultProductWorkflowForCatalogName(prod.name)
+    : { primaryFacility: '16th' };
+  const primaryFacility = pwPrimaryFacility || def.primaryFacility || '16th';
+  const payload = {
+    id: pwDbRowId || undefined,
+    productCatalogId: prod.id,
+    productName: prod.name,
+    primaryFacility,
+    steps: pwEditorSteps.map((s, i) => ({ ...s, sortOrder: i + 1 })),
+  };
+  if (typeof upsertProductWorkflow !== 'function') {
+    alert('Workflow save is not available. Reload the page or enable Supabase in pulse-config.local.js.');
+    return;
+  }
+  try {
+    const saved = await upsertProductWorkflow(payload);
+    pwWorkflowByCatalog.set(prod.id, saved);
+    pwDbRowId = saved.id;
+    pwPrimaryFacility = saved.primaryFacility || primaryFacility;
+    if (typeof showPageToast === 'function') showPageToast('Workflow saved.', 'success');
+    else alert('Workflow saved.');
+    renderPwProductList();
+  } catch (e) {
+    alert('Save failed: ' + (e.message || e));
+  }
 }
 
 // ── Modal helpers ─────────────────────────────────────────
