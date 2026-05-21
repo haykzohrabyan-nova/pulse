@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse — Quote &amp; Payment Logic (AI Reference)</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #1d4ed8;
+      --green: #15803d;
+      --amber: #b45309;
+      --code-bg: #f1f5f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 1.75rem; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 28px; font-size: 0.95rem; }
+    h2 {
+      font-size: 1.15rem;
+      margin: 36px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+    h3 { font-size: 1rem; margin: 24px 0 8px; color: var(--accent); }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 12px; padding-left: 1.35rem; }
+    li { margin-bottom: 6px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #dbeafe;
+      color: var(--accent);
+      margin-right: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 12px 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1f5f9; font-weight: 600; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+    code {
+      background: var(--code-bg);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    .diagram {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .diagram pre {
+      background: transparent;
+      color: var(--ink);
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .rule-ok { color: var(--green); font-weight: 600; }
+    .rule-warn { color: var(--amber); font-weight: 600; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .meta { font-size: 12px; color: var(--muted); margin-top: 32px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pulse — Quote &amp; Payment Logic</h1>
+  <p class="lead">
+    Reference document for developers and AI assistants. Describes how <strong>payment.html</strong> (admin configuration),
+    <strong>crm-quote.html</strong> (quote UI &amp; checkout), and <strong>pulse-quote-payment.js</strong> (shared rules engine) work together.
+    Data is stored in <code>localStorage</code> until wired to Supabase/orders.
+  </p>
+
+  <nav class="card toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#architecture">Architecture &amp; file map</a></li>
+      <li><a href="#storage">Storage keys &amp; data shapes</a></li>
+      <li><a href="#strategies">Payment strategies (business rules)</a></li>
+      <li><a href="#gates">Production gates &amp; status labels</a></li>
+      <li><a href="#payment-ui">Payment settings UI (payment.html)</a></li>
+      <li><a href="#quote-ui">Quote UI (crm-quote.html)</a></li>
+      <li><a href="#engine">Shared engine API (pulse-quote-payment.js)</a></li>
+      <li><a href="#flows">End-to-end flows</a></li>
+      <li><a href="#edge">Cash, confirmation &amp; follow-up edge cases</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="architecture">1. Architecture &amp; file map</h2>
+  <div class="diagram">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────┐
+│  admin.html                                                             │
+│  ├── iframe: payment.html?embedded=admin   (Payment tab)                │
+│  └── iframe: crm-quote.html?embedded=admin  (Quote tab)                 │
+└─────────────────────────────────────────────────────────────────────────┘
+         │                              │
+         │ save/load                    │ read config + quote state
+         ▼                              ▼
+┌──────────────────────┐    ┌──────────────────────────────────────────┐
+│  payment.html        │    │  crm-quote.html                          │
+│  - Strategy panels   │    │  - Quote sheet (lines, totals)           │
+│  - Deposit / channels│    │  - To Start Production checklist         │
+│  - Remote quote send │    │  - Payment summary + Record payment modal│
+│  - Follow-up schedule│    │  - Auto-start production when gates pass │
+└──────────┬───────────┘    └──────────────────┬───────────────────────┘
+           │                                      │
+           └──────────────┬───────────────────────┘
+                          ▼
+              ┌───────────────────────────┐
+              │  pulse-quote-payment.js   │
+              │  window.PulseQuotePayment │
+              │  - PAY_DEFAULTS           │
+              │  - computeCheckout()      │
+              │  - getPaidAmount()        │
+              │  - validatePaymentConfig()│
+              └───────────────────────────┘
+                          │
+                          ▼
+              localStorage (browser)
+              - pulse_payment_admin_config_v1
+              - pulse_quote_checkout_v1
+</pre>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>File</th><th>Role</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>pulse-quote-payment.js</code></td>
+        <td>Single source of truth for payment rules, quote catalog (<code>PULSE_QUOTES</code>), remittance details, and checkout computation. No <code>shared.js</code> dependency.</td>
+      </tr>
+      <tr>
+        <td><code>payment.html</code></td>
+        <td>Admin UI to configure strategy, deposits, channels, client confirmation, quote delivery (SMS/email), and follow-up schedule. Writes <code>PAY_STORAGE_KEY</code>.</td>
+      </tr>
+      <tr>
+        <td><code>crm-quote.html</code></td>
+        <td>Quote display + production checklist + payment modal. Reads config, loads/saves per-quote state, calls <code>computeCheckout()</code> on every render.</td>
+      </tr>
+      <tr>
+        <td><code>admin.html</code></td>
+        <td>Embeds both pages in iframes. Listens to <code>storage</code> events is not required on admin itself; child pages refresh on their own keys.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span class="tag">Sync</span>
+    When Payment settings are saved, Quote tab should reload (same origin <code>storage</code> event on
+    <code>pulse_payment_admin_config_v1</code>). Quote page re-runs <code>renderQuote()</code> which recomputes checkout.
+  </p>
+
+  <h2 id="storage">2. Storage keys &amp; data shapes</h2>
+
+  <h3>Payment config — <code>pulse_payment_admin_config_v1</code></h3>
+  <p>Written by <code>payment.html</code> → <code>PQP.savePaymentConfig(cfg)</code>. Merged with <code>PAY_DEFAULTS</code> on read.</p>
+  <pre>{
+  "strategy": "partial" | "full" | "net",
+  "quotePrice": 1000,
+  "previewQuoteToken": "40496516-f693-4d6e-a15a-add7e582444b",
+  "depositPct": 30,
+  "depositAmt": 300,
+  "depHandling": "cash" | "gateway",
+  "receiptId": "",
+  "channelsPartial": ["cash", "wire", "ach", "zelle", "card"],
+  "channelsFull": ["wire", "ach", "zelle", "check", "card"],
+  "requireClientConfirm": true,
+  "quoteChannel": "sms" | "email" | "both",
+  "destPhone": "",
+  "destEmail": "",
+  "followUpEnabled": true,
+  "followUpStart": "2026-05-19",
+  "followUpCount": "3",
+  "followUpFreq": "daily" | "every-3-days" | "weekly",
+  "netTermsLabel": "net-30",
+  "savedAt": "ISO-8601"
+}</pre>
+
+  <h3>Per-quote checkout state — <code>pulse_quote_checkout_v1</code></h3>
+  <p>Object keyed by quote token (UUID). Written by <code>crm-quote.html</code> via <code>PQP.saveQuoteState(token, patch)</code>.</p>
+  <pre>{
+  "&lt;quote-token&gt;": {
+    "quotePriceConfirmed": false,
+    "quotePriceConfirmedAt": null,
+    "clientConfirmed": false,
+    "clientConfirmedAt": null,
+    "productionReleasedAt": null,
+    "payment": {
+      "totalPaid": 350.55,
+      "depositRecordedAt": "ISO",
+      "depositAmount": 350.55,
+      "depositReceiptId": "RCT-10482",
+      "depositMethod": "wire",
+      "balanceRecordedAt": null,
+      "fullRecordedAt": null,
+      "fullAmount": null,
+      "fullReceiptId": null,
+      "lastPaymentRecord": { "method", "recordedAt", ... }
+    }
+  }
+}</pre>
+
+  <h3>Quote catalog — in-memory only</h3>
+  <p><code>PQP.PULSE_QUOTES[token]</code> → <code>{ ticket, company }</code>. Demo quote: <code>DEFAULT_QUOTE_TOKEN</code>. Ticket fields include <code>quote_final_total</code>, line items, customer, <code>reference_code</code>.</p>
+
+  <h2 id="strategies">3. Payment strategies (business rules)</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>Payment required to start production</th>
+        <th>After production starts</th>
+        <th>Price confirmation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Partial</strong></td>
+        <td class="rule-ok">Deposit only</td>
+        <td>Client <strong>can</strong> pay remaining balance (checklist shows “Collect remaining balance”). Status: <code>Active · balance due</code> if balance &gt; 0.</td>
+        <td>Required unless <code>depHandling === 'cash'</code> (then auto-unchecked in Payment UI; not required on quote).</td>
+      </tr>
+      <tr>
+        <td><strong>Pay in full</strong></td>
+        <td class="rule-ok">100% of quote total</td>
+        <td>No remaining balance UI; summary says “Paid in full — no remaining balance.”</td>
+        <td>Required unless cash-only full pay (see edge cases).</td>
+      </tr>
+      <tr>
+        <td><strong>$0 upfront / Net</strong></td>
+        <td class="rule-ok">None</td>
+        <td>Payment step marked done; follow-up date tied to net terms (10–60 days).</td>
+        <td>If <code>requireClientConfirm</code>: production after client confirms only. Else production can start immediately.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Key computed fields (<code>computeCheckout</code> return)</h3>
+  <ul>
+    <li><code>dueNow</code> — Full: quote total. Partial: deposit amount. Net: 0.</li>
+    <li><code>balance</code> — Partial only: quote total − deposit due (not necessarily remaining if overpaid).</li>
+    <li><code>paid</code> — <code>getPaidAmount()</code> capped at quote total.</li>
+    <li><code>remaining</code> — quote total − paid.</li>
+    <li><code>paymentOk</code> — Production payment gate met (partial = deposit satisfied; full = fully paid; net = always true).</li>
+    <li><code>depositPaid</code> — Partial strategy && deposit satisfied.</li>
+    <li><code>fullyPaid</code> — remaining ≤ $0.01.</li>
+    <li><code>canCollectPayment</code> — User can open pay modal (partial/full with remaining &gt; 0).</li>
+    <li><code>canReleaseProduction</code> — All gates pass; quote may auto-set <code>productionReleasedAt</code>.</li>
+  </ul>
+
+  <h2 id="gates">4. Production gates &amp; status labels</h2>
+
+  <div class="diagram">
+<pre>
+canReleaseProduction =
+  NET:     (!needConfirm) OR (confirmed)
+  PARTIAL: priceStepDone AND depositPaid
+  FULL:    cashInPerson ? fullyPaid : (priceStepDone AND fullyPaid)
+
+priceStepDone =
+  !needConfirm OR priceConfirmed OR shouldAutoConfirmOnFullPayment()
+
+needConfirm =
+  !cashInPerson AND !partialCashDeposit AND requireClientConfirm !== false
+</pre>
+  </div>
+
+  <h3>Checklist steps (crm-quote)</h3>
+  <ol>
+    <li><strong>Quote price confirmed</strong> — Hidden when cash-in-person full or partial cash deposit. Action: <code>confirm-price</code>.</li>
+    <li><strong>Deposit / payment</strong> — Done when: net (always), partial (deposit paid + price ok), full (fully paid + price ok).</li>
+    <li><strong>Ready for production</strong> — Done when <code>productionReleasedAt</code> is set. Auto-set by <code>maybeAutoStartProduction()</code> when <code>canReleaseProduction</code> becomes true.</li>
+  </ol>
+
+  <h3>Status badge labels</h3>
+  <table>
+    <thead><tr><th>Condition</th><th>Label</th></tr></thead>
+    <tbody>
+      <tr><td><code>productionReleasedAt</code> + partial + remaining &gt; 0</td><td>Active · balance due</td></tr>
+      <tr><td><code>productionReleasedAt</code></td><td>Active · in production</td></tr>
+      <tr><td>Blocked, need confirm</td><td>Awaiting confirmation</td></tr>
+      <tr><td>Blocked, need payment</td><td>Awaiting payment</td></tr>
+      <tr><td>Gates pass, not started</td><td>Ready for production</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="payment-ui">5. Payment settings UI (payment.html)</h2>
+
+  <h3>Strategy panels</h3>
+  <ul>
+    <li><code>settingPanelPartial</code> — Deposit %/$, deposit collection (cash vs gateway), balance channels (always visible).</li>
+    <li><code>settingPanelFull</code> — Full payment channel checkboxes; cash is <strong>exclusive</strong> (selecting cash unchecks others).</li>
+    <li><code>settingPanelNet</code> — Payment due period 10–60 days; drives read-only reminder start date.</li>
+  </ul>
+
+  <h3>Deposit collection (partial) — UI side effects</h3>
+  <table>
+    <thead><tr><th>depHandling</th><th>Require client confirmation</th><th>Follow-up (partial cash)</th></tr></thead>
+    <tbody>
+      <tr><td><code>cash</code></td><td>Unchecked automatically</td><td>Follow-up schedule stays visible &amp; enabled</td></tr>
+      <tr><td><code>gateway</code></td><td>Checked automatically</td><td>Normal follow-up rules</td></tr>
+    </tbody>
+  </table>
+  <p>Function: <code>syncQuoteDeliveryOptionsUi()</code> in payment.html.</p>
+
+  <h3>Pay in full — cash channel</h3>
+  <ul>
+    <li>Checking <strong>Cash</strong> unchecks all other channels (<code>onFullChannelChange</code>).</li>
+    <li>Checking any other channel unchecks Cash.</li>
+    <li>When cash-only: client confirmation <strong>off</strong>, follow-up master <strong>off</strong>, follow-up card hidden.</li>
+    <li>When cash not selected: confirmation <strong>on</strong>, follow-up <strong>on</strong>.</li>
+  </ul>
+
+  <h3>Remote quote &amp; follow-up sections</h3>
+  <ul>
+    <li><code>remoteQuoteCard</code> — Send quote via SMS/email, destination fields, client confirmation checkbox (may move to <code>fullConfirmAnchor</code> for full strategy).</li>
+    <li><code>followUpScheduleCard</code> — Separate card; always shown for partial cash (not hidden with remote quote).</li>
+  </ul>
+
+  <h3>Save behavior</h3>
+  <p><code>savePaymentConfig()</code> → validates → <code>PQP.savePaymentConfig(cfg)</code>. If full cash + receipt ID on file, <code>applyFullCashCheckoutState(token)</code> pre-fills quote payment as paid in full.</p>
+
+  <h2 id="quote-ui">6. Quote UI (crm-quote.html)</h2>
+
+  <h3>Render pipeline (<code>renderQuote</code>)</h3>
+  <ol>
+    <li><code>paymentCfg = PQP.loadPaymentConfig()</code></li>
+    <li><code>quoteState = PQP.loadQuoteState(token)</code></li>
+    <li><code>checkout = PQP.computeCheckout(paymentCfg, ticket, quoteState)</code></li>
+    <li><code>ensureFullCashQuoteConfirmed()</code> if cash-in-person paid</li>
+    <li><code>maybeAutoStartProduction()</code> if <code>canReleaseProduction</code></li>
+    <li><code>renderCheckout()</code> — stepper, summary, blocked banner</li>
+  </ol>
+
+  <h3>Record payment modal</h3>
+  <p>Methods: cash, zelle, wire, ach, check, card. Method-specific steps in <code>renderPayMethodPanel(method)</code>:</p>
+  <ul>
+    <li><strong>Wire / ACH</strong> — Bank details from <code>PAYMENT_REMITTANCE</code> with copy icons per field; screenshot upload step 2.</li>
+    <li><strong>Zelle</strong> — Zelle address + quote reference with copy button.</li>
+    <li><strong>Card</strong> — Card fields + photo ID upload.</li>
+    <li><strong>Cash</strong> — Receipt ID.</li>
+    <li><strong>Check</strong> — Instructions + screenshot.</li>
+  </ul>
+
+  <h3>Pay modal modes (<code>openPayModal</code>)</h3>
+  <table>
+    <thead><tr><th>Mode</th><th>When</th><th>Amount shown</th></tr></thead>
+    <tbody>
+      <tr><td><code>deposit</code></td><td>Partial, nothing paid yet</td><td>Deposit due</td></tr>
+      <tr><td><code>balance</code></td><td>Partial, deposit paid, remaining &gt; 0</td><td>Remaining balance</td></tr>
+      <tr><td><code>full</code></td><td>Full strategy or cash-in-person</td><td>Quote total</td></tr>
+    </tbody>
+  </table>
+
+  <h3>On payment save (<code>payModalSave</code>)</h3>
+  <ul>
+    <li>Accumulates <code>payment.totalPaid</code>, sets <code>depositRecordedAt</code> / <code>balanceRecordedAt</code> / <code>fullRecordedAt</code> as appropriate.</li>
+    <li>Full pay may auto-set <code>quotePriceConfirmed</code> + <code>clientConfirmed</code>.</li>
+    <li>If <code>afterCheckout.canReleaseProduction</code>, sets <code>productionReleasedAt</code> automatically.</li>
+  </ul>
+
+  <h2 id="engine">7. Shared engine API (PulseQuotePayment)</h2>
+
+  <p>Exposed on <code>window.PulseQuotePayment</code>. Primary functions:</p>
+
+  <table>
+    <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>loadPaymentConfig() / savePaymentConfig(cfg)</code></td><td>Read/write admin payment settings</td></tr>
+      <tr><td><code>loadQuoteState(token) / saveQuoteState(token, patch)</code></td><td>Per-quote progress</td></tr>
+      <tr><td><code>computeCheckout(cfg, ticket, quoteState)</code></td><td>Main rules engine; returns steps, gates, amounts</td></tr>
+      <tr><td><code>getPaidAmount(state, cfg, total)</code></td><td>Includes config receipt IDs for cash deposit/full</td></tr>
+      <tr><td><code>getRemainingAmount(...)</code></td><td>total − paid</td></tr>
+      <tr><td><code>getDepositAmount(cfg, total)</code></td><td>From depositPct or depositAmt</td></tr>
+      <tr><td><code>isPaymentComplete(...)</code></td><td>Production payment gate (not “fully paid” for partial)</td></tr>
+      <tr><td><code>isDepositSatisfied(...)</code></td><td>Partial deposit met</td></tr>
+      <tr><td><code>isFullyPaid(...)</code></td><td>remaining ≤ 0.01</td></tr>
+      <tr><td><code>isPartialCashDeposit(cfg)</code></td><td>strategy partial + depHandling cash</td></tr>
+      <tr><td><code>isCashInPersonFull(cfg)</code></td><td>strategy full + channelsFull === ['cash']</td></tr>
+      <tr><td><code>hasConfigDepositReceipt(cfg)</code></td><td>Partial cash + receiptId in config</td></tr>
+      <tr><td><code>hasConfigFullCashReceipt(cfg)</code></td><td>Full cash-only + receiptId in config</td></tr>
+      <tr><td><code>shouldAutoConfirmOnFullPayment(...)</code></td><td>Full pay counts as price confirmed when confirm required</td></tr>
+      <tr><td><code>validatePaymentConfig(cfg)</code></td><td>Save-time validation (receipt, destinations)</td></tr>
+      <tr><td><code>describeGatePreview(cfg, ticket)</code></td><td>Human text for payment.html preview line</td></tr>
+      <tr><td><code>applyFullCashCheckoutState(token, cfg)</code></td><td>Seed quote state when admin saves full cash receipt</td></tr>
+      <tr><td><code>resetQuoteCheckoutForPaymentConfig(cfg)</code></td><td>Clears all quote states (on reset)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="flows">8. End-to-end flows</h2>
+
+  <h3>Flow A — Partial: deposit then production, balance later</h3>
+  <ol>
+    <li>Admin sets strategy <strong>partial</strong>, deposit 30%, gateway or cash, saves config.</li>
+    <li>On quote, client confirms price (if required).</li>
+    <li>Staff records deposit via modal → <code>depositRecordedAt</code>, <code>totalPaid</code> updated.</li>
+    <li><code>computeCheckout</code> → <code>canReleaseProduction</code> true → <code>maybeAutoStartProduction</code> sets <code>productionReleasedAt</code>.</li>
+    <li>Status <strong>Active · balance due</strong>; user can still <strong>Collect remaining balance</strong>.</li>
+  </ol>
+
+  <h3>Flow B — Full: pay 100% then production</h3>
+  <ol>
+    <li>Admin sets strategy <strong>full</strong>, selects channels (not cash-only unless in-person).</li>
+    <li>Client confirms price if required; pays full amount in modal.</li>
+    <li>When <code>fullyPaid</code>, production auto-starts; no further pay buttons.</li>
+  </ol>
+
+  <h3>Flow C — Net: no upfront payment</h3>
+  <ol>
+    <li>Admin sets strategy <strong>net</strong>, due period (e.g. 30 days), follow-up date syncs.</li>
+    <li>If confirmation required: confirm price → production starts.</li>
+    <li>If confirmation not required: production can start immediately on load.</li>
+  </ol>
+
+  <h3>Flow D — Admin pre-records cash (config receipt ID)</h3>
+  <ol>
+    <li>Partial cash: save Payment with receipt ID → <code>getPaidAmount</code> treats deposit as paid from config (no modal needed for deposit gate).</li>
+    <li>Full cash-only: <code>applyFullCashCheckoutState</code> marks quote paid + confirmed.</li>
+  </ol>
+
+  <h2 id="edge">9. Cash, confirmation &amp; follow-up edge cases</h2>
+
+  <table>
+    <thead><tr><th>Scenario</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Partial + cash deposit</td>
+        <td><code>partialCashDeposit</code> true; price step hidden; confirmation not required; balance channels always visible; follow-up schedule visible.</td>
+      </tr>
+      <tr>
+        <td>Full + cash only</td>
+        <td><code>cashInPerson</code> true; all channels forced off except cash; confirmation off; follow-up off; receipt ID required in Payment settings.</td>
+      </tr>
+      <tr>
+        <td>Full + cash + other channels</td>
+        <td>Not allowed in UI — cash selection is exclusive.</td>
+      </tr>
+      <tr>
+        <td>Config receipt without modal</td>
+        <td><code>hasConfigDepositReceipt</code> / <code>hasConfigFullCashReceipt</code> bump <code>getPaidAmount</code> for preview quote token.</td>
+      </tr>
+      <tr>
+        <td>Quote token resolution</td>
+        <td>URL <code>?id=</code> or <code>?q=</code>, else <code>previewQuoteToken</code> from config, else <code>DEFAULT_QUOTE_TOKEN</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Constants for remittance UI</h3>
+  <pre>PAYMENT_REMITTANCE = {
+  bankName, accountName, accountNumber, routingNumber, zelle
+}</pre>
+
+  <h3>Not yet wired to production backend</h3>
+  <ul>
+    <li>Quote catalog is static in <code>PULSE_QUOTES</code> (not Supabase).</li>
+    <li><code>ticket_status</code> on demo ticket is display-only; real order status updates would be a future integration.</li>
+    <li>Follow-up schedule is configured but not sent (no SMS/email job).</li>
+    <li>Payment modal file uploads store filename in meta only (no upload API).</li>
+  </ul>
+
+  <p class="meta">
+    Generated for Pulse repo — Quote &amp; Payment module. Files:
+    <code>pulse-quote-payment.js</code>,
+    <code>payment.html</code>,
+    <code>crm-quote.html</code>,
+    <code>admin.html</code> (tabs: Payment, Quote).
+    Open this file in a browser for readable formatting; paste sections into other AI contexts as needed.
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quote — Bazaar Printing</title>
+  <script src="pulse-quote-payment.js?v=20260520-QP1"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="auth.js?v=20260519-QUOTE2"></script>
+  <style id="page-styles"></style>
+</head>
+<body data-page="admin">
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div id="quoteRoot" class="q-root">
+  <div class="q-toolbar" id="quoteToolbar">
+    <div class="q-price-pill" aria-live="polite">
+      <span class="q-price-label">Quote price</span>
+      <span id="toolbarQuotePrice">—</span>
+    </div>
+    <button type="button" class="q-btn q-btn-primary" id="btnPrintQuote">Print</button>
+    <button type="button" class="q-btn" id="btnPaymentSettings">Payment settings</button>
+    <button type="button" class="q-btn q-btn-muted" id="btnClientLink" disabled title="Coming soon">Copy client link</button>
+    <span id="quoteStatus" class="q-status" aria-live="polite"></span>
+  </div>
+
+  <article id="quoteSheet" class="q-sheet">
+    <header class="q-company-line" id="quoteCompanyLine"></header>
+
+    <div class="q-paper">
+      <div class="q-head">
+        <div>
+          <h1 id="quoteTitle">Quote</h1>
+          <p class="q-ref" id="quoteRef" hidden></p>
+        </div>
+        <div class="q-badges" id="quoteBadges"></div>
+      </div>
+
+      <section class="q-grid q-grid-2">
+        <div class="q-block">
+          <h2>Bill to</h2>
+          <p class="q-strong" id="quoteBillName"></p>
+          <p class="q-muted" id="quoteBillContact"></p>
+        </div>
+        <div class="q-block">
+          <h2>Quote details</h2>
+          <div class="q-kv" id="quoteDetailsKv"></div>
+        </div>
+      </section>
+
+      <table class="q-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Specs</th>
+            <th class="num">Qty</th>
+            <th class="num">Unit</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="quoteLines"></tbody>
+      </table>
+
+      <div class="q-totals-wrap">
+        <div class="q-totals" id="quoteTotals"></div>
+      </div>
+
+      <section class="q-checkout" id="quoteCheckout">
+        <div class="q-checkout-grid">
+          <div class="q-checkout-col">
+            <h2 class="q-checkout-heading">To Start Production checklist</h2>
+            <ol class="q-stepper" id="quoteStepper"></ol>
+          </div>
+          <div class="q-checkout-col q-checkout-summary">
+            <h2 class="q-checkout-heading">Payment summary</h2>
+            <div class="q-summary" id="quotePaySummary"></div>
+          </div>
+        </div>
+        <div class="q-blocked" id="quoteBlocked" hidden></div>
+      </section>
+    </div>
+  </article>
+
+  <div id="quoteError" class="q-error" hidden></div>
+</div>
+
+<div id="payModal" class="q-modal" hidden>
+  <div class="q-modal-backdrop" data-close="payModal"></div>
+  <div class="q-modal-card q-modal-card-pay" role="dialog" aria-labelledby="payModalTitle">
+    <h3 id="payModalTitle">Record payment</h3>
+    <div class="q-modal-balance">
+      <span class="q-modal-balance-label" id="payModalBalanceLabel">Remaining balance</span>
+      <strong id="payModalRemaining" class="q-modal-balance-value">—</strong>
+    </div>
+    <p class="q-modal-lead" id="payModalLead" hidden></p>
+    <div class="field">
+      <label for="payModalMethod">Payment method</label>
+      <select id="payModalMethod">
+        <option value="cash">Cash</option>
+        <option value="zelle">Zelle</option>
+        <option value="wire">Wire</option>
+        <option value="ach">ACH</option>
+        <option value="check">Check</option>
+        <option value="card">Card</option>
+      </select>
+    </div>
+    <div id="payModalMethodPanel" class="q-pay-method-panel" hidden></div>
+    <div class="field" id="payModalAmountWrap">
+      <label for="payModalAmount" id="payModalAmountLabel">Amount ($)</label>
+      <input type="number" id="payModalAmount" min="0" step="0.01">
+    </div>
+    <div class="q-modal-actions">
+      <button type="button" class="q-btn" data-close="payModal">Cancel</button>
+      <button type="button" class="q-btn q-btn-primary" id="payModalSave" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const PQP = window.PulseQuotePayment;
+  const EMBEDDED = new URLSearchParams(window.location.search).get('embedded') === 'admin';
+  let currentToken = PQP.DEFAULT_QUOTE_TOKEN;
+  let payModalMode = 'deposit';
+  let payModalQuoteRef = '';
+
+  document.getElementById('page-styles').textContent = `
+    :root { --bg:#f0f4fa; --paper:#fff; --ink:#1b2b4b; --muted:#6b7280; --border:#e2e8f0; --accent:#1b2b4b; --ok:#15803d; --warn:#b45309; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:Inter,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+    .q-root { display:flex; flex-direction:column; min-height:${EMBEDDED ? '100vh' : 'calc(100vh - 52px)'}; }
+    .q-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 16px; background:var(--paper); border-bottom:1px solid var(--border); }
+    .q-field-inline { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; }
+    .q-price-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; }
+    .q-price-label { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    #toolbarQuotePrice { font-size:15px; font-weight:800; color:var(--ink); }
+    .q-btn { border:1px solid var(--border); border-radius:8px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer; background:#fff; color:var(--ink); }
+    .q-btn-primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .q-btn-muted { opacity:0.5; cursor:not-allowed; }
+    .q-status { margin-left:auto; font-size:12px; color:var(--muted); }
+    .q-sheet { flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .q-company-line { background:var(--paper); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:12px; white-space:nowrap; overflow-x:auto; }
+    .q-company-line a { color:#2563eb; text-decoration:none; }
+    .q-company-line .sep { color:#cbd5e1; margin:0 6px; }
+    .q-paper { max-width:960px; width:100%; margin:0 auto; background:var(--paper); border:1px solid var(--border); border-radius:14px; padding:28px 32px; box-shadow:0 2px 12px rgba(27,43,75,.08); }
+    .q-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:22px; padding-bottom:18px; border-bottom:2px solid var(--border); }
+    .q-head h1 { margin:0; font-size:26px; font-weight:800; }
+    .q-ref { margin:4px 0 0; font-size:13px; color:var(--muted); }
+    .q-badges { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .q-badge { font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; }
+    .q-badge.status { background:#dbeafe; color:#1d4ed8; }
+    .q-badge.rush { background:#fef3c7; color:#92400e; }
+    .q-badge.gate { background:#f3f4f6; color:#4b5563; }
+    .q-badge.ready { background:#dcfce7; color:var(--ok); }
+    .q-grid { display:grid; gap:14px; margin-bottom:22px; }
+    .q-grid-2 { grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+    .q-block { background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+    .q-block h2 { margin:0 0 8px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .q-strong { margin:0; font-size:16px; font-weight:700; }
+    .q-muted { margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.5; }
+    .q-kv .row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #eef2f7; font-size:13px; }
+    .q-kv .row span:first-child { color:var(--muted); }
+    .q-kv .row span:last-child { font-weight:600; }
+    .q-quote-download { margin-top: 12px; }
+    .q-btn-block { width: 100%; display: block; text-align: center; }
+    .q-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:18px; }
+    .q-table th,.q-table td { padding:10px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    .q-table th { font-size:10px; text-transform:uppercase; color:var(--muted); }
+    .q-table td.num,.q-table th.num { text-align:right; }
+    .q-spec { font-size:11px; color:var(--muted); margin-top:4px; }
+    .q-totals-wrap { display:flex; justify-content:flex-end; margin-bottom:20px; }
+    .q-totals { width:min(300px,100%); font-size:13px; }
+    .q-totals .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9; }
+    .q-totals .row.total { font-size:18px; font-weight:800; color:var(--accent); border:0; padding-top:10px; }
+    .q-checkout { margin-top:8px; padding-top:20px; border-top:2px solid var(--border); }
+    .q-checkout-heading { margin:0 0 12px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .q-checkout-grid { display:grid; grid-template-columns:1fr minmax(220px,.9fr); gap:20px; }
+    @media (max-width:720px) { .q-checkout-grid { grid-template-columns:1fr; } }
+    .q-stepper { list-style:none; margin:0; padding:0; }
+    .q-step { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9; align-items:flex-start; }
+    .q-step:last-child { border-bottom:0; }
+    .q-step-dot { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--muted); margin-top:2px; }
+    .q-step.done .q-step-dot { background:var(--ok); border-color:var(--ok); color:#fff; }
+    .q-step-body { flex:1; min-width:0; }
+    .q-step-label { font-weight:600; font-size:14px; }
+    .q-step-num { color:var(--muted); font-weight:700; margin-right:2px; }
+    .q-step.done .q-step-num { color:var(--ok); }
+    .q-step-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+    .q-step-started .q-step-meta { color:var(--ok); font-weight:500; }
+    .q-step-actions { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; }
+    .q-step-actions .q-btn { font-size:12px; padding:5px 10px; }
+    .q-summary .row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid #f1f5f9; }
+    .q-summary .row strong { font-weight:600; }
+    .q-summary .row.highlight strong { color:var(--warn); font-size:15px; }
+    .q-summary-actions { margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; }
+    .q-summary-actions .q-btn { width:100%; justify-content:center; }
+    .q-summary-hint { margin:12px 0 0; font-size:12px; color:var(--muted); line-height:1.4; }
+    .q-blocked { margin-top:14px; padding:12px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; font-size:13px; color:#78350f; }
+    .q-error { margin:24px; padding:16px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; color:#991b1b; }
+    .q-modal { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .q-modal[hidden] { display:none !important; }
+    .q-modal-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.45); }
+    .q-modal-card { position:relative; background:#fff; border-radius:12px; padding:20px; width:min(400px,100%); box-shadow:0 8px 32px rgba(0,0,0,.15); }
+    .q-modal-card-pay { width:min(480px,100%); }
+    .q-modal-card h3 { margin:0 0 12px; }
+    .q-modal-balance { margin:0 0 16px; padding:14px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; text-align:center; }
+    .q-modal-balance-label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+    .q-modal-balance-value { font-size:28px; font-weight:700; color:var(--ink); line-height:1.2; }
+    .q-modal-lead { margin:0 0 14px; font-size:13px; color:var(--muted); }
+    .q-modal-card .field { margin-bottom:12px; }
+    .q-modal-card label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; }
+    .q-modal-card input,.q-modal-card select { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+    .q-pay-method-panel { margin:0 0 14px; padding:14px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; }
+    .q-pay-method-panel[hidden] { display:none !important; }
+    .q-pay-method-panel .field { margin-bottom:10px; }
+    .q-pay-method-panel .field:last-child { margin-bottom:0; }
+    .q-pay-instructions { margin:0 0 12px; font-size:13px; color:var(--ink); line-height:1.45; }
+    .q-pay-hint { margin:8px 0 0; font-size:12px; color:var(--muted); }
+    .q-pay-details { margin:10px 0 12px; display:grid; grid-template-columns:auto 1fr; gap:8px 12px; font-size:13px; align-items:center; }
+    .q-pay-details dt { margin:0; font-weight:600; color:var(--muted); }
+    .q-pay-details dd { margin:0; font-weight:600; color:var(--ink); }
+    .q-pay-detail-dd { display:flex; align-items:center; gap:6px; min-width:0; }
+    .q-pay-detail-value { flex:1; min-width:0; word-break:break-all; }
+    .q-btn-copy-icon {
+      flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+      width:28px; height:28px; padding:0; border:1px solid var(--border); border-radius:6px;
+      background:#fff; color:var(--accent); cursor:pointer;
+    }
+    .q-btn-copy-icon:hover { background:#f1f5f9; }
+    .q-btn-copy-icon.q-copied { border-color:#86efac; background:#f0fdf4; color:#15803d; }
+    .q-pay-ref-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; }
+    .q-pay-ref-row code { padding:6px 10px; background:#fff; border:1px solid var(--border); border-radius:6px; font-size:14px; font-weight:700; }
+    .q-btn-copy { padding:6px 10px; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--accent); cursor:pointer; }
+    .q-btn-copy:hover { background:#f1f5f9; }
+    .q-pay-card-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .q-pay-steps { list-style:none; margin:0; padding:0; }
+    .q-pay-step { display:flex; gap:12px; padding:0 0 16px; margin:0 0 16px; border-bottom:1px solid #e2e8f0; }
+    .q-pay-step:last-child { padding-bottom:0; margin-bottom:0; border-bottom:0; }
+    .q-pay-step-num { width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+    .q-pay-step-body { flex:1; min-width:0; }
+    .q-pay-step-title { display:block; font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+    .q-pay-step-desc { margin:0 0 10px; font-size:12px; color:var(--muted); line-height:1.45; }
+    .q-pay-upload-field { margin-top:4px; }
+    .q-pay-upload-field input[type="file"] { font-size:12px; padding:8px; background:#fff; }
+    .q-pay-file-preview { margin-top:10px; padding:10px 12px; background:#fff; border:1px solid #bbf7d0; border-radius:8px; }
+    .q-pay-file-preview[hidden] { display:none !important; }
+    .q-pay-file-name { font-size:12px; color:var(--ink); margin-bottom:8px; }
+    .q-pay-file-thumb { display:block; max-width:100%; max-height:160px; border-radius:6px; border:1px solid var(--border); object-fit:contain; }
+    .q-modal-actions .q-btn-primary:disabled { opacity:.45; cursor:not-allowed; }
+    .q-modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+    body.q-embedded #nav,body.q-embedded #breadcrumb { display:none !important; }
+    @media print { .q-toolbar,.q-checkout,.q-modal { display:none !important; } .q-paper { box-shadow:none; border:0; } }
+  `;
+
+  if (EMBEDDED) {
+    document.body.classList.add('q-embedded');
+    document.getElementById('nav').style.display = 'none';
+    document.getElementById('breadcrumb').style.display = 'none';
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  const PAY_COPY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+  function renderCopyableDetailRow(label, value) {
+    const v = String(value ?? '').trim() || '—';
+    const copyBtn = v === '—' ? '' : `<button type="button" class="q-btn-copy-icon" data-copy-text="${esc(v)}" title="Copy ${esc(label)}" aria-label="Copy ${esc(label)}">${PAY_COPY_ICON}</button>`;
+    return `<dt>${esc(label)}</dt><dd class="q-pay-detail-dd"><span class="q-pay-detail-value">${esc(v)}</span>${copyBtn}</dd>`;
+  }
+
+  function copyPayText(text, btn) {
+    const onDone = () => {
+      if (!btn) return;
+      btn.classList.add('q-copied');
+      const prevLabel = btn.getAttribute('aria-label');
+      btn.setAttribute('aria-label', 'Copied');
+      setTimeout(() => {
+        btn.classList.remove('q-copied');
+        if (prevLabel) btn.setAttribute('aria-label', prevLabel);
+      }, 1500);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(onDone, () => {
+        window.prompt('Copy:', text);
+        onDone();
+      });
+    } else {
+      window.prompt('Copy:', text);
+      onDone();
+    }
+  }
+
+  function formatPhone(p) {
+    const d = String(p||'').replace(/\D/g,'');
+    if (d.length===10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+    return p||'';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  function formatQuoteCreatedDate(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  function getQuoteCreatedAt(ticket, quoteState) {
+    return ticket?.created_at
+      || ticket?.quote_created_at
+      || quoteState?.sentAt
+      || null;
+  }
+
+  function quotePdfFilename(ticket) {
+    const ref = String(ticket?.reference_code || ticket?.order_number || 'quote')
+      .replace(/[^\w.-]+/g, '-');
+    return `quote-${ref}.pdf`;
+  }
+
+  async function downloadQuotePdf() {
+    const paper = document.querySelector('#quoteSheet .q-paper');
+    if (!paper) return;
+    const clone = paper.cloneNode(true);
+    clone.querySelector('.q-checkout')?.remove();
+    clone.style.boxShadow = 'none';
+    clone.style.border = 'none';
+    clone.style.maxWidth = 'none';
+    const pack = PQP.getQuotePack(currentToken);
+    const filename = quotePdfFilename(pack?.ticket);
+    const btn = document.getElementById('btnDownloadQuotePdf');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Generating PDF…';
+    }
+    try {
+      if (typeof html2pdf === 'undefined') {
+        window.print();
+        return;
+      }
+      await html2pdf().set({
+        margin: [0.45, 0.45, 0.45, 0.45],
+        filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+      }).from(clone).save();
+    } catch (err) {
+      console.warn('[Quote] PDF export failed', err);
+      alert('Could not generate PDF. Use Print and choose Save as PDF instead.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Download PDF';
+      }
+    }
+  }
+
+  function getProductionStartAt(quoteState) {
+    const p = quoteState.payment || {};
+    return (
+      quoteState.productionReleasedAt
+      || p.fullRecordedAt
+      || p.balanceRecordedAt
+      || p.depositRecordedAt
+      || quoteState.quotePriceConfirmedAt
+      || quoteState.clientConfirmedAt
+      || null
+    );
+  }
+
+  function maybeAutoStartProduction(token, paymentCfg, ticket, quoteState, checkout) {
+    if (!checkout.canReleaseProduction || quoteState.productionReleasedAt) return quoteState;
+    const startAt = getProductionStartAt(quoteState) || new Date().toISOString();
+    PQP.saveQuoteState(token, { productionReleasedAt: startAt });
+    return PQP.loadQuoteState(token);
+  }
+
+  function ensureFullCashQuoteConfirmed(token, cfg, quoteState, checkout) {
+    if (!checkout.cashInPerson || !checkout.paymentOk) return quoteState;
+    if (quoteState.quotePriceConfirmed && quoteState.clientConfirmed) return quoteState;
+    const now = new Date().toISOString();
+    PQP.saveQuoteState(token, {
+      quotePriceConfirmed: true,
+      quotePriceConfirmedAt: quoteState.quotePriceConfirmedAt || now,
+      clientConfirmed: true,
+      clientConfirmedAt: quoteState.clientConfirmedAt || now,
+    });
+    return PQP.loadQuoteState(token);
+  }
+
+  function renderCompanyLine(company) {
+    const cityLine = [company.city, company.state, company.zip].filter(Boolean).join(', ');
+    const address = [company.address_line1, cityLine].filter(Boolean).join(', ');
+    const phone = formatPhone(company.phone);
+    const site = (company.website||'').replace(/\/$/,'');
+    const siteLabel = site.replace(/^https?:\/\//i,'');
+    const parts = [
+      `<strong>${esc(company.company_name)}</strong>`,
+      address ? esc(address) : '',
+      phone ? `Tel: ${esc(phone)}` : '',
+      company.email ? `<a href="mailto:${esc(company.email)}">${esc(company.email)}</a>` : '',
+      site ? `<a href="${esc(site)}" target="_blank" rel="noopener noreferrer">${esc(siteLabel)}</a>` : '',
+    ].filter(Boolean);
+    document.getElementById('quoteCompanyLine').innerHTML = parts.join('<span class="sep">·</span>');
+  }
+
+  function skuSpecs(sku) {
+    const bits = [];
+    if (sku.width && sku.height) bits.push(`${sku.width}" × ${sku.height}"`);
+    if (sku.material) bits.push(sku.material);
+    if (sku.color_mode) bits.push(sku.color_mode);
+    if (sku.lamination && sku.lamination !== 'None') bits.push(sku.lamination);
+    if (sku.sides) bits.push(sku.sides);
+    return bits.join(' · ');
+  }
+
+  function lineAmount(sku) {
+    return (Number(sku.quantity)||0) * (Number(sku.unit_price)||0);
+  }
+
+  function readPayPanelField(name) {
+    const panel = document.getElementById('payModalMethodPanel');
+    const el = panel.querySelector(`[data-pay-field="${name}"]`);
+    if (!el) return name === 'screenshot' || name === 'cardId' ? null : '';
+    if (el.type === 'file') return el.files[0] || null;
+    return String(el.value || '').trim();
+  }
+
+  function payMethodNeedsScreenshot(method) {
+    return method === 'ach' || method === 'wire' || method === 'zelle' || method === 'check';
+  }
+
+  function isPayModalReadyToConfirm(method) {
+    if (method === 'cash') return !!readPayPanelField('receipt');
+    if (payMethodNeedsScreenshot(method)) return !!readPayPanelField('screenshot');
+    if (method === 'card') {
+      return !!(readPayPanelField('cardName') && readPayPanelField('cardNumber')
+        && readPayPanelField('cardExpiry') && readPayPanelField('cardCvv')
+        && readPayPanelField('cardId'));
+    }
+    return true;
+  }
+
+  function syncPayModalSaveButton() {
+    const method = document.getElementById('payModalMethod').value;
+    const btn = document.getElementById('payModalSave');
+    const ready = isPayModalReadyToConfirm(method);
+    const needsProof = payMethodNeedsScreenshot(method) || method === 'card' || method === 'cash';
+    btn.textContent = ready && needsProof ? 'Confirm the payment' : 'Save';
+    btn.disabled = needsProof && !ready;
+  }
+
+  function renderScreenshotUploadStep(stepNum, description) {
+    return `
+      <li class="q-pay-step q-pay-step-upload">
+        <span class="q-pay-step-num" aria-hidden="true">${stepNum}</span>
+        <div class="q-pay-step-body">
+          <span class="q-pay-step-title">Upload payment confirmation screenshot</span>
+          <p class="q-pay-step-desc">${description}</p>
+          <div class="field q-pay-upload-field">
+            <label>Payment confirmation (screenshot)</label>
+            <input type="file" accept="image/*,.pdf" data-pay-field="screenshot">
+          </div>
+          <div class="q-pay-file-preview" data-pay-preview hidden></div>
+        </div>
+      </li>`;
+  }
+
+  function updatePayFilePreview(input) {
+    const wrap = input.closest('.q-pay-step-body, .q-pay-method-panel');
+    const preview = wrap?.querySelector('[data-pay-preview]');
+    if (!preview) return;
+    const file = input.files[0];
+    if (!file) {
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    preview.hidden = false;
+    let html = `<div class="q-pay-file-name"><strong>Attached:</strong> ${esc(file.name)}</div>`;
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      html += `<img class="q-pay-file-thumb" src="${url}" alt="Payment confirmation preview">`;
+    }
+    preview.innerHTML = html;
+    const img = preview.querySelector('.q-pay-file-thumb');
+    if (img) img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true });
+  }
+
+  function bindPayPanelInteractions() {
+    const panel = document.getElementById('payModalMethodPanel');
+    panel.querySelector('[data-copy-quote-ref]')?.addEventListener('click', () => {
+      const text = payModalQuoteRef || '—';
+      if (!text || text === '—') return;
+      copyPayText(text);
+    });
+    panel.querySelectorAll('[data-copy-text]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const text = btn.getAttribute('data-copy-text');
+        if (!text) return;
+        copyPayText(text, btn);
+      });
+    });
+    panel.querySelectorAll('input[type="file"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        updatePayFilePreview(input);
+        syncPayModalSaveButton();
+      });
+    });
+    panel.querySelectorAll('input:not([type="file"]), textarea').forEach((input) => {
+      input.addEventListener('input', syncPayModalSaveButton);
+    });
+    syncPayModalSaveButton();
+  }
+
+  function renderPayMethodPanel(method) {
+    const panel = document.getElementById('payModalMethodPanel');
+    const remit = PQP.PAYMENT_REMITTANCE || {};
+    const quoteRef = payModalQuoteRef || '—';
+    const cfg = PQP.loadPaymentConfig();
+    const cashInPerson = PQP.isCashInPersonFull(cfg);
+    let html = '';
+
+    if (method === 'ach' || method === 'wire') {
+      const label = method === 'wire' ? 'Wire' : 'ACH';
+      html = `
+        <ol class="q-pay-steps">
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">1</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Send payment via ${label}</span>
+              <p class="q-pay-step-desc">Use the company account below. Send the amount shown above, then complete step 2.</p>
+              <dl class="q-pay-details">
+                ${renderCopyableDetailRow('Bank', remit.bankName)}
+                ${renderCopyableDetailRow('Account name', remit.accountName)}
+                ${renderCopyableDetailRow('Account number', remit.accountNumber)}
+                ${renderCopyableDetailRow('Routing number', remit.routingNumber)}
+              </dl>
+            </div>
+          </li>
+          ${renderScreenshotUploadStep(2, 'Take a screenshot of your bank app or wire confirmation showing the amount, date, and account details.')}
+        </ol>`;
+    } else if (method === 'zelle') {
+      html = `
+        <ol class="q-pay-steps">
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">1</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Send payment via Zelle</span>
+              <p class="q-pay-step-desc">Send the amount above to the number below. Copy the quote number into the Zelle memo/note field.</p>
+              <dl class="q-pay-details">
+                <dt>Zelle</dt><dd>${esc(remit.zelle || '—')}</dd>
+                <dt>Unique quote number</dt>
+                <dd>
+                  <div class="q-pay-ref-row">
+                    <code>${esc(quoteRef)}</code>
+                    <button type="button" class="q-btn-copy" data-copy-quote-ref>Copy</button>
+                  </div>
+                </dd>
+              </dl>
+              <p class="q-pay-hint">Include the quote number exactly as shown so we can match your payment.</p>
+            </div>
+          </li>
+          ${renderScreenshotUploadStep(2, 'After sending, screenshot your Zelle confirmation showing the amount and memo with the quote number.')}
+        </ol>`;
+    } else if (method === 'card') {
+      html = `
+        <ol class="q-pay-steps">
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">1</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Enter card details</span>
+              <p class="q-pay-step-desc">Complete your card information below.</p>
+        <div class="field">
+          <label>Name on card</label>
+          <input type="text" data-pay-field="cardName" autocomplete="cc-name">
+        </div>
+        <div class="field">
+          <label>Card number</label>
+          <input type="text" inputmode="numeric" data-pay-field="cardNumber" autocomplete="cc-number" placeholder="0000 0000 0000 0000">
+        </div>
+        <div class="q-pay-card-row">
+          <div class="field">
+            <label>Expiry (MM/YY)</label>
+            <input type="text" data-pay-field="cardExpiry" autocomplete="cc-exp" placeholder="MM/YY">
+          </div>
+          <div class="field">
+            <label>CVV</label>
+            <input type="text" inputmode="numeric" data-pay-field="cardCvv" autocomplete="cc-csc" placeholder="123">
+          </div>
+        </div>
+        <div class="field">
+          <label>Billing ZIP</label>
+          <input type="text" data-pay-field="cardZip" autocomplete="postal-code">
+        </div>
+            </div>
+          </li>
+          <li class="q-pay-step q-pay-step-upload">
+            <span class="q-pay-step-num" aria-hidden="true">2</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Upload photo ID</span>
+              <p class="q-pay-step-desc">Attach a clear photo of your government-issued ID for verification.</p>
+              <div class="field q-pay-upload-field">
+                <label>Photo ID</label>
+                <input type="file" accept="image/*,.pdf" data-pay-field="cardId">
+              </div>
+              <div class="q-pay-file-preview" data-pay-preview hidden></div>
+            </div>
+          </li>
+        </ol>`;
+    } else if (method === 'cash') {
+      html = `
+        <ol class="q-pay-steps">
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">1</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Record receipt</span>
+              <p class="q-pay-step-desc">${cashInPerson ? 'Record the in-person cash payment with a receipt ID.' : 'Enter the receipt ID for this cash or offline payment.'}</p>
+              <div class="field">
+                <label>Receipt ID</label>
+                <input type="text" data-pay-field="receipt" placeholder="e.g. RCT-10482" autocomplete="off" value="${esc(cashInPerson ? (cfg.receiptId || '') : '')}">
+              </div>
+            </div>
+          </li>
+        </ol>`;
+    } else if (method === 'check') {
+      html = `
+        <ol class="q-pay-steps">
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">1</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Send your check</span>
+              <p class="q-pay-step-desc">Make check payable to ${esc(PQP.PULSE_COMPANY?.company_name || 'Bazaar Printing')}. Mail or deliver the check, then complete step 2.</p>
+            </div>
+          </li>
+          ${renderScreenshotUploadStep(2, 'Attach a photo of the check or your bank deposit confirmation once the check has been sent or deposited.')}
+        </ol>`;
+    } else {
+      panel.hidden = true;
+      panel.innerHTML = '';
+      return;
+    }
+
+    panel.innerHTML = html;
+    panel.hidden = false;
+    bindPayPanelInteractions();
+  }
+
+  function validatePayModal(method) {
+    if (method === 'cash') {
+      if (!readPayPanelField('receipt')) {
+        alert('Receipt ID is required for cash / offline.');
+        return false;
+      }
+      return true;
+    }
+    if (method === 'ach' || method === 'wire' || method === 'zelle' || method === 'check') {
+      if (!readPayPanelField('screenshot')) {
+        alert('Attach a payment confirmation screenshot.');
+        return false;
+      }
+      return true;
+    }
+    if (method === 'card') {
+      if (!readPayPanelField('cardName') || !readPayPanelField('cardNumber')
+        || !readPayPanelField('cardExpiry') || !readPayPanelField('cardCvv')) {
+        alert('Complete all card fields.');
+        return false;
+      }
+      if (!readPayPanelField('cardId')) {
+        alert('Attach a photo ID.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  function buildPaymentRecordMeta(method) {
+    const meta = { method, recordedAt: new Date().toISOString() };
+    if (method === 'cash') {
+      meta.receiptId = readPayPanelField('receipt');
+      return meta;
+    }
+    const screenshot = readPayPanelField('screenshot');
+    if (screenshot) meta.confirmationFileName = screenshot.name;
+    if (method === 'zelle') meta.zelleQuoteRef = payModalQuoteRef;
+    if (method === 'card') {
+      const num = readPayPanelField('cardNumber').replace(/\s/g, '');
+      meta.cardName = readPayPanelField('cardName');
+      meta.cardLast4 = num.length >= 4 ? num.slice(-4) : '';
+      meta.cardExpiry = readPayPanelField('cardExpiry');
+      const idFile = readPayPanelField('cardId');
+      if (idFile) meta.idAttachmentFileName = idFile.name;
+    }
+    return meta;
+  }
+
+  function openPayModal(mode, amountDue, checkout) {
+    payModalMode = mode;
+    const cfg = PQP.loadPaymentConfig();
+    const pack = PQP.getQuotePack(currentToken);
+    payModalQuoteRef = pack?.ticket?.reference_code || pack?.ticket?.order_number || currentToken;
+    const cashInPerson = PQP.isCashInPersonFull(cfg);
+    const due = Math.max(0, Number(amountDue) || 0);
+    const balanceLabel = document.getElementById('payModalBalanceLabel');
+    const amountLabel = document.getElementById('payModalAmountLabel');
+    const titleEl = document.getElementById('payModalTitle');
+    const leadEl = document.getElementById('payModalLead');
+
+    if (cashInPerson) {
+      titleEl.textContent = 'Record cash payment';
+      balanceLabel.textContent = 'Amount due';
+      amountLabel.textContent = 'Amount ($)';
+    } else if (mode === 'deposit') {
+      titleEl.textContent = 'Record deposit';
+      balanceLabel.textContent = 'Deposit due';
+      amountLabel.textContent = 'Deposit amount ($)';
+    } else if (mode === 'balance') {
+      titleEl.textContent = 'Record payment';
+      balanceLabel.textContent = 'Remaining balance';
+      amountLabel.textContent = 'Payment amount ($)';
+    } else {
+      titleEl.textContent = 'Record payment';
+      balanceLabel.textContent = 'Amount due';
+      amountLabel.textContent = 'Amount ($)';
+    }
+
+    document.getElementById('payModalRemaining').textContent = PQP.formatMoney(due);
+
+    if (cashInPerson) {
+      leadEl.hidden = false;
+      leadEl.textContent = `Client paid in person. Full amount: ${PQP.formatMoney(due)}`;
+    } else if (mode === 'deposit' && checkout) {
+      leadEl.hidden = false;
+      leadEl.textContent = `Quote total ${PQP.formatMoney(checkout.quoteTotal)} · Balance after deposit ${PQP.formatMoney(checkout.balance)}`;
+    } else if (mode === 'balance' && checkout) {
+      leadEl.hidden = false;
+      leadEl.textContent = `Deposit paid ${PQP.formatMoney(checkout.paid)} · Quote total ${PQP.formatMoney(checkout.quoteTotal)}`;
+    } else {
+      leadEl.hidden = true;
+      leadEl.textContent = '';
+    }
+
+    document.getElementById('payModalAmount').value = due.toFixed(2);
+    const methods = cashInPerson
+      ? ['cash']
+      : ((cfg.strategy === 'full' ? cfg.channelsFull : cfg.channelsPartial) || []);
+    const sel = document.getElementById('payModalMethod');
+    sel.innerHTML = (methods.length ? methods : ['cash', 'zelle']).map((id) =>
+      `<option value="${id}">${esc(PQP.PAY_CHANNELS.find((c) => c.id === id)?.label || id)}</option>`
+    ).join('');
+    renderPayMethodPanel(sel.value);
+    syncPayModalSaveButton();
+    document.getElementById('payModal').hidden = false;
+  }
+
+  function closePayModal() {
+    document.getElementById('payModalMethodPanel').hidden = true;
+    document.getElementById('payModalMethodPanel').innerHTML = '';
+    const btn = document.getElementById('payModalSave');
+    btn.textContent = 'Save';
+    btn.disabled = true;
+    document.getElementById('payModal').hidden = true;
+  }
+
+  function getPayButtonLabel(checkout, cashInPerson, quoteState) {
+    if (cashInPerson) return 'Record cash payment';
+    if (checkout.partialCashDeposit && !checkout.depositPaid) return 'Record cash deposit';
+    if (checkout.strategy === 'partial' && checkout.depositPaid && checkout.remaining > 0.01) {
+      return 'Collect remaining balance';
+    }
+    if (checkout.strategy === 'partial' && checkout.paid < 0.01) return 'Collect deposit';
+    return 'Do the payment';
+  }
+
+  function buildPaySummaryAmountRows(checkout, dueLabel) {
+    if (checkout.strategy === 'partial') {
+      if (checkout.paid > 0.01) {
+        if (checkout.partialCashDeposit) {
+          return `<div class="row"><span>Deposit paid</span><strong>${PQP.formatMoney(checkout.paid)}</strong></div>
+            <div class="row highlight"><span>Balance due</span><strong>${PQP.formatMoney(checkout.remaining)}</strong></div>`;
+        }
+        return `<div class="row"><span>Deposit paid</span><strong>${PQP.formatMoney(checkout.paid)}</strong></div>
+          <div class="row highlight"><span>Balance due</span><strong>${PQP.formatMoney(checkout.remaining)}</strong></div>`;
+      }
+      return `<div class="row"><span>${esc(dueLabel)}</span><strong>${PQP.formatMoney(checkout.dueNow)}</strong></div>
+        <div class="row"><span>Balance after deposit</span><strong>${PQP.formatMoney(checkout.balance)}</strong></div>`;
+    }
+    let rows = `<div class="row"><span>Paid</span><strong>${PQP.formatMoney(checkout.paid)}</strong></div>
+      <div class="row highlight"><span>Remaining</span><strong>${PQP.formatMoney(checkout.remaining)}</strong></div>`;
+    if (checkout.strategy !== 'net') {
+      rows += `<div class="row"><span>${esc(dueLabel)}</span><strong>${PQP.formatMoney(checkout.dueNow)}</strong></div>`;
+    }
+    return rows;
+  }
+
+  function renderCheckout(token, pack, paymentCfg, quoteState, checkout) {
+    const stepper = document.getElementById('quoteStepper');
+    const cfg = paymentCfg;
+
+    const cashInPerson = checkout.cashInPerson;
+    const partialCash = checkout.partialCashDeposit;
+    const priceOk = cashInPerson || partialCash || checkout.priceConfirmed || PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal);
+    const canPay = checkout.canCollectPayment && (partialCash || cashInPerson || priceOk);
+    const visibleSteps = checkout.steps.filter((step) => !(cashInPerson && step.id === 'price'));
+
+    stepper.innerHTML = visibleSteps.map((step, index) => {
+      const stepNum = index + 1;
+      let meta = '';
+      let stepLabel = step.label;
+      let stepDone = step.done;
+      if (step.id === 'price') {
+        const at = quoteState.quotePriceConfirmedAt || quoteState.clientConfirmedAt;
+        if (priceOk && at) meta = `Confirmed ${formatDate(at)}`;
+        else if (priceOk && PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal)) {
+          meta = 'Confirmed automatically — paid in full';
+        }
+      }
+      if (step.id === 'payment') {
+        stepDone = checkout.strategy === 'net'
+          || (checkout.strategy === 'partial' && checkout.depositPaid && priceOk)
+          || (checkout.strategy === 'full' && checkout.fullyPaid && priceOk);
+      }
+      if (step.id === 'payment' && checkout.strategy === 'partial') {
+        if (checkout.depositPaid && quoteState.productionReleasedAt && checkout.remaining > 0.01) {
+          const paidAt = quoteState.payment?.depositRecordedAt;
+          meta = `Deposit paid ${PQP.formatMoney(checkout.paid)} · Production active · Balance ${PQP.formatMoney(checkout.remaining)} due`;
+          if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+        } else if (partialCash && checkout.depositPaid && checkout.paid > 0.01) {
+          const paidAt = quoteState.payment?.depositRecordedAt;
+          meta = `Cash deposit ${PQP.formatMoney(checkout.paid)} · Balance ${PQP.formatMoney(checkout.remaining)} due`;
+          if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+          else if (PQP.hasConfigDepositReceipt(cfg)) meta += ' · Receipt on file';
+        } else if (checkout.remaining <= 0.01 && checkout.paid > 0.01) {
+          const paidAt = quoteState.payment?.fullRecordedAt
+            || quoteState.payment?.balanceRecordedAt
+            || quoteState.payment?.depositRecordedAt;
+          meta = `Paid in full ${PQP.formatMoney(checkout.paid)}`;
+          if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+        } else if (checkout.paid > 0.01) {
+          const paidAt = quoteState.payment?.depositRecordedAt;
+          meta = `Deposit paid ${PQP.formatMoney(checkout.paid)} · Balance ${PQP.formatMoney(checkout.remaining)} due`;
+          if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+          else if (quoteState.payment?.depositReceiptId) meta += ' · Receipt on file';
+        } else {
+          meta = `Deposit due ${PQP.formatMoney(checkout.depositDue)} · Balance ${PQP.formatMoney(checkout.balance)}`;
+        }
+      } else if (step.id === 'payment' && checkout.strategy === 'full' && cashInPerson) {
+        if (checkout.paymentOk) {
+          const paidAt = quoteState.payment?.fullRecordedAt;
+          meta = `Paid in full ${PQP.formatMoney(checkout.paid)} · Quote confirmed`;
+          if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+          else if (PQP.hasConfigFullCashReceipt(cfg)) meta += ' · Receipt on file';
+        } else {
+          meta = `Due ${PQP.formatMoney(checkout.quoteTotal)} · cash in person`;
+        }
+      } else if (step.id === 'payment' && checkout.strategy !== 'net') {
+        const paidAt = quoteState.payment?.fullRecordedAt || quoteState.payment?.depositRecordedAt;
+        meta = `Paid ${PQP.formatMoney(checkout.paid)} · Remaining ${PQP.formatMoney(checkout.remaining)}`;
+        if (paidAt) meta += ` · ${formatDate(paidAt)}`;
+      }
+      if (step.id === 'production' && quoteState.productionReleasedAt) {
+        stepLabel = 'Production started';
+        stepDone = true;
+        meta = `Congratulations! Your production has started. Start date: ${formatDate(quoteState.productionReleasedAt)}`;
+      }
+
+      let actions = '';
+      if (step.id === 'price' && !priceOk && step.action === 'confirm-price') {
+        actions = `<button type="button" class="q-btn q-btn-primary" data-action="confirm-price">Confirm quote price</button>`;
+      }
+      if (step.id === 'payment' && canPay) {
+        const payLabel = getPayButtonLabel(checkout, cashInPerson, quoteState);
+        actions = `<button type="button" class="q-btn q-btn-primary" data-action="pay">${payLabel}</button>`;
+      }
+      if (step.id === 'payment' && canPay && !cashInPerson && !priceOk) {
+        meta = (meta ? meta + ' · ' : '') + 'Confirm quote price first';
+      }
+      return `<li class="q-step ${stepDone ? 'done' : ''} ${step.id === 'production' && quoteState.productionReleasedAt ? 'q-step-started' : ''}" data-step="${step.id}">
+        <span class="q-step-dot" aria-label="Step ${stepNum}">${stepDone ? '✓' : stepNum}</span>
+        <div class="q-step-body">
+          <div class="q-step-label"><span class="q-step-num">${stepNum}.</span> ${esc(stepLabel)}</div>
+          ${meta ? `<div class="q-step-meta">${meta}</div>` : ''}
+          ${actions ? `<div class="q-step-actions">${actions}</div>` : ''}
+        </div>
+      </li>`;
+    }).join('');
+
+    stepper.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', () => handleStepAction(token, btn.dataset.action, checkout));
+    });
+
+    const summary = document.getElementById('quotePaySummary');
+    const dueLabel = checkout.strategy === 'full' ? 'Due now (100%)' : checkout.strategy === 'partial' ? `Deposit (${checkout.depositPct}%)` : 'Due now';
+    let summaryPayBlock = '';
+    if (canPay) {
+      const payLabel = getPayButtonLabel(checkout, cashInPerson, quoteState);
+      summaryPayBlock = `<div class="q-summary-actions"><button type="button" class="q-btn q-btn-primary" data-action="pay">${esc(payLabel)}</button></div>`;
+    } else if (checkout.canCollectPayment && !partialCash && !cashInPerson && !priceOk) {
+      summaryPayBlock = '<p class="q-summary-hint">Confirm quote price in the checklist to collect payment.</p>';
+    } else if (checkout.strategy === 'full' && checkout.fullyPaid) {
+      summaryPayBlock = '<p class="q-summary-hint">Paid in full — no remaining balance.</p>';
+    } else if (checkout.strategy === 'partial' && checkout.depositPaid && checkout.remaining <= 0.01) {
+      summaryPayBlock = '<p class="q-summary-hint">Paid in full.</p>';
+    }
+    summary.innerHTML = `
+      <div class="row"><span>Strategy</span><strong>${esc(checkout.strategyLabel)}</strong></div>
+      <div class="row"><span>Quote total</span><strong>${PQP.formatMoney(checkout.quoteTotal)}</strong></div>
+      ${buildPaySummaryAmountRows(checkout, dueLabel)}
+      <div class="row"><span>Channels</span><strong>${esc(checkout.channelLabels || '—')}</strong></div>
+      <div class="row"><span>Price confirmation</span><strong>${checkout.cashInPerson || checkout.partialCashDeposit ? 'Not required (cash in person)' : (checkout.requireClientConfirm ? 'Required' : 'Not required')}</strong></div>
+      ${summaryPayBlock}
+    `;
+
+    summary.querySelectorAll('[data-action="pay"]').forEach((btn) => {
+      btn.addEventListener('click', () => handleStepAction(token, 'pay', checkout));
+    });
+
+    const blocked = document.getElementById('quoteBlocked');
+    if (checkout.canReleaseProduction || !checkout.blockReason) {
+      blocked.hidden = true;
+    } else {
+      blocked.hidden = false;
+      blocked.textContent = checkout.blockReason;
+    }
+  }
+
+  function handleStepAction(token, action, checkout) {
+    const cfg = PQP.loadPaymentConfig();
+    const now = new Date().toISOString();
+
+    if (action === 'confirm-price') {
+      PQP.saveQuoteState(token, {
+        quotePriceConfirmed: true,
+        quotePriceConfirmedAt: now,
+        clientConfirmed: true,
+        clientConfirmedAt: now,
+      });
+    } else if (action === 'pay') {
+      const quoteState = PQP.loadQuoteState(token);
+      const paid = PQP.getPaidAmount(quoteState, cfg, checkout.quoteTotal);
+      const cashInPerson = PQP.isCashInPersonFull(cfg);
+      let modalMode = 'payment';
+      let amountDue = checkout.dueNow;
+
+      if (cashInPerson) {
+        modalMode = 'full';
+        amountDue = checkout.quoteTotal;
+      } else if (cfg.strategy === 'partial' && paid < 0.01) {
+        modalMode = 'deposit';
+        amountDue = checkout.depositDue;
+      } else if (cfg.strategy === 'partial' && paid > 0.01 && checkout.remaining > 0.01) {
+        modalMode = 'balance';
+        amountDue = checkout.remaining;
+      } else if (cfg.strategy === 'full') {
+        modalMode = 'full';
+        amountDue = checkout.quoteTotal;
+      } else {
+        amountDue = checkout.remaining > 0.01 ? checkout.remaining : checkout.dueNow;
+      }
+
+      openPayModal(modalMode, amountDue, checkout);
+      return;
+    } else if (action === 'release') {
+      if (!checkout.canReleaseProduction) return;
+      PQP.saveQuoteState(token, { productionReleasedAt: now });
+    }
+    renderQuote(currentToken);
+  }
+
+  function renderQuote(token) {
+    currentToken = token;
+    const pack = PQP.getQuotePack(token);
+    const err = document.getElementById('quoteError');
+    const sheet = document.getElementById('quoteSheet');
+
+    if (!pack) {
+      sheet.hidden = true;
+      err.hidden = false;
+      err.textContent = 'Quote not found in Pulse catalog.';
+      return;
+    }
+
+    err.hidden = true;
+    sheet.hidden = false;
+
+    const t = pack.ticket;
+    const company = pack.company || PQP.PULSE_COMPANY;
+    const paymentCfg = PQP.loadPaymentConfig();
+    const quotePrice = Number(paymentCfg.quotePrice) > 0 ? Number(paymentCfg.quotePrice) : PQP.getQuoteTotal(t);
+    const ticket = { ...t, quote_final_total: quotePrice };
+    let quoteState = PQP.loadQuoteState(token);
+    let checkout = PQP.computeCheckout(paymentCfg, ticket, quoteState);
+    quoteState = ensureFullCashQuoteConfirmed(token, paymentCfg, quoteState, checkout);
+    checkout = PQP.computeCheckout(paymentCfg, ticket, quoteState);
+    quoteState = maybeAutoStartProduction(token, paymentCfg, ticket, quoteState, checkout);
+    checkout = PQP.computeCheckout(paymentCfg, ticket, quoteState);
+
+    renderCompanyLine(company);
+    document.getElementById('quoteTitle').textContent = t.title || 'Quote';
+    document.getElementById('toolbarQuotePrice').textContent = PQP.formatMoney(quotePrice);
+
+    const badges = [];
+    if (t.ticket_status) badges.push(`<span class="q-badge status">${esc(String(t.ticket_status).replace(/_/g,' '))}</span>`);
+    if (t.rush) badges.push('<span class="q-badge rush">Rush</span>');
+    const gateClass = checkout.canReleaseProduction ? 'ready' : 'gate';
+    badges.push(`<span class="q-badge ${gateClass}">${esc(checkout.statusLabel)}</span>`);
+    document.getElementById('quoteBadges').innerHTML = badges.join('');
+
+    const cust = t.customer || {};
+    const contactName = t.contact_name || [cust.first_name, cust.last_name].filter(Boolean).join(' ');
+    document.getElementById('quoteBillName').textContent = t.contact_company || cust.company || contactName || '—';
+    document.getElementById('quoteBillContact').innerHTML = [contactName, t.contact_email||cust.email, cust.phone?formatPhone(cust.phone):''].filter(Boolean).map(esc).join('<br>');
+
+    const createdAt = getQuoteCreatedAt(t, quoteState);
+    document.getElementById('quoteDetailsKv').innerHTML = `
+      <div class="row"><span>Quote created</span><span>${esc(formatQuoteCreatedDate(createdAt))}</span></div>
+      <div class="q-quote-download">
+        <button type="button" class="q-btn q-btn-primary q-btn-block" id="btnDownloadQuotePdf">Download PDF</button>
+      </div>`;
+    document.getElementById('quoteLines').innerHTML = (t.quote_skus||[]).map((sku) => {
+      const specs = skuSpecs(sku);
+      return `<tr><td><div>${esc(sku.description||sku.product_type)}</div>${specs?`<div class="q-spec">${esc(specs)}</div>`:''}</td>
+        <td>${esc(sku.product_type||'—')}</td><td class="num">${Number(sku.quantity||0).toLocaleString()}</td>
+        <td class="num">${PQP.formatMoney(sku.unit_price)}</td><td class="num">${PQP.formatMoney(lineAmount(sku))}</td></tr>`;
+    }).join('') || '<tr><td colspan="5">No line items</td></tr>';
+
+    const preDiscount = Number(t.quote_subtotal||0) + Number(t.quote_shipping||0);
+    const discountAmt = preDiscount - Number(t.quote_pre_tax_total||0);
+    const totalRows = [
+      ['Subtotal', t.quote_subtotal],
+      t.quote_shipping != null ? ['Shipping', t.quote_shipping] : null,
+      discountAmt > 0 ? ['Discount', -discountAmt] : null,
+      ['Pre-tax', t.quote_pre_tax_total],
+      t.quote_tax_amount != null ? [`Tax (${t.quote_tax_rate_percent||0}%)`, t.quote_tax_amount] : null,
+      ['Total', ticket.quote_final_total],
+    ].filter(Boolean);
+
+    document.getElementById('quoteTotals').innerHTML = totalRows.map(([label,val],i,arr) => {
+      const isTotal = i === arr.length - 1;
+      const display = label === 'Discount' ? `−${PQP.formatMoney(Math.abs(val))}` : PQP.formatMoney(val);
+      return `<div class="row ${isTotal?'total':''}"><span>${esc(label)}</span><span>${display}</span></div>`;
+    }).join('');
+
+    renderCheckout(token, pack, paymentCfg, quoteState, checkout);
+  }
+
+  function goToPaymentSettings() {
+    if (EMBEDDED && window.parent !== window) {
+      window.parent.location.href = 'admin.html?tab=payment';
+    } else {
+      window.location.href = 'admin.html?tab=payment';
+    }
+  }
+
+  document.getElementById('payModalMethod').addEventListener('change', (e) => {
+    renderPayMethodPanel(e.target.value);
+  });
+
+  document.getElementById('payModalSave').addEventListener('click', () => {
+    const amount = parseFloat(document.getElementById('payModalAmount').value);
+    const method = document.getElementById('payModalMethod').value;
+    const cfg = PQP.loadPaymentConfig();
+    const pack = PQP.getQuotePack(currentToken);
+    if (!pack) return;
+    const t = pack.ticket;
+    const quoteTotal = Number(cfg.quotePrice) > 0 ? Number(cfg.quotePrice) : PQP.getQuoteTotal(t);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Enter a valid amount.');
+      return;
+    }
+    if (!validatePayModal(method)) return;
+    const receipt = method === 'cash' ? readPayPanelField('receipt') : '';
+    const paymentMeta = buildPaymentRecordMeta(method);
+    const now = new Date().toISOString();
+    const prev = PQP.loadQuoteState(currentToken);
+    const prevPaid = PQP.getPaidAmount(prev, cfg, quoteTotal);
+    const newPaid = Math.min(quoteTotal, Math.round((prevPaid + amount) * 100) / 100);
+    const paymentPatch = {
+      totalPaid: newPaid,
+      depositMethod: method,
+      lastPaymentRecord: paymentMeta,
+    };
+    if (cfg.strategy === 'partial' && !prev.payment?.depositRecordedAt) {
+      paymentPatch.depositRecordedAt = now;
+      paymentPatch.depositAmount = newPaid;
+      paymentPatch.depositReceiptId = receipt;
+    } else if (cfg.strategy === 'partial' && prev.payment?.depositRecordedAt && newPaid < quoteTotal - 0.01) {
+      paymentPatch.balanceRecordedAt = now;
+    }
+    if (newPaid >= quoteTotal - 0.01) {
+      paymentPatch.fullRecordedAt = now;
+      paymentPatch.fullAmount = newPaid;
+      paymentPatch.fullReceiptId = receipt;
+    }
+    const cashInPerson = PQP.isCashInPersonFull(cfg);
+    const statePatch = { payment: paymentPatch };
+    if (cashInPerson && newPaid >= quoteTotal - 0.01) {
+      statePatch.quotePriceConfirmed = true;
+      statePatch.quotePriceConfirmedAt = now;
+      statePatch.clientConfirmed = true;
+      statePatch.clientConfirmedAt = now;
+    } else if (cfg.strategy === 'full' && cfg.requireClientConfirm !== false && newPaid >= quoteTotal - 0.01) {
+      statePatch.quotePriceConfirmed = true;
+      statePatch.quotePriceConfirmedAt = now;
+      statePatch.clientConfirmed = true;
+      statePatch.clientConfirmedAt = now;
+    }
+    const mergedState = { ...prev, payment: { ...(prev.payment || {}), ...paymentPatch } };
+    const afterCheckout = PQP.computeCheckout(cfg, t, mergedState);
+    if (afterCheckout.canReleaseProduction && !prev.productionReleasedAt) {
+      statePatch.productionReleasedAt = getProductionStartAt(mergedState) || now;
+    }
+    PQP.saveQuoteState(currentToken, statePatch);
+    closePayModal();
+    renderQuote(currentToken);
+  });
+
+  document.querySelectorAll('[data-close="payModal"]').forEach((el) => el.addEventListener('click', closePayModal));
+  document.getElementById('btnPaymentSettings').addEventListener('click', goToPaymentSettings);
+  document.getElementById('btnPrintQuote').addEventListener('click', () => window.print());
+  document.getElementById('quoteDetailsKv').addEventListener('click', (e) => {
+    if (e.target.closest('#btnDownloadQuotePdf')) downloadQuotePdf();
+  });
+
+  function resolveQuoteToken() {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('id') || params.get('q');
+    if (fromUrl && PQP.PULSE_QUOTES[fromUrl]) return fromUrl;
+    const cfg = PQP.loadPaymentConfig();
+    const fromConfig = PQP.getPreviewQuoteToken(cfg);
+    if (fromConfig && PQP.PULSE_QUOTES[fromConfig]) return fromConfig;
+    return PQP.DEFAULT_QUOTE_TOKEN;
+  }
+
+  renderQuote(resolveQuoteToken());
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === PQP.PAY_STORAGE_KEY || e.key === PQP.QUOTE_STATE_KEY) {
+      renderQuote(resolveQuoteToken());
+    }
+  });
+
+  if (!EMBEDDED) initAuth('admin');
+})();
+</script>
+</body>
+</html>

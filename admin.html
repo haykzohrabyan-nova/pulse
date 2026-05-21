@@ -21,6 +21,8 @@
     <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="dies" onclick="switchTab('dies')">🔧 Dies</button>
     <button class="tab-btn" data-tab="organisation" onclick="switchTab('organisation')">Organisation</button>
+    <button class="tab-btn" data-tab="payment" onclick="switchTab('payment')">💳 Payment</button>
+    <button class="tab-btn" data-tab="crm-quote" onclick="switchTab('crm-quote')">💬 Quote</button>
     <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">📦 Inventory</button>
     <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
     <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
@@ -110,6 +112,26 @@
         class="admin-org-frame"
         title="Organisation"
         src="organisation.html?embedded=admin"
+      ></iframe>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAYMENT ══ -->
+    <div class="tab-pane" id="tab-payment">
+      <iframe
+        id="paymentAdminFrame"
+        class="admin-org-frame"
+        title="Payment"
+        src="payment.html?embedded=admin"
+      ></iframe>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ QUOTE ══ -->
+    <div class="tab-pane" id="tab-crm-quote">
+      <iframe
+        id="crmQuoteAdminFrame"
+        class="admin-org-frame"
+        title="Quote"
+        src="crm-quote.html?embedded=admin"
       ></iframe>
     </div>
 
@@ -881,8 +903,15 @@ document.getElementById('page-styles').textContent = `
   .admin-content { flex: 1; overflow-y: visible; overflow-x: hidden; }
   .tab-pane { display: none; padding: 20px 24px; }
   .tab-pane.active { display: block; }
-  #tab-organisation { padding: 0; }
-  .admin-org-frame { width: 100%; height: calc(100vh - 112px); border: 0; display: block; background: var(--bg); }
+  #tab-organisation, #tab-payment, #tab-crm-quote { padding: 0; }
+  .admin-org-frame {
+    width: 100%;
+    height: calc(100vh - 112px);
+    min-height: 520px;
+    border: 0;
+    display: block;
+    background: var(--bg);
+  }
   .pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .pane-header h2 { font-size: 20px; font-weight: 700; }
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
@@ -1231,6 +1260,17 @@ MATERIALS.forEach(g => {
 });
 
 // ── Active Tab ────────────────────────────────────────────
+const ADMIN_TAB_IDS = [
+  'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
+  'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
+  'products', 'product-workflows', 'roles',
+];
+
+function getAdminTabFromUrl() {
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  return ADMIN_TAB_IDS.includes(tab) ? tab : null;
+}
+
 let activeTab = 'personnel';
 function switchTab(tab) {
   activeTab = tab;
@@ -1249,6 +1289,14 @@ async function loadTab(tab) {
   else if (tab === 'organisation') {
     const frame = document.getElementById('organisationAdminFrame');
     if (frame && !frame.src) frame.src = 'organisation.html?embedded=admin';
+  }
+  else if (tab === 'payment') {
+    const frame = document.getElementById('paymentAdminFrame');
+    if (frame && !frame.src) frame.src = 'payment.html?embedded=admin';
+  }
+  else if (tab === 'crm-quote') {
+    const frame = document.getElementById('crmQuoteAdminFrame');
+    if (frame && !frame.src) frame.src = 'crm-quote.html?embedded=admin';
   }
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'settings') await loadSettings();
@@ -1523,6 +1571,8 @@ const ROLES_ADMIN_TABS = [
   { key: 'machines', label: 'Machines' },
   { key: 'dies', label: 'Dies' },
   { key: 'organisation', label: 'Organisation' },
+  { key: 'payment', label: 'Payment' },
+  { key: 'crm-quote', label: 'Quote' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'purchase-orders', label: 'Purchase Orders' },
   { key: 'knowledge', label: 'Knowledge' },
@@ -1831,10 +1881,24 @@ async function saveRolePermissions() {
 }
 
 // ── Init ──────────────────────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key === 'pulse_payment_admin_config_v1' || e.key === 'pulse_quote_checkout_v1') {
+    const quoteFrame = document.getElementById('crmQuoteAdminFrame');
+    if (quoteFrame?.contentWindow) {
+      try { quoteFrame.contentWindow.location.reload(); } catch (_) {}
+    }
+  }
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCustomRoles();
   await seedKnowledge();
-  await loadTab(activeTab);
+  const urlTab = getAdminTabFromUrl();
+  if (urlTab) {
+    setTimeout(() => switchTab(urlTab), 50);
+  } else {
+    await loadTab(activeTab);
+  }
   onDBUpdate(async (data) => { await loadTab(activeTab); });
   // Update app dept total when inputs change
   ['appDeptPeople', 'appDeptUnitsPerPerson'].forEach(id => {
