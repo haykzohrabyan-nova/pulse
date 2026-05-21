@@ -1,3 +1,4 @@
 .env.local
 notification-config.local.js
 pulse-config.local.js
+.env
