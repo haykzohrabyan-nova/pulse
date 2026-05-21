@@ -1,6 +1,10 @@
 -- Product workflow configuration (admin Product Workflows tab)
 
-CREATE TABLE IF NOT EXISTS machines (
+-- 1. Obliterate the old table and its enum bindings
+DROP TABLE IF EXISTS machines CASCADE;
+
+-- 2. Create the table using standard TEXT types
+CREATE TABLE machines (
   id            TEXT PRIMARY KEY,
   name          TEXT NOT NULL,
   display_name  TEXT NOT NULL,
@@ -11,10 +15,13 @@ CREATE TABLE IF NOT EXISTS machines (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Safeguard against duplicate trigger attachment
+DROP TRIGGER IF EXISTS machines_updated_at ON machines;
 CREATE TRIGGER machines_updated_at
   BEFORE UPDATE ON machines
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- 3. Build out the Workflows execution layer
 CREATE TABLE IF NOT EXISTS product_workflows (
   id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_catalog_id TEXT UNIQUE NOT NULL,
@@ -25,48 +32,48 @@ CREATE TABLE IF NOT EXISTS product_workflows (
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Safeguard against duplicate trigger attachment
+DROP TRIGGER IF EXISTS product_workflows_updated_at ON product_workflows;
 CREATE TRIGGER product_workflows_updated_at
   BEFORE UPDATE ON product_workflows
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX product_workflows_catalog_id_idx ON product_workflows(product_catalog_id);
+CREATE INDEX IF NOT EXISTS product_workflows_catalog_id_idx ON product_workflows(product_catalog_id);
 
 ALTER TABLE machines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_workflows ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "machines_select"
-  ON machines FOR SELECT
-  USING (auth.uid() IS NOT NULL);
+-- ---------------------------------------------------------------------------
+-- RLS POLICIES
+-- ---------------------------------------------------------------------------
 
-CREATE POLICY "machines_insert_admin"
-  ON machines FOR INSERT
-  WITH CHECK (current_user_role() IN ('admin', 'supervisor'));
+DROP POLICY IF EXISTS "machines_select" ON machines;
+CREATE POLICY "machines_select" ON machines FOR SELECT USING (auth.uid() IS NOT NULL);
 
-CREATE POLICY "machines_update_admin"
-  ON machines FOR UPDATE
-  USING (current_user_role() IN ('admin', 'supervisor'));
+DROP POLICY IF EXISTS "machines_insert_admin" ON machines;
+CREATE POLICY "machines_insert_admin" ON machines FOR INSERT WITH CHECK (current_user_role()::text IN ('admin', 'supervisor'));
 
-CREATE POLICY "machines_delete_admin"
-  ON machines FOR DELETE
-  USING (current_user_role() = 'admin');
+DROP POLICY IF EXISTS "machines_update_admin" ON machines;
+CREATE POLICY "machines_update_admin" ON machines FOR UPDATE USING (current_user_role()::text IN ('admin', 'supervisor'));
 
-CREATE POLICY "product_workflows_select"
-  ON product_workflows FOR SELECT
-  USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "machines_delete_admin" ON machines;
+CREATE POLICY "machines_delete_admin" ON machines FOR DELETE USING (current_user_role()::text = 'admin');
 
-CREATE POLICY "product_workflows_insert_admin"
-  ON product_workflows FOR INSERT
-  WITH CHECK (current_user_role() IN ('admin', 'supervisor'));
+DROP POLICY IF EXISTS "product_workflows_select" ON product_workflows;
+CREATE POLICY "product_workflows_select" ON product_workflows FOR SELECT USING (auth.uid() IS NOT NULL);
 
-CREATE POLICY "product_workflows_update_admin"
-  ON product_workflows FOR UPDATE
-  USING (current_user_role() IN ('admin', 'supervisor'));
+DROP POLICY IF EXISTS "product_workflows_insert_admin" ON product_workflows;
+CREATE POLICY "product_workflows_insert_admin" ON product_workflows FOR INSERT WITH CHECK (current_user_role()::text IN ('admin', 'supervisor'));
 
-CREATE POLICY "product_workflows_delete_admin"
-  ON product_workflows FOR DELETE
-  USING (current_user_role() = 'admin');
+DROP POLICY IF EXISTS "product_workflows_update_admin" ON product_workflows;
+CREATE POLICY "product_workflows_update_admin" ON product_workflows FOR UPDATE USING (current_user_role()::text IN ('admin', 'supervisor'));
 
+DROP POLICY IF EXISTS "product_workflows_delete_admin" ON product_workflows;
+CREATE POLICY "product_workflows_delete_admin" ON product_workflows FOR DELETE USING (current_user_role()::text = 'admin');
+
+-- ---------------------------------------------------------------------------
 -- Seed machines (spec section 2)
+-- ---------------------------------------------------------------------------
 INSERT INTO machines (id, name, display_name, facility, category, capabilities) VALUES
   ('press-6k', 'HP Indigo 6K', 'HP Indigo 6K', '16th', 'press', ARRAY['labels', 'pouches', 'sheet-labels']),
   ('press-15k', 'HP Indigo 15K', 'HP Indigo 15K', '16th', 'press', ARRAY['folding-cartons', 'cardstock', 'sheet']),

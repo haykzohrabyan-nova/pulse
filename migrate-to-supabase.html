@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrate to Supabase — Pulse</title>
+  <script src="pulse-config.local.js"></script>
+  <script>
+    // Import backup → IndexedDB; this page only uses Supabase for auth + order copy.
+    window.PULSE_MIGRATE_TOOL = true;
+    window.PULSE_STORAGE_BACKEND = 'indexeddb';
+  </script>
+  <script src="organisation-local-store.js"></script>
+  <script src="shared.js?v=20260522-MIGRATE2"></script>
+  <script src="supabase-client.js?v=20260522-MIGRATE2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; padding: 40px 24px; }
+    .container { max-width: 740px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+    label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="url"], input[type="password"], input[type="file"] {
+      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 12px;
+    }
+    input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; margin-bottom: 8px; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .status-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-size: 13px; line-height: 1.6; min-height: 80px; white-space: pre-wrap; font-family: ui-monospace, 'Courier New', monospace; max-height: 320px; overflow-y: auto; }
+    .warn { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #92400e; margin-bottom: 16px; line-height: 1.5; }
+    .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #1d4ed8; margin-bottom: 16px; line-height: 1.5; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .migrate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 13px; margin-top: 12px; }
+    .migrate-grid dt { color: #64748b; font-weight: 600; }
+    .migrate-grid dd { margin: 0; font-weight: 700; }
+    .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: center; }
+    .stat-num { font-size: 28px; font-weight: 800; }
+    .stat-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    code { font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Pulse → Supabase Migration</h1>
+  <p class="subtitle">Import Admin <strong>Export JSON</strong> into this browser, then push <strong>all admin + production data</strong> to Supabase (personnel, machines, dies, organisation, products, workflows, roles, orders, and more). Same URL: <code id="pageOriginTop">…</code></p>
+
+  <div class="card">
+    <h2>Before you start</h2>
+    <div class="warn">
+      IndexedDB is <strong>per browser + per URL</strong>. If Dashboard shows orders on another URL (e.g. <code>file://</code>), export JSON there first, then import here.
+    </div>
+    <div class="info">
+      Anon key must start with <code>eyJ</code> (Settings → API → anon public). Use project Auth email/password, not your supabase.com login.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Step 1 — Supabase connection</h2>
+    <label>Supabase project URL</label>
+    <input type="url" id="supaUrl" placeholder="https://xxxxxxxxxxx.supabase.co">
+    <label>Supabase anon key (eyJ…)</label>
+    <input type="password" id="supaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+    <label>Admin email (project Auth)</label>
+    <input type="text" id="adminEmail" placeholder="admin@bazaar-admin.com" autocomplete="username">
+    <label>Admin password</label>
+    <input type="password" id="adminPassword" placeholder="Supabase auth password" autocomplete="current-password">
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">Required for RLS on insert. Seeded users: <code>admin@bazaar-admin.com</code> / <code>Pulse2026!</code></div>
+    <button type="button" class="btn btn-primary" id="connectBtn" onclick="connectToSupabase()">Connect &amp; verify</button>
+    <span id="connectStatus" style="font-size:13px;"></span>
+  </div>
+
+  <div class="card">
+    <h2>Step 2 — Import backup (this browser)</h2>
+    <div class="warn">Data lives at <strong><code id="pageOrigin">…</code></strong> only. Export from the browser that has your real Pulse data.</div>
+    <p style="font-size:13px;margin-bottom:10px;line-height:1.5;">
+      <strong>Admin → Export JSON</strong> includes: Personnel, Machines, Dies, Organisation, Products, Workflows, Roles, plus orders, activity, invoices, etc.
+    </p>
+    <div class="btn-row">
+      <input type="file" id="backupFile" accept=".json,application/json" style="display:none">
+      <button type="button" class="btn btn-gray" onclick="document.getElementById('backupFile').click()">Import backup JSON</button>
+      <button type="button" class="btn btn-gray" id="inspectBtn" onclick="inspectLocalData()" disabled>Inspect local data</button>
+    </div>
+    <div id="inspectResult" style="margin-top:14px;font-size:13px;"></div>
+    <dl class="migrate-grid" id="inspectGrid" style="display:none;"></dl>
+  </div>
+
+  <div class="card">
+    <h2>Step 3 — Push everything to Supabase</h2>
+    <div class="info" style="margin-bottom:12px;">
+      Migrates: config (catalog, roles, machine capacity, personnel), machines, product workflows, organisation, dies, knowledge base, operator sessions/points, invoices, orders, activity log. Devices/reprints stored in <code>config</code> (no Postgres table).
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;text-transform:none;letter-spacing:0;">
+      <input type="checkbox" id="dryRunCheck" checked>
+      <span style="font-size:13px;font-weight:600;">Dry run — count local rows only (no writes)</span>
+    </label>
+    <button type="button" class="btn btn-primary" id="migrateBtn" onclick="runMigration()" disabled>Run full migration</button>
+    <div id="migrateResult" style="display:none;margin-top:16px;">
+      <dl class="migrate-grid" id="resultGrid"></dl>
+      <p id="resultErrors" style="margin-top:12px;font-size:12px;color:#b91c1c;display:none;"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Step 4 — Switch Pulse to Supabase</h2>
+    <div class="info">
+      Edit <code>pulse-config.local.js</code>: real URL + anon key, then<br>
+      <code>window.PULSE_STORAGE_BACKEND = 'supabase';</code><br>
+      Hard-refresh Dashboard — console: <strong>Storage backend: Supabase</strong>.
+    </div>
+    <a href="dashboard.html" class="btn btn-gray" style="display:inline-block;text-decoration:none;">Open Dashboard</a>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div class="status-box" id="logBox">Ready.</div>
+  </div>
+</div>
+
+<script>
+let _connected = false;
+
+async function _waitForSupabaseClient(ms = 15000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const c = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (c) return c;
+    await new Promise(r => setTimeout(r, 80));
+  }
+  throw new Error('Supabase client not ready — check URL/key and hard-refresh.');
+}
+
+function _log(msg) {
+  const box = document.getElementById('logBox');
+  const ts = new Date().toLocaleTimeString();
+  box.textContent += '\n[' + ts + '] ' + msg;
+  box.scrollTop = box.scrollHeight;
+}
+
+function applyConfigFromForm() {
+  window.PULSE_SUPABASE_URL = document.getElementById('supaUrl').value.trim();
+  window.PULSE_SUPABASE_ANON_KEY = document.getElementById('supaKey').value.trim();
+}
+
+function prefillFromPulseConfig() {
+  if (window.PULSE_SUPABASE_URL && !/YOUR-PROJECT/i.test(window.PULSE_SUPABASE_URL)) {
+    document.getElementById('supaUrl').value = window.PULSE_SUPABASE_URL;
+  }
+  if (window.PULSE_SUPABASE_ANON_KEY && !/YOUR-ANON/i.test(window.PULSE_SUPABASE_ANON_KEY)) {
+    document.getElementById('supaKey').value = window.PULSE_SUPABASE_ANON_KEY;
+  }
+}
+
+async function connectToSupabase() {
+  applyConfigFromForm();
+  const url = window.PULSE_SUPABASE_URL;
+  const key = window.PULSE_SUPABASE_ANON_KEY;
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPassword').value;
+
+  if (!url || !key) {
+    _log('ERROR: URL and anon key required.');
+    return;
+  }
+  if (!key.startsWith('eyJ')) {
+    _log('ERROR: Anon key should start with eyJ (use anon public key, not service role).');
+    alert('Use the anon public key from Supabase Settings → API (starts with eyJ).');
+    return;
+  }
+
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true;
+  btn.textContent = 'Connecting…';
+  document.getElementById('connectStatus').textContent = '';
+
+  try {
+    const supa = await _waitForSupabaseClient();
+
+    if (email && pass) {
+      if (typeof window.supabaseSignIn !== 'function') {
+        throw new Error('supabaseSignIn not loaded — check supabase-client.js');
+      }
+      await window.supabaseSignIn(email, pass);
+      _log('Authenticated: ' + email);
+    } else {
+      _log('WARNING: No email/password — RLS may block inserts.');
+    }
+
+    const { count, error } = await supa.from('orders').select('*', { count: 'exact', head: true });
+    if (error) throw error;
+
+    _connected = true;
+    document.getElementById('connectStatus').textContent = 'Connected (cloud orders: ' + (count ?? 0) + ')';
+    document.getElementById('connectStatus').style.color = '#16a34a';
+    document.getElementById('inspectBtn').disabled = false;
+    document.getElementById('migrateBtn').disabled = false;
+    btn.textContent = 'Connected';
+    _log('Supabase OK. Sign in as admin for config/dies/organisation writes.');
+
+    if (typeof window.migratePulseDataToSupabase !== 'function') {
+      _log('WARNING: migratePulseDataToSupabase not loaded — hard-refresh.');
+    }
+  } catch (e) {
+    _log('ERROR: ' + (e.message || e));
+    document.getElementById('connectStatus').textContent = e.message || String(e);
+    document.getElementById('connectStatus').style.color = '#dc2626';
+    btn.disabled = false;
+    btn.textContent = 'Connect & verify';
+    _connected = false;
+  }
+}
+
+function _idbStoreCount(storeName) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('BazaarPrintDB');
+    req.onsuccess = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.close();
+        resolve(0);
+        return;
+      }
+      const tx = db.transaction(storeName, 'readonly');
+      const c = tx.objectStore(storeName).count();
+      c.onsuccess = () => resolve(c.result || 0);
+      c.onerror = () => reject(c.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function _localDataSummary() {
+  const stores = [
+    'personnel', 'dies', 'orders', 'activity_log', 'reprints', 'devices',
+    'invoices', 'operator_sessions', 'operator_points', 'knowledge_base', 'config',
+  ];
+  const counts = {};
+  for (const s of stores) {
+    try { counts[s] = await _idbStoreCount(s); } catch (_) { counts[s] = 0; }
+  }
+  let orgFacilities = 0;
+  let orgHardware = 0;
+  try {
+    const raw = localStorage.getItem('pulse_organisation_bundle_v1');
+    if (raw) {
+      const b = JSON.parse(raw);
+      orgFacilities = (b.facilities || []).length;
+      const hw = b.hardwareByFacilityId || {};
+      orgHardware = Object.values(hw).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+    }
+  } catch (_) {}
+  let workflows = 0;
+  let products = 0;
+  try {
+    if (typeof getAllProductWorkflows === 'function') {
+      workflows = (await getAllProductWorkflows()).length;
+    }
+  } catch (_) {}
+  try {
+    if (typeof getConfig === 'function') {
+      const prods = await getConfig('productCatalog');
+      products = Array.isArray(prods?.value) ? prods.value.length : 0;
+    }
+  } catch (_) {}
+  return { counts, orgFacilities, orgHardware, workflows, products };
+}
+
+function _renderInspectGrid(summary) {
+  const grid = document.getElementById('inspectGrid');
+  const c = summary.counts;
+  const rows = [
+    ['👥 Personnel', c.personnel],
+    ['🔧 Dies', c.dies],
+    ['Organisation facilities', summary.orgFacilities],
+    ['Organisation hardware', summary.orgHardware],
+    ['🗂 Products (config)', summary.products],
+    ['🔀 Workflows', summary.workflows],
+    ['Orders', c.orders],
+    ['Activity log', c.activity_log],
+    ['Reprints', c.reprints],
+    ['Devices (config)', c.devices],
+    ['Invoices', c.invoices],
+    ['Operator sessions', c.operator_sessions],
+    ['Operator points', c.operator_points],
+    ['Knowledge base', c.knowledge_base],
+    ['Config keys', c.config],
+  ];
+  grid.innerHTML = rows.map(([label, n]) =>
+    '<dt>' + label + '</dt><dd>' + n + '</dd>'
+  ).join('');
+  grid.style.display = 'grid';
+}
+
+async function inspectLocalData() {
+  try {
+    const summary = await _localDataSummary();
+    const total = summary.counts.personnel + summary.counts.dies + summary.counts.orders +
+      summary.orgFacilities + summary.products + summary.workflows;
+    const el = document.getElementById('inspectResult');
+    if (!total) {
+      el.innerHTML = '<strong style="color:#b45309">No data</strong> on this URL. Import backup JSON from Admin → Export.';
+    } else {
+      el.innerHTML = '<strong style="color:#16a34a">Ready to migrate</strong> — review counts below.';
+    }
+    _renderInspectGrid(summary);
+    _log('Local inspect @ ' + location.origin + ' — personnel: ' + summary.counts.personnel +
+      ', products: ' + summary.products + ', workflows: ' + summary.workflows +
+      ', orders: ' + summary.counts.orders);
+  } catch (e) {
+    _log('ERROR opening IndexedDB: ' + (e.message || e));
+  }
+}
+
+async function importBackupJson(file) {
+  if (!file) return;
+  if (typeof importPulseFullBackup !== 'function') {
+    _log('ERROR: importPulseFullBackup not loaded — check shared.js.');
+    alert('importPulseFullBackup missing. Hard-refresh the page.');
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(await file.text());
+  } catch (e) {
+    alert('Invalid JSON: ' + (e.message || e));
+    return;
+  }
+
+  const valid = typeof isPulseBackupPayload === 'function'
+    ? isPulseBackupPayload(parsed)
+    : !!(parsed?.indexedDB || parsed?.admin || parsed?.schemaVersion >= 2 || parsed?.orders);
+  if (!valid) {
+    alert('Unrecognized backup file. Export from Admin → Export JSON (schema v4).');
+    return;
+  }
+
+  if (!confirm('Import backup into IndexedDB on this URL?\n\nMode: merge (add/update, does not wipe existing stores first).')) {
+    return;
+  }
+
+  try {
+    const a = parsed.admin || {};
+    _log('Importing ' + file.name + ' — personnel: ' + (a.personnel?.length || 0) +
+      ', workflows: ' + (a.productWorkflows?.length || parsed.productWorkflows?.length || 0) +
+      ', products: ' + (a.products?.products?.length || parsed.catalog?.products?.length || 0));
+
+    const result = await importPulseFullBackup(parsed, { mode: 'merge' });
+    const orderN = result?.counts?.orders ?? parsed?.indexedDB?.orders?.length ?? parsed?.orders?.length ?? 0;
+    _log('Import done — orders in IDB: ' + orderN + ', stores: ' + JSON.stringify(result?.counts || {}));
+    if (a.organisation) _log('Organisation bundle saved to localStorage.');
+    await inspectLocalData();
+  } catch (e) {
+    console.error(e);
+    _log('Import ERROR: ' + (e.message || e));
+    alert('Import failed: ' + (e.message || e));
+  }
+}
+
+function _renderResultGrid(counts, errors) {
+  const grid = document.getElementById('resultGrid');
+  const c = counts || {};
+  const ord = c.orders || {};
+  const rows = [
+    ['Config keys', c.config],
+    ['👥 Personnel', c.personnel],
+    ['⚙️ Machines', c.machines],
+    ['🔀 Product workflows', c.productWorkflows],
+    ['Organisation', c.organisation],
+    ['Org facilities', c.organisationFacilities],
+    ['Org hardware', c.organisationHardware],
+    ['🔧 Dies', c.dies],
+    ['Knowledge base', c.knowledge_base],
+    ['Operator sessions', c.operator_sessions],
+    ['Operator points', c.operator_points],
+    ['Invoices', c.invoices],
+    ['Orders inserted', ord.inserted],
+    ['Orders skipped', ord.skipped],
+    ['Activity log', c.activity_log],
+    ['Devices (config)', c.devices],
+    ['Reprints (config)', c.reprints],
+  ];
+  grid.innerHTML = rows.map(([label, n]) =>
+    '<dt>' + label + '</dt><dd>' + (n ?? '—') + '</dd>'
+  ).join('');
+  const errEl = document.getElementById('resultErrors');
+  if (errors?.length) {
+    errEl.style.display = 'block';
+    errEl.textContent = errors.slice(0, 8).map(e =>
+      (e.phase || '?') + ': ' + (e.item || '') + ' — ' + (e.error || e.message)
+    ).join('\n');
+  } else {
+    errEl.style.display = 'none';
+  }
+}
+
+async function runMigration() {
+  if (!_connected) {
+    alert('Connect first (Step 1).');
+    return;
+  }
+
+  applyConfigFromForm();
+
+  const fn = window.migratePulseDataToSupabase || window.migrateIndexedDBToSupabase;
+  if (typeof fn !== 'function') {
+    alert('Migration API not loaded. Hard-refresh the page.');
+    return;
+  }
+
+  const dryRun = document.getElementById('dryRunCheck').checked;
+  document.getElementById('migrateBtn').disabled = true;
+  _log(dryRun ? '--- DRY RUN (local counts) ---' : '--- LIVE: full migration ---');
+
+  try {
+    const summary = await _localDataSummary();
+    const hasData = summary.counts.personnel + summary.counts.dies + summary.counts.orders +
+      summary.orgFacilities + summary.products + summary.workflows + summary.counts.config;
+    if (!hasData) {
+      alert('No local data. Import backup JSON in Step 2 first.');
+      document.getElementById('migrateBtn').disabled = false;
+      return;
+    }
+
+    if (dryRun) {
+      document.getElementById('migrateResult').style.display = 'block';
+      _renderResultGrid({
+        config: summary.counts.config,
+        personnel: summary.counts.personnel,
+        dies: summary.counts.dies,
+        productWorkflows: summary.workflows,
+        organisationFacilities: summary.orgFacilities,
+        organisationHardware: summary.orgHardware,
+        knowledge_base: summary.counts.knowledge_base,
+        operator_sessions: summary.counts.operator_sessions,
+        operator_points: summary.counts.operator_points,
+        invoices: summary.counts.invoices,
+        orders: { inserted: '(dry)', skipped: summary.counts.orders },
+        activity_log: summary.counts.activity_log,
+        devices: summary.counts.devices,
+        reprints: summary.counts.reprints,
+      }, []);
+      _log('Dry run complete — uncheck box and Run full migration to write to Supabase.');
+      document.getElementById('migrateBtn').disabled = false;
+      return;
+    }
+
+    if (!confirm('Push all admin + production data from this browser to Supabase?\n\nSign in as admin. Safe to re-run (upserts / skips duplicates).')) {
+      document.getElementById('migrateBtn').disabled = false;
+      return;
+    }
+
+    const report = await fn(({ phase, total, done, current }) => {
+      if (phase) _log('Phase: ' + phase + (current ? ' #' + current : '') +
+        (total != null ? ' (' + (done ?? 0) + '/' + total + ')' : ''));
+    });
+
+    document.getElementById('migrateResult').style.display = 'block';
+    _renderResultGrid(report.counts, report.errors);
+    _log('Migration finished. Errors: ' + (report.errors?.length || 0));
+    report.errors?.slice(0, 12).forEach(e => _log('  ERR ' + (e.phase || '') + ' ' + (e.item || '') + ': ' + (e.error || '')));
+  } catch (e) {
+    _log('ERROR: ' + (e.message || e));
+    alert('Migration failed: ' + (e.message || e));
+  }
+
+  document.getElementById('migrateBtn').disabled = false;
+}
+
+const originText = location.origin || '(unknown)';
+document.getElementById('pageOrigin').textContent = originText;
+document.getElementById('pageOriginTop').textContent = originText;
+
+document.getElementById('backupFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) importBackupJson(f);
+  e.target.value = '';
+});
+
+prefillFromPulseConfig();
+_log('Page origin: ' + originText + ' — import → IndexedDB, then Run full migration → Supabase.');
+if (window.PULSE_SUPABASE_URL && !/YOUR-PROJECT/i.test(window.PULSE_SUPABASE_URL)) {
+  _log('Prefilled URL from pulse-config.local.js');
+}
+</script>
+</body>
+</html>

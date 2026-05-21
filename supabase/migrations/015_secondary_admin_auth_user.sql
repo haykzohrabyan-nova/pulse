@@ -1,9 +1,9 @@
--- Alternate admin account (shared temp password with 008 seed until rotated).
--- Idempotent for DBs that already ran 008 before admin@ was added to the batch insert.
+-- Force Postgres to check extensions schema for crypto tools natively
+SELECT set_config('search_path', 'public,extensions,auth', false);
+
 INSERT INTO auth.users (
   instance_id, id, aud, role, email,
   encrypted_password,
-  email_confirmed_at, confirmed_at,
   raw_app_meta_data, raw_user_meta_data,
   is_super_admin,
   created_at, updated_at,
@@ -18,10 +18,8 @@ VALUES (
   'authenticated', 'authenticated',
   'admin@bazaar-admin.com',
   crypt('Pulse2026!', gen_salt('bf')),
-  NOW(), NOW(),
   '{"provider":"email","providers":["email"]}',
   '{"display_name":"Admin","role":"admin"}',
   FALSE, NOW(), NOW(),
   '', '', '', '', NULL, NULL, '', '', '', 0, NULL, ''
-)
-ON CONFLICT (email) DO NOTHING;
+);
