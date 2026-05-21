@@ -17,7 +17,7 @@ CREATE TYPE packaging_category AS ENUM (
   'Pouches',
   'Cartons',
   'Other'
-);
+ );
 
 -- ---------------------------------------------------------------------------
 -- TABLE: packaging_products

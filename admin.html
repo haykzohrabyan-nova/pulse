@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
-  <script src="shared.js?v=20260520-BACKUP2"></script>
+  <script src="shared.js?v=20260521-BACKUP4"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
-  <script src="auth.js?v=20260520-BACKUP2"></script>
+  <script src="supabase-client.js?v=20260521-PWCFG3"></script>
+  <script src="auth.js?v=20260521-SUPASESS2"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -26,6 +26,8 @@
     <button class="tab-btn" data-tab="products" onclick="switchTab('products')">🗂 Products</button>
     <button class="tab-btn" data-tab="product-workflows" onclick="switchTab('product-workflows')">🔀 Product Workflow Configuration</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
+    <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
+    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="tab-btn" data-tab="backup" onclick="switchTab('backup')">💾 Export / Import</button>
   </div>
 
@@ -251,7 +253,7 @@
       <div class="pane-header">
         <div>
           <h2>💾 Export / Import JSON</h2>
-          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Back up or restore Pulse data and configuration from every Admin tab except <strong>Quote</strong> and <strong>Payment</strong>.</p>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Exports an <code>admin</code> JSON block (Personnel, Machines, Dies, Organisation, Products, Workflows, Roles) plus production data. Use for migration to Supabase. Quote &amp; Payment excluded.</p>
         </div>
       </div>
       <div class="backup-page-layout">
@@ -271,14 +273,13 @@
           <div id="backupSummary" class="backup-summary">Loading…</div>
         </div>
         <div class="card backup-includes-card">
-          <h3 class="settings-section-title">Included Admin tabs</h3>
-          <ul id="backupIncludedTabs" class="backup-tab-list backup-tab-list-included"></ul>
+          <h3 class="settings-section-title">Migration Admin tabs (<code>admin</code> in JSON)</h3>
+          <ul id="backupMigrationTabs" class="backup-tab-list backup-tab-list-included"></ul>
+          <h3 class="settings-section-title" style="margin-top:16px;">Production data (<code>indexedDB</code>)</h3>
+          <ul id="backupProductionData" class="backup-tab-list backup-tab-list-included"></ul>
           <h3 class="settings-section-title" style="margin-top:16px;">Not included</h3>
-          <ul class="backup-tab-list backup-tab-list-excluded">
-            <li>💬 Quote</li>
-            <li>💳 Payment</li>
-          </ul>
-          <p class="settings-help" style="margin-top:12px;">Also includes production orders, activity, invoices, and operator data used across Pulse. Login sessions are never imported. Cloud/Supabase rows are separate.</p>
+          <ul id="backupExcludedTabs" class="backup-tab-list backup-tab-list-excluded"></ul>
+          <p class="settings-help" style="margin-top:12px;">Import restores workflows to Supabase when cloud mode is on. Sign in before import. QA Rules and Settings stay in this browser only (see below).</p>
         </div>
       </div>
     </div>
@@ -317,13 +318,6 @@
           <div class="field">
             <label>Default QC Inspector</label>
             <input type="text" id="defaultQCInspector" placeholder="Name" onchange="saveSettingDebounced()">
-          </div>
-        </div>
-        <div class="card settings-card">
-          <h3 class="settings-section-title">Database maintenance</h3>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <button type="button" class="btn" onclick="exportAllData()">📤 Export data only (legacy JSON)</button>
-            <button type="button" class="btn btn-danger" onclick="clearDatabase()">🗑 Clear Database (Danger!)</button>
           </div>
         </div>
       </div>
@@ -1335,7 +1329,7 @@ MATERIALS.forEach(g => {
 // ── Active Tab ────────────────────────────────────────────
 const ADMIN_TAB_IDS = [
   'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
-  'products', 'product-workflows', 'roles', 'backup',
+  'products', 'product-workflows', 'roles', 'qa-rules', 'settings', 'backup',
 ];
 
 function getAdminTabFromUrl() {
@@ -1634,6 +1628,8 @@ const ROLES_ADMIN_TABS = [
   { key: 'products', label: 'Products' },
   { key: 'product-workflows', label: 'Workflow Config' },
   { key: 'roles', label: 'Roles' },
+  { key: 'qa-rules', label: 'QA Rules' },
+  { key: 'settings', label: 'Settings' },
   { key: 'backup', label: 'Export / Import' },
 ];
 
@@ -2024,7 +2020,20 @@ async function recoverCatalogIfNeeded() {
   }
 }
 
+async function waitForSupabaseSession() {
+  if (window.PULSE_STORAGE_BACKEND !== 'supabase' || typeof window.supabaseGetSession !== 'function') {
+    return;
+  }
+  for (let i = 0; i < 150; i++) {
+    const session = await window.supabaseGetSession();
+    if (session) return;
+    if (!document.getElementById('loginOverlay')) return;
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  await waitForSupabaseSession();
   await recoverCatalogIfNeeded();
   await loadCustomRoles();
   await seedKnowledge();
@@ -2035,6 +2044,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadTab(activeTab);
   }
   onDBUpdate(async (data) => { await loadTab(activeTab); });
+  window.addEventListener('pulse:auth-ready', async () => {
+    await recoverCatalogIfNeeded();
+    await loadTab(activeTab);
+  });
   // Update app dept total when inputs change
   ['appDeptPeople', 'appDeptUnitsPerPerson'].forEach(id => {
     const el = document.getElementById(id);
@@ -3039,13 +3052,36 @@ async function loadBackupTab() {
   await renderBackupSummaryPanel();
 }
 
+const BACKUP_PRODUCTION_STORE_LABELS = [
+  { key: 'orders', label: 'Orders' },
+  { key: 'activity_log', label: 'Activity log' },
+  { key: 'reprints', label: 'Reprints' },
+  { key: 'devices', label: 'Devices' },
+  { key: 'invoices', label: 'Invoices' },
+  { key: 'operator_sessions', label: 'Operator sessions' },
+  { key: 'operator_points', label: 'Operator points' },
+  { key: 'knowledge_base', label: 'Knowledge base (IndexedDB)' },
+];
+
 function renderBackupIncludedTabsList() {
-  const el = document.getElementById('backupIncludedTabs');
-  if (!el) return;
-  const tabs = typeof PULSE_ADMIN_BACKUP_TABS !== 'undefined'
-    ? PULSE_ADMIN_BACKUP_TABS
-    : Object.keys(BACKUP_ADMIN_TAB_LABELS);
-  el.innerHTML = tabs.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
+  const migEl = document.getElementById('backupMigrationTabs');
+  const prodEl = document.getElementById('backupProductionData');
+  const exclEl = document.getElementById('backupExcludedTabs');
+  const migTabs = typeof PULSE_MIGRATION_ADMIN_TABS !== 'undefined'
+    ? PULSE_MIGRATION_ADMIN_TABS
+    : ['personnel', 'machines', 'dies', 'organisation', 'products', 'product-workflows', 'roles'];
+  if (migEl) {
+    migEl.innerHTML = migTabs.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
+  }
+  if (prodEl) {
+    prodEl.innerHTML = BACKUP_PRODUCTION_STORE_LABELS.map(s => `<li>${s.label}</li>`).join('');
+  }
+  if (exclEl) {
+    const excluded = typeof PULSE_ADMIN_BACKUP_EXCLUDED_TABS !== 'undefined'
+      ? PULSE_ADMIN_BACKUP_EXCLUDED_TABS
+      : ['payment', 'crm-quote', 'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings'];
+    exclEl.innerHTML = excluded.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
+  }
 }
 
 function renderBackupSummaryHtml(summary) {
@@ -3053,14 +3089,17 @@ function renderBackupSummaryHtml(summary) {
   const idb = summary.indexedDB || {};
   const lines = [
     `<strong>${idb.orders ?? 0}</strong> orders`,
-    `<strong>${idb.personnel ?? 0}</strong> personnel`,
-    `<strong>${idb.dies ?? 0}</strong> dies`,
-    `<strong>${idb.inventory ?? 0}</strong> inventory items`,
-    `<strong>${summary.configCount ?? 0}</strong> config entries`,
-    summary.organisation
-      ? `<strong>${summary.facilities ?? 0}</strong> organisation facilities`
+    `<strong>${summary.personnel ?? idb.personnel ?? 0}</strong> personnel`,
+    `<strong>${summary.dies ?? idb.dies ?? 0}</strong> dies`,
+    `<strong>${summary.catalogProducts ?? 0}</strong> products`,
+    `<strong>${summary.productWorkflows ?? 0}</strong> workflows`,
+    `<strong>${summary.machinesRegistry ?? 0}</strong> machines`,
+    `<strong>${summary.roles ?? 0}</strong> roles`,
+    summary.organisationFacilities
+      ? `<strong>${summary.organisationFacilities}</strong> org facilities`
       : 'no organisation bundle',
-    `<strong>${summary.localStorageKeys ?? 0}</strong> local settings keys`,
+    `<strong>${idb.activity_log ?? 0}</strong> activity`,
+    `<strong>${idb.reprints ?? 0}</strong> reprints`,
   ];
   return `<div class="backup-summary-grid">${lines.map(t => `<span>${t}</span>`).join('')}</div>`;
 }
@@ -3102,9 +3141,9 @@ async function exportPulseFullBackupAdmin() {
     if (typeof showPageToast === 'function') {
       const s = payload.summary || {};
       showPageToast(
-        `Exported backup — ${s.orders ?? 0} orders, ${s.catalogProducts ?? 0} products, ${s.configEntries ?? 0} config entries.`,
+        `Exported — admin block: ${s.personnel ?? 0} personnel, ${s.productWorkflows ?? 0} workflows, ${s.catalogProducts ?? 0} products; ${s.orders ?? 0} orders.`,
         'success',
-        5000
+        6000
       );
     }
   } catch (e) {
@@ -3125,9 +3164,10 @@ async function importPulseFullBackupAdmin(input) {
     return;
   }
   const mode = document.getElementById('pulseImportMode')?.value || 'replace';
-  const isFull = !!(parsed?.indexedDB || parsed?.schemaVersion >= 2);
-  const isLegacy = !!(parsed?.orders && !parsed?.indexedDB);
-  if (!isFull && !isLegacy) {
+  const isValid = typeof isPulseBackupPayload === 'function'
+    ? isPulseBackupPayload(parsed)
+    : !!(parsed?.indexedDB || parsed?.admin || parsed?.schemaVersion >= 2 || (parsed?.orders && !parsed?.indexedDB));
+  if (!isValid) {
     alert('Unrecognized backup file. Use a Pulse full backup JSON from Export full backup, or a legacy export with orders.');
     return;
   }
@@ -3171,52 +3211,6 @@ async function doSaveSettings() {
   await setConfig('defaultFacility', document.getElementById('defaultFacility').value);
   await setConfig('defaultQCInspector', document.getElementById('defaultQCInspector').value.trim());
   updateAppDeptTotal();
-}
-
-async function exportAllData() {
-  if (typeof buildPulseFullBackup === 'function' && typeof downloadPulseBackupFile === 'function') {
-    return exportPulseFullBackupAdmin();
-  }
-  const data = {
-    orders: await getAllOrders(),
-    personnel: await getAllPersonnel(),
-    dies: await getAllDies(),
-    inventory: await getAllInventory(),
-    purchaseOrders: await getAllPurchaseOrders(),
-    knowledge: await getAllKnowledge(),
-    reprints: await getAllReprints(),
-    activity: [],
-    exportedAt: new Date().toISOString(),
-  };
-  downloadPulseBackupFile?.(data, `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`)
-    || (() => {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    })();
-}
-
-async function clearDatabase() {
-  if (!confirm('⚠️ This will permanently delete ALL production data including orders, personnel, dies, and inventory. Are you absolutely sure?')) return;
-  if (!confirm('FINAL WARNING: All data will be lost. Type OK to confirm.')) return;
-  // Clear all object stores
-  const db = await openDB();
-  const stores = typeof PULSE_BACKUP_STORES !== 'undefined' ? [...PULSE_BACKUP_STORES, 'config']
-    : ['orders', 'personnel', 'devices', 'activity_log', 'config', 'knowledge_base', 'reprints', 'dies', 'inventory', 'purchase_orders', 'invoices', 'operator_sessions', 'operator_points'];
-  for (const store of stores) {
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readwrite');
-      const req = tx.objectStore(store).clear();
-      req.onsuccess = resolve;
-      req.onerror = reject;
-    });
-  }
-  alert('Database cleared.');
-  await loadTab(activeTab);
 }
 
 // ── Product Catalogue ──────────────────────────────────────
@@ -4237,8 +4231,18 @@ async function loadProductWorkflowsTab() {
     if (typeof syncPulseMachineryFromOrganisation === 'function') {
       syncPulseMachineryFromOrganisation();
     }
+    if (typeof repairPulseAdminCatalog === 'function') {
+      const repaired = await repairPulseAdminCatalog();
+      if (repaired?.products?.length) catProducts = repaired.products;
+    }
     await ensureCatProductsForPw();
     if (!Array.isArray(catProducts)) catProducts = [];
+    if (!catProducts.length) {
+      if (listEl) {
+        listEl.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">No products in catalogue. Open <strong>Products</strong> tab first, or click ↺ Reset All Workflows after catalogue loads.</div>';
+      }
+      return;
+    }
     pwMachines = typeof getAllMachines === 'function' ? await getAllMachines() : [];
     pwEnsureMachines();
     if (typeof seedProductWorkflowsFromDefaults === 'function') {
@@ -4246,9 +4250,14 @@ async function loadProductWorkflowsTab() {
         const seed = await seedProductWorkflowsFromDefaults(catProducts);
         if (seed?.seeded > 0 && typeof showPageToast === 'function') {
           showPageToast(`Seeded ${seed.seeded} product workflow(s) from defaults.`, 'success');
+        } else if (seed?.error && typeof showPageToast === 'function') {
+          showPageToast('Could not seed workflows: ' + seed.error, 'error');
         }
       } catch (seedErr) {
         console.warn('[Product Workflows] Seed skipped:', seedErr);
+        if (typeof showPageToast === 'function') {
+          showPageToast('Workflow seed failed: ' + (seedErr.message || seedErr), 'error');
+        }
       }
     }
     const workflows = typeof getAllProductWorkflows === 'function' ? await getAllProductWorkflows() : [];

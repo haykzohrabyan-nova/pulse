@@ -8,6 +8,15 @@
 -- ---------------------------------------------------------------------------
 -- ENUMS
 -- ---------------------------------------------------------------------------
+-- Create core timing synchronization function at the very top
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE TYPE user_role AS ENUM (
   'admin',
@@ -363,9 +372,12 @@ CREATE TABLE machines (
 
 CREATE INDEX machines_facility_idx ON machines(facility);
 
+-- Clean up any existing trigger definition before recreating it
+DROP TRIGGER IF EXISTS machines_updated_at ON machines;
+
 CREATE TRIGGER machines_updated_at
   BEFORE UPDATE ON machines
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ---------------------------------------------------------------------------
 -- MACHINE ISSUES (Downtime log)

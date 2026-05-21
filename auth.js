@@ -21,7 +21,7 @@ const ROLE_CONFIG = {
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','machines','dies','organisation','payment','crm-quote','products','product-workflows','roles','backup'],
+    adminTabs: ['personnel','machines','dies','organisation','payment','crm-quote','products','product-workflows','roles','qa-rules','settings','backup'],
   },
   supervisor: {
     label: 'Supervisor',

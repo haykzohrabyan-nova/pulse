@@ -7,6 +7,15 @@
 -- ENUMS
 -- ---------------------------------------------------------------------------
 
+-- Ensure the auto-update function exists before creating triggers
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TYPE ig_lead_stage AS ENUM (
   'new',          -- New / Needs Contact
   'reached_out',  -- Called / Reached Out

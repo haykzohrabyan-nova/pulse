@@ -19,12 +19,15 @@
   const SUPA_URL     = window.PULSE_SUPABASE_URL     || '';
   const SUPA_KEY     = window.PULSE_SUPABASE_ANON_KEY || '';
   const BACKEND      = window.PULSE_STORAGE_BACKEND   || 'indexeddb';
+  const MIGRATE_TOOL = !!window.PULSE_MIGRATE_TOOL;
 
   const hasPlaceholderConfig =
     /YOUR-PROJECT-REF/i.test(SUPA_URL) ||
     /YOUR-ANON-KEY/i.test(SUPA_KEY);
 
-  if (BACKEND !== 'supabase' || !SUPA_URL || !SUPA_KEY || hasPlaceholderConfig) {
+  const useSupabaseClient = (BACKEND === 'supabase' || MIGRATE_TOOL) && SUPA_URL && SUPA_KEY && !hasPlaceholderConfig;
+
+  if (!useSupabaseClient) {
     if (BACKEND === 'supabase' && hasPlaceholderConfig) {
       console.warn('[Pulse] Supabase config has placeholder values; using IndexedDB instead.');
     }
@@ -32,7 +35,11 @@
     return; // No-op — IndexedDB functions remain active
   }
 
-  console.log('[Pulse] Storage backend: Supabase →', SUPA_URL);
+  if (MIGRATE_TOOL) {
+    console.log('[Pulse] Migrate tool: Supabase client for auth + order copy (local data stays in IndexedDB)');
+  } else {
+    console.log('[Pulse] Storage backend: Supabase →', SUPA_URL);
+  }
 
   // ── Supabase client init (lazy, with CDN auto-load) ─────────
   let _client = null;
@@ -704,7 +711,11 @@
   window.supabaseGetProfile = _getCurrentProfile;
 
   // ── Override global functions from shared.js ─────────────────
-  // Each override falls back to IndexedDB if Supabase client is unavailable.
+  // Skipped on migrate-to-supabase.html so backup import writes to IndexedDB.
+
+  if (MIGRATE_TOOL) {
+    // migrateIndexedDBToSupabase only — registered below after internal helpers exist
+  } else {
 
   const _origGetAllOrders       = window.getAllOrders;
   const _origGetOrder           = window.getOrder;
@@ -714,6 +725,67 @@
   const _origGenerateOrderId    = window.generateOrderId;
   const _origGenerateSubTicketId = window.generateSubTicketId;
   const _origGetSubTickets      = window.getSubTickets;
+  const _origGetConfig        = window.getConfig;
+  const _origSetConfig        = window.setConfig;
+  const _origGetAllConfigEntries = window.getAllConfigEntries;
+  const _origGetAllPersonnel    = window.getAllPersonnel;
+
+  async function _supaGetConfig(key) {
+    const supa = await _getClient();
+    const { data, error } = await supa.from('config').select('*').eq('key', key).maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+
+  async function _supaSetConfig(key, value) {
+    const supa = await _getClient();
+    const { error } = await supa.from('config').upsert(
+      { key, value },
+      { onConflict: 'key' }
+    );
+    if (error) throw error;
+  }
+
+  async function _supaGetAllConfigEntries() {
+    const supa = await _getClient();
+    const { data, error } = await supa.from('config').select('*');
+    if (error) throw error;
+    return data || [];
+  }
+
+  window.getConfig = async function (key) {
+    try { return await _supaGetConfig(key); }
+    catch (e) {
+      console.error('[Pulse/Supabase] getConfig:', e);
+      return _origGetConfig ? _origGetConfig(key) : null;
+    }
+  };
+
+  window.setConfig = async function (key, value) {
+    try { return await _supaSetConfig(key, value); }
+    catch (e) {
+      console.error('[Pulse/Supabase] setConfig:', e);
+      return _origSetConfig ? _origSetConfig(key, value) : null;
+    }
+  };
+
+  window.getAllConfigEntries = async function () {
+    try { return await _supaGetAllConfigEntries(); }
+    catch (e) {
+      console.error('[Pulse/Supabase] getAllConfigEntries:', e);
+      return _origGetAllConfigEntries ? _origGetAllConfigEntries() : [];
+    }
+  };
+
+  window.getAllPersonnel = async function () {
+    try {
+      const rec = await _supaGetConfig('personnel');
+      if (rec?.value && Array.isArray(rec.value) && rec.value.length) return rec.value;
+    } catch (e) {
+      console.error('[Pulse/Supabase] getAllPersonnel:', e);
+    }
+    return _origGetAllPersonnel ? _origGetAllPersonnel() : [];
+  };
 
   window.getAllOrders = async function () {
     try { return await _getAllOrders(); }
@@ -774,90 +846,528 @@
   window.getOrderComments = _getOrderComments;
   window.addOrderComment  = _addOrderComment;
 
-  // ── Migration helper: export IndexedDB → Supabase ────────────
+  } // end !MIGRATE_TOOL CRUD overrides
 
-  /**
-   * Migrate all existing IndexedDB orders to Supabase.
-   * Skips orders whose order_id already exists in Supabase.
-   * Called from migrate-to-supabase.html.
-   */
-  window.migrateIndexedDBToSupabase = async function (onProgress) {
-    const supa = await _getClient();
-    const report = { inserted: 0, skipped: 0, errors: [] };
+  // ── Migration helper: IndexedDB → Supabase (full admin + production data) ─
 
-    // Get existing order IDs from Supabase
-    const { data: existing } = await supa.from('orders').select('order_id');
-    const existingIds = new Set((existing || []).map(r => r.order_id));
-
-    // Read from IndexedDB using original function
-    let idbOrders = [];
-    try {
-      idbOrders = _origGetAllOrders ? await _origGetAllOrders() : [];
-    } catch (e) {
-      // Direct IndexedDB read if override not available
-      idbOrders = await _readIndexedDBOrders();
-    }
-
-    onProgress?.({ phase: 'reading', total: idbOrders.length, done: 0 });
-
-    for (let i = 0; i < idbOrders.length; i++) {
-      const order = idbOrders[i];
-      onProgress?.({ phase: 'inserting', total: idbOrders.length, done: i, current: order.orderId });
-
-      if (existingIds.has(String(order.orderId))) {
-        report.skipped++;
-        continue;
-      }
-
-      try {
-        await _addOrder(order);
-        // Also migrate activity log for this order
-        const activities = _origGetActivityLog
-          ? await _origGetActivityLog(order.orderId)
-          : await _readIndexedDBActivity(order.orderId);
-        for (const act of (activities || [])) {
-          await _addActivity({ ...act, orderId: order.orderId });
-        }
-        report.inserted++;
-      } catch (e) {
-        report.errors.push({ orderId: order.orderId, error: e.message });
-      }
-    }
-
-    onProgress?.({ phase: 'done', total: idbOrders.length, done: idbOrders.length });
-    return report;
+  const _PULSE_CAT_KEYS = {
+    colorModes: 'catalogColorModes',
+    materials: 'catalogMaterials',
+    finishing: 'catalogFinishing',
+    products: 'productCatalog',
   };
 
-  /** Direct IndexedDB read (bypasses our overrides) */
-  function _readIndexedDBOrders() {
+  function _readIndexedDBStore(storeName) {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open('BazaarPrintDB');
       req.onsuccess = e => {
         const db = e.target.result;
-        const tx = db.transaction('orders', 'readonly');
-        const all = tx.objectStore('orders').getAll();
-        all.onsuccess = () => resolve(all.result);
-        all.onerror  = () => reject(all.error);
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.close();
+          resolve([]);
+          return;
+        }
+        const tx = db.transaction(storeName, 'readonly');
+        const all = tx.objectStore(storeName).getAll();
+        all.onsuccess = () => resolve(all.result || []);
+        all.onerror = () => reject(all.error);
       };
       req.onerror = () => reject(req.error);
     });
   }
 
-  function _readIndexedDBActivity(orderId) {
-    return new Promise((resolve) => {
-      try {
-        const req = indexedDB.open('BazaarPrintDB');
-        req.onsuccess = e => {
-          const db = e.target.result;
-          const tx = db.transaction('activity_log', 'readonly');
-          const idx = tx.objectStore('activity_log').index('orderId');
-          const all = idx.getAll(orderId);
-          all.onsuccess = () => resolve(all.result);
-          all.onerror  = () => resolve([]);
-        };
-        req.onerror = () => resolve([]);
-      } catch (_) { resolve([]); }
+  function _readIndexedDBConfigMap() {
+    return _readIndexedDBStore('config').then(rows => {
+      const out = {};
+      (rows || []).forEach(r => {
+        if (r?.key) out[r.key] = r.value !== undefined ? r.value : r;
+      });
+      return out;
     });
+  }
+
+  function _migratePushError(report, phase, item, err) {
+    const msg = err?.message || String(err);
+    report.errors.push({ phase, item, error: msg });
+  }
+
+  let _migrateProgressCb = null;
+
+  async function _migrateUpsertConfig(supa, report, key, value) {
+    if (value === undefined || value === null) return;
+    const { error } = await supa.from('config').upsert(
+      { key, value },
+      { onConflict: 'key' }
+    );
+    if (error) throw error;
+    report.counts.config = (report.counts.config || 0) + 1;
+  }
+
+  async function _migrateAdminConfig(supa, report) {
+    _migrateProgressCb?.({ phase: 'config' });
+    const cfg = await _readIndexedDBConfigMap();
+    const keys = [
+      _PULSE_CAT_KEYS.colorModes,
+      _PULSE_CAT_KEYS.materials,
+      _PULSE_CAT_KEYS.finishing,
+      _PULSE_CAT_KEYS.products,
+      'machineCapacity',
+      'customRoles',
+    ];
+    for (const key of keys) {
+      if (cfg[key] === undefined) continue;
+      try {
+        await _migrateUpsertConfig(supa, report, key, cfg[key]);
+      } catch (e) {
+        _migratePushError(report, 'config', key, e);
+      }
+    }
+    const personnel = await _readIndexedDBStore('personnel');
+    if (personnel.length) {
+      try {
+        await _migrateUpsertConfig(supa, report, 'personnel', personnel);
+        report.counts.personnel = personnel.length;
+      } catch (e) {
+        _migratePushError(report, 'personnel', 'personnel', e);
+      }
+    }
+    const devices = await _readIndexedDBStore('devices');
+    if (devices.length) {
+      try {
+        await _migrateUpsertConfig(supa, report, 'pulse_devices', devices);
+        report.counts.devices = devices.length;
+      } catch (e) {
+        _migratePushError(report, 'devices', 'pulse_devices', e);
+      }
+    }
+    const reprints = await _readIndexedDBStore('reprints');
+    if (reprints.length) {
+      try {
+        await _migrateUpsertConfig(supa, report, 'pulse_reprints', reprints);
+        report.counts.reprints = reprints.length;
+      } catch (e) {
+        _migratePushError(report, 'reprints', 'pulse_reprints', e);
+      }
+    }
+  }
+
+  async function _migrateMachinesTable(supa, report) {
+    _migrateProgressCb?.({ phase: 'machines' });
+    let machines = [];
+    try {
+      if (typeof window.getAllMachines === 'function') {
+        machines = await window.getAllMachines();
+      }
+    } catch (_) {}
+    if (!machines.length && typeof window !== 'undefined' && typeof window.getPulseOrgMachines === 'function') {
+      try {
+        const raw = localStorage.getItem('pulse_organisation_bundle_v1');
+        const org = raw ? JSON.parse(raw) : null;
+        if (org) machines = window.getPulseOrgMachines(org) || [];
+      } catch (_) {}
+    }
+    for (const m of machines) {
+      if (!m?.id) continue;
+      const row = {
+        id: String(m.id),
+        name: m.name || m.displayName || m.id,
+        display_name: m.displayName || m.name || m.id,
+        facility: m.facility === 'boyd' || m.facility === 'boyd-street' ? 'boyd' : '16th',
+        category: m.category || 'cutting',
+        capabilities: Array.isArray(m.capabilities) ? m.capabilities : [],
+      };
+      try {
+        const { error } = await supa.from('machines').upsert(row, { onConflict: 'id' });
+        if (error) throw error;
+        report.counts.machines = (report.counts.machines || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'machines', row.id, e);
+      }
+    }
+  }
+
+  async function _migrateProductWorkflowsTable(supa, report) {
+    _migrateProgressCb?.({ phase: 'product_workflows' });
+    let workflows = [];
+    try {
+      if (typeof window.getAllProductWorkflows === 'function') {
+        workflows = await window.getAllProductWorkflows();
+      }
+    } catch (_) {}
+    if (!workflows.length) {
+      const cfg = await _readIndexedDBConfigMap();
+      const legacy = cfg.productWorkflows || cfg.product_workflows;
+      if (Array.isArray(legacy)) workflows = legacy;
+    }
+    for (const wf of workflows) {
+      const catalogId = wf.productCatalogId || wf.product_catalog_id;
+      if (!catalogId) continue;
+      const row = {
+        product_catalog_id: catalogId,
+        product_name: wf.productName || wf.product_name || catalogId,
+        primary_facility: (wf.primaryFacility || wf.primary_facility) === 'boyd' ? 'boyd' : '16th',
+        steps: Array.isArray(wf.steps) ? wf.steps : [],
+      };
+      try {
+        const { error } = await supa.from('product_workflows').upsert(row, { onConflict: 'product_catalog_id' });
+        if (error) throw error;
+        report.counts.productWorkflows = (report.counts.productWorkflows || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'product_workflows', wf.productName || catalogId, e);
+      }
+    }
+  }
+
+  async function _migrateOrganisationBundle(supa, report) {
+    _migrateProgressCb?.({ phase: 'organisation' });
+    let bundle = null;
+    try {
+      if (typeof window !== 'undefined' && window.PulseOrgJsonStore?.loadRaw) {
+        bundle = window.PulseOrgJsonStore.loadRaw();
+      }
+    } catch (_) {}
+    if (!bundle) {
+      try {
+        const raw = localStorage.getItem('pulse_organisation_bundle_v1');
+        bundle = raw ? JSON.parse(raw) : null;
+      } catch (_) {}
+    }
+    if (!bundle?.organisation) return;
+
+    const norm = typeof window !== 'undefined' && window.PulseOrgJsonStore?.normalizeBundle
+      ? window.PulseOrgJsonStore.normalizeBundle(bundle)
+      : bundle;
+    const orgMeta = norm.organisation || {};
+
+    let orgId = orgMeta.id;
+    try {
+      const { data: existingOrg } = await supa.from('organisations').select('id').limit(1);
+      if (existingOrg?.length) orgId = existingOrg[0].id;
+      else {
+        const { data: created, error: cErr } = await supa.from('organisations').insert({
+          name: orgMeta.name || 'Bazaar Print',
+          short_description: orgMeta.short_description || orgMeta.shortDescription || '',
+          website_url: orgMeta.website_url || orgMeta.websiteUrl || null,
+          logo_url: orgMeta.logo_url || orgMeta.logoUrl || null,
+        }).select('id').single();
+        if (cErr) throw cErr;
+        orgId = created.id;
+      }
+      const { error: uErr } = await supa.from('organisations').update({
+        name: orgMeta.name || 'Bazaar Print',
+        short_description: orgMeta.short_description || orgMeta.shortDescription || '',
+        website_url: orgMeta.website_url || orgMeta.websiteUrl || null,
+        logo_url: orgMeta.logo_url || orgMeta.logoUrl || null,
+      }).eq('id', orgId);
+      if (uErr) throw uErr;
+      report.counts.organisation = 1;
+    } catch (e) {
+      _migratePushError(report, 'organisation', 'organisations', e);
+      return;
+    }
+
+    const slugToFacId = new Map();
+    for (const fac of norm.facilities || []) {
+      const slug = String(fac.slug || '').trim();
+      if (!slug) continue;
+      const payload = {
+        organisation_id: orgId,
+        slug,
+        name: fac.name || slug,
+        description: fac.description || '',
+        sort_order: fac.sort_order ?? fac.sortOrder ?? 0,
+      };
+      try {
+        const { data: found } = await supa.from('organisation_facilities')
+          .select('id')
+          .eq('organisation_id', orgId)
+          .eq('slug', slug)
+          .maybeSingle();
+        if (found?.id) {
+          const { error } = await supa.from('organisation_facilities').update(payload).eq('id', found.id);
+          if (error) throw error;
+          slugToFacId.set(slug, found.id);
+        } else {
+          const { data: ins, error } = await supa.from('organisation_facilities').insert(payload).select('id').single();
+          if (error) throw error;
+          slugToFacId.set(slug, ins.id);
+        }
+        report.counts.organisationFacilities = (report.counts.organisationFacilities || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'organisation', slug, e);
+      }
+    }
+
+    for (const fac of norm.facilities || []) {
+      const facId = slugToFacId.get(String(fac.slug || '').trim()) || fac.id;
+      const list = norm.hardwareByFacilityId?.[fac.id] || norm.hardwareByFacilityId?.[facId] || [];
+      for (const h of list) {
+        const machineName = h.machine_name || h.machineName;
+        if (!facId || !machineName) continue;
+        try {
+          const { data: exists } = await supa.from('organisation_hardware')
+            .select('id')
+            .eq('facility_id', facId)
+            .eq('machine_name', machineName)
+            .maybeSingle();
+          const hw = {
+            facility_id: facId,
+            machine_name: machineName,
+            operations: Array.isArray(h.operations) ? h.operations : [],
+            daily_capacity_value: h.daily_capacity_value ?? h.dailyCapacity?.value ?? null,
+            daily_capacity_unit: h.daily_capacity_unit || h.dailyCapacity?.unit || null,
+            notes: h.notes || '',
+            sort_order: h.sort_order ?? h.sortOrder ?? 0,
+            active: h.active !== false,
+          };
+          if (exists?.id) {
+            const { error } = await supa.from('organisation_hardware').update(hw).eq('id', exists.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supa.from('organisation_hardware').insert(hw);
+            if (error) throw error;
+          }
+          report.counts.organisationHardware = (report.counts.organisationHardware || 0) + 1;
+        } catch (e) {
+          _migratePushError(report, 'organisation_hardware', machineName, e);
+        }
+      }
+    }
+  }
+
+  async function _migrateDies(supa, report) {
+    _migrateProgressCb?.({ phase: 'dies' });
+    const dies = await _readIndexedDBStore('dies');
+    for (const d of dies) {
+      const dieNumber = String(d.dieNumber || d.die_number || d.n || '').trim();
+      const barcode = String(d.barcode || d.barcodeValue || dieNumber || '').trim();
+      if (!dieNumber || !barcode) continue;
+      const row = {
+        die_number: dieNumber,
+        barcode,
+        customer_name: d.customer || d.customerName || d.customer_name || 'Unknown',
+        machine: d.machine || d.machineName || 'Unknown',
+        description: d.description || d.name || null,
+        condition: d.condition || 'active',
+        usage_count: d.usageCount ?? d.usage_count ?? 0,
+      };
+      try {
+        const { error } = await supa.from('dies').upsert(row, { onConflict: 'die_number' });
+        if (error) throw error;
+        report.counts.dies = (report.counts.dies || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'dies', dieNumber, e);
+      }
+    }
+  }
+
+  async function _migrateKnowledgeBase(supa, report) {
+    _migrateProgressCb?.({ phase: 'knowledge_base' });
+    const rows = await _readIndexedDBStore('knowledge_base');
+    for (const k of rows) {
+      const title = k.title || k.name;
+      if (!title) continue;
+      const row = {
+        machine: k.machine || null,
+        machines: Array.isArray(k.machines) ? k.machines : (k.machine ? [k.machine] : []),
+        material: k.material || null,
+        operation: k.operation || null,
+        title,
+        description: k.description || k.message || '',
+        fix: k.fix || null,
+        severity: k.severity || 'warning',
+        operators: Array.isArray(k.operators) ? k.operators : [],
+        active: k.active !== false,
+      };
+      try {
+        const { error } = await supa.from('knowledge_base').insert(row);
+        if (error) throw error;
+        report.counts.knowledge_base = (report.counts.knowledge_base || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'knowledge_base', title, e);
+      }
+    }
+  }
+
+  async function _migrateOperatorSessions(supa, report) {
+    _migrateProgressCb?.({ phase: 'operator_sessions' });
+    const rows = await _readIndexedDBStore('operator_sessions');
+    for (const s of rows) {
+      if (!s.operatorName && !s.operator_name) continue;
+      const row = {
+        operator_name: s.operatorName || s.operator_name,
+        session_date: s.date || s.session_date || new Date().toISOString().slice(0, 10),
+        clock_in: s.clockIn || s.clock_in || s.startedAt || new Date().toISOString(),
+        clock_out: s.clockOut || s.clock_out || s.endedAt || null,
+        total_work_minutes: s.totalWorkMinutes ?? s.total_work_minutes ?? null,
+        violation_flag: !!s.violationFlag || !!s.violation_flag,
+        points_earned: s.pointsEarned ?? s.points_earned ?? 0,
+        notes: s.notes || null,
+      };
+      try {
+        const { error } = await supa.from('operator_sessions').insert(row);
+        if (error) throw error;
+        report.counts.operator_sessions = (report.counts.operator_sessions || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'operator_sessions', row.operator_name, e);
+      }
+    }
+  }
+
+  async function _migrateOperatorPoints(supa, report) {
+    _migrateProgressCb?.({ phase: 'operator_points' });
+    const rows = await _readIndexedDBStore('operator_points');
+    for (const p of rows) {
+      const row = {
+        operator_name: p.operatorName || p.operator_name || 'Unknown',
+        earned_date: p.date || p.earned_date || new Date().toISOString().slice(0, 10),
+        points: p.points ?? 0,
+        reason: p.reason || p.type || 'import',
+      };
+      try {
+        const { error } = await supa.from('operator_points').insert(row);
+        if (error) throw error;
+        report.counts.operator_points = (report.counts.operator_points || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'operator_points', row.operator_name, e);
+      }
+    }
+  }
+
+  async function _migrateInvoices(supa, report, orderUuidByOrderId) {
+    _migrateProgressCb?.({ phase: 'invoices' });
+    const rows = await _readIndexedDBStore('invoices');
+    for (const inv of rows) {
+      const invNum = String(inv.invoiceNumber || inv.invoice_number || '').trim();
+      if (!invNum) continue;
+      const oid = inv.orderId || inv.order_id;
+      const row = {
+        invoice_number: invNum,
+        order_id: oid ? (orderUuidByOrderId.get(String(oid)) || null) : null,
+        customer_name: inv.customerName || inv.customer_name || inv.customer || 'Unknown',
+        status: inv.status || 'draft',
+        subtotal: inv.subtotal ?? 0,
+        discount: inv.discount ?? 0,
+        tax: inv.tax ?? 0,
+        total: inv.total ?? 0,
+        due_date: inv.dueDate || inv.due_date || null,
+      };
+      try {
+        const { error } = await supa.from('invoices').upsert(row, { onConflict: 'invoice_number' });
+        if (error) throw error;
+        report.counts.invoices = (report.counts.invoices || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'invoices', invNum, e);
+      }
+    }
+  }
+
+  async function _migrateOrders(supa, report, onProgress) {
+    const { data: existing } = await supa.from('orders').select('order_id, id');
+    const existingIds = new Set((existing || []).map(r => r.order_id));
+    const orderUuidByOrderId = new Map((existing || []).map(r => [String(r.order_id), r.id]));
+
+    let idbOrders = [];
+    try {
+      idbOrders = _origGetAllOrders ? await _origGetAllOrders() : await _readIndexedDBStore('orders');
+    } catch (e) {
+      idbOrders = await _readIndexedDBStore('orders');
+    }
+
+    _migrateProgressCb?.({ phase: 'orders', total: idbOrders.length, done: 0 });
+    report.counts.orders = { inserted: 0, skipped: 0 };
+
+    for (let i = 0; i < idbOrders.length; i++) {
+      const order = idbOrders[i];
+      _migrateProgressCb?.({ phase: 'orders', total: idbOrders.length, done: i, current: order.orderId });
+
+      if (existingIds.has(String(order.orderId))) {
+        report.counts.orders.skipped++;
+        continue;
+      }
+
+      try {
+        const created = await _addOrder(order);
+        const uuid = created?.id || created?._supaId;
+        if (uuid) orderUuidByOrderId.set(String(order.orderId), uuid);
+        report.counts.orders.inserted++;
+        existingIds.add(String(order.orderId));
+      } catch (e) {
+        _migratePushError(report, 'orders', order.orderId, e);
+      }
+    }
+
+    const { data: allOrders } = await supa.from('orders').select('order_id, id');
+    (allOrders || []).forEach(r => orderUuidByOrderId.set(String(r.order_id), r.id));
+    return orderUuidByOrderId;
+  }
+
+  async function _migrateActivityLog(supa, report, orderUuidByOrderId) {
+    _migrateProgressCb?.({ phase: 'activity_log' });
+    const rows = await _readIndexedDBStore('activity_log');
+    for (const act of rows) {
+      const oid = act.orderId || act.order_id;
+      const orderUuid = oid ? orderUuidByOrderId.get(String(oid)) : null;
+      const row = {
+        order_id: orderUuid || null,
+        action: act.action || act.type || 'note',
+        details: act.details || act.meta || act.data || {},
+        actor_name: act.user || act.actor || act.actorName || act.actor_name || null,
+      };
+      try {
+        const { error } = await supa.from('activity_log').insert(row);
+        if (error) throw error;
+        report.counts.activity_log = (report.counts.activity_log || 0) + 1;
+      } catch (e) {
+        _migratePushError(report, 'activity_log', oid || '—', e);
+      }
+    }
+  }
+
+  /**
+   * Migrate admin + production IndexedDB data to Supabase.
+   * Called from migrate-to-supabase.html.
+   */
+  window.migratePulseDataToSupabase = async function (progressCb) {
+    _migrateProgressCb = progressCb;
+    const supa = await _getClient();
+    const report = {
+      counts: {},
+      errors: [],
+      // legacy fields for older UI
+      inserted: 0,
+      skipped: 0,
+    };
+
+    await _migrateAdminConfig(supa, report);
+    await _migrateMachinesTable(supa, report);
+    await _migrateProductWorkflowsTable(supa, report);
+    await _migrateOrganisationBundle(supa, report);
+    await _migrateDies(supa, report);
+    await _migrateKnowledgeBase(supa, report);
+    await _migrateOperatorSessions(supa, report);
+    await _migrateOperatorPoints(supa, report);
+
+    const orderUuidByOrderId = await _migrateOrders(supa, report, progressCb);
+    await _migrateInvoices(supa, report, orderUuidByOrderId);
+    await _migrateActivityLog(supa, report, orderUuidByOrderId);
+
+    report.inserted = report.counts.orders?.inserted ?? 0;
+    report.skipped = report.counts.orders?.skipped ?? 0;
+    _migrateProgressCb?.({ phase: 'done' });
+    return report;
+  };
+
+  window.migrateIndexedDBToSupabase = window.migratePulseDataToSupabase;
+
+  function _readIndexedDBOrders() {
+    return _readIndexedDBStore('orders');
+  }
+
+  function _readIndexedDBActivity(orderId) {
+    return _readIndexedDBStore('activity_log').then(rows =>
+      (rows || []).filter(a => String(a.orderId || a.order_id) === String(orderId))
+    );
   }
 
   /** Sync client handle for pages that call getSupabaseClient() without awaiting (after init). */
@@ -1027,6 +1537,7 @@
     return { updated };
   }
 
+  if (!MIGRATE_TOOL) {
   window.getAllMachines = async function () {
     try { return await _getAllMachines(); }
     catch (e) { console.error('[Pulse/Supabase] getAllMachines:', e); return []; }
@@ -1098,5 +1609,8 @@
   };
 
   console.log('[Pulse] Supabase backend registered — awaiting client init');
+  } else {
+    console.log('[Pulse] Migrate tool ready — import backup, then run full migration');
+  }
 
 })();

@@ -4193,25 +4193,34 @@ function setConfig(key, value) {
 
 // ── Full backup / restore (Admin → Export / Import tab) ───────────────────
 
-const PULSE_BACKUP_SCHEMA_VERSION = 3;
+const PULSE_BACKUP_SCHEMA_VERSION = 4;
 
-/** Admin tabs whose data is included in full backup (Quote & Payment excluded). */
-const PULSE_ADMIN_BACKUP_TABS = [
-  'personnel', 'machines', 'dies', 'organisation', 'inventory', 'purchase-orders',
-  'knowledge', 'qa-rules', 'settings', 'products', 'product-workflows', 'roles',
+/** Admin tabs in JSON `admin` block (migration export). */
+const PULSE_MIGRATION_ADMIN_TABS = [
+  'personnel', 'machines', 'dies', 'organisation', 'products', 'product-workflows', 'roles',
 ];
-const PULSE_ADMIN_BACKUP_EXCLUDED_TABS = ['payment', 'crm-quote'];
+const PULSE_ADMIN_BACKUP_TABS = [...PULSE_MIGRATION_ADMIN_TABS];
+const PULSE_ADMIN_BACKUP_EXCLUDED_TABS = [
+  'payment', 'crm-quote', 'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
+];
 
+/** Production IndexedDB stores in backup (no inventory / purchase_orders). */
 const PULSE_BACKUP_STORES = [
   'orders', 'personnel', 'devices', 'activity_log', 'knowledge_base', 'reprints',
-  'dies', 'inventory', 'purchase_orders', 'invoices', 'operator_sessions', 'operator_points',
+  'dies', 'invoices', 'operator_sessions', 'operator_points',
 ];
+
+/** Config keys not part of migration JSON (Settings tab — still in app via getConfig). */
+const PULSE_BACKUP_EXCLUDED_CONFIG_KEYS = new Set([
+  'appDeptCapacity', 'defaultFacility', 'defaultQCInspector',
+]);
 
 /** Never backup/restore (sessions, auth). */
 const PULSE_BACKUP_SKIP_LS_KEYS = new Set([
   'pulse_session',
   'pulse_portal_active_session',
   'pulse_portal_otp_codes',
+  'pulse_qa_rules',
 ]);
 
 /** Quote & Payment admin tabs — excluded from full backup per product policy. */
@@ -4256,6 +4265,15 @@ function loadPulseOrganisationBundleForBackup() {
   }
 }
 
+function isPulseBackupPayload(raw) {
+  if (!raw || typeof raw !== 'object') return false;
+  if (raw.indexedDB && typeof raw.indexedDB === 'object') return true;
+  if (raw.admin && typeof raw.admin === 'object') return true;
+  if (raw.schemaVersion >= 2) return true;
+  if (Array.isArray(raw.orders) && !raw.indexedDB) return true;
+  return false;
+}
+
 function normalizePulseBackupPayload(raw) {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Invalid backup file — expected a JSON object.');
@@ -4270,6 +4288,20 @@ function normalizePulseBackupPayload(raw) {
       localStorage: raw.localStorage && typeof raw.localStorage === 'object' ? raw.localStorage : {},
       catalog: raw.catalog || null,
       productWorkflows: raw.productWorkflows || null,
+      admin: raw.admin || null,
+    };
+  }
+  if (raw.admin && typeof raw.admin === 'object') {
+    return {
+      schemaVersion: raw.schemaVersion || PULSE_BACKUP_SCHEMA_VERSION,
+      exportedAt: raw.exportedAt || null,
+      indexedDB: raw.indexedDB && typeof raw.indexedDB === 'object' ? raw.indexedDB : {},
+      config: Array.isArray(raw.config) ? raw.config : [],
+      organisation: raw.admin.organisation ?? raw.organisation ?? null,
+      localStorage: raw.localStorage && typeof raw.localStorage === 'object' ? raw.localStorage : {},
+      catalog: raw.admin.products ?? raw.catalog ?? null,
+      productWorkflows: raw.admin.productWorkflows ?? raw.productWorkflows ?? null,
+      admin: raw.admin,
     };
   }
   return {
@@ -4279,8 +4311,6 @@ function normalizePulseBackupPayload(raw) {
       orders: raw.orders || [],
       personnel: raw.personnel || [],
       dies: raw.dies || [],
-      inventory: raw.inventory || [],
-      purchase_orders: raw.purchase_orders || raw.purchaseOrders || [],
       knowledge_base: raw.knowledge_base || raw.knowledge || [],
       reprints: raw.reprints || [],
       activity_log: raw.activity_log || raw.activity || [],
@@ -4297,6 +4327,63 @@ function normalizePulseBackupPayload(raw) {
   };
 }
 
+function _configValueFromEntries(config, key) {
+  const row = config.find(c => c.key === key);
+  return _configStoredValue(row);
+}
+
+async function _loadProductWorkflowsForBackup() {
+  try {
+    if (typeof getAllProductWorkflows === 'function') {
+      return await getAllProductWorkflows();
+    }
+  } catch (e) {
+    console.warn('[PulseBackup] getAllProductWorkflows:', e);
+  }
+  try {
+    if (typeof getAllProductWorkflowsIndexedDB === 'function') {
+      return await getAllProductWorkflowsIndexedDB();
+    }
+  } catch (_) {}
+  return [];
+}
+
+async function _loadMachinesRegistryForBackup() {
+  try {
+    if (typeof getAllMachines === 'function') {
+      return await getAllMachines();
+    }
+  } catch (e) {
+    console.warn('[PulseBackup] getAllMachines:', e);
+  }
+  return [];
+}
+
+async function buildPulseAdminMigrationSection(indexedDB, config, catalog, productWorkflows, organisation) {
+  const machineCapacity = _configValueFromEntries(config, 'machineCapacity') || {};
+  const machinesRegistry = await _loadMachinesRegistryForBackup();
+  let roles = _configValueFromEntries(config, 'customRoles');
+  if (!Array.isArray(roles)) roles = [];
+
+  return {
+    personnel: Array.isArray(indexedDB.personnel) ? indexedDB.personnel : [],
+    machines: {
+      capacityOverrides: machineCapacity,
+      registry: machinesRegistry,
+    },
+    dies: Array.isArray(indexedDB.dies) ? indexedDB.dies : [],
+    organisation: organisation || null,
+    products: catalog || {
+      colorModes: [],
+      materials: [],
+      finishing: [],
+      products: [],
+    },
+    productWorkflows: Array.isArray(productWorkflows) ? productWorkflows : [],
+    roles,
+  };
+}
+
 async function getPulseBackupSummary() {
   const indexedDB = {};
   for (const store of PULSE_BACKUP_STORES) {
@@ -4307,8 +4394,19 @@ async function getPulseBackupSummary() {
     }
   }
   let configCount = 0;
+  let catalogProducts = 0;
+  let productWorkflows = 0;
+  let machinesRegistry = 0;
+  let roles = 0;
   try {
-    configCount = (await getAllConfigEntries()).length;
+    const cfg = await getAllConfigEntries();
+    configCount = cfg.filter(c => !PULSE_BACKUP_EXCLUDED_CONFIG_KEYS.has(c.key)).length;
+    const prods = _configValueFromEntries(cfg, PULSE_CATALOG_KEYS.products);
+    catalogProducts = Array.isArray(prods) ? prods.length : 0;
+    productWorkflows = (await _loadProductWorkflowsForBackup()).length;
+    machinesRegistry = (await _loadMachinesRegistryForBackup()).length;
+    const r = _configValueFromEntries(cfg, 'customRoles');
+    roles = Array.isArray(r) ? r.length : 0;
   } catch (_) {}
   const ls = collectPulseLocalStorageBackup();
   const org = loadPulseOrganisationBundleForBackup();
@@ -4318,6 +4416,12 @@ async function getPulseBackupSummary() {
     localStorageKeys: Object.keys(ls).length,
     organisation: !!org,
     facilities: org?.facilities?.length || 0,
+    personnel: indexedDB.personnel || 0,
+    dies: indexedDB.dies || 0,
+    catalogProducts,
+    productWorkflows,
+    machinesRegistry,
+    roles,
   };
 }
 
@@ -4326,45 +4430,44 @@ async function buildPulseFullBackup() {
   for (const store of PULSE_BACKUP_STORES) {
     indexedDB[store] = await _getAll(store);
   }
-  const config = await getAllConfigEntries();
-  const configValues = config.map(c => ({ key: c.key, value: _configStoredValue(c) ?? c.value }));
+  const configAll = await getAllConfigEntries();
+  const config = configAll.filter(c => !PULSE_BACKUP_EXCLUDED_CONFIG_KEYS.has(c.key));
   const catalog = {
-    colorModes: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.colorModes)) || [],
-    materials: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.materials)) || [],
-    finishing: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.finishing)) || [],
-    products: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.products)) || [],
+    colorModes: _configValueFromEntries(configAll, PULSE_CATALOG_KEYS.colorModes) || [],
+    materials: _configValueFromEntries(configAll, PULSE_CATALOG_KEYS.materials) || [],
+    finishing: _configValueFromEntries(configAll, PULSE_CATALOG_KEYS.finishing) || [],
+    products: _configValueFromEntries(configAll, PULSE_CATALOG_KEYS.products) || [],
   };
-  let productWorkflows = [];
-  try {
-    productWorkflows = typeof getAllProductWorkflowsIndexedDB === 'function'
-      ? await getAllProductWorkflowsIndexedDB()
-      : [];
-  } catch (_) {}
+  const productWorkflows = await _loadProductWorkflowsForBackup();
   const organisation = loadPulseOrganisationBundleForBackup();
+  const admin = await buildPulseAdminMigrationSection(
+    indexedDB, configAll, catalog, productWorkflows, organisation
+  );
   const localStorage = collectPulseLocalStorageBackup();
   const summary = {
     orders: indexedDB.orders?.length || 0,
-    personnel: indexedDB.personnel?.length || 0,
-    dies: indexedDB.dies?.length || 0,
-    inventory: indexedDB.inventory?.length || 0,
-    purchaseOrders: indexedDB.purchase_orders?.length || 0,
-    knowledge: indexedDB.knowledge_base?.length || 0,
+    personnel: admin.personnel?.length || 0,
+    dies: admin.dies?.length || 0,
     reprints: indexedDB.reprints?.length || 0,
     activity: indexedDB.activity_log?.length || 0,
     devices: indexedDB.devices?.length || 0,
     invoices: indexedDB.invoices?.length || 0,
-    configEntries: config.length,
     catalogProducts: catalog.products?.length || 0,
     productWorkflows: productWorkflows.length,
+    machinesRegistry: admin.machines?.registry?.length || 0,
+    roles: admin.roles?.length || 0,
     organisationFacilities: organisation?.facilities?.length || 0,
+    configEntries: config.length,
     localStorageKeys: Object.keys(localStorage).length,
   };
   return {
     schemaVersion: PULSE_BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     source: 'pulse-admin',
+    migrationAdminTabs: [...PULSE_MIGRATION_ADMIN_TABS],
     adminIncludedTabs: [...PULSE_ADMIN_BACKUP_TABS],
     adminExcludedTabs: [...PULSE_ADMIN_BACKUP_EXCLUDED_TABS],
+    admin,
     indexedDB,
     config,
     catalog,
@@ -4422,6 +4525,20 @@ async function importPulseFullBackup(rawPayload, options = {}) {
     });
   }
 
+  const adminBlock = data.admin && typeof data.admin === 'object' ? data.admin : null;
+  if (adminBlock) {
+    if (Array.isArray(adminBlock.personnel) && adminBlock.personnel.length) {
+      idb.personnel = mode === 'merge' && idb.personnel?.length
+        ? idb.personnel.concat(adminBlock.personnel)
+        : adminBlock.personnel;
+    }
+    if (Array.isArray(adminBlock.dies) && adminBlock.dies.length) {
+      idb.dies = mode === 'merge' && idb.dies?.length
+        ? idb.dies.concat(adminBlock.dies)
+        : adminBlock.dies;
+    }
+  }
+
   const counts = {};
   for (const store of PULSE_BACKUP_STORES) {
     const rows = idb[store];
@@ -4431,26 +4548,49 @@ async function importPulseFullBackup(rawPayload, options = {}) {
 
   const configRows = Array.isArray(data.config) ? data.config : [];
   for (const entry of configRows) {
-    if (!entry?.key) continue;
+    if (!entry?.key || PULSE_BACKUP_EXCLUDED_CONFIG_KEYS.has(entry.key)) continue;
     const val = entry.value !== undefined ? entry.value : _configStoredValue(entry);
     await setConfig(entry.key, val);
   }
 
-  if (data.catalog && typeof data.catalog === 'object') {
-    if (data.catalog.colorModes?.length) await setConfig(PULSE_CATALOG_KEYS.colorModes, data.catalog.colorModes);
-    if (data.catalog.materials?.length) await setConfig(PULSE_CATALOG_KEYS.materials, data.catalog.materials);
-    if (data.catalog.finishing?.length) await setConfig(PULSE_CATALOG_KEYS.finishing, data.catalog.finishing);
-    if (data.catalog.products?.length) await setConfig(PULSE_CATALOG_KEYS.products, data.catalog.products);
+  const catalogToImport = adminBlock?.products ?? data.catalog;
+  if (catalogToImport && typeof catalogToImport === 'object') {
+    if (catalogToImport.colorModes?.length) await setConfig(PULSE_CATALOG_KEYS.colorModes, catalogToImport.colorModes);
+    if (catalogToImport.materials?.length) await setConfig(PULSE_CATALOG_KEYS.materials, catalogToImport.materials);
+    if (catalogToImport.finishing?.length) await setConfig(PULSE_CATALOG_KEYS.finishing, catalogToImport.finishing);
+    if (catalogToImport.products?.length) await setConfig(PULSE_CATALOG_KEYS.products, catalogToImport.products);
   }
 
-  if (Array.isArray(data.productWorkflows) && data.productWorkflows.length) {
-    await setConfig(PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY, data.productWorkflows);
+  const workflowsToImport = adminBlock?.productWorkflows?.length
+    ? adminBlock.productWorkflows
+    : (data.productWorkflows || []);
+  if (Array.isArray(workflowsToImport) && workflowsToImport.length) {
+    if (typeof upsertProductWorkflow === 'function') {
+      for (const wf of workflowsToImport) {
+        await upsertProductWorkflow(wf);
+      }
+      counts.product_workflows = workflowsToImport.length;
+    } else {
+      await setConfig(PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY, workflowsToImport);
+      counts.product_workflows = workflowsToImport.length;
+    }
   }
 
-  if (data.organisation && typeof data.organisation === 'object') {
+  if (adminBlock?.machines?.capacityOverrides && typeof adminBlock.machines.capacityOverrides === 'object') {
+    await setConfig('machineCapacity', adminBlock.machines.capacityOverrides);
+    counts.machineCapacity = Object.keys(adminBlock.machines.capacityOverrides).length;
+  }
+
+  if (Array.isArray(adminBlock?.roles) && adminBlock.roles.length) {
+    await setConfig('customRoles', adminBlock.roles);
+    counts.customRoles = adminBlock.roles.length;
+  }
+
+  const orgBundle = adminBlock?.organisation ?? data.organisation;
+  if (orgBundle && typeof orgBundle === 'object') {
     const norm = typeof window !== 'undefined' && window.PulseOrgJsonStore?.normalizeBundle
-      ? window.PulseOrgJsonStore.normalizeBundle(data.organisation)
-      : data.organisation;
+      ? window.PulseOrgJsonStore.normalizeBundle(orgBundle)
+      : orgBundle;
     localStorage.setItem('pulse_organisation_bundle_v1', JSON.stringify(norm));
     if (typeof syncPulseMachineryFromOrganisation === 'function') {
       syncPulseMachineryFromOrganisation();
@@ -4938,6 +5078,7 @@ async function refreshPulseAdminData() {
 if (typeof window !== 'undefined') {
   window.PULSE_CATALOG_KEYS = PULSE_CATALOG_KEYS;
   window.PULSE_BACKUP_SCHEMA_VERSION = PULSE_BACKUP_SCHEMA_VERSION;
+  window.PULSE_MIGRATION_ADMIN_TABS = PULSE_MIGRATION_ADMIN_TABS;
   window.PULSE_ADMIN_BACKUP_TABS = PULSE_ADMIN_BACKUP_TABS;
   window.PULSE_ADMIN_BACKUP_EXCLUDED_TABS = PULSE_ADMIN_BACKUP_EXCLUDED_TABS;
   window.getAllConfigEntries = getAllConfigEntries;
@@ -4945,6 +5086,7 @@ if (typeof window !== 'undefined') {
   window.buildPulseFullBackup = buildPulseFullBackup;
   window.downloadPulseBackupFile = downloadPulseBackupFile;
   window.importPulseFullBackup = importPulseFullBackup;
+  window.isPulseBackupPayload = isPulseBackupPayload;
   window.normalizePulseBackupPayload = normalizePulseBackupPayload;
   window.buildPulseDefaultProductCatalog = buildPulseDefaultProductCatalog;
   window.repairPulseAdminCatalog = repairPulseAdminCatalog;
