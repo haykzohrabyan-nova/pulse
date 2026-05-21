@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/haykzohrabyan-nova/pulse#readme",
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
     "playwright": "^1.59.1"
   },
   "devDependencies": {

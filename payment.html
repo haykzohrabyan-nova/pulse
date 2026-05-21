@@ -8,6 +8,19 @@
   <script src="pulse-quote-payment.js?v=20260520-QP4"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
+  <style>
+    html[data-pay-embedded] #nav,
+    html[data-pay-embedded] #breadcrumb,
+    body.pay-embedded #nav,
+    body.pay-embedded #breadcrumb { display: none !important; height: 0 !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
+  </style>
+  <script>
+    (function () {
+      if (new URLSearchParams(window.location.search).get('embedded') === 'admin') {
+        document.documentElement.setAttribute('data-pay-embedded', '1');
+      }
+    })();
+  </script>
 </head>
 <body class="pay-page">
 <div id="nav"></div>
@@ -239,18 +252,19 @@
 injectThemeCSS();
 
 const PAY_EMBEDDED = new URLSearchParams(window.location.search).get('embedded') === 'admin';
-if (!PAY_EMBEDDED) {
+if (PAY_EMBEDDED) {
+  document.documentElement.setAttribute('data-pay-embedded', '1');
+  document.body.classList.add('pay-embedded');
+  const navEl = document.getElementById('nav');
+  const bcEl = document.getElementById('breadcrumb');
+  if (navEl) { navEl.innerHTML = ''; navEl.style.display = 'none'; }
+  if (bcEl) { bcEl.innerHTML = ''; bcEl.style.display = 'none'; }
+} else {
   document.getElementById('nav').innerHTML = renderNav('admin');
   document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([
     { label: 'Admin', href: 'admin.html' },
     { label: 'Payment' }
   ]);
-} else {
-  document.body.classList.add('pay-embedded');
-  const navEl = document.getElementById('nav');
-  const bcEl = document.getElementById('breadcrumb');
-  if (navEl) navEl.remove();
-  if (bcEl) bcEl.remove();
 }
 
 const PQP = window.PulseQuotePayment;
@@ -882,6 +896,12 @@ document.getElementById('page-styles').textContent = `
   .pay-page.pay-embedded {
     min-height: 100%;
     justify-content: flex-start;
+  }
+  body.pay-embedded #nav,
+  body.pay-embedded #breadcrumb,
+  html[data-pay-embedded] #nav,
+  html[data-pay-embedded] #breadcrumb {
+    display: none !important;
   }
   .pay-layout {
     width: 100%;
