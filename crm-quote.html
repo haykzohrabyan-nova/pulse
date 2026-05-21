@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quote — Bazaar Printing</title>
-  <script src="pulse-quote-payment.js?v=20260520-QP1"></script>
+  <script src="pulse-quote-payment.js?v=20260520-QP4"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
   <script src="auth.js?v=20260519-QUOTE2"></script>
   <style id="page-styles"></style>
@@ -101,7 +101,7 @@
         <option value="zelle">Zelle</option>
         <option value="wire">Wire</option>
         <option value="ach">ACH</option>
-        <option value="check">Check</option>
+        <option value="other">Others</option>
         <option value="card">Card</option>
       </select>
     </div>
@@ -202,7 +202,7 @@
     .q-modal[hidden] { display:none !important; }
     .q-modal-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.45); }
     .q-modal-card { position:relative; background:#fff; border-radius:12px; padding:20px; width:min(400px,100%); box-shadow:0 8px 32px rgba(0,0,0,.15); }
-    .q-modal-card-pay { width:min(480px,100%); }
+    .q-modal-card-pay { width:min(540px,100%); max-height:min(92vh,900px); overflow-y:auto; }
     .q-modal-card h3 { margin:0 0 12px; }
     .q-modal-balance { margin:0 0 16px; padding:14px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; text-align:center; }
     .q-modal-balance-label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
@@ -247,6 +247,12 @@
     .q-pay-file-preview[hidden] { display:none !important; }
     .q-pay-file-name { font-size:12px; color:var(--ink); margin-bottom:8px; }
     .q-pay-file-thumb { display:block; max-width:100%; max-height:160px; border-radius:6px; border:1px solid var(--border); object-fit:contain; }
+    .q-pay-auth-box { margin:0 0 12px; padding:12px 14px; background:#fff; border:1px solid #bfdbfe; border-radius:10px; }
+    .q-pay-auth-box p { margin:0 0 10px; font-size:12px; color:var(--ink); line-height:1.5; }
+    .q-pay-auth-link { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#2563eb; text-decoration:none; margin-bottom:10px; }
+    .q-pay-auth-link:hover { text-decoration:underline; }
+    .q-pay-auth-check { display:flex; gap:10px; align-items:flex-start; margin:0; font-size:12px; line-height:1.45; cursor:pointer; }
+    .q-pay-auth-check input { margin:3px 0 0; flex-shrink:0; width:16px; height:16px; accent-color:var(--accent); }
     .q-modal-actions .q-btn-primary:disabled { opacity:.45; cursor:not-allowed; }
     .q-modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
     body.q-embedded #nav,body.q-embedded #breadcrumb { display:none !important; }
@@ -400,6 +406,7 @@
 
   function ensureFullCashQuoteConfirmed(token, cfg, quoteState, checkout) {
     if (!checkout.cashInPerson || !checkout.paymentOk) return quoteState;
+    if (cfg.requireClientConfirm !== false) return quoteState;
     if (quoteState.quotePriceConfirmed && quoteState.clientConfirmed) return quoteState;
     const now = new Date().toISOString();
     PQP.saveQuoteState(token, {
@@ -444,28 +451,43 @@
   function readPayPanelField(name) {
     const panel = document.getElementById('payModalMethodPanel');
     const el = panel.querySelector(`[data-pay-field="${name}"]`);
-    if (!el) return name === 'screenshot' || name === 'cardId' ? null : '';
+    if (!el) {
+      return name === 'screenshot' || name === 'cardId' ? null : '';
+    }
+    if (el.type === 'checkbox') return el.checked;
     if (el.type === 'file') return el.files[0] || null;
     return String(el.value || '').trim();
   }
 
+  function normalizePayMethod(method) {
+    return PQP.normalizeChannelId(method);
+  }
+
   function payMethodNeedsScreenshot(method) {
-    return method === 'ach' || method === 'wire' || method === 'zelle' || method === 'check';
+    const m = normalizePayMethod(method);
+    return m === 'ach' || m === 'wire' || m === 'zelle' || m === 'other';
   }
 
   function isPayModalReadyToConfirm(method) {
     if (method === 'cash') return !!readPayPanelField('receipt');
     if (payMethodNeedsScreenshot(method)) return !!readPayPanelField('screenshot');
     if (method === 'card') {
-      return !!(readPayPanelField('cardName') && readPayPanelField('cardNumber')
-        && readPayPanelField('cardExpiry') && readPayPanelField('cardCvv')
-        && readPayPanelField('cardId'));
+      return !!(
+        readPayPanelField('cardAuthAgree')
+        && readPayPanelField('cardType')
+        && readPayPanelField('cardName')
+        && readPayPanelField('cardNumber')
+        && readPayPanelField('cardExpiry')
+        && readPayPanelField('cardCvv')
+        && readPayPanelField('cardZip')
+        && readPayPanelField('cardId')
+      );
     }
     return true;
   }
 
   function syncPayModalSaveButton() {
-    const method = document.getElementById('payModalMethod').value;
+    const method = normalizePayMethod(document.getElementById('payModalMethod').value);
     const btn = document.getElementById('payModalSave');
     const ready = isPayModalReadyToConfirm(method);
     const needsProof = payMethodNeedsScreenshot(method) || method === 'card' || method === 'cash';
@@ -473,15 +495,17 @@
     btn.disabled = needsProof && !ready;
   }
 
-  function renderScreenshotUploadStep(stepNum, description) {
+  function renderScreenshotUploadStep(stepNum, description, options = {}) {
+    const title = options.title || 'Upload payment confirmation screenshot';
+    const label = options.label || 'Payment confirmation (screenshot)';
     return `
       <li class="q-pay-step q-pay-step-upload">
         <span class="q-pay-step-num" aria-hidden="true">${stepNum}</span>
         <div class="q-pay-step-body">
-          <span class="q-pay-step-title">Upload payment confirmation screenshot</span>
+          <span class="q-pay-step-title">${esc(title)}</span>
           <p class="q-pay-step-desc">${description}</p>
           <div class="field q-pay-upload-field">
-            <label>Payment confirmation (screenshot)</label>
+            <label>${esc(label)}</label>
             <input type="file" accept="image/*,.pdf" data-pay-field="screenshot">
           </div>
           <div class="q-pay-file-preview" data-pay-preview hidden></div>
@@ -530,13 +554,15 @@
         syncPayModalSaveButton();
       });
     });
-    panel.querySelectorAll('input:not([type="file"]), textarea').forEach((input) => {
+    panel.querySelectorAll('input:not([type="file"]), textarea, select').forEach((input) => {
       input.addEventListener('input', syncPayModalSaveButton);
+      input.addEventListener('change', syncPayModalSaveButton);
     });
     syncPayModalSaveButton();
   }
 
   function renderPayMethodPanel(method) {
+    method = normalizePayMethod(method);
     const panel = document.getElementById('payModalMethodPanel');
     const remit = PQP.PAYMENT_REMITTANCE || {};
     const quoteRef = payModalQuoteRef || '—';
@@ -587,39 +613,65 @@
           ${renderScreenshotUploadStep(2, 'After sending, screenshot your Zelle confirmation showing the amount and memo with the quote number.')}
         </ol>`;
     } else if (method === 'card') {
+      const company = PQP.PULSE_COMPANY?.company_name || 'Bazaar Printing';
       html = `
         <ol class="q-pay-steps">
           <li class="q-pay-step">
             <span class="q-pay-step-num" aria-hidden="true">1</span>
             <div class="q-pay-step-body">
-              <span class="q-pay-step-title">Enter card details</span>
-              <p class="q-pay-step-desc">Complete your card information below.</p>
-        <div class="field">
-          <label>Name on card</label>
-          <input type="text" data-pay-field="cardName" autocomplete="cc-name">
-        </div>
-        <div class="field">
-          <label>Card number</label>
-          <input type="text" inputmode="numeric" data-pay-field="cardNumber" autocomplete="cc-number" placeholder="0000 0000 0000 0000">
-        </div>
-        <div class="q-pay-card-row">
-          <div class="field">
-            <label>Expiry (MM/YY)</label>
-            <input type="text" data-pay-field="cardExpiry" autocomplete="cc-exp" placeholder="MM/YY">
-          </div>
-          <div class="field">
-            <label>CVV</label>
-            <input type="text" inputmode="numeric" data-pay-field="cardCvv" autocomplete="cc-csc" placeholder="123">
-          </div>
-        </div>
-        <div class="field">
-          <label>Billing ZIP</label>
-          <input type="text" data-pay-field="cardZip" autocomplete="postal-code">
-        </div>
+              <span class="q-pay-step-title">Card-on-file authorization</span>
+              <p class="q-pay-step-desc">You may cancel this authorization at any time by contacting us. It remains in effect until cancelled.</p>
+              <div class="q-pay-auth-box">
+                <p>I authorize ${esc(company)} to charge the card entered below for agreed-upon purchases, including this quote${payModalQuoteRef && payModalQuoteRef !== '—' ? ` (${esc(payModalQuoteRef)})` : ''}. I understand my card information will be saved on file for future transactions on my account.</p>
+                <label class="q-pay-auth-check">
+                  <input type="checkbox" data-pay-field="cardAuthAgree">
+                  <span>I approve this card-on-file authorization.</span>
+                </label>
+              </div>
+            </div>
+          </li>
+          <li class="q-pay-step">
+            <span class="q-pay-step-num" aria-hidden="true">2</span>
+            <div class="q-pay-step-body">
+              <span class="q-pay-step-title">Credit card information</span>
+              <p class="q-pay-step-desc">Enter your card details below.</p>
+              <div class="field">
+                <label>Card type</label>
+                <select data-pay-field="cardType">
+                  <option value="">Select…</option>
+                  <option value="visa">VISA</option>
+                  <option value="mastercard">MasterCard</option>
+                  <option value="discover">Discover</option>
+                  <option value="amex">AMEX</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Cardholder name (as shown on card)</label>
+                <input type="text" data-pay-field="cardName" autocomplete="cc-name">
+              </div>
+              <div class="field">
+                <label>Card number</label>
+                <input type="text" inputmode="numeric" data-pay-field="cardNumber" autocomplete="cc-number" placeholder="0000 0000 0000 0000">
+              </div>
+              <div class="q-pay-card-row">
+                <div class="field">
+                  <label>Expiration (MM/YY)</label>
+                  <input type="text" data-pay-field="cardExpiry" autocomplete="cc-exp" placeholder="MM/YY">
+                </div>
+                <div class="field">
+                  <label>CVV</label>
+                  <input type="text" inputmode="numeric" data-pay-field="cardCvv" autocomplete="cc-csc" placeholder="123">
+                </div>
+              </div>
+              <div class="field">
+                <label>Cardholder ZIP (billing address)</label>
+                <input type="text" data-pay-field="cardZip" autocomplete="postal-code">
+              </div>
             </div>
           </li>
           <li class="q-pay-step q-pay-step-upload">
-            <span class="q-pay-step-num" aria-hidden="true">2</span>
+            <span class="q-pay-step-num" aria-hidden="true">3</span>
             <div class="q-pay-step-body">
               <span class="q-pay-step-title">Upload photo ID</span>
               <p class="q-pay-step-desc">Attach a clear photo of your government-issued ID for verification.</p>
@@ -646,17 +698,14 @@
             </div>
           </li>
         </ol>`;
-    } else if (method === 'check') {
+    } else if (method === 'other') {
       html = `
         <ol class="q-pay-steps">
-          <li class="q-pay-step">
-            <span class="q-pay-step-num" aria-hidden="true">1</span>
-            <div class="q-pay-step-body">
-              <span class="q-pay-step-title">Send your check</span>
-              <p class="q-pay-step-desc">Make check payable to ${esc(PQP.PULSE_COMPANY?.company_name || 'Bazaar Printing')}. Mail or deliver the check, then complete step 2.</p>
-            </div>
-          </li>
-          ${renderScreenshotUploadStep(2, 'Attach a photo of the check or your bank deposit confirmation once the check has been sent or deposited.')}
+          ${renderScreenshotUploadStep(
+            1,
+            `Attach proof of payment for this quote${payModalQuoteRef && payModalQuoteRef !== '—' ? ` (${esc(payModalQuoteRef)})` : ''}. Accepted: image or PDF.`,
+            { title: 'Upload payment proof', label: 'Payment proof' }
+          )}
         </ol>`;
     } else {
       panel.hidden = true;
@@ -670,6 +719,7 @@
   }
 
   function validatePayModal(method) {
+    method = normalizePayMethod(method);
     if (method === 'cash') {
       if (!readPayPanelField('receipt')) {
         alert('Receipt ID is required for cash / offline.');
@@ -677,17 +727,29 @@
       }
       return true;
     }
-    if (method === 'ach' || method === 'wire' || method === 'zelle' || method === 'check') {
+    if (method === 'ach' || method === 'wire' || method === 'zelle') {
       if (!readPayPanelField('screenshot')) {
         alert('Attach a payment confirmation screenshot.');
         return false;
       }
       return true;
     }
+    if (method === 'other') {
+      if (!readPayPanelField('screenshot')) {
+        alert('Attach payment proof.');
+        return false;
+      }
+      return true;
+    }
     if (method === 'card') {
-      if (!readPayPanelField('cardName') || !readPayPanelField('cardNumber')
-        || !readPayPanelField('cardExpiry') || !readPayPanelField('cardCvv')) {
-        alert('Complete all card fields.');
+      if (!readPayPanelField('cardAuthAgree')) {
+        alert('Agree to the card-on-file authorization to continue.');
+        return false;
+      }
+      if (!readPayPanelField('cardType') || !readPayPanelField('cardName')
+        || !readPayPanelField('cardNumber') || !readPayPanelField('cardExpiry')
+        || !readPayPanelField('cardCvv') || !readPayPanelField('cardZip')) {
+        alert('Complete all card fields (type, name, number, expiry, CVV, and billing ZIP).');
         return false;
       }
       if (!readPayPanelField('cardId')) {
@@ -710,9 +772,12 @@
     if (method === 'zelle') meta.zelleQuoteRef = payModalQuoteRef;
     if (method === 'card') {
       const num = readPayPanelField('cardNumber').replace(/\s/g, '');
+      meta.cardType = readPayPanelField('cardType');
       meta.cardName = readPayPanelField('cardName');
       meta.cardLast4 = num.length >= 4 ? num.slice(-4) : '';
       meta.cardExpiry = readPayPanelField('cardExpiry');
+      meta.cardZip = readPayPanelField('cardZip');
+      meta.cardAuthAgreed = true;
       const idFile = readPayPanelField('cardId');
       if (idFile) meta.idAttachmentFileName = idFile.name;
     }
@@ -768,10 +833,12 @@
     document.getElementById('payModalAmount').value = due.toFixed(2);
     const methods = cashInPerson
       ? ['cash']
-      : ((cfg.strategy === 'full' ? cfg.channelsFull : cfg.channelsPartial) || []);
+      : PQP.normalizeChannelIds(
+        (cfg.strategy === 'full' ? cfg.channelsFull : cfg.channelsPartial) || []
+      );
     const sel = document.getElementById('payModalMethod');
     sel.innerHTML = (methods.length ? methods : ['cash', 'zelle']).map((id) =>
-      `<option value="${id}">${esc(PQP.PAY_CHANNELS.find((c) => c.id === id)?.label || id)}</option>`
+      `<option value="${esc(id)}">${esc(PQP.channelLabel(id))}</option>`
     ).join('');
     renderPayMethodPanel(sel.value);
     syncPayModalSaveButton();
@@ -824,9 +891,13 @@
 
     const cashInPerson = checkout.cashInPerson;
     const partialCash = checkout.partialCashDeposit;
-    const priceOk = cashInPerson || partialCash || checkout.priceConfirmed || PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal);
-    const canPay = checkout.canCollectPayment && (partialCash || cashInPerson || priceOk);
-    const visibleSteps = checkout.steps.filter((step) => !(cashInPerson && step.id === 'price'));
+    const priceConfirmed = !checkout.requireClientConfirm
+      || checkout.clientPriceConfirmed
+      || PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal);
+    const canPayDeposit = checkout.canCollectPayment && priceConfirmed;
+    const visibleSteps = checkout.steps.filter(
+      (step) => !(cashInPerson && !checkout.requireClientConfirm && step.id === 'price')
+    );
 
     stepper.innerHTML = visibleSteps.map((step, index) => {
       const stepNum = index + 1;
@@ -834,16 +905,20 @@
       let stepLabel = step.label;
       let stepDone = step.done;
       if (step.id === 'price') {
+        stepDone = priceConfirmed;
         const at = quoteState.quotePriceConfirmedAt || quoteState.clientConfirmedAt;
-        if (priceOk && at) meta = `Confirmed ${formatDate(at)}`;
-        else if (priceOk && PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal)) {
+        if (checkout.clientPriceConfirmed && at) {
+          meta = `Confirmed ${formatDate(at)}`;
+        } else if (priceConfirmed && PQP.shouldAutoConfirmOnFullPayment(cfg, quoteState, checkout.quoteTotal)) {
           meta = 'Confirmed automatically — paid in full';
+        } else if (checkout.requireClientConfirm) {
+          meta = 'Client must confirm quote price before deposit payment';
         }
       }
       if (step.id === 'payment') {
         stepDone = checkout.strategy === 'net'
-          || (checkout.strategy === 'partial' && checkout.depositPaid && priceOk)
-          || (checkout.strategy === 'full' && checkout.fullyPaid && priceOk);
+          || (checkout.strategy === 'partial' && checkout.depositPaid && priceConfirmed)
+          || (checkout.strategy === 'full' && checkout.fullyPaid && priceConfirmed);
       }
       if (step.id === 'payment' && checkout.strategy === 'partial') {
         if (checkout.depositPaid && quoteState.productionReleasedAt && checkout.remaining > 0.01) {
@@ -884,20 +959,20 @@
         if (paidAt) meta += ` · ${formatDate(paidAt)}`;
       }
       if (step.id === 'production' && quoteState.productionReleasedAt) {
-        stepLabel = 'Production started';
+        stepLabel = 'Order Is Processed';
         stepDone = true;
-        meta = `Congratulations! Your production has started. Start date: ${formatDate(quoteState.productionReleasedAt)}`;
+        meta = `Order processed. Start date: ${formatDate(quoteState.productionReleasedAt)}`;
       }
 
       let actions = '';
-      if (step.id === 'price' && !priceOk && step.action === 'confirm-price') {
+      if (step.id === 'price' && checkout.requireClientConfirm && !checkout.clientPriceConfirmed) {
         actions = `<button type="button" class="q-btn q-btn-primary" data-action="confirm-price">Confirm quote price</button>`;
       }
-      if (step.id === 'payment' && canPay) {
+      if (step.id === 'payment' && canPayDeposit) {
         const payLabel = getPayButtonLabel(checkout, cashInPerson, quoteState);
-        actions = `<button type="button" class="q-btn q-btn-primary" data-action="pay">${payLabel}</button>`;
+        actions = `<button type="button" class="q-btn q-btn-primary" data-action="pay">${esc(payLabel)}</button>`;
       }
-      if (step.id === 'payment' && canPay && !cashInPerson && !priceOk) {
+      if (step.id === 'payment' && checkout.canCollectPayment && checkout.requireClientConfirm && !priceConfirmed) {
         meta = (meta ? meta + ' · ' : '') + 'Confirm quote price first';
       }
       return `<li class="q-step ${stepDone ? 'done' : ''} ${step.id === 'production' && quoteState.productionReleasedAt ? 'q-step-started' : ''}" data-step="${step.id}">
@@ -917,10 +992,10 @@
     const summary = document.getElementById('quotePaySummary');
     const dueLabel = checkout.strategy === 'full' ? 'Due now (100%)' : checkout.strategy === 'partial' ? `Deposit (${checkout.depositPct}%)` : 'Due now';
     let summaryPayBlock = '';
-    if (canPay) {
+    if (canPayDeposit) {
       const payLabel = getPayButtonLabel(checkout, cashInPerson, quoteState);
       summaryPayBlock = `<div class="q-summary-actions"><button type="button" class="q-btn q-btn-primary" data-action="pay">${esc(payLabel)}</button></div>`;
-    } else if (checkout.canCollectPayment && !partialCash && !cashInPerson && !priceOk) {
+    } else if (checkout.canCollectPayment && checkout.requireClientConfirm && !priceConfirmed) {
       summaryPayBlock = '<p class="q-summary-hint">Confirm quote price in the checklist to collect payment.</p>';
     } else if (checkout.strategy === 'full' && checkout.fullyPaid) {
       summaryPayBlock = '<p class="q-summary-hint">Paid in full — no remaining balance.</p>';
@@ -932,7 +1007,7 @@
       <div class="row"><span>Quote total</span><strong>${PQP.formatMoney(checkout.quoteTotal)}</strong></div>
       ${buildPaySummaryAmountRows(checkout, dueLabel)}
       <div class="row"><span>Channels</span><strong>${esc(checkout.channelLabels || '—')}</strong></div>
-      <div class="row"><span>Price confirmation</span><strong>${checkout.cashInPerson || checkout.partialCashDeposit ? 'Not required (cash in person)' : (checkout.requireClientConfirm ? 'Required' : 'Not required')}</strong></div>
+      <div class="row"><span>Price confirmation</span><strong>${checkout.requireClientConfirm ? 'Required' : 'Not required'}</strong></div>
       ${summaryPayBlock}
     `;
 
@@ -954,14 +1029,22 @@
     const now = new Date().toISOString();
 
     if (action === 'confirm-price') {
+      if (!checkout.requireClientConfirm) return;
       PQP.saveQuoteState(token, {
         quotePriceConfirmed: true,
         quotePriceConfirmedAt: now,
         clientConfirmed: true,
         clientConfirmedAt: now,
       });
+      renderQuote(token);
+      return;
     } else if (action === 'pay') {
       const quoteState = PQP.loadQuoteState(token);
+      const pack = PQP.getQuotePack(token);
+      if (checkout.requireClientConfirm && !PQP.isQuotePriceConfirmed(quoteState, pack?.ticket, cfg)) {
+        alert('Confirm quote price before collecting payment.');
+        return;
+      }
       const paid = PQP.getPaidAmount(quoteState, cfg, checkout.quoteTotal);
       const cashInPerson = PQP.isCashInPersonFull(cfg);
       let modalMode = 'payment';
@@ -1119,12 +1202,7 @@
     }
     const cashInPerson = PQP.isCashInPersonFull(cfg);
     const statePatch = { payment: paymentPatch };
-    if (cashInPerson && newPaid >= quoteTotal - 0.01) {
-      statePatch.quotePriceConfirmed = true;
-      statePatch.quotePriceConfirmedAt = now;
-      statePatch.clientConfirmed = true;
-      statePatch.clientConfirmedAt = now;
-    } else if (cfg.strategy === 'full' && cfg.requireClientConfirm !== false && newPaid >= quoteTotal - 0.01) {
+    if (cashInPerson && newPaid >= quoteTotal - 0.01 && cfg.requireClientConfirm === false) {
       statePatch.quotePriceConfirmed = true;
       statePatch.quotePriceConfirmedAt = now;
       statePatch.clientConfirmed = true;
@@ -1157,7 +1235,9 @@
     return PQP.DEFAULT_QUOTE_TOKEN;
   }
 
-  renderQuote(resolveQuoteToken());
+  const _initialQuoteToken = resolveQuoteToken();
+  window.renderQuote = renderQuote;
+  renderQuote(_initialQuoteToken);
 
   window.addEventListener('storage', (e) => {
     if (e.key === PQP.PAY_STORAGE_KEY || e.key === PQP.QUOTE_STATE_KEY) {

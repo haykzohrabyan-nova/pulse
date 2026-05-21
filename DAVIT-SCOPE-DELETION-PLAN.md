@@ -1,6 +1,6 @@
 # Davit / David Review — Scope, Dependencies & Deletion Plan
 
-**Status:** Planning document only — **no code or files have been changed** as part of this write-up.  
+**Status:** Applied on branch 2026-05-21 — production-focused nav, roles, and file cleanup completed.  
 **Purpose:** Record findings from codebase review so the team can return later and remove parts of Pulse that this user does not use.  
 **Last reviewed:** 2026-05-18  
 **Storage mode assumed:** Local / IndexedDB (`PULSE_STORAGE_BACKEND` = `indexeddb` or unset; Supabase not connected).
@@ -437,6 +437,7 @@ For a **multi-role** shop, keep other roles’ config and only delete HTML files
 | Date | Change |
 |------|--------|
 | 2026-05-18 | Initial version from codebase review (local mode, david-review role, dependencies, deletion candidates). No application code modified. |
+| 2026-05-21 | Cleanup executed: trimmed nav/roles, deleted sales/CRM/competitor/v2 pages, kept Pricing + Admin Payment/Quote. |
 
 ---
 

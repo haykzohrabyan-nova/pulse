@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
-  <script src="shared.js?v=20260518-PW4"></script>
+  <script src="shared.js?v=20260520-BACKUP2"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
-  <script src="auth.js?v=20260427-PRI240"></script>
+  <script src="auth.js?v=20260520-BACKUP2"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -23,14 +23,10 @@
     <button class="tab-btn" data-tab="organisation" onclick="switchTab('organisation')">Organisation</button>
     <button class="tab-btn" data-tab="payment" onclick="switchTab('payment')">💳 Payment</button>
     <button class="tab-btn" data-tab="crm-quote" onclick="switchTab('crm-quote')">💬 Quote</button>
-    <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">📦 Inventory</button>
-    <button class="tab-btn" data-tab="purchase-orders" onclick="switchTab('purchase-orders')">🛒 Purchase Orders</button>
-    <button class="tab-btn" data-tab="knowledge" onclick="switchTab('knowledge')">💡 Knowledge Base</button>
-    <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
-    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="tab-btn" data-tab="products" onclick="switchTab('products')">🗂 Products</button>
     <button class="tab-btn" data-tab="product-workflows" onclick="switchTab('product-workflows')">🔀 Product Workflow Configuration</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
+    <button class="tab-btn" data-tab="backup" onclick="switchTab('backup')">💾 Export / Import</button>
   </div>
 
   <main class="admin-content">
@@ -121,7 +117,7 @@
         id="paymentAdminFrame"
         class="admin-org-frame"
         title="Payment"
-        src="payment.html?embedded=admin"
+        src="payment.html?embedded=admin&amp;v=20260520-QP4"
       ></iframe>
     </div>
 
@@ -131,7 +127,7 @@
         id="crmQuoteAdminFrame"
         class="admin-org-frame"
         title="Quote"
-        src="crm-quote.html?embedded=admin"
+        src="crm-quote.html?embedded=admin&amp;v=20260520-QP4"
       ></iframe>
     </div>
 
@@ -250,6 +246,43 @@
   </div>
 </div>
 
+    <!-- ═══ EXPORT / IMPORT (all Admin tabs except Quote & Payment) ═══ -->
+    <div class="tab-pane" id="tab-backup">
+      <div class="pane-header">
+        <div>
+          <h2>💾 Export / Import JSON</h2>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Back up or restore Pulse data and configuration from every Admin tab except <strong>Quote</strong> and <strong>Payment</strong>.</p>
+        </div>
+      </div>
+      <div class="backup-page-layout">
+        <div class="card backup-main-card">
+          <div class="backup-actions backup-actions-lg">
+            <button type="button" class="btn btn-primary btn-lg" onclick="exportPulseFullBackupAdmin()">📤 Export JSON</button>
+            <input type="file" id="pulseImportFile" accept=".json,application/json" style="display:none" onchange="importPulseFullBackupAdmin(this)">
+            <button type="button" class="btn btn-lg" onclick="document.getElementById('pulseImportFile').click()">📥 Import JSON</button>
+          </div>
+          <div class="field" style="margin-top:16px;max-width:480px;">
+            <label for="pulseImportMode">Import mode</label>
+            <select id="pulseImportMode" class="backup-import-mode">
+              <option value="replace">Replace — overwrite data in this browser (restore from backup)</option>
+              <option value="merge">Merge — add/update records without clearing stores first</option>
+            </select>
+          </div>
+          <div id="backupSummary" class="backup-summary">Loading…</div>
+        </div>
+        <div class="card backup-includes-card">
+          <h3 class="settings-section-title">Included Admin tabs</h3>
+          <ul id="backupIncludedTabs" class="backup-tab-list backup-tab-list-included"></ul>
+          <h3 class="settings-section-title" style="margin-top:16px;">Not included</h3>
+          <ul class="backup-tab-list backup-tab-list-excluded">
+            <li>💬 Quote</li>
+            <li>💳 Payment</li>
+          </ul>
+          <p class="settings-help" style="margin-top:12px;">Also includes production orders, activity, invoices, and operator data used across Pulse. Login sessions are never imported. Cloud/Supabase rows are separate.</p>
+        </div>
+      </div>
+    </div>
+
 <div class="tab-pane" id="tab-settings">
       <div class="pane-header">
         <h2>System Settings</h2>
@@ -287,10 +320,10 @@
           </div>
         </div>
         <div class="card settings-card">
-          <h3 class="settings-section-title">Database</h3>
+          <h3 class="settings-section-title">Database maintenance</h3>
           <div style="display:flex;flex-direction:column;gap:10px;">
-            <button class="btn" onclick="exportAllData()">📤 Export All Data (JSON)</button>
-            <button class="btn btn-danger" onclick="clearDatabase()">🗑 Clear Database (Danger!)</button>
+            <button type="button" class="btn" onclick="exportAllData()">📤 Export data only (legacy JSON)</button>
+            <button type="button" class="btn btn-danger" onclick="clearDatabase()">🗑 Clear Database (Danger!)</button>
           </div>
         </div>
       </div>
@@ -373,7 +406,7 @@
         </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Versions</th><th>Actions</th></tr></thead>
             <tbody id="catFinishingBody"></tbody>
           </table>
         </div>
@@ -728,11 +761,19 @@
 
 <!-- Special Finishing Modal -->
 <div class="modal-overlay" id="catFinishingModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <h2 id="catFinTitle">Add Finishing Option</h2>
     <div class="modal-form">
       <div class="field"><label>Name *</label><input type="text" id="catFinName" placeholder="e.g. Lamination"></div>
-      <div class="field"><label>Description</label><input type="text" id="catFinDesc" placeholder="Optional description"></div>
+      <div class="field">
+        <label>Versions</label>
+        <p style="margin:0 0 8px;font-size:12px;color:var(--text-muted);">Each row is one choice on the job ticket (e.g. Gloss, Matte for Lamination).</p>
+        <div id="catFinVersionList" style="display:flex;flex-direction:column;gap:8px;min-height:24px;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="catFinVersionInput" placeholder="Type version and press Enter or Add…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCatFinVersion();}">
+          <button type="button" class="btn btn-sm" onclick="addCatFinVersion()">+ Add version</button>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('catFinishingModal')">Cancel</button>
@@ -945,6 +986,38 @@ document.getElementById('page-styles').textContent = `
   /* Settings */
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .settings-card { }
+  .settings-help { font-size: 12px; color: var(--text-muted); line-height: 1.45; margin: 0 0 12px; }
+  .backup-page-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .backup-page-layout { grid-template-columns: 1fr; } }
+  .backup-main-card { padding: 20px; }
+  .backup-actions-lg { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn-lg { padding: 12px 20px; font-size: 15px; font-weight: 700; }
+  .backup-includes-card { padding: 16px; }
+  .backup-tab-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .backup-tab-list li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .backup-tab-list li:last-child { border-bottom: none; }
+  .backup-tab-list-included li::before { content: '✓ '; color: var(--green, #16a34a); font-weight: 700; }
+  .backup-tab-list-excluded li { color: var(--text-muted); }
+  .backup-import-mode { width: 100%; max-width: 480px; }
+  .backup-summary {
+    font-size: 12px;
+    color: var(--text);
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .backup-summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+  .backup-summary-grid span { white-space: nowrap; }
+  .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .backup-details { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+  .backup-details ul { margin: 8px 0 0 18px; padding: 0; }
+  .backup-details li { margin-bottom: 4px; }
   .settings-section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
   /* PO line items */
@@ -1262,8 +1335,7 @@ MATERIALS.forEach(g => {
 // ── Active Tab ────────────────────────────────────────────
 const ADMIN_TAB_IDS = [
   'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
-  'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
-  'products', 'product-workflows', 'roles',
+  'products', 'product-workflows', 'roles', 'backup',
 ];
 
 function getAdminTabFromUrl() {
@@ -1292,16 +1364,16 @@ async function loadTab(tab) {
   }
   else if (tab === 'payment') {
     const frame = document.getElementById('paymentAdminFrame');
-    if (frame && !frame.src) frame.src = 'payment.html?embedded=admin';
+    if (frame && !frame.src) frame.src = 'payment.html?embedded=admin&v=20260520-QP4';
   }
   else if (tab === 'crm-quote') {
-    const frame = document.getElementById('crmQuoteAdminFrame');
-    if (frame && !frame.src) frame.src = 'crm-quote.html?embedded=admin';
+    refreshQuoteAdminFrame();
   }
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'settings') await loadSettings();
   else if (tab === 'qa-rules') renderQARules();
   else if (tab === 'roles') await renderRoles();
+  else if (tab === 'backup') await loadBackupTab();
   else if (tab === 'products') await loadProductsTab();
   else if (tab === 'product-workflows') await loadProductWorkflowsTab();
 }
@@ -1535,26 +1607,12 @@ const ROLES_PAGES = [
   { key: 'dashboard',           label: 'Dashboard' },
   { key: 'job-ticket',          label: 'Job Ticket' },
   { key: 'pricing-calculator',  label: 'Pricing' },
-  { key: 'quotes',              label: 'Quotes' },
-  { key: 'orders',              label: 'Orders' },
-  { key: 'invoices',            label: 'Invoices' },
   { key: 'prepress',            label: 'Prepress' },
   { key: 'production-manager',  label: 'Production' },
   { key: 'operator-terminal',   label: 'Operator' },
   { key: 'qc-checkout',         label: 'QC Checkout' },
   { key: 'machine-issues',      label: 'Machine Issues' },
-  { key: 'application-dept',    label: 'Application' },
   { key: 'shipping',            label: 'Shipping' },
-  { key: 'proofs',              label: 'Proofs' },
-  { key: 'design-task',         label: 'Design Task' },
-  { key: 'rep-tasks',           label: 'Rep Tasks' },
-  { key: 'leads',               label: 'Leads' },
-  { key: 'instagram-leads',     label: 'Instagram Leads' },
-  { key: 'sales-dashboard',     label: 'Sales Dashboard' },
-  { key: 'jm-dashboard',        label: 'JM Dashboard' },
-  { key: 'sdr-dashboard',       label: 'SDR Dashboard' },
-  { key: 'sdr-pipeline-portal', label: 'SDR Pipeline' },
-  { key: 'ops-manager',         label: 'Ops Manager' },
   { key: 'organisation',        label: 'Organisation' },
   { key: 'admin',               label: 'Admin' },
 ];
@@ -1573,15 +1631,26 @@ const ROLES_ADMIN_TABS = [
   { key: 'organisation', label: 'Organisation' },
   { key: 'payment', label: 'Payment' },
   { key: 'crm-quote', label: 'Quote' },
-  { key: 'inventory', label: 'Inventory' },
-  { key: 'purchase-orders', label: 'Purchase Orders' },
-  { key: 'knowledge', label: 'Knowledge' },
-  { key: 'qa-rules', label: 'QA Rules' },
-  { key: 'settings', label: 'Settings' },
   { key: 'products', label: 'Products' },
   { key: 'product-workflows', label: 'Workflow Config' },
   { key: 'roles', label: 'Roles' },
+  { key: 'backup', label: 'Export / Import' },
 ];
+
+const BACKUP_ADMIN_TAB_LABELS = {
+  personnel: '👥 Personnel',
+  machines: '⚙️ Machines',
+  dies: '🔧 Dies',
+  organisation: 'Organisation',
+  inventory: '📦 Inventory',
+  'purchase-orders': '🛒 Purchase Orders',
+  knowledge: '💡 Knowledge Base',
+  'qa-rules': '✅ QA Rules',
+  settings: '⚙️ Settings',
+  products: '🗂 Products',
+  'product-workflows': '🔀 Product Workflows',
+  roles: '🔐 Roles',
+};
 
 let _roleOverrides = {};
 
@@ -1778,6 +1847,11 @@ function _baseAdminTabsForRole(roleKey, baseCfg) {
   if (baseCfg.adminTabs === 'all' || (roleKey === 'admin' && baseCfg.canViewAdmin)) {
     return ROLES_ADMIN_TABS.map(t => t.key);
   }
+  if (baseCfg.canViewAdmin && Array.isArray(baseCfg.adminTabs) && baseCfg.adminTabs.length) {
+    const tabs = [...baseCfg.adminTabs];
+    if (!tabs.includes('backup')) tabs.push('backup');
+    return tabs;
+  }
   if (Array.isArray(baseCfg.adminTabs) && baseCfg.adminTabs.length) return [...baseCfg.adminTabs];
   return baseCfg.canViewAdmin ? ROLES_ADMIN_TABS.map(t => t.key) : [];
 }
@@ -1880,17 +1954,78 @@ async function saveRolePermissions() {
   if (status) { status.textContent = '✓ Saved'; status.style.color = '#16a34a'; setTimeout(() => { status.textContent = ''; }, 3000); }
 }
 
+// ── Payment / Quote iframe sync ─────────────────────────────
+function refreshQuoteAdminFrame() {
+  const frame = document.getElementById('crmQuoteAdminFrame');
+  if (!frame) return;
+  if (!frame.src) {
+    frame.src = 'crm-quote.html?embedded=admin&v=20260520-QP4';
+    frame.addEventListener('load', () => refreshQuoteAdminFrame(), { once: true });
+    return;
+  }
+  const win = frame.contentWindow;
+  if (win?.renderQuote && win.PulseQuotePayment) {
+    try {
+      const cfg = win.PulseQuotePayment.loadPaymentConfig();
+      const token = win.PulseQuotePayment.getPreviewQuoteToken(cfg);
+      win.renderQuote(token);
+      return;
+    } catch (_) {}
+  }
+  try { win.location.reload(); } catch (_) {}
+}
+
 // ── Init ──────────────────────────────────────────────────
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'pulse-payment-saved') refreshQuoteAdminFrame();
+});
+
 window.addEventListener('storage', (e) => {
   if (e.key === 'pulse_payment_admin_config_v1' || e.key === 'pulse_quote_checkout_v1') {
-    const quoteFrame = document.getElementById('crmQuoteAdminFrame');
-    if (quoteFrame?.contentWindow) {
-      try { quoteFrame.contentWindow.location.reload(); } catch (_) {}
-    }
+    refreshQuoteAdminFrame();
   }
 });
 
+async function recoverCatalogIfNeeded() {
+  try {
+    let c = typeof repairPulseAdminCatalog === 'function'
+      ? await repairPulseAdminCatalog()
+      : null;
+    const needs = typeof pulseCatalogNeedsRecovery === 'function'
+      ? pulseCatalogNeedsRecovery(c)
+      : (!c?.colorModes?.length || !c?.products?.length);
+    if (needs && typeof recoverPulseAdminCatalog === 'function') {
+      c = await recoverPulseAdminCatalog();
+    }
+    if (typeof pulseCatalogNeedsRecovery === 'function' && pulseCatalogNeedsRecovery(c)) {
+      await importCatalogFromDefaultFile();
+      c = typeof repairPulseAdminCatalog === 'function' ? await repairPulseAdminCatalog() : c;
+    }
+    if (needs && c && typeof showPageToast === 'function') {
+      showPageToast(
+        `Catalogue restored — ${c.colorModes?.length || 0} color modes, ${c.products?.length || 0} products.`,
+        'success'
+      );
+    }
+    if (activeTab === 'products' && c) {
+      catColorModes = c.colorModes || [];
+      catMaterials = c.materials || [];
+      catFinishing = c.finishing || [];
+      catProducts = c.products || [];
+      renderCatColorModes();
+      renderCatMaterials();
+      renderCatFinishing();
+      renderCatProducts();
+    }
+    return c;
+  } catch (e) {
+    console.warn('[Admin] catalogue recovery:', e);
+    return null;
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  await recoverCatalogIfNeeded();
   await loadCustomRoles();
   await seedKnowledge();
   const urlTab = getAdminTabFromUrl();
@@ -2738,23 +2873,45 @@ async function markPOReceived(id) {
 let machineCapOverrides = {};
 
 async function renderMachines() {
-  // Load config overrides
   const capConfig = await getConfig('machineCapacity');
   machineCapOverrides = capConfig?.value || {};
+  if (typeof loadPulseMachineCapacityOverrides === 'function') await loadPulseMachineCapacityOverrides();
+  if (typeof syncPulseMachineryFromOrganisation === 'function') syncPulseMachineryFromOrganisation();
+
+  const orgMachines = typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [];
+  const overrideNames = Object.keys(machineCapOverrides || {});
+  const byName = new Map();
+  for (const m of orgMachines) {
+    const name = m.displayName || m.name;
+    if (name) byName.set(name, m);
+  }
+  overrideNames.forEach(name => { if (!byName.has(name)) byName.set(name, { name, displayName: name }); });
+
   const tbody = document.getElementById('machinesTableBody');
-  tbody.innerHTML = Object.entries(MACHINES).map(([name, info]) => {
-    const cap = { ...MACHINE_CAPACITY[name], ...(machineCapOverrides[name] || {}) };
+  if (!byName.size) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No machines in Organisation — add hardware in Admin → Organisation</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = [...byName.entries()].map(([name, m]) => {
+    const info = (typeof MACHINES !== 'undefined' && MACHINES[name]) || {};
+    const facSlug = info.facility || (m.facility === 'boyd' ? 'boyd-street' : m.facility === '16th' ? '16th-street' : '');
+    const facLabel = typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(facSlug) : (facSlug || '—');
+    const cap = typeof getEffectiveMachineCapacity === 'function'
+      ? getEffectiveMachineCapacity(name)
+      : { ...(typeof MACHINE_CAPACITY !== 'undefined' ? MACHINE_CAPACITY[name] : {}), ...(machineCapOverrides[name] || {}) };
     const capStr = cap.dailySheets ? `${cap.dailySheets.toLocaleString()} sheets/day`
       : cap.dailyLinearFeet ? `${cap.dailyLinearFeet.toLocaleString()} ft/day`
       : cap.dailyPouches ? `${cap.dailyPouches.toLocaleString()} pouches/day`
       : cap.dailyUnits ? `${cap.dailyUnits.toLocaleString()} units/day`
       : cap.dailySqFt ? `${cap.dailySqFt.toLocaleString()} sq-ft/day`
       : '—';
+    const ops = (info.operations || []).join(', ');
     return `
       <tr>
         <td style="font-weight:600;">${name}</td>
-        <td>${FACILITIES[info.facility]?.name?.split(' —')[0] || info.facility || '—'}</td>
-        <td style="font-size:12px;">${(info.operations || []).join(', ')}</td>
+        <td>${facLabel}</td>
+        <td style="font-size:12px;">${ops || '—'}</td>
         <td>${capStr}</td>
         <td style="font-size:12px;color:var(--text-muted);">${cap.notes || ''}</td>
         <td><button class="btn btn-sm" onclick="openMachineCapModal('${name.replace(/'/g,"\\'")}')">Edit</button></td>
@@ -2764,7 +2921,9 @@ async function renderMachines() {
 }
 
 async function openMachineCapModal(machineName) {
-  const cap = { ...MACHINE_CAPACITY[machineName], ...(machineCapOverrides[machineName] || {}) };
+  const cap = typeof getEffectiveMachineCapacity === 'function'
+    ? getEffectiveMachineCapacity(machineName)
+    : { ...(typeof MACHINE_CAPACITY !== 'undefined' ? MACHINE_CAPACITY[machineName] : {}), ...(machineCapOverrides[machineName] || {}) };
   document.getElementById('machCapTitle').textContent = 'Edit: ' + machineName;
   document.getElementById('machCapKey').value = machineName;
   document.getElementById('machCapSheets').value = cap.dailySheets || '';
@@ -2875,6 +3034,129 @@ async function loadSettings() {
   updateAppDeptTotal();
 }
 
+async function loadBackupTab() {
+  renderBackupIncludedTabsList();
+  await renderBackupSummaryPanel();
+}
+
+function renderBackupIncludedTabsList() {
+  const el = document.getElementById('backupIncludedTabs');
+  if (!el) return;
+  const tabs = typeof PULSE_ADMIN_BACKUP_TABS !== 'undefined'
+    ? PULSE_ADMIN_BACKUP_TABS
+    : Object.keys(BACKUP_ADMIN_TAB_LABELS);
+  el.innerHTML = tabs.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
+}
+
+function renderBackupSummaryHtml(summary) {
+  if (!summary) return '<span class="settings-help">Summary unavailable.</span>';
+  const idb = summary.indexedDB || {};
+  const lines = [
+    `<strong>${idb.orders ?? 0}</strong> orders`,
+    `<strong>${idb.personnel ?? 0}</strong> personnel`,
+    `<strong>${idb.dies ?? 0}</strong> dies`,
+    `<strong>${idb.inventory ?? 0}</strong> inventory items`,
+    `<strong>${summary.configCount ?? 0}</strong> config entries`,
+    summary.organisation
+      ? `<strong>${summary.facilities ?? 0}</strong> organisation facilities`
+      : 'no organisation bundle',
+    `<strong>${summary.localStorageKeys ?? 0}</strong> local settings keys`,
+  ];
+  return `<div class="backup-summary-grid">${lines.map(t => `<span>${t}</span>`).join('')}</div>`;
+}
+
+async function renderBackupSummaryPanel() {
+  const el = document.getElementById('backupSummary');
+  if (!el) return;
+  try {
+    if (typeof getPulseBackupSummary !== 'function') {
+      el.textContent = 'Backup API not loaded — refresh the page.';
+      return;
+    }
+    const summary = await getPulseBackupSummary();
+    el.innerHTML = renderBackupSummaryHtml(summary);
+  } catch (e) {
+    el.textContent = 'Could not load summary: ' + (e.message || e);
+  }
+}
+
+async function exportPulseFullBackupAdmin() {
+  try {
+    if (typeof buildPulseFullBackup !== 'function') {
+      alert('Backup export is not available. Refresh the page.');
+      return;
+    }
+    const payload = await buildPulseFullBackup();
+    if (typeof downloadPulseBackupFile === 'function') {
+      downloadPulseBackupFile(payload);
+    } else {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pulse-full-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    await renderBackupSummaryPanel();
+    if (typeof showPageToast === 'function') {
+      const s = payload.summary || {};
+      showPageToast(
+        `Exported backup — ${s.orders ?? 0} orders, ${s.catalogProducts ?? 0} products, ${s.configEntries ?? 0} config entries.`,
+        'success',
+        5000
+      );
+    }
+  } catch (e) {
+    console.error('[exportPulseFullBackupAdmin]', e);
+    alert('Export failed: ' + (e.message || e));
+  }
+}
+
+async function importPulseFullBackupAdmin(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  input.value = '';
+  let parsed;
+  try {
+    parsed = JSON.parse(await file.text());
+  } catch (e) {
+    alert('Invalid JSON file: ' + (e.message || e));
+    return;
+  }
+  const mode = document.getElementById('pulseImportMode')?.value || 'replace';
+  const isFull = !!(parsed?.indexedDB || parsed?.schemaVersion >= 2);
+  const isLegacy = !!(parsed?.orders && !parsed?.indexedDB);
+  if (!isFull && !isLegacy) {
+    alert('Unrecognized backup file. Use a Pulse full backup JSON from Export full backup, or a legacy export with orders.');
+    return;
+  }
+  const warn = mode === 'replace'
+    ? 'Replace will overwrite IndexedDB production stores and config in this browser.\n\nContinue?'
+    : 'Merge will add/update records without clearing existing stores first.\n\nContinue?';
+  if (!confirm(warn)) return;
+  if (mode === 'replace' && !confirm('Final confirmation: import backup now?')) return;
+  try {
+    if (typeof importPulseFullBackup !== 'function') throw new Error('Import API not loaded');
+    const result = await importPulseFullBackup(parsed, { mode });
+    await recoverCatalogIfNeeded();
+    await loadCustomRoles();
+    if (activeTab === 'products') await loadProductsTab();
+    if (activeTab === 'product-workflows') await loadProductWorkflowsTab();
+    if (activeTab === 'backup') await loadBackupTab();
+    else if (activeTab === 'settings') await loadSettings();
+    const orderN = result.counts?.orders ?? parsed?.indexedDB?.orders?.length ?? parsed?.orders?.length ?? 0;
+    if (typeof showPageToast === 'function') {
+      showPageToast(`Import complete (${mode}) — ${orderN} orders restored. Refresh other open Pulse tabs.`, 'success', 7000);
+    } else {
+      alert(`Import complete (${mode}). Refresh the page and other open Pulse tabs.`);
+    }
+  } catch (e) {
+    console.error('[importPulseFullBackupAdmin]', e);
+    alert('Import failed: ' + (e.message || e));
+  }
+}
+
 let saveSettingTimer = null;
 function saveSettingDebounced() {
   clearTimeout(saveSettingTimer);
@@ -2892,6 +3174,9 @@ async function doSaveSettings() {
 }
 
 async function exportAllData() {
+  if (typeof buildPulseFullBackup === 'function' && typeof downloadPulseBackupFile === 'function') {
+    return exportPulseFullBackupAdmin();
+  }
   const data = {
     orders: await getAllOrders(),
     personnel: await getAllPersonnel(),
@@ -2900,16 +3185,19 @@ async function exportAllData() {
     purchaseOrders: await getAllPurchaseOrders(),
     knowledge: await getAllKnowledge(),
     reprints: await getAllReprints(),
-    activity: await getAllActivity(),
-    exportedAt: new Date().toISOString()
+    activity: [],
+    exportedAt: new Date().toISOString(),
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadPulseBackupFile?.(data, `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`)
+    || (() => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bazaar-print-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    })();
 }
 
 async function clearDatabase() {
@@ -2917,7 +3205,8 @@ async function clearDatabase() {
   if (!confirm('FINAL WARNING: All data will be lost. Type OK to confirm.')) return;
   // Clear all object stores
   const db = await openDB();
-  const stores = ['orders', 'personnel', 'devices', 'activity_log', 'config', 'knowledge_base', 'reprints', 'dies', 'inventory', 'purchase_orders'];
+  const stores = typeof PULSE_BACKUP_STORES !== 'undefined' ? [...PULSE_BACKUP_STORES, 'config']
+    : ['orders', 'personnel', 'devices', 'activity_log', 'config', 'knowledge_base', 'reprints', 'dies', 'inventory', 'purchase_orders', 'invoices', 'operator_sessions', 'operator_points'];
   for (const store of stores) {
     await new Promise((resolve, reject) => {
       const tx = db.transaction(store, 'readwrite');
@@ -2944,6 +3233,7 @@ let catFinishing  = [];
 let catProducts   = [];
 let catEditingId  = { colorModes: null, materials: null, finishing: null, products: null };
 let catMatItems   = [];
+let catFinVersions = [];
 
 function catalogUID() {
   return Math.random().toString(36).slice(2, 10);
@@ -2969,14 +3259,33 @@ function buildDefaultMaterials() {
 }
 
 function buildDefaultFinishing() {
+  if (typeof buildPulseDefaultFinishing === 'function') return buildPulseDefaultFinishing();
   return [
-    { id: catalogUID(), name: 'Lamination',  description: 'Gloss, Matte, Soft Touch, Holo, Coating' },
-    { id: catalogUID(), name: 'Spot UV',      description: 'UV coating on selected areas' },
-    { id: catalogUID(), name: 'Foil',         description: 'Gold, Silver, Rose Gold, Holographic, Custom' },
-    { id: catalogUID(), name: 'Scodix',       description: 'Scodix UV and foil digital effects' },
-    { id: catalogUID(), name: 'Embossing',    description: 'Raised emboss effect' },
-    { id: catalogUID(), name: 'Perforation',  description: 'Tear-off perforation line' },
+    { id: catalogUID(), name: 'Lamination', versions: ['Gloss', 'Matte', 'Soft Touch', 'Holo', 'Coating'] },
+    { id: catalogUID(), name: 'Spot UV', versions: [] },
+    { id: catalogUID(), name: 'Foil', versions: ['Gold', 'Silver', 'Rose Gold', 'Holographic', 'Custom'] },
+    { id: catalogUID(), name: 'Scodix', versions: [] },
+    { id: catalogUID(), name: 'Embossing', versions: [] },
+    { id: catalogUID(), name: 'Perforation', versions: [] },
   ];
+}
+
+function catFinishingVersions(entry) {
+  if (typeof getCatalogFinishingVersions === 'function') return getCatalogFinishingVersions(entry);
+  if (Array.isArray(entry?.versions) && entry.versions.length) return entry.versions.slice();
+  if (entry?.description) {
+    return String(entry.description).split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeCatFinishingList(list) {
+  return (list || []).map(f => {
+    const versions = catFinishingVersions(f);
+    const next = { ...f, versions };
+    delete next.description;
+    return next;
+  });
 }
 
 function buildDefaultProductCatalog() {
@@ -3149,16 +3458,24 @@ async function resetAllCatalogToDefaults() {
     'This overwrites color modes, materials, special finishing, and all products. ' +
     'Product workflows will also be reset to defaults.'
   )) return;
-  catColorModes = buildDefaultColorModes();
-  catMaterials = buildDefaultMaterials();
-  catFinishing = buildDefaultFinishing();
-  catProducts = buildDefaultProductCatalog();
-  await Promise.all([
-    setConfig(CAT_KEYS.colorModes, catColorModes),
-    setConfig(CAT_KEYS.materials, catMaterials),
-    setConfig(CAT_KEYS.finishing, catFinishing),
-    setConfig(CAT_KEYS.products, catProducts),
-  ]);
+  if (typeof repairPulseAdminCatalog === 'function') {
+    const c = await repairPulseAdminCatalog({ force: true });
+    catColorModes = c.colorModes;
+    catMaterials = c.materials;
+    catFinishing = c.finishing;
+    catProducts = c.products;
+  } else {
+    catColorModes = buildDefaultColorModes();
+    catMaterials = buildDefaultMaterials();
+    catFinishing = buildDefaultFinishing();
+    catProducts = buildDefaultProductCatalog();
+    await Promise.all([
+      setConfig(CAT_KEYS.colorModes, catColorModes),
+      setConfig(CAT_KEYS.materials, catMaterials),
+      setConfig(CAT_KEYS.finishing, catFinishing),
+      setConfig(CAT_KEYS.products, catProducts),
+    ]);
+  }
   renderCatColorModes();
   renderCatMaterials();
   renderCatFinishing();
@@ -3213,35 +3530,61 @@ async function resetAllWorkflowsToDefaults() {
 
 // ── Load & seed ────────────────────────────────────────────
 async function loadProductsTab() {
-  // Color Modes
-  const cmCfg = await getConfig(CAT_KEYS.colorModes);
-  catColorModes = cmCfg?.value ?? null;
-  if (!catColorModes) {
-    catColorModes = buildDefaultColorModes();
-    await setConfig(CAT_KEYS.colorModes, catColorModes);
+  if (typeof repairPulseAdminCatalog === 'function') {
+    let c = await repairPulseAdminCatalog();
+    if (typeof pulseCatalogNeedsRecovery === 'function' && pulseCatalogNeedsRecovery(c)) {
+      c = typeof recoverPulseAdminCatalog === 'function'
+        ? await recoverPulseAdminCatalog()
+        : await repairPulseAdminCatalog({ force: true });
+    }
+    if (typeof pulseCatalogNeedsRecovery === 'function' && pulseCatalogNeedsRecovery(c)) {
+      await importCatalogFromDefaultFile();
+      c = typeof repairPulseAdminCatalog === 'function' ? await repairPulseAdminCatalog() : c;
+      catColorModes = c.colorModes || [];
+      catMaterials = c.materials || [];
+      catFinishing = c.finishing || [];
+      catProducts = c.products || [];
+    }
+    catColorModes = c.colorModes || [];
+    catMaterials = c.materials || [];
+    catFinishing = c.finishing || [];
+    catProducts = c.products || [];
+    if ((c.repaired && Object.values(c.repaired).some(Boolean)) && typeof showPageToast === 'function') {
+      showPageToast('Product catalogue restored from defaults.', 'success');
+    }
+  } else if (typeof ensurePulseAdminCatalog === 'function') {
+    const c = await ensurePulseAdminCatalog();
+    catColorModes = c.colorModes || [];
+    catMaterials = c.materials || [];
+    catFinishing = c.finishing || [];
+    catProducts = c.products || [];
+  } else {
+    const cmCfg = await getConfig(CAT_KEYS.colorModes);
+    catColorModes = cmCfg?.value ?? null;
+    if (!Array.isArray(catColorModes) || !catColorModes.length) {
+      catColorModes = buildDefaultColorModes();
+      await setConfig(CAT_KEYS.colorModes, catColorModes);
+    }
+    const matCfg = await getConfig(CAT_KEYS.materials);
+    catMaterials = matCfg?.value ?? null;
+    if (!Array.isArray(catMaterials) || !catMaterials.length) {
+      catMaterials = buildDefaultMaterials();
+      await setConfig(CAT_KEYS.materials, catMaterials);
+    }
+    const finCfg = await getConfig(CAT_KEYS.finishing);
+    catFinishing = finCfg?.value ?? null;
+    if (!Array.isArray(catFinishing) || !catFinishing.length) {
+      catFinishing = buildDefaultFinishing();
+      await setConfig(CAT_KEYS.finishing, catFinishing);
+    }
+    const prodCfg = await getConfig(CAT_KEYS.products);
+    catProducts = prodCfg?.value ?? null;
+    if (!Array.isArray(catProducts) || !catProducts.length) {
+      catProducts = buildDefaultProductCatalog();
+      await setConfig(CAT_KEYS.products, catProducts);
+    }
   }
-
-  const matCfg = await getConfig(CAT_KEYS.materials);
-  catMaterials = matCfg?.value ?? null;
-  if (!catMaterials) {
-    catMaterials = buildDefaultMaterials();
-    await setConfig(CAT_KEYS.materials, catMaterials);
-  }
-
-  const finCfg = await getConfig(CAT_KEYS.finishing);
-  catFinishing = finCfg?.value ?? null;
-  if (!catFinishing) {
-    catFinishing = buildDefaultFinishing();
-    await setConfig(CAT_KEYS.finishing, catFinishing);
-  }
-
-  // Products — seed with full material / finishing / color mode data per product
-  const prodCfg = await getConfig(CAT_KEYS.products);
-  catProducts = prodCfg?.value ?? null;
-  if (!catProducts) {
-    catProducts = buildDefaultProductCatalog();
-    await setConfig(CAT_KEYS.products, catProducts);
-  }
+  catFinishing = normalizeCatFinishingList(catFinishing);
 
   renderCatProducts();
   renderCatMaterials();
@@ -3261,7 +3604,10 @@ function renderCatColorModes() {
   const tbody = document.getElementById('catColorModesBody');
   if (!tbody) return;
   if (!catColorModes.length) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No color modes yet. Add one above.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">
+      No color modes in this browser. Data may have been cleared.
+      <div style="margin-top:10px;"><button type="button" class="btn btn-primary btn-sm" onclick="resetAllCatalogToDefaults()">↺ Restore catalogue defaults</button></div>
+    </td></tr>`;
     return;
   }
   tbody.innerHTML = catColorModes.map(cm => `
@@ -3387,36 +3733,93 @@ function renderCatFinishing() {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No finishing options yet. Add one above.</td></tr>';
     return;
   }
-  tbody.innerHTML = catFinishing.map(f => `
+  tbody.innerHTML = catFinishing.map(f => {
+    const vers = catFinishingVersions(f);
+    const versHtml = vers.length
+      ? vers.map(v => `<span class="cat-tag">${escHtml(v)}</span>`).join(' ')
+      : '<span style="color:var(--text-muted);">—</span>';
+    return `
     <tr>
       <td style="font-weight:600;">${escHtml(f.name)}</td>
-      <td style="color:var(--text-muted);font-size:13px;">${escHtml(f.description || '—')}</td>
+      <td style="font-size:12px;">${versHtml}</td>
       <td>
         <button class="btn btn-sm" onclick="openCatFinishingModal('${f.id}')">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteCatFinishing('${f.id}')">Delete</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+}
+
+function renderCatFinVersions() {
+  const list = document.getElementById('catFinVersionList');
+  if (!list) return;
+  if (!catFinVersions.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 0;">No versions yet — add one below.</div>';
+    return;
+  }
+  list.innerHTML = catFinVersions.map((item, i) => `
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" class="cat-fin-ver-input" data-idx="${i}" value="${escHtml(item)}" placeholder="e.g. Gloss" style="flex:1;">
+      <button type="button" class="btn btn-sm" onclick="removeCatFinVersion(${i})" title="Remove">Remove</button>
+    </div>
+  `).join('');
+}
+
+function collectCatFinVersionsFromDom() {
+  const inputs = document.querySelectorAll('#catFinVersionList .cat-fin-ver-input');
+  const seen = new Set();
+  const out = [];
+  inputs.forEach(inp => {
+    const v = (inp.value || '').trim();
+    if (!v || seen.has(v.toLowerCase())) return;
+    seen.add(v.toLowerCase());
+    out.push(v);
+  });
+  return out;
+}
+
+function addCatFinVersion() {
+  const collected = collectCatFinVersionsFromDom();
+  const input = document.getElementById('catFinVersionInput');
+  const val = (input?.value || '').trim();
+  catFinVersions = collected;
+  if (val && !catFinVersions.some(v => v.toLowerCase() === val.toLowerCase())) {
+    catFinVersions.push(val);
+  }
+  if (input) input.value = '';
+  renderCatFinVersions();
+}
+
+function removeCatFinVersion(idx) {
+  catFinVersions = collectCatFinVersionsFromDom();
+  catFinVersions.splice(idx, 1);
+  renderCatFinVersions();
 }
 
 function openCatFinishingModal(id) {
   const fin = id ? catFinishing.find(x => x.id === id) : null;
   catEditingId.finishing = id || null;
+  catFinVersions = fin ? catFinishingVersions(fin) : [];
   document.getElementById('catFinTitle').textContent = fin ? 'Edit Finishing Option' : 'Add Finishing Option';
   document.getElementById('catFinName').value = fin?.name || '';
-  document.getElementById('catFinDesc').value = fin?.description || '';
+  document.getElementById('catFinVersionInput').value = '';
+  renderCatFinVersions();
   document.getElementById('catFinishingModal').classList.add('active');
 }
 
 async function saveCatFinishing() {
   const name = document.getElementById('catFinName').value.trim();
   if (!name) { alert('Name is required.'); return; }
-  const description = document.getElementById('catFinDesc').value.trim();
+  const versions = collectCatFinVersionsFromDom();
+  const pending = (document.getElementById('catFinVersionInput')?.value || '').trim();
+  if (pending && !versions.some(v => v.toLowerCase() === pending.toLowerCase())) versions.push(pending);
   if (catEditingId.finishing) {
     const idx = catFinishing.findIndex(x => x.id === catEditingId.finishing);
-    if (idx >= 0) catFinishing[idx] = { ...catFinishing[idx], name, description };
+    if (idx >= 0) catFinishing[idx] = { ...catFinishing[idx], name, versions };
   } else {
-    catFinishing.push({ id: catalogUID(), name, description });
+    catFinishing.push({ id: catalogUID(), name, versions });
   }
+  catFinishing = normalizeCatFinishingList(catFinishing);
   await setConfig(CAT_KEYS.finishing, catFinishing);
   closeModal('catFinishingModal');
   renderCatFinishing();
@@ -3621,6 +4024,34 @@ async function catImportSection(section, input) {
   input.value = '';
 }
 
+async function importCatalogFromDefaultFile() {
+  try {
+    const r = await fetch('data/pulse-catalog-default.json', { cache: 'no-store' });
+    if (!r.ok) return false;
+    const parsed = await r.json();
+    if (parsed.colorModes?.length) {
+      catColorModes = parsed.colorModes;
+      await setConfig(CAT_KEYS.colorModes, catColorModes);
+    }
+    if (parsed.materials?.length) {
+      catMaterials = parsed.materials;
+      await setConfig(CAT_KEYS.materials, catMaterials);
+    }
+    if (parsed.finishing?.length) {
+      catFinishing = parsed.finishing;
+      await setConfig(CAT_KEYS.finishing, catFinishing);
+    }
+    if (parsed.products?.length) {
+      catProducts = parsed.products;
+      await setConfig(CAT_KEYS.products, catProducts);
+    }
+    return !!(catColorModes?.length && catProducts?.length);
+  } catch (e) {
+    console.warn('[Admin] importCatalogFromDefaultFile:', e);
+    return false;
+  }
+}
+
 async function catalogImportAll(input) {
   const file = input.files[0];
   if (!file) return;
@@ -3787,6 +4218,11 @@ function pwCloneSteps(steps) {
 
 async function ensureCatProductsForPw() {
   if (typeof catProducts !== 'undefined' && catProducts?.length) return;
+  if (typeof ensurePulseAdminCatalog === 'function') {
+    const c = await ensurePulseAdminCatalog();
+    catProducts = c.products || [];
+    return;
+  }
   const prodCfg = await getConfig(CAT_KEYS.products);
   catProducts = Array.isArray(prodCfg) ? prodCfg : (prodCfg?.value ?? null);
   if (!catProducts) {
@@ -3798,6 +4234,9 @@ async function ensureCatProductsForPw() {
 async function loadProductWorkflowsTab() {
   const listEl = document.getElementById('pwProductList');
   try {
+    if (typeof syncPulseMachineryFromOrganisation === 'function') {
+      syncPulseMachineryFromOrganisation();
+    }
     await ensureCatProductsForPw();
     if (!Array.isArray(catProducts)) catProducts = [];
     pwMachines = typeof getAllMachines === 'function' ? await getAllMachines() : [];

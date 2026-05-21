@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Payment — Bazaar Print</title>
   <script src="shared.js?v=20260520-PAY2"></script>
-  <script src="pulse-quote-payment.js?v=20260520-QP1"></script>
+  <script src="pulse-quote-payment.js?v=20260520-QP4"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -104,10 +104,6 @@
       <div id="partialCashDepositHint" class="pay-callout pay-callout-green" hidden style="margin-top:14px;">
         <strong>Cash / offline deposit:</strong> Record the deposit with a receipt ID. Select balance payment channels below for the remaining balance.
       </div>
-      <div id="partialBalanceChannelsWrap">
-        <h3 class="pay-section-label" style="margin-top:14px;">Balance payment channels <span id="balanceChannelsAmount" class="pay-balance-amount">—</span></h3>
-        <div class="pay-channels pay-channels-grid" id="channelsPartial"></div>
-      </div>
     </div>
 
     <div id="settingPanelFull" class="pay-panel" hidden>
@@ -144,6 +140,15 @@
           <option value="net-60">60 days</option>
         </select>
         <p class="pay-field-hint">Reminder start date in the follow-up section is set to today plus this period (e.g. 30 days → due date 30 days from today).</p>
+      </div>
+    </div>
+
+    <div id="balanceChannelsSection" class="pay-panel" hidden>
+      <div id="partialBalanceChannelsWrap">
+        <h3 class="pay-section-label" style="margin-top:0;">Balance payment channels <span id="balanceChannelsAmount" class="pay-balance-amount">—</span></h3>
+        <p id="balanceChannelsNetHint" class="pay-field-hint" hidden>Channels the client can use to pay the full invoice by the due date (no upfront deposit).</p>
+        <p id="balanceChannelsPartialHint" class="pay-field-hint">Channels for the remaining balance after the deposit is collected.</p>
+        <div class="pay-channels pay-channels-grid" id="channelsPartial"></div>
       </div>
     </div>
   </div>
@@ -269,8 +274,7 @@ function addDaysIso(days) {
 }
 
 function normalizeFullChannels(ids) {
-  if (!ids?.length) return [...PAY_DEFAULTS.channelsFull];
-  return [...new Set(ids)];
+  return PQP.normalizeChannelIds(ids?.length ? ids : PAY_DEFAULTS.channelsFull);
 }
 
 /** Full pay-in includes cash (shows receipt ID field). */
@@ -311,6 +315,11 @@ function renderChannelCheckboxes(containerId, selectedIds, namePrefix, exclusive
     el.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       cb.addEventListener('change', () => onExclusiveChannelChange(containerId, cb));
     });
+  } else if (containerId === 'channelsPartial') {
+    el.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', updateGatePreview);
+    });
+    syncPartialBalanceChannelsUi();
   }
 }
 
@@ -322,6 +331,15 @@ function onFullChannelChange(changed) {
     el.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
       cb.checked = cb.dataset.channel === 'cash';
     });
+  } else if (id === 'cash' && !changed.checked) {
+    const defaults = (PAY_DEFAULTS.channelsFull || []).filter((ch) => ch !== 'cash');
+    el.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = defaults.includes(cb.dataset.channel);
+    });
+    if (!el.querySelector('input[type="checkbox"]:checked')) {
+      const fallback = el.querySelector('input[type="checkbox"]');
+      if (fallback) fallback.checked = true;
+    }
   } else if (changed.checked) {
     const cashCb = el.querySelector('input[data-channel="cash"]');
     if (cashCb) cashCb.checked = false;
@@ -346,10 +364,60 @@ function onExclusiveChannelChange(containerId, changed) {
   updateGatePreview();
 }
 
+/** Net terms: show all balance channels; no deposit gateway/cash rules. */
+function syncNetBalanceChannelsUi() {
+  if (getSelectedStrategy() !== 'net') return;
+  const el = document.getElementById('channelsPartial');
+  if (!el) return;
+  el.querySelectorAll('[data-channel-chip]').forEach((chip) => {
+    chip.hidden = false;
+  });
+  updateBalanceChannelsAmountDisplay();
+}
+
+/** Partial: gateway deposit hides Cash in balance channels; cash deposit selects all channels. */
+function syncPartialBalanceChannelsUi() {
+  if (getSelectedStrategy() !== 'partial') return;
+  const el = document.getElementById('channelsPartial');
+  if (!el) return;
+  const depHandling = document.querySelector('input[name="depHandling"]:checked')?.value || 'cash';
+  const isGateway = depHandling === 'gateway';
+  const allIds = PQP.PAY_CHANNELS.map((ch) => ch.id);
+
+  el.querySelectorAll('[data-channel-chip]').forEach((chip) => {
+    const id = chip.querySelector('input[type="checkbox"]')?.dataset.channel;
+    if (id === 'cash') chip.hidden = isGateway;
+  });
+
+  el.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    const id = cb.dataset.channel;
+    if (isGateway) {
+      if (id === 'cash') cb.checked = false;
+    } else {
+      cb.checked = true;
+    }
+  });
+
+  if (isGateway) {
+    const anyChecked = el.querySelector('input[type="checkbox"]:checked');
+    if (!anyChecked) {
+      const fallback = allIds.find((id) => id !== 'cash');
+      const cb = el.querySelector(`input[data-channel="${fallback}"]`);
+      if (cb) cb.checked = true;
+    }
+  }
+
+  updateGatePreview();
+}
+
 function readChannelSelection(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
-  return [...el.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.dataset.channel);
+  return PQP.normalizeChannelIds(
+    [...el.querySelectorAll('input[type="checkbox"]:checked')]
+      .filter((cb) => !cb.closest('[data-channel-chip]')?.hidden)
+      .map((cb) => cb.dataset.channel)
+  );
 }
 
 function getQuoteTotalForPreview() {
@@ -390,10 +458,23 @@ function updateRemainingBalanceDisplay() {
   if (el) el.textContent = remainingFormatted;
   const depositTitle = document.getElementById('depositCollectionAmount');
   if (depositTitle) depositTitle.textContent = `(${depositFormatted})`;
-  const balanceTitle = document.getElementById('balanceChannelsAmount');
-  if (balanceTitle) balanceTitle.textContent = `(${remainingFormatted})`;
+  updateBalanceChannelsAmountDisplay();
   const fullTitle = document.getElementById('fullPaymentAmount');
   if (fullTitle) fullTitle.textContent = total > 0 ? `(${PQP.formatMoney(total)})` : '—';
+}
+
+function updateBalanceChannelsAmountDisplay() {
+  const balanceTitle = document.getElementById('balanceChannelsAmount');
+  if (!balanceTitle) return;
+  if (getSelectedStrategy() === 'net') {
+    balanceTitle.textContent = `(${PQP.formatMoney(getQuoteTotalForPreview())})`;
+    return;
+  }
+  if (getSelectedStrategy() === 'partial') {
+    const total = getQuoteTotalFromInput();
+    const deposit = getDepositFromInputs();
+    balanceTitle.textContent = `(${PQP.formatMoney(Math.max(0, total - deposit))})`;
+  }
 }
 
 function syncDepositFields(origin, finalize = false) {
@@ -476,13 +557,24 @@ function handleStrategySwitch() {
   document.getElementById('settingPanelPartial').hidden = selected !== 'partial';
   document.getElementById('settingPanelFull').hidden = selected !== 'full';
   document.getElementById('settingPanelNet').hidden = selected !== 'net';
+  const balanceSection = document.getElementById('balanceChannelsSection');
+  const showBalanceChannels = selected === 'partial' || selected === 'net';
+  if (balanceSection) balanceSection.hidden = !showBalanceChannels;
+  const netHint = document.getElementById('balanceChannelsNetHint');
+  const partialHint = document.getElementById('balanceChannelsPartialHint');
+  if (netHint) netHint.hidden = selected !== 'net';
+  if (partialHint) partialHint.hidden = selected !== 'partial';
   if (selected === 'net') syncNetTermsToReminderDate();
   updateReminderDateUiForStrategy();
   syncRemoteQuoteCardVisibility();
   syncClientConfirmPlacement();
   if (selected === 'full') syncFullCashModeUi();
   else if (selected === 'partial') syncPartialCashDepositUi();
-  else syncQuoteDeliveryOptionsUi();
+  else if (selected === 'net') {
+    syncNetBalanceChannelsUi();
+    syncQuoteDeliveryOptionsUi({ resetDefaults: true });
+  }
+  updateBalanceChannelsAmountDisplay();
   updateGatePreview();
 }
 
@@ -496,33 +588,24 @@ function isCashFollowUpContext() {
   return isPartialCashDeposit();
 }
 
-/** Partial+cash vs full+cash rules for confirmation and follow-up checkboxes. */
-function syncQuoteDeliveryOptionsUi() {
+/** Partial+cash vs full+cash rules for confirmation and follow-up visibility. */
+function syncQuoteDeliveryOptionsUi(options = {}) {
+  const resetDefaults = options.resetDefaults === true;
   const partialCash = isPartialCashDeposit();
   const fullCashOnly = isFullCashInPersonOnly();
   const confirmWrap = document.getElementById('confirmBeforeOrderWrap');
   const confirmChk = document.getElementById('chkActiveOrder');
-  const followUpCard = document.getElementById('followUpScheduleCard');
+  const followUpScheduleCard = document.getElementById('followUpScheduleCard');
   const followUpMasterWrap = document.getElementById('followUpMasterWrap');
   const followUpMaster = document.getElementById('chkFollowUpMaster');
 
   if (confirmWrap) confirmWrap.hidden = false;
   if (followUpMasterWrap) followUpMasterWrap.hidden = false;
+  if (followUpScheduleCard) followUpScheduleCard.hidden = fullCashOnly;
 
-  if (getSelectedStrategy() === 'partial') {
-    if (confirmChk) confirmChk.checked = !partialCash;
-    if (partialCash) {
-      if (followUpCard) followUpCard.hidden = false;
-      if (followUpMaster) followUpMaster.checked = true;
-    } else if (followUpCard) {
-      followUpCard.hidden = false;
-    }
-  } else if (getSelectedStrategy() === 'full') {
-    if (confirmChk) confirmChk.checked = !fullCashOnly;
-    if (followUpMaster) followUpMaster.checked = !fullCashOnly;
-    if (followUpCard) followUpCard.hidden = false;
-  } else if (followUpCard) {
-    followUpCard.hidden = false;
+  if (resetDefaults && followUpMaster) {
+    if (fullCashOnly) followUpMaster.checked = false;
+    else if (partialCash) followUpMaster.checked = true;
   }
 
   const cashHint = document.getElementById('followUpCashHint');
@@ -531,7 +614,7 @@ function syncQuoteDeliveryOptionsUi() {
 }
 
 function syncFollowUpScheduleUi() {
-  syncQuoteDeliveryOptionsUi();
+  toggleFollowUpBox();
 }
 
 function syncRemoteQuoteCardVisibility() {
@@ -544,9 +627,10 @@ function syncPartialCashDepositUi() {
   const cashDep = isPartialCashDeposit();
   const hint = document.getElementById('partialCashDepositHint');
   if (hint) hint.hidden = !cashDep;
+  syncPartialBalanceChannelsUi();
   syncRemoteQuoteCardVisibility();
   syncClientConfirmPlacement();
-  syncQuoteDeliveryOptionsUi();
+  syncQuoteDeliveryOptionsUi({ resetDefaults: true });
   updateGatePreview();
 }
 
@@ -578,31 +662,39 @@ function enforceFullCashExclusiveSelection() {
 
 function syncFullCashModeUi() {
   enforceFullCashExclusiveSelection();
-  const includesCash = fullPaymentIncludesCash();
   const el = document.getElementById('channelsFull');
+  const cashCb = el?.querySelector('input[data-channel="cash"]');
+  const cashSelected = !!cashCb?.checked;
   if (el) {
-    el.classList.remove('pay-channels-cash-only');
+    el.classList.toggle('pay-channels-cash-only', cashSelected);
     el.querySelectorAll('[data-channel-chip]').forEach((chip) => {
-      chip.hidden = false;
+      const id = chip.querySelector('input[type="checkbox"]')?.dataset.channel;
+      chip.hidden = cashSelected && id !== 'cash';
     });
+    if (cashSelected) {
+      el.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = cb.dataset.channel === 'cash';
+      });
+    }
   }
   const box = document.getElementById('fullCashReceiptBox');
-  if (box) box.hidden = !includesCash;
+  if (box) box.hidden = !cashSelected;
   syncRemoteQuoteCardVisibility();
   syncClientConfirmPlacement();
-  syncQuoteDeliveryOptionsUi();
+  syncQuoteDeliveryOptionsUi({ resetDefaults: true });
   const hint = document.getElementById('fullPayMethodHint');
   const cashOnly = isFullCashInPersonOnly();
   if (hint) {
-    hint.textContent = cashOnly
-      ? 'Cash only — other methods are turned off. Receipt ID required. Client confirmation and follow-up schedule are off.'
+    hint.textContent = cashSelected
+      ? 'Cash selected — other payment methods are hidden. Receipt ID required.'
+        + (cashOnly ? ' Client confirmation and follow-up schedule are off.' : '')
       : 'Select one or more methods for full payment checkout. Client confirmation and follow-up schedule are on.';
   }
   const panelHint = document.getElementById('fullPanelCashHint');
   if (panelHint) {
-    panelHint.hidden = !cashOnly;
-    if (cashOnly) {
-      panelHint.innerHTML = '<strong>Cash only:</strong> Record in-person cash on the quote with a receipt ID.';
+    panelHint.hidden = !cashSelected;
+    if (cashSelected) {
+      panelHint.innerHTML = '<strong>Cash:</strong> Record in-person cash on the quote with a receipt ID.';
     }
   }
   updateGatePreview();
@@ -698,7 +790,7 @@ function applyConfig(cfg) {
   toggleCashReceiptBox();
   syncFullCashModeUi();
   handleStrategySwitch();
-  syncFollowUpScheduleUi();
+  syncQuoteDeliveryOptionsUi({ resetDefaults: false });
   syncDepositFields('total', true);
   updateGatePreview();
 }
@@ -716,6 +808,14 @@ function setSaveStatus(msg, ok) {
   const el = document.getElementById('paySaveStatus');
   el.textContent = msg;
   el.className = 'pay-save-status' + (ok ? ' is-ok' : msg ? ' is-err' : '');
+}
+
+/** Tell admin.html to refresh the Quote iframe after config is saved. */
+function notifyAdminPaymentSaved() {
+  if (!PAY_EMBEDDED || window.parent === window) return;
+  try {
+    window.parent.postMessage({ type: 'pulse-payment-saved' }, '*');
+  } catch (_) {}
 }
 
 function savePaymentConfig() {
@@ -736,6 +836,7 @@ function savePaymentConfig() {
     PQP.resetQuoteCheckoutForPaymentConfig(cfg);
     setSaveStatus('Saved ' + new Date().toLocaleTimeString(), true);
     updateGatePreview();
+    notifyAdminPaymentSaved();
   } catch (e) {
     setSaveStatus('Could not save: ' + (e.message || e), false);
   }
@@ -749,6 +850,7 @@ function resetPaymentConfig() {
   PQP.savePaymentConfig(defaults);
   PQP.resetQuoteCheckoutForPaymentConfig(defaults);
   setSaveStatus('Defaults restored.', true);
+  notifyAdminPaymentSaved();
 }
 
 document.getElementById('page-styles').textContent = `
@@ -1034,7 +1136,8 @@ document.getElementById('page-styles').textContent = `
     border-top: 1px dashed #93c5fd;
   }
   .pay-cash-receipt[hidden] { display: none !important; }
-  .pay-channels-cash-only .pay-channel-chip[hidden] { display: none !important; }
+  .pay-channels-cash-only .pay-channel-chip[hidden],
+  .pay-channels .pay-channel-chip[hidden] { display: none !important; }
   #confirmBeforeOrderWrap[hidden] { display: none !important; }
   #partialCashDepositHint[hidden] { display: none !important; }
   #remoteQuoteCard[hidden],
@@ -1150,14 +1253,16 @@ document.getElementById('receiptId')?.addEventListener('input', updateGatePrevie
 document.getElementById('netTermsLabel').addEventListener('change', syncNetTermsToReminderDate);
 document.getElementById('channelDrop').addEventListener('change', syncChannelLabels);
 document.getElementById('chkFollowUpMaster').addEventListener('change', syncFollowUpScheduleUi);
-document.getElementById('chkActiveOrder').addEventListener('change', updateGatePreview);
+document.getElementById('chkActiveOrder').addEventListener('change', () => {
+  updateGatePreview();
+});
 
 renderChannelCheckboxes('channelsPartial', PAY_DEFAULTS.channelsPartial, 'partial', false);
 renderChannelCheckboxes('channelsFull', PAY_DEFAULTS.channelsFull, 'full', false);
 toggleCashReceiptBox();
 syncPartialCashDepositUi();
 syncFullCashModeUi();
-syncFollowUpScheduleUi();
+syncQuoteDeliveryOptionsUi({ resetDefaults: true });
 
 document.addEventListener('DOMContentLoaded', async () => {
   loadPaymentConfig();

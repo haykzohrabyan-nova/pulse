@@ -14,7 +14,7 @@
     { id: 'wire', label: 'Wire' },
     { id: 'ach', label: 'ACH' },
     { id: 'zelle', label: 'Zelle' },
-    { id: 'check', label: 'Check' },
+    { id: 'other', label: 'Others' },
     { id: 'card', label: 'Card (online)' },
   ];
 
@@ -68,6 +68,10 @@
     email: 'bazarprint@gmail.com',
     website: 'https://bazaarprinting.com/',
   };
+
+  /** Square card-on-file authorization PDF (linked from quote payment modal). */
+  const CARD_ON_FILE_AUTHORIZATION_FORM_URL =
+    'https://dashboard-production-f.squarecdn.com/dashboard/assets/billing/card_on_file_authorization_form-4ea81e1ef9f611cf6d0e88274591adea.pdf';
 
   /** Shown in quote “Record payment” modal for client remittance instructions */
   const PAYMENT_REMITTANCE = {
@@ -148,7 +152,7 @@
     depHandling: 'cash',
     receiptId: '',
     channelsPartial: ['cash', 'wire', 'ach', 'zelle', 'card'],
-    channelsFull: ['wire', 'ach', 'zelle', 'check', 'card'],
+    channelsFull: ['wire', 'ach', 'zelle', 'other', 'card'],
     requireClientConfirm: true,
     quoteChannel: 'sms',
     destPhone: '',
@@ -182,10 +186,25 @@
     return 0;
   }
 
+  const LEGACY_CHANNEL_ID_MAP = { check: 'other' };
+
+  function normalizeChannelId(id) {
+    const key = String(id || '');
+    return LEGACY_CHANNEL_ID_MAP[key] || key;
+  }
+
+  function normalizeChannelIds(ids) {
+    const valid = new Set(PAY_CHANNELS.map((c) => c.id));
+    return [...new Set((ids || []).map(normalizeChannelId).filter((id) => valid.has(id)))];
+  }
+
+  function channelLabel(id) {
+    const nid = normalizeChannelId(id);
+    return PAY_CHANNELS.find((c) => c.id === nid)?.label || id;
+  }
+
   function channelLabels(ids) {
-    return (ids || [])
-      .map((id) => PAY_CHANNELS.find((c) => c.id === id)?.label || id)
-      .join(', ');
+    return normalizeChannelIds(ids).map(channelLabel).join(', ');
   }
 
   function strategyLabel(strategy) {
@@ -256,7 +275,10 @@
       const raw = localStorage.getItem(PAY_STORAGE_KEY);
       if (!raw) return { ...PAY_DEFAULTS };
       const parsed = JSON.parse(raw);
-      return { ...PAY_DEFAULTS, ...parsed };
+      const merged = { ...PAY_DEFAULTS, ...parsed };
+      merged.channelsPartial = normalizeChannelIds(merged.channelsPartial);
+      merged.channelsFull = normalizeChannelIds(merged.channelsFull);
+      return merged;
     } catch (_) {
       return { ...PAY_DEFAULTS };
     }
@@ -264,6 +286,7 @@
 
   function applyFullCashCheckoutState(token, cfg) {
     if (!hasConfigFullCashReceipt(cfg)) return;
+    if (cfg.requireClientConfirm !== false) return;
     const pack = getQuotePack(token);
     if (!pack) return;
     const quoteTotal = Number(cfg.quotePrice) > 0 ? Number(cfg.quotePrice) : getQuoteTotal(pack.ticket);
@@ -287,7 +310,12 @@
   }
 
   function savePaymentConfig(cfg) {
-    const merged = { ...cfg, savedAt: new Date().toISOString() };
+    const merged = {
+      ...cfg,
+      channelsPartial: normalizeChannelIds(cfg.channelsPartial),
+      channelsFull: normalizeChannelIds(cfg.channelsFull),
+      savedAt: new Date().toISOString(),
+    };
     localStorage.setItem(PAY_STORAGE_KEY, JSON.stringify(merged));
     if (hasConfigFullCashReceipt(merged)) {
       applyFullCashCheckoutState(getPreviewQuoteToken(merged), merged);
@@ -411,14 +439,15 @@
     return Math.max(0, Math.round((total - paid) * 100) / 100);
   }
 
-  function isQuotePriceConfirmed(quoteState, ticket) {
-    if (quoteState.quotePriceConfirmed) return true;
-    if (quoteState.clientConfirmed) return true;
+  function isQuotePriceConfirmed(quoteState, ticket, paymentCfg) {
+    if (quoteState.quotePriceConfirmed || quoteState.clientConfirmed) return true;
+    const cfg = { ...PAY_DEFAULTS, ...(paymentCfg || {}) };
+    if (cfg.requireClientConfirm !== false) return false;
     return !!ticket?.client_confirmed;
   }
 
   function isClientConfirmed(paymentCfg, quoteState, ticket) {
-    return isQuotePriceConfirmed(quoteState, ticket);
+    return isQuotePriceConfirmed(quoteState, ticket, paymentCfg);
   }
 
   function isDepositSatisfied(quoteState, paymentCfg, quoteTotal) {
@@ -448,10 +477,10 @@
     return false;
   }
 
-  /** Full payment recorded while confirmation is required → treat as confirmed. */
+  /** When client confirmation is off, full payment can satisfy the price step without a separate confirm action. */
   function shouldAutoConfirmOnFullPayment(paymentCfg, quoteState, quoteTotal) {
+    if (paymentCfg.requireClientConfirm !== false) return false;
     if (isCashInPersonFull(paymentCfg)) return false;
-    if (paymentCfg.requireClientConfirm === false) return false;
     if (paymentCfg.strategy !== 'full') return false;
     const paid = getPaidAmount(quoteState, paymentCfg, quoteTotal);
     return paid >= Number(quoteTotal) - 0.01;
@@ -472,14 +501,15 @@
     const depositDue = cfg.strategy === 'partial' ? getDepositAmount(cfg, quoteTotal) : 0;
     const dueNow = cfg.strategy === 'full' ? quoteTotal : cfg.strategy === 'partial' ? depositDue : 0;
     const balance = cfg.strategy === 'partial' ? Math.max(0, quoteTotal - depositDue) : 0;
-    const channels =
+    const channels = normalizeChannelIds(
       cfg.strategy === 'full'
         ? cfg.channelsFull || PAY_DEFAULTS.channelsFull
-        : cfg.channelsPartial || PAY_DEFAULTS.channelsPartial;
+        : cfg.channelsPartial || PAY_DEFAULTS.channelsPartial
+    );
 
     const cashInPerson = isCashInPersonFull(cfg);
     const partialCashDeposit = isPartialCashDeposit(cfg);
-    const needConfirm = !cashInPerson && !partialCashDeposit && cfg.requireClientConfirm !== false;
+    const needConfirm = cfg.requireClientConfirm !== false;
     const paymentOk = isPaymentComplete(state, cfg, quoteTotal);
     const depositPaid = cfg.strategy === 'partial' ? paymentOk : false;
     const fullyPaid = isFullyPaid(state, cfg, quoteTotal);
@@ -493,14 +523,13 @@
         : cfg.strategy === 'partial'
           ? remaining > 0.01
           : false;
-    const priceConfirmed = isQuotePriceConfirmed(state, ticket)
-      || (cashInPerson && paymentOk)
-      || (cashInPerson && hasConfigFullCashReceipt(cfg));
-    const confirmed = priceConfirmed || shouldAutoConfirmOnFullPayment(cfg, state, quoteTotal);
+    const clientPriceConfirmed = isQuotePriceConfirmed(state, ticket, cfg);
+    const confirmed =
+      clientPriceConfirmed || shouldAutoConfirmOnFullPayment(cfg, state, quoteTotal);
 
     const priceStepDone =
       !needConfirm ||
-      priceConfirmed ||
+      clientPriceConfirmed ||
       shouldAutoConfirmOnFullPayment(cfg, state, quoteTotal);
 
     const steps = [
@@ -525,7 +554,7 @@
       },
       {
         id: 'production',
-        label: 'Ready for production',
+        label: 'Order Is Processed',
         done: !!state.productionReleasedAt,
         required: false,
         action: 'release',
@@ -550,8 +579,8 @@
       }
     } else if (cfg.strategy === 'full') {
       const payGate = paymentOk;
-      canReleaseProduction = cashInPerson ? payGate : priceStepDone && payGate;
-      if (!cashInPerson && !priceStepDone && needConfirm) {
+      canReleaseProduction = priceStepDone && payGate;
+      if (!priceStepDone && needConfirm) {
         blockReason = 'Confirm the quote price before production.';
       } else if (!payGate) {
         blockReason = cashInPerson
@@ -575,7 +604,7 @@
         if (cfg.strategy !== 'net' && !paymentOk) return 'Awaiting payment';
         return 'Blocked';
       }
-      return 'Ready for production';
+      return 'Order Is Processed';
     })();
 
     return {
@@ -591,6 +620,7 @@
       strategy: cfg.strategy,
       strategyLabel: strategyLabel(cfg.strategy),
       requireClientConfirm: needConfirm,
+      clientPriceConfirmed,
       cashInPerson,
       partialCashDeposit,
       priceConfirmed: priceStepDone,
@@ -611,11 +641,18 @@
     const cfg = { ...PAY_DEFAULTS, ...paymentCfg };
     const quoteTotal = getQuoteTotal(ticket);
     if (isCashInPersonFull(cfg)) {
+      if (cfg.requireClientConfirm !== false) {
+        return `With current settings: Quote price must be confirmed → record cash payment (${formatMoney(quoteTotal)}) with receipt ID → production.`;
+      }
       return `With current settings: Cash in person — record full payment (${formatMoney(quoteTotal)}) with receipt ID → production. No quote confirmation.`;
     }
     if (isPartialCashDeposit(cfg)) {
       const dep = getDepositAmount(cfg, quoteTotal);
-      return `With current settings: Cash / offline deposit (${formatMoney(dep)}) with receipt ID → production starts. Client can pay remaining balance while in production.`;
+      const parts = [];
+      if (cfg.requireClientConfirm !== false) parts.push('Quote price must be confirmed');
+      parts.push(`Cash / offline deposit (${formatMoney(dep)}) with receipt ID → production`);
+      parts.push('remaining balance can be paid while in production');
+      return `With current settings: ${parts.join(' → ')}.`;
     }
     const checkout = computeCheckout(cfg, ticket, emptyQuoteState());
     const parts = [];
@@ -646,7 +683,7 @@
     if (cfg.strategy === 'full' && (cfg.channelsFull || []).includes('cash') && !cfg.receiptId) {
       return { ok: false, message: 'Receipt ID is required when payment method is cash.' };
     }
-    if (cfg.requireClientConfirm && !isCashInPersonFull(cfg)) {
+    if (cfg.requireClientConfirm !== false) {
       if (cfg.quoteChannel === 'sms' && !cfg.destPhone) {
         return { ok: false, message: 'Phone destination is required.' };
       }
@@ -669,12 +706,16 @@
     normalizeNetTermsLabel,
     getNetTermsDaysFromLabel,
     normalizeFollowUpFreq,
+    normalizeChannelId,
+    normalizeChannelIds,
+    channelLabel,
     FOLLOW_UP_FREQ_VALUES,
     hasConfigDepositReceipt,
     hasConfigFullCashReceipt,
     applyFullCashCheckoutState,
     isPartialCashDeposit,
     PULSE_COMPANY,
+    CARD_ON_FILE_AUTHORIZATION_FORM_URL,
     PAYMENT_REMITTANCE,
     PULSE_QUOTES,
     DEFAULT_QUOTE_TOKEN,

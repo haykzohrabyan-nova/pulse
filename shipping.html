@@ -7,7 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="shared.js?v=20260518-SHIPFIX2"></script>
+  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260518-SHIPFIX2"></script>
   <script src="auth.js?v=20260429-PRI262"></script>
@@ -586,6 +587,17 @@
     .ship-card-date { font-size: 10px; color: var(--text-muted); }
     .ship-card-customer { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
     .ship-card-meta { font-size: 11px; color: var(--text-muted); }
+    .ship-card-notes {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #78350f;
+    }
+    .ship-card-notes-label { font-weight: 700; margin-right: 4px; }
     .ship-card-tracking {
       display: flex; align-items: center; gap: 6px; margin-top: 6px;
       padding: 5px 8px; background: var(--bg); border-radius: 5px;
@@ -609,6 +621,18 @@
       cursor: pointer; font-family: inherit; border-bottom: none;
     }
     .ship-card-tab:hover { color: var(--text); background: var(--card-hover); }
+    .ship-card-combined-tickets {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 6px 0 4px;
+      padding: 6px 8px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+    .ship-card-ticket-pill { color: var(--text-muted); }
     .ship-card-tab.active {
       background: var(--card); color: var(--accent); border-color: var(--accent);
       border-bottom: 1px solid var(--card); margin-bottom: -1px;
@@ -903,6 +927,23 @@
       font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
     }
     .td-full { grid-column: span 2; }
+    .td-sku-body { padding: 12px 14px 14px; }
+    .td-sku-body .pulse-sku-section {
+      margin-top: 0; padding-top: 0; border-top: none;
+    }
+    .td-sku-body .pulse-sku-section-title { display: none; }
+    .td-sku-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .td-sku-table th {
+      text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+    .td-sku-table td {
+      padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top;
+    }
+    .td-sku-table tbody tr:last-child td { border-bottom: none; }
 
     /* ── Print target (screen hidden) ── */
     #printTarget { display: none; }
@@ -989,9 +1030,33 @@
     return [...new Set(fromAssign)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }
 
+  function shipmentGroupIdList(orders) {
+    return orders.map(o => String(o.orderId)).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })).join('|');
+  }
+
   function getShipmentGroupKey(order) {
     const ps = order?.packingSlip;
     if (ps?.shipmentGroupId) return `gid:${ps.shipmentGroupId}`;
+
+    if (ps?.generatedAt) {
+      const genPeers = allOrders.filter(o => o.packingSlip?.generatedAt === ps.generatedAt);
+      if (genPeers.length > 1) return `fp:${ps.generatedAt}|${shipmentGroupIdList(genPeers)}`;
+    }
+
+    if (order.deliveryReadyAt) {
+      const drPeers = allOrders.filter(o => o.deliveryReadyAt === order.deliveryReadyAt);
+      if (drPeers.length > 1) return `dr:${order.deliveryReadyAt}|${shipmentGroupIdList(drPeers)}`;
+    }
+
+    if (order.waitingPickupAt) {
+      const minute = order.waitingPickupAt.slice(0, 16);
+      const labelPeers = allOrders.filter(o =>
+        o.waitingPickupAt && o.waitingPickupAt.slice(0, 16) === minute && o.packingSlip
+      );
+      if (labelPeers.length > 1) return `lbl:${minute}|${shipmentGroupIdList(labelPeers)}`;
+    }
+
     const tickets = getPackingSlipTicketIds(ps);
     if (tickets.length > 1 && ps?.generatedAt) {
       return `fp:${ps.generatedAt}|${tickets.join('|')}`;
@@ -1019,16 +1084,34 @@
       String(a.orderId).localeCompare(String(b.orderId), undefined, { numeric: true }));
   }
 
-  function groupShipColumnOrders(orders) {
-    const byKey = new Map();
-    for (const o of orders) {
-      const key = getShipmentGroupKey(o);
-      if (!byKey.has(key)) byKey.set(key, []);
-      byKey.get(key).push(o);
+  function getShipmentGroupLeadStatus(group) {
+    const priority = ['delivery-ready', 'waiting-pickup', 'shipped', 'received', 'completed'];
+    for (const st of priority) {
+      if (group.some(o => o.status === st)) return st;
     }
-    return [...byKey.values()].map(group =>
-      group.sort((a, b) =>
-        String(a.orderId).localeCompare(String(b.orderId), undefined, { numeric: true })));
+    return group[0]?.status || '';
+  }
+
+  function shipmentGroupBelongsInColumn(group, columnKind) {
+    const lead = getShipmentGroupLeadStatus(group);
+    if (columnKind === 'label-created') return lead === 'waiting-pickup';
+    if (columnKind === 'delivery-ready') return lead === 'delivery-ready';
+    if (columnKind === 'shipped') return ['shipped', 'received', 'completed'].includes(lead);
+    return true;
+  }
+
+  /** One card per combined label — all tickets on the card; card lives in the leftmost active column only */
+  function groupShipColumnOrders(orders, columnKind) {
+    const keys = new Set();
+    for (const o of orders) keys.add(getShipmentGroupKey(o));
+    return [...keys]
+      .map(key =>
+        allOrders
+          .filter(o => getShipmentGroupKey(o) === key)
+          .sort((a, b) =>
+            String(a.orderId).localeCompare(String(b.orderId), undefined, { numeric: true }))
+      )
+      .filter(group => !columnKind || shipmentGroupBelongsInColumn(group, columnKind));
   }
 
   const shipGroupActiveTab = {};
@@ -1037,6 +1120,7 @@
     shipGroupActiveTab[decodeURIComponent(encodedKey)] = idx;
     renderPickup();
     renderDeliveryReady();
+    renderShipped();
   }
 
   // ── State ──────────────────────────────────────────────────────────────
@@ -1094,6 +1178,10 @@
   }
 
   window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+    if (typeof registerPulseAdminConfigRefresh === 'function') {
+      registerPulseAdminConfigRefresh(() => { renderLeft(); if (selectedIds.size) renderSelectionBar(); });
+    }
     await load();
 
     // Handle ?packingSlip=<dbId> redirect from Production Manager
@@ -1156,9 +1244,9 @@
   function renderStats() {
     const ready         = allOrders.filter(o => o.status === 'ready-to-ship' && matchesShipDateFilter(o));
     const waitPickup    = allOrders.filter(o => o.status === 'waiting-pickup' && matchesShipDateFilter(o));
-    const waitPickupGroups = groupShipColumnOrders(waitPickup);
+    const waitPickupGroups = groupShipColumnOrders(waitPickup, 'label-created');
     const deliveryReady = allOrders.filter(o => o.status === 'delivery-ready' && matchesShipDateFilter(o));
-    const deliveryReadyGroups = groupShipColumnOrders(deliveryReady);
+    const deliveryReadyGroups = groupShipColumnOrders(deliveryReady, 'delivery-ready');
     const shippedCol    = allOrders.filter(o => ['shipped', 'received', 'completed'].includes(o.status) && matchesShipDateFilter(o));
     const sumQty = arr => arr.reduce((s, o) => s + (o.quantity || 0), 0);
 
@@ -1266,7 +1354,7 @@
     const q = (document.getElementById('pickupSearch')?.value || '').toLowerCase().trim();
     let orders = allOrders.filter(o => o.status === 'waiting-pickup').filter(matchesShipDateFilter);
     if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
-    const groups = groupShipColumnOrders(orders);
+    const groups = groupShipColumnOrders(orders, 'label-created');
     document.getElementById('pickupCount').textContent = `${groups.length} label${groups.length !== 1 ? 's' : ''}`;
     const container = document.getElementById('pickupList');
     container.innerHTML = groups.length
@@ -1278,7 +1366,7 @@
     const q = (document.getElementById('deliveryReadySearch')?.value || '').toLowerCase().trim();
     let orders = allOrders.filter(o => o.status === 'delivery-ready').filter(matchesShipDateFilter);
     if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
-    const groups = groupShipColumnOrders(orders);
+    const groups = groupShipColumnOrders(orders, 'delivery-ready');
     document.getElementById('deliveryReadyCount').textContent = `${groups.length} label${groups.length !== 1 ? 's' : ''}`;
     const container = document.getElementById('deliveryReadyList');
     container.innerHTML = groups.length
@@ -1290,18 +1378,22 @@
     const q = (document.getElementById('shippedSearch')?.value || '').toLowerCase().trim();
     let orders = allOrders
       .filter(o => ['shipped', 'received', 'completed'].includes(o.status))
-      .filter(matchesShipDateFilter)
-      .sort((a, b) => {
-        const aKey = a.receivedAt || a.completedAt || a.shippedAt || '';
-        const bKey = b.receivedAt || b.completedAt || b.shippedAt || '';
-        return bKey > aKey ? 1 : -1;
+      .filter(matchesShipDateFilter);
+    if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
+    const groups = groupShipColumnOrders(orders, 'shipped')
+      .sort((ga, gb) => {
+        const aTs = Math.max(...ga.map(x => new Date(x.receivedAt || x.completedAt || x.shippedAt || 0).getTime()));
+        const bTs = Math.max(...gb.map(x => new Date(x.receivedAt || x.completedAt || x.shippedAt || 0).getTime()));
+        return bTs - aTs;
       })
       .slice(0, 80);
-    if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
-    document.getElementById('shippedCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+    const ticketCount = groups.reduce((n, g) => n + g.length, 0);
+    document.getElementById('shippedCount').textContent = groups.length === ticketCount
+      ? `${ticketCount} order${ticketCount !== 1 ? 's' : ''}`
+      : `${groups.length} shipment${groups.length !== 1 ? 's' : ''} · ${ticketCount} tickets`;
     const container = document.getElementById('shippedList');
-    container.innerHTML = orders.length
-      ? orders.map(o => renderShipCard(o)).join('')
+    container.innerHTML = groups.length
+      ? groups.map(g => renderShipColumnGroupCard(g, 'shipped')).join('')
       : '<div class="panel-empty">No shipped orders</div>';
   }
 
@@ -1316,6 +1408,34 @@
       'OnTrac': `https://www.ontrac.com/trackingdetail.asp?tracking=${t}`,
     };
     return map[carrier] || null;
+  }
+
+  /** Job, packing-slip box, and ship/delivery notes for list cards */
+  function collectShipNotesForOrder(o) {
+    const lines = [];
+    if (o?.specialNotes?.trim()) lines.push({ label: 'Job', text: o.specialNotes.trim() });
+    const ps = o?.packingSlip;
+    if (ps?.assignments?.length) {
+      const seen = new Set();
+      ps.assignments
+        .filter(a => ticketKey(a.ticketId) === ticketKey(o.orderId) && (a.notes || '').trim())
+        .forEach(a => {
+          const t = a.notes.trim();
+          if (!seen.has(t)) { seen.add(t); lines.push({ label: 'Box', text: t }); }
+        });
+    }
+    if (o?.pickupCompleteNotes?.trim()) lines.push({ label: 'Ship', text: o.pickupCompleteNotes.trim() });
+    if (o?.receivedNotes?.trim()) lines.push({ label: 'Delivered', text: o.receivedNotes.trim() });
+    return lines;
+  }
+
+  function renderShipCardNotesHtml(o) {
+    const lines = collectShipNotesForOrder(o);
+    if (!lines.length) return '';
+    const body = lines.map(l =>
+      l.label ? `<span><strong>${escHtml(l.label)}:</strong> ${escHtml(l.text)}</span>` : escHtml(l.text)
+    ).join('<br>');
+    return `<div class="ship-card-notes"><span class="ship-card-notes-label">Notes</span>${body}</div>`;
   }
 
   function _buildShipCardHtml(o, dateStr, actionsHtml) {
@@ -1348,6 +1468,7 @@
         ${ticketDatesHtml(o)}
         ${trackingHtml}
         ${o.pickupContact ? `<div class="ship-card-meta" style="margin-top:4px;">Contact: ${escHtml(o.pickupContact)}</div>` : ''}
+        ${renderShipCardNotesHtml(o)}
         ${statusNote}
         <div class="ship-card-actions">
           <button class="btn-view-ticket" onclick="openTicketDetail('${sid}')">View Ticket</button>
@@ -1365,12 +1486,28 @@
     return _buildShipCardHtml(o, dateStr, actionsHtml);
   }
 
+  function renderCombinedTicketSummary(group) {
+    return group.map(ord =>
+      `<span class="ship-card-ticket-pill">#${escHtml(ord.orderId)} · ${escHtml(ord.productType || '—')}${ord.quantity ? ' × ' + Number(ord.quantity).toLocaleString() : ''}</span>`
+    ).join('');
+  }
+
+  function renderShipStatusNoteHtml(o) {
+    if (o.status === 'received' || o.status === 'completed') {
+      return `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Delivered ${formatTicketDateTime(o.receivedAt)}</div>`;
+    }
+    if (o.status === 'shipped' && (o.pickupCompletedAt || o.pickupCompletedBy)) {
+      return `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Picked up ${formatTicketDateTime(o.pickupCompletedAt || o.shippedAt)}</div>`;
+    }
+    return '';
+  }
+
   function renderShipColumnGroupCard(group, columnKind) {
     if (!group?.length) return '';
     if (group.length === 1) {
-      return columnKind === 'label-created'
-        ? renderLabelCreatedCard(group[0])
-        : renderDeliveryReadyCard(group[0]);
+      if (columnKind === 'label-created') return renderLabelCreatedCard(group[0]);
+      if (columnKind === 'delivery-ready') return renderDeliveryReadyCard(group[0]);
+      return renderShipCard(group[0]);
     }
     const groupKey = getShipmentGroupKey(group[0]);
     const encKey = encodeURIComponent(groupKey);
@@ -1380,20 +1517,33 @@
     const o = group[activeIdx];
     const primaryId = String(group[0].id);
     const sid = String(o.id);
-    const dateStr = columnKind === 'delivery-ready'
-      ? (o.deliveryReadyAt
-        ? new Date(o.deliveryReadyAt).toLocaleDateString()
-        : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : ''))
-      : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '');
-    const tabsHtml = group.map((ord, i) =>
-      `<button type="button" class="ship-card-tab${i === activeIdx ? ' active' : ''}" onclick="setShipGroupTab('${encKey}', ${i})">#${escHtml(ord.orderId)}</button>`
-    ).join('');
+    const dateStr = columnKind === 'shipped'
+      ? (o.receivedAt
+        ? new Date(o.receivedAt).toLocaleDateString()
+        : (o.shippedAt ? new Date(o.shippedAt).toLocaleDateString() : ''))
+      : columnKind === 'delivery-ready'
+        ? (o.deliveryReadyAt
+          ? new Date(o.deliveryReadyAt).toLocaleDateString()
+          : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : ''))
+        : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '');
+    const tabsHtml = group.map((ord, i) => {
+      const shippedTag = ord.status === 'shipped' || ord.status === 'received' || ord.status === 'completed'
+        ? ' ✓' : '';
+      const drTag = columnKind === 'delivery-ready' && ord.status !== 'delivery-ready' ? ' · shipped' : '';
+      return `<button type="button" class="ship-card-tab${i === activeIdx ? ' active' : ''}" onclick="setShipGroupTab('${encKey}', ${i})">#${escHtml(ord.orderId)}${shippedTag}${drTag}</button>`;
+    }).join('');
     const customers = [...new Set(group.map(x => x.customerName).filter(Boolean))];
     const customerLabel = customers.length === 1 ? (customers[0] || '—') : customers.join(' · ');
     const actionsHtml = columnKind === 'label-created'
       ? `<button class="btn-xs" onclick="printLabelForOrder('${primaryId}')">Print Label</button>
          <button class="btn-xs btn-xs-primary" onclick="openShippingInfoModal('${primaryId}')">Add Shipping Info</button>`
-      : `<button class="btn-xs btn-xs-primary" onclick="markShippedFromDeliveryReady('${primaryId}')">Mark as Shipped</button>`;
+      : columnKind === 'delivery-ready'
+        ? (group.some(ord => ord.status === 'delivery-ready')
+          ? `<button class="btn-xs btn-xs-primary" onclick="markShippedFromDeliveryReady('${primaryId}')">Mark as Shipped</button>`
+          : '')
+        : (o.trackingNumber
+          ? `<button class="btn-xs" onclick="copyTracking('${escHtml(o.trackingNumber || '')}')">Copy Tracking</button>`
+          : '');
     const trackUrl = getTrackingUrl(o.carrier, o.trackingNumber);
     const trackingHtml = (o.trackingNumber || o.carrier) ? `
           <div class="ship-card-tracking">
@@ -1415,9 +1565,12 @@
         </div>
         <div class="ship-card-customer">${escHtml(customerLabel)}</div>
         <div class="ship-card-tabs">${tabsHtml}</div>
+        <div class="ship-card-combined-tickets">${renderCombinedTicketSummary(group)}</div>
         <div class="ship-card-meta">${escHtml(o.productType || '')}${o.quantity ? ' &times; ' + o.quantity.toLocaleString() : ''}</div>
         ${ticketDatesHtml(o)}
         ${trackingHtml}
+        ${renderShipCardNotesHtml(o)}
+        ${renderShipStatusNoteHtml(o)}
         <div class="ship-card-actions">
           <button class="btn-view-ticket" onclick="openTicketDetail('${sid}')">View Ticket</button>
           ${actionsHtml}
@@ -1635,14 +1788,17 @@
   }
 
   function openCourierShipModal(dbId) {
-    const order = findOrderByDbRef(dbId);
+    const group = getShipmentGroupOrders(dbId);
+    const order = group[0] || findOrderByDbRef(dbId);
     if (!order) {
       showPageToast('Order not found — refresh and try again.', 'warning');
       return;
     }
     courierShipDbId = order.id;
-    document.getElementById('courierShipOrderInfo').innerHTML = `
-      <strong>#${escHtml(order.orderId)}</strong> — ${escHtml(order.customerName || '—')}`;
+    const ticketLine = group.length > 1
+      ? `<strong>Combined label</strong> — ${group.map(o => '#' + escHtml(o.orderId)).join(', ')}`
+      : `<strong>#${escHtml(order.orderId)}</strong> — ${escHtml(order.customerName || '—')}`;
+    document.getElementById('courierShipOrderInfo').innerHTML = ticketLine;
     document.getElementById('courierShipPlate').value = order.packingSlip?.plateNumber || '';
     document.getElementById('courierShipHandoff').value = '';
     document.getElementById('courierShipNotes').value = '';
@@ -1664,7 +1820,8 @@
 
   async function submitCourierShip() {
     if (!courierShipDbId || courierShipSubmitting) return;
-    const order = findOrderByDbRef(courierShipDbId);
+    const orders = getShipmentGroupOrders(courierShipDbId);
+    const order = orders[0];
     if (!order) {
       showPageToast('Order not found — refresh and try again.', 'warning');
       return;
@@ -1673,27 +1830,32 @@
     const handoff = document.getElementById('courierShipHandoff').value.trim();
     const notes = document.getElementById('courierShipNotes').value.trim();
     if (!plate) { showPageToast('Enter vehicle plate number.', 'warning'); return; }
-    const packingSlip = { ...(order.packingSlip || {}), plateNumber: plate };
+    const idList = orders.map(o => '#' + o.orderId).join(', ');
     courierShipSubmitting = true;
     const btn = document.getElementById('courierShipSubmitBtn');
     if (btn) btn.disabled = true;
     try {
-      await updateOrder(order.id, {
-        status: 'shipped',
-        shippedAt: new Date().toISOString(),
-        carrier: order.carrier || 'Courier/Rideshare',
-        trackingNumber: order.trackingNumber || null,
-        packingSlip,
-        pickupHandoffBy: handoff || null,
-        pickupCompleteNotes: notes || null,
-      });
-      await addActivity({
-        orderId: order.orderId,
-        type: 'shipped',
-        message: `Courier delivery confirmed — plate ${plate}${handoff ? ' · Handed off by: ' + handoff : ''}`,
-        by: handoff || 'Shipping Dept',
-      });
-      showPageToast(`#${order.orderId} marked as shipped.`, 'success', 4000);
+      const shippedAt = new Date().toISOString();
+      for (const o of orders) {
+        const packingSlip = { ...(o.packingSlip || {}), plateNumber: plate };
+        await updateOrder(o.id, {
+          status: 'shipped',
+          shippedAt,
+          carrier: o.carrier || order.carrier || 'Courier/Rideshare',
+          trackingNumber: o.trackingNumber || order.trackingNumber || null,
+          packingSlip,
+          pickupHandoffBy: handoff || null,
+          pickupCompleteNotes: notes || null,
+        });
+        await addActivity({
+          orderId: o.orderId,
+          type: 'shipped',
+          message: `Courier delivery confirmed — plate ${plate}${handoff ? ' · Handed off by: ' + handoff : ''}`
+            + (orders.length > 1 ? ' (combined label)' : ''),
+          by: handoff || 'Shipping Dept',
+        });
+      }
+      showPageToast(`${idList} marked as shipped.`, 'success', 4000);
       closeCourierShipModal();
       await load();
     } catch (err) {
@@ -1978,8 +2140,7 @@
       return `<tr class="${invalid ? 'ps-row-invalid' : ''}" data-assign-idx="${idx}">
         <td><select class="ps-sel" onchange="updateAssignment(${idx},'boxId',+this.value)">
           <option value="">Box…</option>${boxOpts}</select></td>
-        <td><select class="ps-sel" onchange="updateAssignmentProduct(${idx},this.value)">
-          <option value="">Product…</option>${prodOpts}</select></td>
+        <td><select class="ps-sel" onchange="updateAssignmentProduct(${idx},this.value)">${prodOpts}</select></td>
         <td><input type="number" class="ps-num" value="${escHtml(qtyVal)}" min="0" inputmode="numeric"
           oninput="updateAssignmentQty(${idx},this.value)"
           onblur="normalizeAssignmentQty(${idx})"></td>
@@ -2139,10 +2300,11 @@
       const shipmentGroupId = psSelectedOrders.length > 1
         ? `ship-${Date.now()}-${ticketIds.join('-')}`
         : null;
+      const labelCreatedAt = new Date().toISOString();
       const packingSlipData = {
         boxes: psSkipped ? [] : boxes,
         assignments: validAssignments,
-        generatedAt: new Date().toISOString(),
+        generatedAt: labelCreatedAt,
         ticketIds,
         shipmentGroupId,
       };
@@ -2155,7 +2317,7 @@
           carrier: null,
           trackingNumber: null,
           shippedAt: null,
-          waitingPickupAt: new Date().toISOString(),
+          waitingPickupAt: labelCreatedAt,
           deliveryReadyAt: null,
           packingSlip: packingSlipData,
         });
@@ -2545,6 +2707,9 @@
       _tdField('Delivery ready', o.deliveryReadyAt ? formatTicketDateTime(o.deliveryReadyAt) : null, { hide: true }),
       _tdField('Shipped',        o.shippedAt      ? formatTicketDateTime(o.shippedAt)      : null, { hide: true }),
       _tdField('Delivered',      o.receivedAt     ? formatTicketDateTime(o.receivedAt)     : null, { hide: true }),
+      _tdField('Ship notes',     o.pickupCompleteNotes, { hide: true, full: true }),
+      _tdField('Delivery notes', o.receivedNotes,       { hide: true, full: true }),
+      _tdField('Special notes',  o.specialNotes,        { hide: true, full: true }),
     ]);
 
     // ── Box Manifest ──
@@ -2671,6 +2836,61 @@
     </div>`;
   }
 
+  function _getOrderSkus(o) {
+    return (o?.skus || []).filter(s => {
+      if (!s) return false;
+      const hasName = String(s.name || '').trim();
+      const hasQty = s.quantity != null && s.quantity !== '';
+      const hasArt = typeof getOrderSkuArtFiles === 'function' && getOrderSkuArtFiles(s).length > 0;
+      return hasName || hasQty || hasArt;
+    });
+  }
+
+  function _skuLayersLabel(sku) {
+    const layers = [];
+    if (sku?.whiteDataUrl) layers.push('White');
+    if (sku?.uvDataUrl) layers.push('UV');
+    if (sku?.foilDataUrl) layers.push('Foil');
+    return layers.length ? layers.join(' · ') : '—';
+  }
+
+  function _buildShippingSkuTable(skus) {
+    const rows = skus.map((sku, i) => {
+      const name = sku.name?.trim() || `SKU ${i + 1}`;
+      const qty = (sku.quantity || 0).toLocaleString();
+      const artCount = typeof getOrderSkuArtFiles === 'function' ? getOrderSkuArtFiles(sku).length : 0;
+      return `<tr>
+        <td style="font-weight:600;">${escHtml(name)}</td>
+        <td style="text-align:right;white-space:nowrap;">${qty}</td>
+        <td>${escHtml(_skuLayersLabel(sku))}</td>
+        <td style="color:var(--text-muted);">${artCount ? `${artCount} file${artCount !== 1 ? 's' : ''}` : '—'}</td>
+      </tr>`;
+    }).join('');
+    return `<table class="td-sku-table">
+      <thead><tr>
+        <th>SKU name</th>
+        <th style="text-align:right;">Quantity</th>
+        <th>Layers</th>
+        <th>Artwork</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function _buildShippingSkuSection(o) {
+    const skus = _getOrderSkus(o);
+    if (!skus.length) return '';
+
+    const title = skus.length === 1 ? 'SKU' : `SKU Versions (${skus.length})`;
+    let inner = typeof renderOrderSkuSection === 'function' ? (renderOrderSkuSection(o) || '') : '';
+    if (!inner) inner = _buildShippingSkuTable(skus);
+
+    return `<div class="td-section td-section-skus">
+      <div class="td-section-hdr">${title}</div>
+      <div class="td-sku-body">${inner}</div>
+    </div>`;
+  }
+
   function _buildTicketDetailHTML(o) {
     const field   = _tdField;
     const section = _tdSection;
@@ -2722,11 +2942,24 @@
       field('Shipped', formatTicketDateTime(o.shippedAt && !o.pickupCompletedAt && !o.pickupCompletedBy ? o.shippedAt : null), { hide: true }),
     ]);
 
+    const skus = _getOrderSkus(o);
+    let skuSummary = null;
+    if (skus.length === 1) {
+      const s = skus[0];
+      skuSummary = `${s.name || 'SKU 1'} — ${(s.quantity || 0).toLocaleString()} pcs`;
+    } else if (skus.length > 1) {
+      const totalSkuQty = skus.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+      skuSummary = `${skus.length} SKUs (${totalSkuQty.toLocaleString()} pcs total)`;
+    } else {
+      skuSummary = 'No SKU versions on this ticket (single artwork job)';
+    }
+
     const s1 = section('Job Overview', [
       field('Order ID',      '#' + o.orderId),
       field('Customer',      o.customerName),
       field('Product Type',  o.productType),
       field('Material',      o.material),
+      field('SKU',           skuSummary),
       field('Quantity',      qtyDisplay),
       field('Due Date',      dueDateDisplay),
       field('Account Manager', o.accountManager, { hide: true }),
@@ -2737,7 +2970,7 @@
 
     const s2 = section('Print Specifications', [
       field('Print Type',    o.printType),
-      field('Facility',      o.facility),
+      field('Facility',      typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(o.facility) : o.facility),
       field('Color Mode',    o.colorMode),
       field('Sides',         o.sides),
       field('Lamination',    o.lamination,  { hide: true }),
@@ -2788,7 +3021,9 @@
       field('Current Step', o.currentStep != null ? `Step ${o.currentStep}` : null),
     ]) : '';
 
-    return [sTicketDates, s1, s2, s3, s4, s5, s6, s7].filter(Boolean).join('');
+    const sSku = _buildShippingSkuSection(o);
+
+    return [sTicketDates, s1, sSku, s2, s3, s4, s5, s6, s7].filter(Boolean).join('');
   }
 </script>
 </body>

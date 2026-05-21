@@ -1401,12 +1401,7 @@ const OPERATOR_PROFILES = {
   'Adrian':    { userId: 1011, facility: '16th-street', machines: ['Karlville Poucher','Laminator (Nobelus)'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville poucher, backup laminator' },
   'Harry':     { userId: 1012, facility: '16th-street', machines: ['Karlville Poucher','HP Indigo 6K'], role: 'operator', shift: '6:00 AM', notes: 'Primary Karlville, knows 6K (not expert)' },
   'Mike':      { userId: 1013, facility: '16th-street', machines: [], role: 'production-manager', shift: '7:00 AM', notes: 'Production manager (new)' },
-  // Account Managers / Sales Reps
-  'Gary Gharibyan':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
-  'Ernesto Flores':   { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
-  'Bob Werner':       { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
-  'Tiko':             { facility: 'all', machines: [], role: 'account-manager', shift: '—', notes: 'Account Manager' },
-  'Tigran Zohrabyan': { facility: 'all', machines: [], role: 'supervisor', shift: '—', notes: 'Supervisor / Sales Manager' },
+  'Tigran Zohrabyan': { facility: 'all', machines: [], role: 'supervisor', shift: '—', notes: 'Supervisor' },
 };
 
 const DEFAULT_PRODUCTIVE_HOURS_PER_DAY = 7;
@@ -3992,6 +3987,66 @@ function getAllPersonnel() { return _getAll('personnel'); }
 function updatePersonnel(id, changes) { return _update('personnel', id, changes); }
 function deletePersonnel(id) { return _delete('personnel', id); }
 
+/** Prefer the richest personnel row when the same display name exists twice. */
+function _personnelRowScore(p) {
+  let s = 0;
+  if (p && p.active !== false) s += 8;
+  if (String(p?.userId || '').trim()) s += 4;
+  if (String(p?.facility || '').trim()) s += 2;
+  if (String(p?.role || '').trim()) s += 1;
+  return s;
+}
+
+/** One login option per name (in-memory). */
+function dedupePeopleByName(list) {
+  const byName = new Map();
+  for (const p of list || []) {
+    const name = String(p?.name || '').trim();
+    if (!name) continue;
+    const row = {
+      id: p.id,
+      name,
+      role: p.role || 'operator',
+      userId: p.userId != null ? String(p.userId) : '',
+    };
+    const prev = byName.get(name);
+    if (!prev || _personnelRowScore(row) > _personnelRowScore(prev)) byName.set(name, row);
+  }
+  return [...byName.values()];
+}
+
+/** Remove duplicate Personnel DB rows that share the same name (keeps best row). */
+async function dedupePersonnelByName() {
+  if (typeof getAllPersonnel !== 'function' || typeof deletePersonnel !== 'function') return 0;
+  const all = await getAllPersonnel();
+  const keepByName = new Map();
+  for (const p of all) {
+    const name = String(p?.name || '').trim();
+    if (!name) continue;
+    const prev = keepByName.get(name);
+    if (!prev || _personnelRowScore(p) > _personnelRowScore(prev)) keepByName.set(name, p);
+  }
+  let removed = 0;
+  for (const p of all) {
+    const name = String(p?.name || '').trim();
+    if (!name) continue;
+    const keep = keepByName.get(name);
+    if (keep && p.id != null && p.id !== keep.id) {
+      await deletePersonnel(p.id);
+      removed++;
+    }
+  }
+  return removed;
+}
+
+const PERSONNEL_AUTH_SEED_EXTRAS = [
+  { name: 'Admin', role: 'admin', notes: 'System admin' },
+  { name: 'Hayk Zohrabyan', role: 'admin', notes: 'Admin' },
+  { name: 'David Zargaryan', role: 'david-review', notes: 'David review access' },
+  { name: 'QC Inspector', role: 'qc', notes: 'Dedicated QC login' },
+  { name: 'Shipping', role: 'shipping', notes: 'Shipping' },
+];
+
 async function seedPersonnelFromProfiles() {
   const existing = await getAllPersonnel();
   if (existing.length > 0) return; // idempotent — only seed if empty
@@ -4003,6 +4058,19 @@ async function seedPersonnelFromProfiles() {
       facility: profile.facility || '',
       phone: profile.phone || '',
       active: true,
+      userId: profile.userId != null ? String(profile.userId) : '',
+    });
+  }
+  for (const extra of PERSONNEL_AUTH_SEED_EXTRAS) {
+    if (OPERATOR_PROFILES[extra.name]) continue;
+    await addPersonnel({
+      name: extra.name,
+      role: extra.role,
+      notes: extra.notes || '',
+      facility: '16th-street',
+      phone: '',
+      active: true,
+      userId: '',
     });
   }
 }
@@ -4011,14 +4079,14 @@ async function getPersonnelByName(name) {
   return people.find(p => p.name === name) || null;
 }
 async function getOperatorProfile(name) {
-  const staticProfile = OPERATOR_PROFILES[name] || null;
   const dbPerson = await getPersonnelByName(name);
-  if (!staticProfile && !dbPerson) return null;
+  if (!dbPerson) return null;
   return {
-    ...(staticProfile || {}),
-    ...(dbPerson || {}),
-    name,
-    machines: dbPerson?.machines || staticProfile?.machines || [],
+    ...dbPerson,
+    name: dbPerson.name || name,
+    machines: Array.isArray(dbPerson.machines) ? dbPerson.machines : [],
+    facility: dbPerson.facility || '',
+    role: dbPerson.role || 'operator',
   };
 }
 
@@ -4121,6 +4189,805 @@ function setConfig(key, value) {
     req.onsuccess = () => { broadcastUpdate('config', key); resolve(); };
     req.onerror = () => reject(req.error);
   }));
+}
+
+// ── Full backup / restore (Admin → Export / Import tab) ───────────────────
+
+const PULSE_BACKUP_SCHEMA_VERSION = 3;
+
+/** Admin tabs whose data is included in full backup (Quote & Payment excluded). */
+const PULSE_ADMIN_BACKUP_TABS = [
+  'personnel', 'machines', 'dies', 'organisation', 'inventory', 'purchase-orders',
+  'knowledge', 'qa-rules', 'settings', 'products', 'product-workflows', 'roles',
+];
+const PULSE_ADMIN_BACKUP_EXCLUDED_TABS = ['payment', 'crm-quote'];
+
+const PULSE_BACKUP_STORES = [
+  'orders', 'personnel', 'devices', 'activity_log', 'knowledge_base', 'reprints',
+  'dies', 'inventory', 'purchase_orders', 'invoices', 'operator_sessions', 'operator_points',
+];
+
+/** Never backup/restore (sessions, auth). */
+const PULSE_BACKUP_SKIP_LS_KEYS = new Set([
+  'pulse_session',
+  'pulse_portal_active_session',
+  'pulse_portal_otp_codes',
+]);
+
+/** Quote & Payment admin tabs — excluded from full backup per product policy. */
+function pulseBackupLocalStorageExcluded(key) {
+  if (!key || !key.startsWith('pulse_')) return true;
+  if (PULSE_BACKUP_SKIP_LS_KEYS.has(key)) return true;
+  if (key.startsWith('pulse_payment_')) return true;
+  if (key.startsWith('pulse_quote')) return true;
+  if (key === 'pulse_quotes') return true;
+  return false;
+}
+
+function getAllConfigEntries() {
+  return _getAll('config');
+}
+
+function collectPulseLocalStorageBackup() {
+  const out = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (pulseBackupLocalStorageExcluded(k)) continue;
+      out[k] = localStorage.getItem(k);
+    }
+  } catch (e) {
+    console.warn('[PulseBackup] localStorage read:', e);
+  }
+  return out;
+}
+
+function loadPulseOrganisationBundleForBackup() {
+  try {
+    if (typeof window !== 'undefined' && window.PulseOrgJsonStore?.loadRaw) {
+      return window.PulseOrgJsonStore.loadRaw();
+    }
+  } catch (_) {}
+  try {
+    const raw = localStorage.getItem('pulse_organisation_bundle_v1');
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizePulseBackupPayload(raw) {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid backup file — expected a JSON object.');
+  }
+  if (raw.indexedDB && typeof raw.indexedDB === 'object') {
+    return {
+      schemaVersion: raw.schemaVersion || PULSE_BACKUP_SCHEMA_VERSION,
+      exportedAt: raw.exportedAt || null,
+      indexedDB: raw.indexedDB,
+      config: Array.isArray(raw.config) ? raw.config : [],
+      organisation: raw.organisation || null,
+      localStorage: raw.localStorage && typeof raw.localStorage === 'object' ? raw.localStorage : {},
+      catalog: raw.catalog || null,
+      productWorkflows: raw.productWorkflows || null,
+    };
+  }
+  return {
+    schemaVersion: 1,
+    exportedAt: raw.exportedAt || null,
+    indexedDB: {
+      orders: raw.orders || [],
+      personnel: raw.personnel || [],
+      dies: raw.dies || [],
+      inventory: raw.inventory || [],
+      purchase_orders: raw.purchase_orders || raw.purchaseOrders || [],
+      knowledge_base: raw.knowledge_base || raw.knowledge || [],
+      reprints: raw.reprints || [],
+      activity_log: raw.activity_log || raw.activity || [],
+      devices: raw.devices || [],
+      invoices: raw.invoices || [],
+      operator_sessions: raw.operator_sessions || [],
+      operator_points: raw.operator_points || [],
+    },
+    config: [],
+    organisation: raw.organisation || null,
+    localStorage: raw.localStorage || {},
+    catalog: raw.catalog || null,
+    productWorkflows: raw.productWorkflows || null,
+  };
+}
+
+async function getPulseBackupSummary() {
+  const indexedDB = {};
+  for (const store of PULSE_BACKUP_STORES) {
+    try {
+      indexedDB[store] = (await _getAll(store)).length;
+    } catch (_) {
+      indexedDB[store] = 0;
+    }
+  }
+  let configCount = 0;
+  try {
+    configCount = (await getAllConfigEntries()).length;
+  } catch (_) {}
+  const ls = collectPulseLocalStorageBackup();
+  const org = loadPulseOrganisationBundleForBackup();
+  return {
+    indexedDB,
+    configCount,
+    localStorageKeys: Object.keys(ls).length,
+    organisation: !!org,
+    facilities: org?.facilities?.length || 0,
+  };
+}
+
+async function buildPulseFullBackup() {
+  const indexedDB = {};
+  for (const store of PULSE_BACKUP_STORES) {
+    indexedDB[store] = await _getAll(store);
+  }
+  const config = await getAllConfigEntries();
+  const configValues = config.map(c => ({ key: c.key, value: _configStoredValue(c) ?? c.value }));
+  const catalog = {
+    colorModes: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.colorModes)) || [],
+    materials: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.materials)) || [],
+    finishing: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.finishing)) || [],
+    products: _configStoredValue(config.find(c => c.key === PULSE_CATALOG_KEYS.products)) || [],
+  };
+  let productWorkflows = [];
+  try {
+    productWorkflows = typeof getAllProductWorkflowsIndexedDB === 'function'
+      ? await getAllProductWorkflowsIndexedDB()
+      : [];
+  } catch (_) {}
+  const organisation = loadPulseOrganisationBundleForBackup();
+  const localStorage = collectPulseLocalStorageBackup();
+  const summary = {
+    orders: indexedDB.orders?.length || 0,
+    personnel: indexedDB.personnel?.length || 0,
+    dies: indexedDB.dies?.length || 0,
+    inventory: indexedDB.inventory?.length || 0,
+    purchaseOrders: indexedDB.purchase_orders?.length || 0,
+    knowledge: indexedDB.knowledge_base?.length || 0,
+    reprints: indexedDB.reprints?.length || 0,
+    activity: indexedDB.activity_log?.length || 0,
+    devices: indexedDB.devices?.length || 0,
+    invoices: indexedDB.invoices?.length || 0,
+    configEntries: config.length,
+    catalogProducts: catalog.products?.length || 0,
+    productWorkflows: productWorkflows.length,
+    organisationFacilities: organisation?.facilities?.length || 0,
+    localStorageKeys: Object.keys(localStorage).length,
+  };
+  return {
+    schemaVersion: PULSE_BACKUP_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    source: 'pulse-admin',
+    adminIncludedTabs: [...PULSE_ADMIN_BACKUP_TABS],
+    adminExcludedTabs: [...PULSE_ADMIN_BACKUP_EXCLUDED_TABS],
+    indexedDB,
+    config,
+    catalog,
+    productWorkflows,
+    organisation,
+    localStorage,
+    summary,
+  };
+}
+
+function downloadPulseBackupFile(payload, filename) {
+  const name = filename || `pulse-full-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function _bulkImportStore(storeName, rows, mode) {
+  if (!Array.isArray(rows) || !rows.length) return 0;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    if (mode === 'replace') {
+      store.clear();
+    }
+    rows.forEach(row => {
+      if (row != null && typeof row === 'object') store.put(row);
+    });
+    tx.oncomplete = () => resolve(rows.length);
+    tx.onerror = () => reject(tx.error || new Error(`Import failed: ${storeName}`));
+  });
+}
+
+async function importPulseFullBackup(rawPayload, options = {}) {
+  const mode = options.mode === 'merge' ? 'merge' : 'replace';
+  const data = normalizePulseBackupPayload(rawPayload);
+  const idb = data.indexedDB || {};
+
+  if (mode === 'replace') {
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const names = [...PULSE_BACKUP_STORES];
+      if (db.objectStoreNames.contains('config')) names.push('config');
+      const existing = names.filter(s => db.objectStoreNames.contains(s));
+      if (!existing.length) { db.close(); resolve(); return; }
+      const tx = db.transaction(existing, 'readwrite');
+      existing.forEach(n => tx.objectStore(n).clear());
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error || new Error('Clear stores failed'));
+    });
+  }
+
+  const counts = {};
+  for (const store of PULSE_BACKUP_STORES) {
+    const rows = idb[store];
+    if (!Array.isArray(rows) || !rows.length) continue;
+    counts[store] = await _bulkImportStore(store, rows, mode);
+  }
+
+  const configRows = Array.isArray(data.config) ? data.config : [];
+  for (const entry of configRows) {
+    if (!entry?.key) continue;
+    const val = entry.value !== undefined ? entry.value : _configStoredValue(entry);
+    await setConfig(entry.key, val);
+  }
+
+  if (data.catalog && typeof data.catalog === 'object') {
+    if (data.catalog.colorModes?.length) await setConfig(PULSE_CATALOG_KEYS.colorModes, data.catalog.colorModes);
+    if (data.catalog.materials?.length) await setConfig(PULSE_CATALOG_KEYS.materials, data.catalog.materials);
+    if (data.catalog.finishing?.length) await setConfig(PULSE_CATALOG_KEYS.finishing, data.catalog.finishing);
+    if (data.catalog.products?.length) await setConfig(PULSE_CATALOG_KEYS.products, data.catalog.products);
+  }
+
+  if (Array.isArray(data.productWorkflows) && data.productWorkflows.length) {
+    await setConfig(PULSE_PRODUCT_WORKFLOWS_CONFIG_KEY, data.productWorkflows);
+  }
+
+  if (data.organisation && typeof data.organisation === 'object') {
+    const norm = typeof window !== 'undefined' && window.PulseOrgJsonStore?.normalizeBundle
+      ? window.PulseOrgJsonStore.normalizeBundle(data.organisation)
+      : data.organisation;
+    localStorage.setItem('pulse_organisation_bundle_v1', JSON.stringify(norm));
+    if (typeof syncPulseMachineryFromOrganisation === 'function') {
+      syncPulseMachineryFromOrganisation();
+    }
+  }
+
+  if (data.localStorage && typeof data.localStorage === 'object') {
+    for (const [k, v] of Object.entries(data.localStorage)) {
+      if (pulseBackupLocalStorageExcluded(k)) continue;
+      try {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+      } catch (e) {
+        console.warn('[PulseBackup] skip ls key', k, e);
+      }
+    }
+  }
+
+  if (typeof _pulseAdminInitPromise !== 'undefined') _pulseAdminInitPromise = null;
+  if (typeof _pulseAdminCache !== 'undefined') _pulseAdminCache = null;
+
+  return { mode, counts, configImported: configRows.length };
+}
+
+// ── Admin catalog + organisation machinery (shared by job ticket, admin, PM) ─
+
+const PULSE_CATALOG_KEYS = {
+  colorModes: 'catalogColorModes',
+  materials: 'catalogMaterials',
+  finishing: 'catalogFinishing',
+  products: 'productCatalog',
+};
+
+function pulseCatalogUID() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function buildPulseDefaultColorModes() {
+  return [
+    { id: pulseCatalogUID(), name: 'CMYK', description: 'Standard 4-color process' },
+    { id: pulseCatalogUID(), name: 'CMYK + White', description: 'CMYK with white underbase' },
+  ];
+}
+
+function buildPulseDefaultMaterials() {
+  return (typeof MATERIALS !== 'undefined' ? MATERIALS : []).map(g => ({
+    id: pulseCatalogUID(), category: g.category, items: [...(g.items || [])],
+  }));
+}
+
+/** Versions for a catalog finishing entry (migrates legacy comma-separated description). */
+function getCatalogFinishingVersions(entry) {
+  if (!entry) return [];
+  if (typeof entry === 'string') return [];
+  if (Array.isArray(entry.versions) && entry.versions.length) {
+    return entry.versions.map(v => String(v).trim()).filter(Boolean);
+  }
+  if (entry.description) {
+    return String(entry.description).split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function buildPulseDefaultFinishing() {
+  return [
+    { id: pulseCatalogUID(), name: 'Lamination', versions: ['Gloss', 'Matte', 'Soft Touch', 'Holo', 'Coating'] },
+    { id: pulseCatalogUID(), name: 'Spot UV', versions: [] },
+    { id: pulseCatalogUID(), name: 'Foil', versions: ['Gold', 'Silver', 'Rose Gold', 'Holographic', 'Custom'] },
+    { id: pulseCatalogUID(), name: 'Scodix', versions: [] },
+    { id: pulseCatalogUID(), name: 'Embossing', versions: [] },
+    { id: pulseCatalogUID(), name: 'Perforation', versions: [] },
+  ];
+}
+
+function buildPulseDefaultProductCatalog() {
+  const u = pulseCatalogUID;
+  return [
+    { id: u(), name: 'Labels (Roll)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided'], rollDirection: true, notes: 'Roll labels — HP Indigo 6K → GM Die/Laser Cutter. NOT Cosmetic Web.' },
+    { id: u(), name: 'Labels (Sheet)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil'], sides: ['1-sided'], rollDirection: false, notes: 'Sheet labels — HP Indigo 6K → Duplo or Guillotine.' },
+    { id: u(), name: 'Pouches', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: true, notes: 'Pouches — ONLY Cosmetic Web. HP Indigo 6K → GM Die/Laser → Karlville Poucher.' },
+    { id: u(), name: 'Folding Cartons / Boxes', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing'], sides: ['2-sided'], rollDirection: false, notes: 'Boxes — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer.' },
+    { id: u(), name: 'Business Cards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','80lb Cover','100lb Cover','110lb Cover'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Business Cards — HP Indigo 15K → Lamination → Duplo or Guillotine.' },
+    { id: u(), name: 'Flyers / Postcards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','14pt C1S','16pt C1S'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Flat sheets — HP Indigo 15K → Lamination → Guillotine.' },
+    { id: u(), name: 'Booklets', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['80lb Cover','100lb Cover','80lb Text','100lb Text'], finishing: ['Lamination'], sides: ['2-sided'], rollDirection: false, notes: 'Booklets — HP Indigo 15K → Lamination → Booklet Folder → Guillotine.' },
+    { id: u(), name: 'Diecut Stickers', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet'], finishing: ['Lamination','Spot UV'], sides: ['1-sided'], rollDirection: false, notes: 'Diecut stickers — sheet or roll.' },
+    { id: u(), name: 'Vinyl Labels / 54\'\' Rolls', facilities: ['boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['White Vinyl','White Vinyl - Aggressive Glue','Holographic Vinyl'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: true, notes: 'Boyd vinyl label roll workflow.' },
+    { id: u(), name: 'Vinyl Signage', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['White Vinyl','White Vinyl - Aggressive Glue','Holographic Vinyl'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: false, notes: 'Boyd vinyl signage.' },
+    { id: u(), name: 'Banners / Large Format', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['Banner Material'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Large format banners.' },
+    { id: u(), name: 'Window Decals', facilities: ['boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Window Decal'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Window decals.' },
+    { id: u(), name: 'Wallpaper', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['Self-Adhesive (Peel-and-Stick)','Traditional / Unpasted'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Wallpaper.' },
+    { id: u(), name: 'Sheet Products (Boyd)', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['18pt (Boyd)','20pt (Boyd)','24pt (Boyd)'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Boyd sheet products.' },
+    { id: u(), name: 'Other', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web','Gloss Label Sheet','Matte Label Sheet','Semi Gloss','14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','24pt C1S','80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','White Vinyl','Banner Material','Window Decal','Vinyl'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing','Perforation'], sides: ['1-sided','2-sided'], rollDirection: false, notes: '' },
+  ];
+}
+
+function _catalogSectionEmpty(arr, isValidItem) {
+  if (!Array.isArray(arr) || arr.length === 0) return true;
+  if (typeof isValidItem === 'function') return !arr.some(isValidItem);
+  return false;
+}
+
+/**
+ * Restore Admin → Product Catalogue when missing or wiped (empty [] in IndexedDB).
+ * Same keys as admin.html. Pass { force: true } to overwrite all sections with built-in defaults.
+ */
+async function repairPulseAdminCatalog(opts = {}) {
+  const force = !!opts.force;
+  const repaired = { colorModes: false, materials: false, finishing: false, products: false };
+
+  try { await openDB(); } catch (_) {}
+
+  let colorModes = _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.colorModes));
+  let materials = _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.materials));
+  let finishing = _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.finishing));
+  let products = _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.products));
+
+  if (force || _catalogSectionEmpty(colorModes, cm => String(cm?.name || '').trim())) {
+    colorModes = buildPulseDefaultColorModes();
+    await setConfig(PULSE_CATALOG_KEYS.colorModes, colorModes);
+    repaired.colorModes = true;
+  }
+  if (force || _catalogSectionEmpty(materials, m => String(m?.category || '').trim() && Array.isArray(m.items) && m.items.length)) {
+    materials = buildPulseDefaultMaterials();
+    await setConfig(PULSE_CATALOG_KEYS.materials, materials);
+    repaired.materials = true;
+  }
+  if (force || _catalogSectionEmpty(finishing, f => String(f?.name || '').trim())) {
+    finishing = buildPulseDefaultFinishing();
+    await setConfig(PULSE_CATALOG_KEYS.finishing, finishing);
+    repaired.finishing = true;
+  }
+  if (force || _catalogSectionEmpty(products, p => String(p?.name || '').trim())) {
+    products = buildPulseDefaultProductCatalog();
+    await setConfig(PULSE_CATALOG_KEYS.products, products);
+    repaired.products = true;
+  }
+
+  if (products.length && typeof seedProductWorkflowsFromDefaults === 'function') {
+    try { await seedProductWorkflowsFromDefaults(products); } catch (_) {}
+  }
+
+  return { colorModes, materials, finishing, products, repaired };
+}
+
+/** True when any catalogue section is missing or empty. */
+function pulseCatalogNeedsRecovery(catalog) {
+  const c = catalog || {};
+  return (
+    _catalogSectionEmpty(c.colorModes, cm => String(cm?.name || '').trim()) ||
+    _catalogSectionEmpty(c.materials, m => String(m?.category || '').trim()) ||
+    _catalogSectionEmpty(c.finishing, f => String(f?.name || '').trim()) ||
+    _catalogSectionEmpty(c.products, p => String(p?.name || '').trim())
+  );
+}
+
+/** Force full catalogue restore (Admin → Products defaults). */
+async function recoverPulseAdminCatalog() {
+  return repairPulseAdminCatalog({ force: true });
+}
+
+/** @deprecated alias — use repairPulseAdminCatalog */
+async function ensurePulseAdminCatalog() {
+  return repairPulseAdminCatalog();
+}
+
+/** Facilities from Organisation tab (local JSON / Supabase). Optional CONST fallback for legacy only. */
+async function getPulseOrganisationFacilities(opts = {}) {
+  if (typeof window !== 'undefined' && window.PulseOrgJsonStore) {
+    try {
+      const bundle = PulseOrgJsonStore.loadRaw();
+      if (bundle?.facilities?.length) {
+        return bundle.facilities
+          .filter(f => f.slug && f.name)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map(f => ({ slug: f.slug, name: f.name }));
+      }
+    } catch (_) {}
+  }
+  if (typeof getSupabaseClient === 'function') {
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data } = await client
+          .from('organisation_facilities')
+          .select('slug, name, sort_order')
+          .order('sort_order', { ascending: true });
+        if (data?.length) {
+          return data.filter(f => f.slug && f.name).map(f => ({ slug: f.slug, name: f.name }));
+        }
+      }
+    } catch (_) {}
+  }
+  if (!opts.noConstFallback && typeof FACILITIES !== 'undefined') {
+    return Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
+  }
+  return [];
+}
+
+let _pulseOrgMachines = null;
+let _pulseOrgCapacityByMachine = {};
+let _pulseMachineCapOverrides = {};
+
+function _orgHardwareToCapacity(h) {
+  const v = h.daily_capacity_value;
+  if (v == null || v === '') return { notes: h.notes || '' };
+  const unit = String(h.daily_capacity_unit || '').toLowerCase();
+  if (unit === 'sheets') return { dailySheets: v, notes: h.notes || '' };
+  if (unit === 'units') return { dailyUnits: v, notes: h.notes || '' };
+  if (unit === 'sq_ft') return { dailySqFt: v, notes: h.notes || '' };
+  if (unit === 'none' || !unit) return { notes: h.notes || '' };
+  return { dailySheets: v, notes: h.notes || '' };
+}
+
+/** Sync machine display names, operations, and capacity from Organisation → hardware. */
+function syncPulseMachineryFromOrganisation() {
+  const out = [];
+  _pulseOrgCapacityByMachine = {};
+  if (typeof window === 'undefined' || !window.PulseOrgJsonStore) {
+    _pulseOrgMachines = out;
+    return out;
+  }
+  try {
+    const bundle = PulseOrgJsonStore.loadRaw();
+    const facById = new Map((bundle.facilities || []).map(f => [f.id, f]));
+    const hwMap = bundle.hardwareByFacilityId || {};
+    for (const [facId, rows] of Object.entries(hwMap)) {
+      const fac = facById.get(facId);
+      const facSlug = fac?.slug || '';
+      const isBoyd = facSlug === 'boyd-street';
+      for (const h of rows || []) {
+        if (h.active === false || !h.machine_name) continue;
+        const displayName = h.machine_name;
+        const slug = typeof displayNameToMachineSlug === 'function'
+          ? displayNameToMachineSlug(displayName)
+          : null;
+        if (slug && typeof MACHINE_SLUG_TO_DISPLAY !== 'undefined') {
+          MACHINE_SLUG_TO_DISPLAY[slug] = displayName;
+        }
+        if (typeof MACHINES !== 'undefined') {
+          MACHINES[displayName] = {
+            ...(MACHINES[displayName] || {}),
+            facility: isBoyd ? 'boyd-street' : (facSlug || '16th-street'),
+            operations: Array.isArray(h.operations) && h.operations.length
+              ? h.operations.slice()
+              : (MACHINES[displayName]?.operations || ['Processing']),
+          };
+        }
+        _pulseOrgCapacityByMachine[displayName] = _orgHardwareToCapacity(h);
+        out.push({
+          id: slug || displayName,
+          name: displayName,
+          displayName,
+          facility: isBoyd ? 'boyd' : '16th',
+          category: slug && typeof MACHINE_SLUG_CATEGORY !== 'undefined'
+            ? (MACHINE_SLUG_CATEGORY[slug] || 'cutting')
+            : 'cutting',
+          capabilities: [],
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[Pulse] syncPulseMachineryFromOrganisation:', e);
+  }
+  _pulseOrgMachines = out;
+  return out;
+}
+
+async function loadPulseMachineCapacityOverrides() {
+  try {
+    const capConfig = await getConfig('machineCapacity');
+    _pulseMachineCapOverrides = capConfig?.value || capConfig || {};
+  } catch (_) {
+    _pulseMachineCapOverrides = {};
+  }
+}
+
+/** Admin Machines tab overrides + Organisation hardware + built-in MACHINE_CAPACITY. */
+function getEffectiveMachineCapacity(machineName) {
+  const base = (typeof MACHINE_CAPACITY !== 'undefined' && MACHINE_CAPACITY[machineName]) || {};
+  const org = _pulseOrgCapacityByMachine[machineName] || {};
+  const over = _pulseMachineCapOverrides[machineName] || {};
+  return { ...base, ...org, ...over };
+}
+
+// ── Production-page Admin bootstrap (read-only; no runtime CONST lists) ──
+
+let _pulseAdminCache = null;
+let _pulseAdminInitPromise = null;
+const _pulseAdminConfigRefreshHandlers = [];
+
+async function _loadPulseSettingsFromConfig() {
+  const [appDept, defFac, defQc] = await Promise.all([
+    getConfig('appDeptCapacity'),
+    getConfig('defaultFacility'),
+    getConfig('defaultQCInspector'),
+  ]);
+  const appVal = _configStoredValue(appDept) || {};
+  return {
+    appDeptCapacity: appVal.dailyUnits != null ? appVal.dailyUnits : null,
+    appDeptCapacityRaw: appVal,
+    defaultFacility: _configStoredValue(defFac) || '',
+    defaultQCInspector: String(_configStoredValue(defQc) || '').trim(),
+  };
+}
+
+/**
+ * Load Admin config for production flow pages. Does not auto-seed catalogue (use Admin → Products).
+ * @param {{ force?: boolean, seedCatalog?: boolean }} opts
+ */
+async function initPulseAdminData(opts = {}) {
+  if (_pulseAdminInitPromise && !opts.force) return _pulseAdminInitPromise;
+  _pulseAdminInitPromise = (async () => {
+    try { await openDB(); } catch (_) {}
+
+    let catalog;
+    if (opts.seedCatalog) {
+      catalog = await repairPulseAdminCatalog();
+    } else {
+      catalog = {
+        colorModes: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.colorModes)) || [],
+        materials: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.materials)) || [],
+        finishing: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.finishing)) || [],
+        products: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.products)) || [],
+        repaired: {},
+      };
+    }
+
+    syncPulseMachineryFromOrganisation();
+    await loadPulseMachineCapacityOverrides();
+    const facilities = await getPulseOrganisationFacilities({ noConstFallback: true });
+    const settings = await _loadPulseSettingsFromConfig();
+
+    _pulseAdminCache = {
+      catalog,
+      facilities,
+      machines: typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [],
+      settings,
+      loadedAt: Date.now(),
+    };
+    return _pulseAdminCache;
+  })();
+  try {
+    return await _pulseAdminInitPromise;
+  } catch (e) {
+    _pulseAdminInitPromise = null;
+    throw e;
+  }
+}
+
+function getPulseAdminCache() {
+  return _pulseAdminCache;
+}
+
+function getPulseFacilityList() {
+  return _pulseAdminCache?.facilities ? [..._pulseAdminCache.facilities] : [];
+}
+
+function getPulseFacilityLabel(slug) {
+  if (!slug) return '—';
+  const found = getPulseFacilityList().find(f => f.slug === slug);
+  return found?.name || String(slug);
+}
+
+function getPulseCatalogProducts() {
+  return _pulseAdminCache?.catalog?.products ? [..._pulseAdminCache.catalog.products] : [];
+}
+
+function getPulseCatalogMaterials() {
+  return _pulseAdminCache?.catalog?.materials ? [..._pulseAdminCache.catalog.materials] : [];
+}
+
+function getPulseCatalogColorModes() {
+  return _pulseAdminCache?.catalog?.colorModes ? [..._pulseAdminCache.catalog.colorModes] : [];
+}
+
+function getPulseCatalogFinishing() {
+  return _pulseAdminCache?.catalog?.finishing ? [..._pulseAdminCache.catalog.finishing] : [];
+}
+
+function getPulseSettings() {
+  return _pulseAdminCache?.settings ? { ..._pulseAdminCache.settings } : {
+    appDeptCapacity: null,
+    appDeptCapacityRaw: {},
+    defaultFacility: '',
+    defaultQCInspector: '',
+  };
+}
+
+/** Display names from Organisation hardware (Admin source); no Object.keys(MACHINES) fallback. */
+function getPulseMachineNames() {
+  const names = new Set();
+  for (const m of (_pulseAdminCache?.machines || [])) {
+    const n = m.displayName || m.name;
+    if (n) names.add(n);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+/** Machine list for Report Issue — Organisation + Admin Machine Capacity overrides (same merge as admin Machines tab). */
+async function getPulseReportIssueMachines() {
+  if (typeof loadPulseMachineCapacityOverrides === 'function') {
+    await loadPulseMachineCapacityOverrides();
+  }
+  if (typeof syncPulseMachineryFromOrganisation === 'function') {
+    syncPulseMachineryFromOrganisation();
+  }
+  const orgMachines = typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [];
+  const capKeys = Object.keys(_pulseMachineCapOverrides || {});
+  const byName = new Map();
+  for (const m of orgMachines) {
+    const name = m.displayName || m.name;
+    if (name) byName.set(name, name);
+  }
+  capKeys.forEach(name => { if (name && !byName.has(name)) byName.set(name, name); });
+  let names = [...byName.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  if (!names.length && typeof MACHINE_SLUG_TO_DISPLAY !== 'undefined') {
+    names = Object.values(MACHINE_SLUG_TO_DISPLAY).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }
+  return names;
+}
+
+const PULSE_PROBLEM_SOURCE_LABELS = {
+  'operator-noticed': 'Operator noticed during run',
+  'preventive-check': 'Preventive / scheduled check',
+  'alarm-error': 'Alarm or error code on screen',
+  'quality-defect': 'Quality defect traced to machine',
+  'after-maintenance': 'After maintenance / restart',
+  other: 'Other',
+  legacy: 'Unknown (legacy)',
+};
+
+const PULSE_PROBLEM_CATEGORY_LABELS = {
+  mechanical: 'Mechanical',
+  software: 'Software / driver',
+  consumables: 'Consumables / materials',
+  electrical: 'Electrical',
+  other: 'Other',
+};
+
+const PULSE_FIX_SOURCE_LABELS = {
+  'in-house': 'Found and fixed in-house',
+  'oem-support': 'Manufacturer / OEM support',
+  'third-party': 'Third-party service technician',
+  'internal-maintenance': 'Internal maintenance team',
+  'past-issue': 'Documented fix from past issue',
+  'trial-error': 'Trial and error / testing',
+  other: 'Other',
+};
+
+function pulseIssueLabel(map, key, otherText) {
+  if (!key) return '—';
+  if (key === 'other' && otherText) return otherText;
+  return map[key] || key;
+}
+
+function getPulseMachineOperations(displayName) {
+  if (!displayName) return ['Processing'];
+  const ops = typeof MACHINES !== 'undefined' && MACHINES[displayName]?.operations;
+  if (Array.isArray(ops) && ops.length) return ops.slice();
+  return ['Processing'];
+}
+
+function renderPulseAdminEmptyState(message, adminHint) {
+  const hint = adminHint || 'Open Admin to configure these values.';
+  const msg = message || 'No data configured yet.';
+  return `<div class="pulse-admin-empty" style="padding:12px 14px;border:1px dashed var(--border,#cbd5e1);border-radius:8px;background:#f8fafc;font-size:13px;color:var(--text-muted,#64748b);">
+    <strong style="display:block;color:var(--text,#334155);margin-bottom:4px;">${pulseEscapeHtml(msg)}</strong>
+    ${pulseEscapeHtml(hint)}
+  </div>`;
+}
+
+function registerPulseAdminConfigRefresh(handler) {
+  if (typeof handler === 'function') _pulseAdminConfigRefreshHandlers.push(handler);
+}
+
+async function refreshPulseAdminData() {
+  _pulseAdminInitPromise = null;
+  const cache = await initPulseAdminData({ force: true });
+  for (const fn of _pulseAdminConfigRefreshHandlers) {
+    try { await fn(cache); } catch (e) { console.warn('[Pulse] admin config refresh', e); }
+  }
+  return cache;
+}
+
+if (typeof window !== 'undefined') {
+  window.PULSE_CATALOG_KEYS = PULSE_CATALOG_KEYS;
+  window.PULSE_BACKUP_SCHEMA_VERSION = PULSE_BACKUP_SCHEMA_VERSION;
+  window.PULSE_ADMIN_BACKUP_TABS = PULSE_ADMIN_BACKUP_TABS;
+  window.PULSE_ADMIN_BACKUP_EXCLUDED_TABS = PULSE_ADMIN_BACKUP_EXCLUDED_TABS;
+  window.getAllConfigEntries = getAllConfigEntries;
+  window.getPulseBackupSummary = getPulseBackupSummary;
+  window.buildPulseFullBackup = buildPulseFullBackup;
+  window.downloadPulseBackupFile = downloadPulseBackupFile;
+  window.importPulseFullBackup = importPulseFullBackup;
+  window.normalizePulseBackupPayload = normalizePulseBackupPayload;
+  window.buildPulseDefaultProductCatalog = buildPulseDefaultProductCatalog;
+  window.repairPulseAdminCatalog = repairPulseAdminCatalog;
+  window.recoverPulseAdminCatalog = recoverPulseAdminCatalog;
+  window.pulseCatalogNeedsRecovery = pulseCatalogNeedsRecovery;
+  window.ensurePulseAdminCatalog = ensurePulseAdminCatalog;
+  window.getPulseOrganisationFacilities = getPulseOrganisationFacilities;
+  window.syncPulseMachineryFromOrganisation = syncPulseMachineryFromOrganisation;
+  window.loadPulseMachineCapacityOverrides = loadPulseMachineCapacityOverrides;
+  window.getEffectiveMachineCapacity = getEffectiveMachineCapacity;
+  window.getCatalogFinishingVersions = getCatalogFinishingVersions;
+  window.initPulseAdminData = initPulseAdminData;
+  window.getPulseAdminCache = getPulseAdminCache;
+  window.getPulseFacilityList = getPulseFacilityList;
+  window.getPulseFacilityLabel = getPulseFacilityLabel;
+  window.getPulseCatalogProducts = getPulseCatalogProducts;
+  window.getPulseCatalogMaterials = getPulseCatalogMaterials;
+  window.getPulseCatalogColorModes = getPulseCatalogColorModes;
+  window.getPulseCatalogFinishing = getPulseCatalogFinishing;
+  window.getPulseSettings = getPulseSettings;
+  window.getPulseMachineNames = getPulseMachineNames;
+  window.getPulseReportIssueMachines = getPulseReportIssueMachines;
+  window.PULSE_PROBLEM_SOURCE_LABELS = PULSE_PROBLEM_SOURCE_LABELS;
+  window.PULSE_PROBLEM_CATEGORY_LABELS = PULSE_PROBLEM_CATEGORY_LABELS;
+  window.PULSE_FIX_SOURCE_LABELS = PULSE_FIX_SOURCE_LABELS;
+  window.pulseIssueLabel = pulseIssueLabel;
+  window.getPulseMachineOperations = getPulseMachineOperations;
+  window.renderPulseAdminEmptyState = renderPulseAdminEmptyState;
+  window.registerPulseAdminConfigRefresh = registerPulseAdminConfigRefresh;
+  window.refreshPulseAdminData = refreshPulseAdminData;
+  window.getPulseOrgMachines = function () {
+    if (!_pulseOrgMachines) syncPulseMachineryFromOrganisation();
+    return _pulseOrgMachines || [];
+  };
+}
+
+// Re-fire admin refresh when IndexedDB config changes (Admin saves)
+if (typeof onDBUpdate === 'function') {
+  onDBUpdate((data) => {
+    if (data?.store === 'config' && typeof refreshPulseAdminData === 'function') {
+      refreshPulseAdminData().catch(() => {});
+    }
+  });
 }
 
 // ── Product workflows (IndexedDB / local config fallback) ─
@@ -4237,15 +5104,32 @@ async function resetAllProductWorkflowsFromDefaultsIndexedDB(catProducts) {
 }
 
 async function getAllMachinesIndexedDB() {
-  if (typeof MACHINE_SLUG_TO_DISPLAY === 'undefined') return [];
-  return Object.entries(MACHINE_SLUG_TO_DISPLAY).map(([id, displayName]) => ({
-    id,
-    name: displayName,
-    displayName,
-    facility: ['canon-colorado', 'roland', 'graphtec-vinyl', 'graphtec-flatbed', 'boyd-laminator'].includes(id) ? 'boyd' : '16th',
-    category: id.includes('press') ? 'press' : id.includes('laminat') ? 'lamination' : 'cutting',
-    capabilities: [],
-  }));
+  if (typeof syncPulseMachineryFromOrganisation === 'function') {
+    syncPulseMachineryFromOrganisation();
+  }
+  const byId = new Map();
+  const orgList = typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [];
+  for (const m of orgList) {
+    if (m?.id) byId.set(m.id, m);
+  }
+  if (typeof MACHINE_SLUG_TO_DISPLAY !== 'undefined') {
+    for (const [id, displayName] of Object.entries(MACHINE_SLUG_TO_DISPLAY)) {
+      if (byId.has(id)) {
+        const cur = byId.get(id);
+        if (!cur.category) byId.set(id, { ...cur, category: MACHINE_SLUG_CATEGORY?.[id] || cur.category });
+        continue;
+      }
+      byId.set(id, {
+        id,
+        name: displayName,
+        displayName,
+        facility: ['canon-colorado', 'roland', 'graphtec-vinyl', 'graphtec-flatbed', 'boyd-laminator'].includes(id) ? 'boyd' : '16th',
+        category: MACHINE_SLUG_CATEGORY?.[id] || (id.includes('press') ? 'press' : id.includes('laminat') ? 'lamination' : 'cutting'),
+        capabilities: [],
+      });
+    }
+  }
+  return Array.from(byId.values());
 }
 
 if (typeof window !== 'undefined') {
@@ -5304,25 +6188,65 @@ const THEME_CSS = `
   .note-type-badge.INSTRUCTIONS { background:#fef3cd; color:#92600a; }
 
   /* ── SKU versions & artwork (production manager, operator, etc.) ── */
-  .pulse-sku-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pulse-sku-section {
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+    width: 100%; box-sizing: border-box;
+  }
   .pulse-sku-section-title {
     font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--text-muted); margin: 0 0 10px;
+    color: var(--text-muted); margin: 0 0 12px;
   }
   .pulse-sku-section-title span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .pulse-sku-columns {
+    display: grid;
+    gap: 12px;
+    align-items: stretch;
+    width: 100%;
+    grid-template-columns: repeat(var(--pulse-sku-cols, 1), minmax(0, 1fr));
+  }
+  .pulse-sku-columns .pulse-sku-block {
+    margin-bottom: 0;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  @media (max-width: 900px) {
+    .pulse-sku-columns { grid-template-columns: 1fr !important; }
+  }
   .pulse-sku-block {
+    display: flex; flex-direction: column; align-items: stretch;
     border: 1px solid var(--border); border-radius: 10px; padding: 12px;
     margin-bottom: 10px; background: #f8fafc;
   }
   .pulse-sku-block:last-child { margin-bottom: 0; }
+  .pulse-sku-name {
+    font-size: 12px; font-weight: 700; color: var(--text);
+    line-height: 1.35; margin-bottom: 8px; text-align: center;
+    word-break: break-word;
+  }
+  .pulse-sku-qty {
+    font-size: 26px; font-weight: 800; color: var(--accent); line-height: 1;
+    text-align: center; margin: 4px 0 2px;
+  }
+  .pulse-sku-qty-unit {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--text-muted); text-align: center; margin-bottom: 10px;
+    padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;
+  }
   .pulse-sku-hdr {
     display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
     margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;
   }
   .pulse-sku-hdr strong { font-size: 13px; color: var(--text); }
   .pulse-sku-hdr span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
-  .pulse-sku-layers { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
-  .pulse-sku-empty { font-size: 12px; color: var(--text-muted); }
+  .pulse-sku-layers {
+    display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 8px;
+    font-weight: 600; text-align: center;
+  }
+  .pulse-sku-empty { font-size: 12px; color: var(--text-muted); text-align: center; }
+  .pulse-sku-art { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .pulse-sku-art .pulse-art-grid { justify-content: center; width: 100%; }
   .pulse-art-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .pulse-art-thumb, .pulse-art-pdf {
     width: 72px; height: 72px; border-radius: 8px; border: 1px solid var(--border);
@@ -5359,26 +6283,12 @@ function renderNav(activePage) {
   const pages = [
     { id: 'dashboard',          label: '\uD83C\uDFE0 Dashboard',         href: 'dashboard.html',           access: 'all' },
     { id: 'job-ticket',         label: '\uD83C\uDFAB Job Ticket',         href: 'job-ticket.html',          access: 'all' },
-    { id: 'quotes',             label: '\uD83D\uDCAC Quotes',             href: 'quotes.html',              access: 'all' },
-    { id: 'orders',             label: '\uD83D\uDCE6 Orders',             href: 'orders.html',              access: 'all' },
-    { id: 'invoices',           label: '\uD83D\uDCCB Invoices',           href: 'invoice.html',             access: 'all' },
     { id: 'prepress',           label: '\uD83D\uDCC4 Prepress',          href: 'prepress.html',            access: 'production' },
     { id: 'production-manager', label: '\u2699\uFE0F Production',         href: 'production-manager.html',  access: 'production' },
     { id: 'operator-terminal',  label: '\uD83D\uDC77 Operator',           href: 'operator-terminal.html',   access: 'operator' },
     { id: 'qc-checkout',        label: '\uD83D\uDD0D QC',                 href: 'qc-checkout.html',         access: 'production' },
     { id: 'shipping',           label: '\uD83D\uDE9A Shipping',            href: 'shipping.html',            access: 'production' },
-    { id: 'application-dept',   label: '\uD83C\uDFF7\uFE0F Application',  href: 'application-dept.html',    access: 'production' },
-    { id: 'jm-dashboard',       label: '\uD83C\uDFAB Job Manager',        href: 'jm-dashboard.html',        access: 'all' },
-    { id: 'rep-tasks',          label: '\uD83D\uDCCB Rep Tasks',          href: 'rep-tasks.html',           access: 'all' },
-    { id: 'leads',              label: '\uD83D\uDCCB Leads',              href: 'leads.html',               access: 'all' },
-    { id: 'sdr-dashboard',      label: '\uD83C\uDFAF SDR Inbox',          href: 'sdr-dashboard.html',       access: 'all' },
-    { id: 'sdr-pipeline-portal', label: '\uD83D\uDDA5\uFE0F SDR Pipeline', href: 'sdr-pipeline-portal.html', access: 'all' },
-    { id: 'walkin-dashboard',   label: '\uD83D\uDEAA Walk-In',            href: 'walkin-dashboard.html',    access: 'all' },
-    { id: 'proofs',             label: '\uD83D\uDDBC\uFE0F Proofs',             href: 'proofs.html',              access: 'all' },
-    { id: 'design-task',       label: '\uD83C\uDFA8 Design Tasks',       href: 'design-task.html',         access: 'all' },
-    { id: 'instagram-leads',    label: '\uD83D\uDCF8 Instagram',           href: 'instagram-leads.html',     access: 'all' },
     { id: 'machine-issues',     label: '\uD83D\uDD27 Report Issue',       href: 'machine-issues.html',      access: 'production' },
-    { id: 'ops-manager',        label: '\uD83C\uDFC1 Ops Manager',        href: 'ops-manager.html',         access: 'admin' },
   ];
   const accessClass = { 'all': '', 'admin': 'nav-admin-only', 'production': 'nav-production-only', 'operator': 'nav-operator-only' };
   const adminMenuActive = activePage === 'admin';
@@ -5509,10 +6419,36 @@ function renderPulseArtThumbGrid(files = []) {
   }).join('')}</div>`;
 }
 
+function getOrderSkusFiltered(order) {
+  return (order?.skus || []).filter(s => s && (s.name || s.quantity || getOrderSkuArtFiles(s).length));
+}
+
+function getOrderSkuTotalQuantity(order) {
+  const skus = getOrderSkusFiltered(order);
+  if (!skus.length) return Number(order?.quantity) || 0;
+  return skus.reduce((sum, sku) => sum + (Number(sku.quantity) || 0), 0);
+}
+
+/** Job detail quantity line — uses per-SKU qty when SKU versions exist. */
+function formatOrderQuantityDisplay(order) {
+  const skus = getOrderSkusFiltered(order);
+  if (skus.length === 1) {
+    const q = (Number(skus[0].quantity) || 0).toLocaleString();
+    const name = skus[0].name || 'SKU 1';
+    return `${q} pcs · ${name}`;
+  }
+  if (skus.length > 1) {
+    const total = getOrderSkuTotalQuantity(order);
+    return `${total.toLocaleString()} pcs total (${skus.length} SKUs — see columns below)`;
+  }
+  const q = Number(order?.quantity) || 0;
+  return q ? `${q.toLocaleString()} units` : '—';
+}
+
 function renderPulseSkuBlock(sku, index) {
   const files = getOrderSkuArtFiles(sku);
   const label = pulseEscapeHtml(sku.name || `SKU ${index + 1}`);
-  const qty = (sku.quantity || 0).toLocaleString();
+  const qty = (Number(sku.quantity) || 0).toLocaleString();
   const layers = [];
   if (sku.whiteDataUrl) layers.push('White');
   if (sku.uvDataUrl) layers.push('UV');
@@ -5522,39 +6458,55 @@ function renderPulseSkuBlock(sku, index) {
     : '';
   return `
     <div class="pulse-sku-block">
-      <div class="pulse-sku-hdr">
-        <strong>#${index + 1} ${label}</strong>
-        <span>${qty} pcs</span>
-      </div>
+      <div class="pulse-sku-name">#${index + 1} · ${label}</div>
+      <div class="pulse-sku-qty">${qty}</div>
+      <div class="pulse-sku-qty-unit">pieces</div>
       ${layersHtml}
-      ${files.length
+      <div class="pulse-sku-art">${files.length
         ? renderPulseArtThumbGrid(files)
         : '<div class="pulse-sku-empty">No artwork files for this SKU.</div>'
-      }
+      }</div>
     </div>`;
+}
+
+/** Grid columns for SKU row: N SKUs → N equal-width columns. */
+function pulseSkuColumnsStyle(skus) {
+  const n = Math.max(1, skus?.length || 0);
+  return `--pulse-sku-cols:${n};grid-template-columns:repeat(${n},minmax(0,1fr));`;
+}
+if (typeof window !== 'undefined') {
+  window.pulseSkuColumnsStyle = pulseSkuColumnsStyle;
+  window.getOrderSkusFiltered = getOrderSkusFiltered;
+  window.getOrderSkuTotalQuantity = getOrderSkuTotalQuantity;
+  window.formatOrderQuantityDisplay = formatOrderQuantityDisplay;
 }
 
 /** SKU versions + artwork for production manager / operator job detail */
 function renderOrderSkuSection(order) {
   if (!order) return '';
   _pulseArtworkUrls = [];
-  const skus = (order.skus || []).filter(s => s && (s.name || s.quantity || getOrderSkuArtFiles(s).length));
+  const skus = getOrderSkusFiltered(order);
   const globalFiles = collectOrderArtworkFiles(order);
   if (!skus.length && !globalFiles.length) return '';
 
   const parts = [];
   if (skus.length) {
+    const colStyle = pulseSkuColumnsStyle(skus);
+    const totalQty = getOrderSkuTotalQuantity(order);
+    const titleExtra = totalQty
+      ? ` · ${totalQty.toLocaleString()} pcs total`
+      : '';
     parts.push(`
       <div class="pulse-sku-section">
-        <h4 class="pulse-sku-section-title">📦 SKU versions <span>(${skus.length})</span></h4>
-        ${skus.map((sku, i) => renderPulseSkuBlock(sku, i)).join('')}
+        <h4 class="pulse-sku-section-title">📦 SKU versions <span>(${skus.length}${titleExtra})</span></h4>
+        <div class="pulse-sku-columns" style="${colStyle}">
+          ${skus.map((sku, i) => renderPulseSkuBlock(sku, i)).join('')}
+        </div>
       </div>`);
-  }
-  if (globalFiles.length) {
-    const title = skus.length ? 'Order-level artwork &amp; layers' : 'Artwork';
+  } else if (globalFiles.length) {
     parts.push(`
       <div class="pulse-sku-section">
-        <h4 class="pulse-sku-section-title">${title}</h4>
+        <h4 class="pulse-sku-section-title">Artwork</h4>
         ${renderPulseArtThumbGrid(globalFiles)}
       </div>`);
   }
@@ -5626,7 +6578,14 @@ function renderNextStepBanner(nextMachine, nextOperation) {
 }
 
 // Auto-seed Personnel DB from OPERATOR_PROFILES on every page load (idempotent — skips if already seeded)
-document.addEventListener('DOMContentLoaded', () => { seedPersonnelFromProfiles().catch(() => {}); });
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await seedPersonnelFromProfiles();
+    await dedupePersonnelByName();
+    if (typeof ensureAuthPersonnelInDb === 'function') await ensureAuthPersonnelInDb();
+    await dedupePersonnelByName();
+  } catch (_) {}
+});
 
 // ── PUL-710: Company logo helper ─────────────────────────────
 // Returns the branding-directory path for a given company key,

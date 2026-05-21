@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260518-PW"></script>
+  <script src="shared.js?v=20260520-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
@@ -297,6 +297,7 @@ document.getElementById('page-styles').textContent = `
 
   /* Detail sections */
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .order-body .pulse-sku-section { width: 100%; max-width: 100%; }
   .detail-section { }
   .detail-section h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
   .detail-item { display: flex; gap: 8px; margin-bottom: 4px; font-size: 13px; }
@@ -353,45 +354,36 @@ let assignTargetOrderDbId = null;
 let assignTargetStepId = null;
 let addStepTargetOrderDbId = null;
 
-// Populate machine selectors
-const machineSelect = document.getElementById('newStepMachine');
-Object.keys(MACHINES).forEach(m => {
-  machineSelect.innerHTML += `<option value="${m}">${m}</option>`;
-});
-machineSelect.onchange = function() {
-  const ops = MACHINES[this.value]?.operations || OPERATIONS;
-  const opSel = document.getElementById('newStepOperation');
-  opSel.innerHTML = '<option value="">— Select Operation —</option>';
-  ops.forEach(o => opSel.innerHTML += `<option value="${o}">${o}</option>`);
-};
-OPERATIONS.forEach(o => {
-  document.getElementById('newStepOperation').innerHTML += `<option value="${o}">${o}</option>`;
-});
-
-// ── Dynamic facility helpers ──────────────────────────────
-function _getPmOrgFacilities() {
-  if (window.PulseOrgJsonStore) {
-    try {
-      const bundle = PulseOrgJsonStore.loadRaw();
-      if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
-        return bundle.facilities
-          .filter(f => f.slug && f.name)
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      }
-    } catch (_) {}
-  }
-  if (typeof FACILITIES !== 'undefined') {
-    return Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
-  }
-  return [];
+function populatePmMachineSelectors() {
+  const machineSelect = document.getElementById('newStepMachine');
+  if (!machineSelect) return;
+  const prev = machineSelect.value;
+  const names = typeof getPulseMachineNames === 'function' ? getPulseMachineNames() : [];
+  machineSelect.innerHTML = names.length
+    ? '<option value="">— Select Machine —</option>'
+    : '<option value="">— Configure in Admin → Organisation —</option>';
+  names.forEach(m => { machineSelect.innerHTML += `<option value="${m}">${m}</option>`; });
+  if (prev && names.includes(prev)) machineSelect.value = prev;
+  onPmNewStepMachineChange();
 }
 
+function onPmNewStepMachineChange() {
+  const machineSelect = document.getElementById('newStepMachine');
+  const opSel = document.getElementById('newStepOperation');
+  if (!machineSelect || !opSel) return;
+  const ops = typeof getPulseMachineOperations === 'function'
+    ? getPulseMachineOperations(machineSelect.value)
+    : [];
+  opSel.innerHTML = '<option value="">— Select Operation —</option>';
+  (ops.length ? ops : (typeof OPERATIONS !== 'undefined' ? OPERATIONS : [])).forEach(o => {
+    opSel.innerHTML += `<option value="${o}">${o}</option>`;
+  });
+}
+
+document.getElementById('newStepMachine')?.addEventListener('change', onPmNewStepMachineChange);
+
 function getPmFacilityLabel(slug) {
-  if (!slug) return '—';
-  const facs = _getPmOrgFacilities();
-  const found = facs.find(f => f.slug === slug);
-  if (found) return found.name;
-  return (typeof FACILITIES !== 'undefined' && FACILITIES[slug]?.name) || slug;
+  return typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(slug) : (slug || '—');
 }
 
 function populatePmFacilityFilter() {
@@ -399,7 +391,7 @@ function populatePmFacilityFilter() {
   if (!sel) return;
   const current = sel.value;
   sel.innerHTML = '<option value="all">All Facilities</option>';
-  _getPmOrgFacilities().forEach(f => {
+  (typeof getPulseFacilityList === 'function' ? getPulseFacilityList() : []).forEach(f => {
     const opt = document.createElement('option');
     opt.value = f.slug;
     opt.textContent = f.name;
@@ -410,7 +402,16 @@ function populatePmFacilityFilter() {
 
 // ── Init ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
   populatePmFacilityFilter();
+  populatePmMachineSelectors();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(() => {
+      populatePmFacilityFilter();
+      populatePmMachineSelectors();
+      renderList();
+    });
+  }
   await loadOrders();
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -629,7 +630,7 @@ function renderOrderBody(order) {
         <h4>Job Details</h4>
         ${di('Product', order.productType)}
         ${di('Material', order.material)}
-        ${di('Quantity', order.quantity?.toLocaleString() + ' units')}
+        ${di('Quantity', typeof formatOrderQuantityDisplay === 'function' ? formatOrderQuantityDisplay(order) : (order.quantity?.toLocaleString() + ' units'))}
         ${di('Sheet Count', order.sheetCount || '—')}
         ${di('Print Type', order.printType)}
         ${di('Sides', order.sides + '-sided')}
@@ -1004,7 +1005,7 @@ async function confirmAddStep() {
   const newStep = {
     id: generateStepId(),
     machine,
-    operation: operation || (MACHINES[machine]?.operations?.[0] || 'Processing'),
+    operation: operation || ((typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(machine) : [])[0] || 'Processing'),
     status: 'pending',
     assignedTo: null,
     startedAt: null,
@@ -1132,11 +1133,10 @@ function onRedirectMachineChange() {
   const machine = document.getElementById('redirectMachine').value;
   const opSel = document.getElementById('redirectOperation');
   opSel.innerHTML = '<option value="">— Auto from machine —</option>';
-  if (machine && MACHINES[machine]) {
-    MACHINES[machine].operations.forEach(op => {
-      opSel.innerHTML += `<option value="${op}">${op}</option>`;
-    });
-  }
+  const ops = typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(machine) : [];
+  ops.forEach(op => {
+    opSel.innerHTML += `<option value="${op}">${op}</option>`;
+  });
 }
 
 function toggleRedirectQty() {
@@ -1169,7 +1169,7 @@ async function confirmRedirect() {
     return;
   }
 
-  const newOp = document.getElementById('redirectOperation').value || (MACHINES[newMachine]?.operations?.[0]) || 'Processing';
+  const newOp = document.getElementById('redirectOperation').value || ((typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(newMachine) : [])[0] || 'Processing');
   const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
   const notes = document.getElementById('redirectNotes').value;
   const originalMachine = step.machine;
