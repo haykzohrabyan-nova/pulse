@@ -1118,7 +1118,7 @@
     const detailsPanelHtml = `
       <div style="display:flex;gap:8px;margin-top:4px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
         <span class="card-line-tag tag-${line}" style="font-size:12px;padding:3px 10px;">${lineConfig.name}</span>
-        <a href="production-manager.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
+        <a href="job-ticket.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
         <a href="job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
         ${o.parentOrderId ? `<a href="job-ticket.html?order=${o.parentOrderId}" class="btn btn-sm" style="text-decoration:none;font-size:11px;">📎 Parent #${o.parentOrderId}</a>` : ''}
         ${o.status === 'prepress' ? `<button class="btn btn-primary btn-sm" onclick="startPrepressOrder(${o.id},'${o.orderId}')">▶️ Start Prepress</button>` : ''}

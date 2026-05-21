@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
@@ -216,6 +217,13 @@ document.getElementById('page-styles').textContent = `
   .prepress-sku-wrap { margin-bottom:14px; }
   .prepress-sku-wrap-title { font-size:12px; font-weight:700; color:var(--text); margin-bottom:10px; }
   .prepress-sku-wrap-title span { font-weight:500; color:var(--text-muted); }
+  .prepress-sku-columns {
+    display:grid; gap:12px; align-items:stretch; width:100%;
+  }
+  .prepress-sku-columns .prepress-sku-block { margin-bottom:0; min-width:0; height:100%; }
+  @media (max-width:720px) {
+    .prepress-sku-columns { grid-template-columns:1fr !important; }
+  }
   .prepress-sku-block {
     border:1px solid var(--border); border-radius:10px; padding:12px;
     margin-bottom:10px; background:#f8fafc;
@@ -258,6 +266,10 @@ const PREPRESS_VISIBLE_STATUSES = ['prepress','prepress-active','prepress-paused
 const PREPRESS_APPROVED_PRODUCTION_STATUSES = ['pending-review','in-production'];
 
 window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(() => { if (selectedOrderId) renderDetail(); });
+  }
   await loadOrders();
   onDBUpdate(async (data) => {
     if (data.store === 'orders') await loadOrders();
@@ -448,21 +460,25 @@ function renderArtworkAndNotes(order, lockedNotice = '') {
 
   const skus = (order.skus || []).filter(s => s && (s.name || s.quantity || getSkuArtFiles(s).length));
   if (skus.length) {
+    const colStyle = typeof pulseSkuColumnsStyle === 'function'
+      ? pulseSkuColumnsStyle(skus)
+      : `grid-template-columns: repeat(${skus.length}, minmax(0, 1fr));`;
     chunks.push(`
       <div class="prepress-sku-wrap">
         <div class="prepress-sku-wrap-title">📦 SKU versions <span>(${skus.length})</span></div>
-        ${renderSkuArtworkBlocks(skus)}
+        <div class="prepress-sku-columns" style="${colStyle}">
+          ${renderSkuArtworkBlocks(skus)}
+        </div>
       </div>`);
-  }
-
-  const globalFiles = collectOrderArtworkFiles(order);
-  if (globalFiles.length) {
-    const title = skus.length ? 'Order-level artwork & layers' : 'Artwork';
-    chunks.push(`
-      <div class="prepress-art-block">
-        <div class="prepress-art-block-title">${title}</div>
-        ${renderArtwork(globalFiles)}
-      </div>`);
+  } else {
+    const globalFiles = collectOrderArtworkFiles(order);
+    if (globalFiles.length) {
+      chunks.push(`
+        <div class="prepress-art-block">
+          <div class="prepress-art-block-title">Artwork</div>
+          ${renderArtwork(globalFiles)}
+        </div>`);
+    }
   }
 
   if (!chunks.length) {
@@ -709,7 +725,8 @@ function renderDetail() {
   }
 
   document.getElementById('detailTitle').textContent = `${order.customerName || order.customer || '—'} — #${order.orderId}`;
-  document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${FACILITIES[order.facility]?.name || order.facility || '—'} • Rep: ${order.accountManager || '—'}`;
+  const facLabel = typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(order.facility) : (order.facility || '—');
+  document.getElementById('detailSubtitle').textContent = `${order.productType || '—'} • ${facLabel} • Rep: ${order.accountManager || '—'}`;
   document.getElementById('detailStatus').innerHTML = renderStatusBadge(order.status);
   const lockedNotice = ['pending-review','in-production','qc-failed','ready-to-ship','completed','shipped','received'].includes(order.status)
     ? `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #fed7aa;background:#fff7ed;font-size:12px;color:#9a3412;">This ticket is already approved or in production. Prepress can view it here, but edits are locked.</div>`
@@ -923,6 +940,23 @@ async function pauseReview() {
   await loadOrders();
 }
 
+function buildJobTicketSnapshotAtReturn(order) {
+  if (!order) return null;
+  const keys = [
+    'orderId', 'customerName', 'customer', 'accountManager', 'jobDescription', 'productType', 'otherProductDesc',
+    'facility', 'material', 'quantity', 'piecesPerSheet', 'sheetCount', 'printType', 'sides', 'colorMode', 'colors',
+    'hasWhiteLayer', 'hasSpecialColor', 'specialColorDetails', 'lamination', 'hasUV', 'hasFoil', 'foilType', 'foilNotes',
+    'hasPerforation', 'perforationNotes', 'finishingNotes', 'applicationService', 'applicationContainerType',
+    'cutMethod', 'dieStatus', 'dieName', 'labelWidth', 'labelHeight', 'boxDepth', 'pouchGusset', 'rollDirection',
+    'customBatching', 'unitsPerRoll', 'packagingInstructions', 'dueDate', 'specialNotes', 'noteType',
+    'workflowTemplate', 'workflowSteps', 'currentStep', 'artworkFiles', 'whiteLayerFile', 'uvFile', 'foilFile', 'skus', 'skuCount',
+    'customerPO', 'quoteRef', 'pricePerUnit', 'orderTotal', 'paymentTerms', 'invoiceNumber', 'invoiceStatus',
+  ];
+  const snap = { snapshottedAt: new Date().toISOString() };
+  keys.forEach(k => { if (order[k] !== undefined && order[k] !== null) snap[k] = order[k]; });
+  return snap;
+}
+
 async function sendBackToAccountManager() {
   const order = await getFreshSelectedOrder();
   if (!order) return;
@@ -936,16 +970,22 @@ async function sendBackToAccountManager() {
     alert('Add a clear prepress comment before sending this back.');
     return;
   }
-  const patch = collectReviewPatch(order);
+  const review = collectReviewPatch(order);
   const issueAt = new Date().toISOString();
-  patch.status = 'pending-account-manager';
-  patch.needsAccountManagerAction = true;
-  patch.prepressIssueComment = comment;
-  patch.prepressIssueCategory = category;
-  patch.prepressIssueAt = issueAt;
-  patch.prepressIssueBy = patch.prepressLastUpdatedBy;
-  patch.conversationHistory = [];
-  patch.notesLog = [];
+  const by = review.prepressLastUpdatedBy;
+  const patch = {
+    status: 'pending-account-manager',
+    needsAccountManagerAction: true,
+    prepressIssueComment: comment,
+    prepressIssueCategory: category,
+    prepressIssueAt: issueAt,
+    prepressIssueBy: by,
+    prepressChecklist: review.prepressChecklist,
+    prepressComment: review.prepressComment,
+    prepressLastUpdatedAt: review.prepressLastUpdatedAt,
+    prepressLastUpdatedBy: by,
+    jobTicketSnapshotAtReturn: buildJobTicketSnapshotAtReturn(order),
+  };
   await updateOrder(order.id, patch);
   await addActivity({ orderId: order.orderId, type: 'prepress-returned', message: `Sent back to account manager${category ? ` (${category})` : ''}: ${comment}`, by: patch.prepressLastUpdatedBy });
   try {
@@ -1122,7 +1162,7 @@ function renderV3Detail() {
       <br><span style="font-size:11px;color:#64748b;margin-top:4px;display:block;">Download via the Proofs page to get a signed R2 URL.</span>
     </div>`;
   } else {
-    artHtml = `<div style="font-size:13px;color:#6b7280;">File key not on record. Check <a href="proofs.html" style="color:#2563eb;">Proofs page</a> for the locked file.</div>`;
+    artHtml = `<div style="font-size:13px;color:#6b7280;">File key not on record. Locked proof file may be attached on the order record.</div>`;
   }
   if (lockedVersion?.notes) {
     artHtml += `<div style="font-size:12px;color:#374151;margin-top:8px;padding:8px 12px;background:#f8fafc;border-radius:6px;">Designer notes: ${escHtml_pre(lockedVersion.notes)}</div>`;
@@ -1164,7 +1204,7 @@ function renderV3SidePanel(task) {
           ⚠ <strong>Issue reported.</strong> Routed back to JM/Designer.<br>
           <span style="font-size:11px;">${escHtml_pre(task.prepress_issue_notes)}</span>
         </div>
-        <a href="proofs.html" style="display:block;text-align:center;padding:8px;background:#ede9fe;color:#5b21b6;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">↗ View in Proofs</a>`;
+        <span style="display:block;text-align:center;padding:8px;background:#ede9fe;color:#5b21b6;border-radius:8px;font-size:13px;font-weight:600;">Issue routed to design — check order artwork on Job Ticket</span>`;
     } else if (isConfirmed) {
       actionStack.innerHTML = `
         <div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:10px;font-size:13px;color:#166534;">

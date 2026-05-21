@@ -1,0 +1,596 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-05-20T21:39:34.023Z",
+  "colorModes": [
+    {
+      "id": "wzl5lwdi",
+      "name": "CMYK",
+      "description": "Standard 4-color process"
+    },
+    {
+      "id": "7r2ibqd5",
+      "name": "CMYK + White",
+      "description": "CMYK with white underbase"
+    }
+  ],
+  "materials": [
+    {
+      "id": "bkif50iw",
+      "category": "BOPP",
+      "items": [
+        "Clear BOPP",
+        "White BOPP",
+        "Silver BOPP",
+        "Holo BOPP"
+      ]
+    },
+    {
+      "id": "mcdm6g6l",
+      "category": "Cosmetic Web",
+      "items": [
+        "Clear Cosmetic Web",
+        "White Cosmetic Web",
+        "Silver Cosmetic Web"
+      ]
+    },
+    {
+      "id": "x6idoi84",
+      "category": "Label Sheets",
+      "items": [
+        "Gloss Label Sheet",
+        "Matte Label Sheet",
+        "Semi Gloss"
+      ]
+    },
+    {
+      "id": "l2ud75qa",
+      "category": "Cardstock",
+      "items": [
+        "14pt C1S",
+        "14pt C2S",
+        "16pt C1S",
+        "16pt C2S",
+        "18pt C1S",
+        "18pt C2S",
+        "18pt Silver",
+        "24pt C1S",
+        "24pt C2S"
+      ]
+    },
+    {
+      "id": "ykru89wj",
+      "category": "Cardstock (Boyd)",
+      "items": [
+        "16pt",
+        "18pt",
+        "20pt",
+        "24pt"
+      ]
+    },
+    {
+      "id": "qxkumwbo",
+      "category": "Cover/Text Stock",
+      "items": [
+        "80lb Cover",
+        "100lb Cover",
+        "110lb Cover",
+        "80lb Text",
+        "100lb Text"
+      ]
+    },
+    {
+      "id": "3hug7tcs",
+      "category": "Cover Stock",
+      "items": [
+        "80lb Cover",
+        "100lb Cover",
+        "110lb Cover"
+      ]
+    },
+    {
+      "id": "mb9nszvp",
+      "category": "Vinyl (Boyd)",
+      "items": [
+        "White Vinyl",
+        "White Vinyl - Aggressive Glue",
+        "Holographic Vinyl"
+      ]
+    },
+    {
+      "id": "66a0n9bx",
+      "category": "Banner Material (Boyd)",
+      "items": [
+        "Banner Material"
+      ]
+    },
+    {
+      "id": "g1m7vi8x",
+      "category": "Window Decal Material (Boyd)",
+      "items": [
+        "Window Decal"
+      ]
+    },
+    {
+      "id": "3h4zyx61",
+      "category": "Wallpaper Material (Boyd)",
+      "items": [
+        "Self-Adhesive (Peel-and-Stick)",
+        "Traditional / Unpasted"
+      ]
+    },
+    {
+      "id": "hievpkou",
+      "category": "Specialty (Boyd)",
+      "items": [
+        "Window Decal",
+        "Wallpaper Material",
+        "Banner Material"
+      ]
+    },
+    {
+      "id": "e8izryx9",
+      "category": "Sheet (Boyd)",
+      "items": [
+        "18pt (Boyd)",
+        "20pt (Boyd)",
+        "24pt (Boyd)"
+      ]
+    },
+    {
+      "id": "hge6tjyh",
+      "category": "Other",
+      "items": [
+        "Vinyl"
+      ]
+    }
+  ],
+  "finishing": [
+    {
+      "id": "9xbez3v3",
+      "name": "Lamination",
+      "description": "Gloss, Matte, Soft Touch, Holo, Coating"
+    },
+    {
+      "id": "cjqxt77f",
+      "name": "Spot UV",
+      "description": "UV coating on selected areas"
+    },
+    {
+      "id": "3sqc2g5h",
+      "name": "Foil",
+      "description": "Gold, Silver, Rose Gold, Holographic, Custom"
+    },
+    {
+      "id": "mwr0jblv",
+      "name": "Scodix",
+      "description": "Scodix UV and foil digital effects"
+    },
+    {
+      "id": "1x4460qi",
+      "name": "Embossing",
+      "description": "Raised emboss effect"
+    },
+    {
+      "id": "u09aqmlo",
+      "name": "Perforation",
+      "description": "Tear-off perforation line"
+    }
+  ],
+  "products": [
+    {
+      "id": "ssv4twa6",
+      "name": "Labels (Roll)",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Clear BOPP",
+        "White BOPP",
+        "Silver BOPP",
+        "Holo BOPP",
+        "Gloss Label Sheet",
+        "Matte Label Sheet",
+        "Semi Gloss"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV",
+        "Foil",
+        "Scodix"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": true,
+      "notes": "Roll labels — HP Indigo 6K → GM Die/Laser Cutter. NOT Cosmetic Web."
+    },
+    {
+      "id": "iafoz54o",
+      "name": "Labels (Sheet)",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Gloss Label Sheet",
+        "Matte Label Sheet",
+        "Semi Gloss"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV",
+        "Foil"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Sheet labels — HP Indigo 6K → Duplo or Guillotine."
+    },
+    {
+      "id": "iw3gh06n",
+      "name": "Pouches",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Clear Cosmetic Web",
+        "White Cosmetic Web",
+        "Silver Cosmetic Web"
+      ],
+      "finishing": [
+        "Lamination"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": true,
+      "notes": "Pouches — ONLY Cosmetic Web. HP Indigo 6K → GM Die/Laser → Karlville Poucher."
+    },
+    {
+      "id": "8jfrmvbp",
+      "name": "Folding Cartons / Boxes",
+      "facilities": [
+        "16th-street",
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "14pt C1S",
+        "14pt C2S",
+        "16pt C1S",
+        "16pt C2S",
+        "18pt C1S",
+        "18pt C2S",
+        "18pt Silver",
+        "24pt C1S",
+        "24pt C2S"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV",
+        "Foil",
+        "Scodix",
+        "Embossing"
+      ],
+      "sides": [
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Boxes — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer."
+    },
+    {
+      "id": "p11u3m86",
+      "name": "Business Cards",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "14pt C1S",
+        "14pt C2S",
+        "16pt C1S",
+        "16pt C2S",
+        "18pt C1S",
+        "18pt C2S",
+        "80lb Cover",
+        "100lb Cover",
+        "110lb Cover"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV",
+        "Foil",
+        "Scodix"
+      ],
+      "sides": [
+        "1-sided",
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Business Cards — HP Indigo 15K → Lamination → Duplo or Guillotine. No text stock."
+    },
+    {
+      "id": "wdq7ntbm",
+      "name": "Flyers / Postcards",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "80lb Cover",
+        "100lb Cover",
+        "110lb Cover",
+        "80lb Text",
+        "100lb Text",
+        "14pt C1S",
+        "16pt C1S"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV"
+      ],
+      "sides": [
+        "1-sided",
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Flat sheets — HP Indigo 15K → Lamination → Guillotine."
+    },
+    {
+      "id": "we5pjnrc",
+      "name": "Booklets",
+      "facilities": [
+        "16th-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "80lb Cover",
+        "100lb Cover",
+        "80lb Text",
+        "100lb Text"
+      ],
+      "finishing": [
+        "Lamination"
+      ],
+      "sides": [
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Booklets — HP Indigo 15K → Lamination → Booklet Folder → Guillotine."
+    },
+    {
+      "id": "ip4wuh2o",
+      "name": "Diecut Stickers",
+      "facilities": [
+        "16th-street",
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Clear BOPP",
+        "White BOPP",
+        "Silver BOPP",
+        "Holo BOPP",
+        "Gloss Label Sheet",
+        "Matte Label Sheet"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Diecut stickers — sheet or roll. 6K → GM Die/Laser Cutter or Graphtec at Boyd."
+    },
+    {
+      "id": "ojb3pt9v",
+      "name": "Vinyl Labels / 54'' Rolls",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "White Vinyl",
+        "White Vinyl - Aggressive Glue",
+        "Holographic Vinyl"
+      ],
+      "finishing": [
+        "Lamination"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": true,
+      "notes": "Boyd vinyl label roll — Canon Colorado or Roland → Graphtec vinyl cutters."
+    },
+    {
+      "id": "pond3vl2",
+      "name": "Vinyl Signage",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "White Vinyl",
+        "White Vinyl - Aggressive Glue",
+        "Holographic Vinyl"
+      ],
+      "finishing": [
+        "Lamination"
+      ],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Vinyl signage — Canon Colorado (gloss) or Roland (matte) → Graphtec vinyl cutters."
+    },
+    {
+      "id": "ued87vh0",
+      "name": "Banners / Large Format",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "Banner Material"
+      ],
+      "finishing": [],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Large format banners — Canon Colorado or Roland. No post-finishing."
+    },
+    {
+      "id": "kfcnvu6p",
+      "name": "Window Decals",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Window Decal"
+      ],
+      "finishing": [],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Window decals — print + contour cut on Graphtec."
+    },
+    {
+      "id": "e1507jfd",
+      "name": "Wallpaper",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "Self-Adhesive (Peel-and-Stick)",
+        "Traditional / Unpasted"
+      ],
+      "finishing": [],
+      "sides": [
+        "1-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Wallpaper — Canon Colorado or Roland."
+    },
+    {
+      "id": "rz41ys10",
+      "name": "Sheet Products (Boyd)",
+      "facilities": [
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK"
+      ],
+      "materials": [
+        "18pt (Boyd)",
+        "20pt (Boyd)",
+        "24pt (Boyd)"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV"
+      ],
+      "sides": [
+        "1-sided",
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": "Boyd sheet products — Lamination → Graphtec Flatbed."
+    },
+    {
+      "id": "ujjq4y2v",
+      "name": "Other",
+      "facilities": [
+        "16th-street",
+        "boyd-street"
+      ],
+      "colorModes": [
+        "CMYK",
+        "CMYK + White"
+      ],
+      "materials": [
+        "Clear BOPP",
+        "White BOPP",
+        "Silver BOPP",
+        "Holo BOPP",
+        "Clear Cosmetic Web",
+        "White Cosmetic Web",
+        "Silver Cosmetic Web",
+        "Gloss Label Sheet",
+        "Matte Label Sheet",
+        "Semi Gloss",
+        "14pt C1S",
+        "14pt C2S",
+        "16pt C1S",
+        "16pt C2S",
+        "18pt C1S",
+        "18pt C2S",
+        "24pt C1S",
+        "80lb Cover",
+        "100lb Cover",
+        "110lb Cover",
+        "80lb Text",
+        "100lb Text",
+        "White Vinyl",
+        "Banner Material",
+        "Window Decal",
+        "Vinyl"
+      ],
+      "finishing": [
+        "Lamination",
+        "Spot UV",
+        "Foil",
+        "Scodix",
+        "Embossing",
+        "Perforation"
+      ],
+      "sides": [
+        "1-sided",
+        "2-sided"
+      ],
+      "rollDirection": false,
+      "notes": ""
+    }
+  ]
+}

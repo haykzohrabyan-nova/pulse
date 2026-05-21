@@ -598,18 +598,20 @@ async function loadAllFromJsonStore() {
       const r = await fetch('data/pulse-organisation-default.json', { cache: 'no-store' });
       if (r.ok) {
         b = PulseOrgJsonStore.normalizeBundle(await r.json());
-        b.organisation.saved = false;
-        PulseOrgJsonStore.saveRaw(b);
+        if (typeof b.organisation.saved !== 'boolean') b.organisation.saved = true;
       }
     } catch (_) { /* file:// or missing file */ }
     if (!b) {
       b = PulseOrgJsonStore.defaultBundle();
-      PulseOrgJsonStore.saveRaw(b);
     }
   } else {
     b = PulseOrgJsonStore.loadRaw();
     if (!/"saved"\s*:/.test(storedRaw)) b.organisation.saved = true;
   }
+
+  const seeded = PulseOrgJsonStore.ensureStructureSeed(b);
+  b = seeded.bundle;
+  if (!hadStoredBundle || seeded.changed) PulseOrgJsonStore.saveRaw(b);
 
   organisationId = b.organisation.id;
   organisationSaved = !!b.organisation.saved;

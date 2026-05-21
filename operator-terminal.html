@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Operator Terminal — Bazaar Print</title>
-  <script src="shared.js?v=20260518-SKU"></script>
+  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
@@ -242,6 +243,12 @@
     .jd-value.large { font-size: 18px; font-weight: 800; color: var(--accent); }
     .jd-value.overdue { color: var(--red); }
     .jd-value.warn { color: var(--yellow); }
+
+    #job-detail-area .pulse-sku-section {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
     /* Workflow Pipeline */
     .workflow-pipeline-card {
@@ -940,6 +947,10 @@ let lastBreakPopupKey = null;   // prevents repeat popups
 window.addEventListener('DOMContentLoaded', async () => {
   injectThemeCSS();
   startLoginClock();
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(() => populateOperatorList());
+  }
   await populateOperatorList();
 
   // Check sessionStorage for persisted login
@@ -971,17 +982,29 @@ function startLoginClock() {
 // ── POPULATE OPERATOR LIST ────────────────────────────────────────────
 async function populateOperatorList() {
   const sel = document.getElementById('operator-select');
-  const names = Object.keys(OPERATOR_PROFILES);
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Select Operator —</option>';
   let dbPeople = [];
   try { dbPeople = await getAllPersonnel(); } catch (e) {}
-  const operatorPeople = dbPeople.filter(p => ['operator','supervisor'].includes(p.role || 'operator'));
-  const extraNames = operatorPeople.map(p => p.name).filter(n => !names.includes(n));
-  [...names, ...extraNames].forEach(name => {
+  const operatorPeople = dbPeople
+    .filter(p => p.active !== false && ['operator', 'supervisor'].includes(p.role || 'operator'))
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  if (!operatorPeople.length) {
+    const hint = document.createElement('option');
+    hint.value = '';
+    hint.disabled = true;
+    hint.textContent = '— Configure in Admin → Personnel —';
+    sel.appendChild(hint);
+    return;
+  }
+  operatorPeople.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
+    opt.value = p.name;
+    opt.textContent = p.name;
     sel.appendChild(opt);
   });
+  if (prev) sel.value = prev;
 }
 
 // ── OPERATOR SELECT ───────────────────────────────────────────────────
@@ -1085,7 +1108,7 @@ async function applyOperatorTerminalNavAccess() {
   let navRole = appSession?.role || 'operator';
 
   if (!appSession && currentOperator) {
-    const profile = await getOperatorProfile(currentOperator) || OPERATOR_PROFILES[currentOperator] || {};
+    const profile = await getOperatorProfile(currentOperator) || {};
     navRole = String(profile.role || 'operator').replace(/_/g, '-');
   }
 
@@ -1130,7 +1153,7 @@ async function enterMainScreen() {
   document.getElementById('op-breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Operator Terminal' }]);
 
   // Populate top bar
-  const profile = OPERATOR_PROFILES[currentOperator] || {};
+  const profile = await getOperatorProfile(currentOperator) || {};
   document.getElementById('tb-op-name').textContent = currentOperator;
 
   // Machine badge: primary machine or "Multiple"
@@ -1241,7 +1264,7 @@ async function refreshDoneToday() {
   try {
     const allOrders = await getAllOrders();
     const profile = await getOperatorProfile(currentOperator);
-    const myMachines = (profile ? profile.machines : null) || (OPERATOR_PROFILES[currentOperator] || {}).machines || [];
+    const myMachines = profile?.machines || [];
     // Show all completed tickets that this operator worked on (any step)
     const done = allOrders.filter(order => {
       if (!['completed','shipped','received','waiting-pickup','delivery-ready','ready-to-ship'].includes(order.status) && !order.workflowSteps?.every(s => s.status === 'completed')) return false;
@@ -1639,7 +1662,13 @@ async function renderJobDetail(order) {
   const details = [];
   details.push({ label: 'Product Type', value: order.productType || '—' });
   details.push({ label: 'Material', value: order.material || '—' });
-  details.push({ label: 'Quantity', value: (order.quantity || 0).toLocaleString(), large: true });
+  details.push({
+    label: 'Quantity',
+    value: typeof formatOrderQuantityDisplay === 'function'
+      ? formatOrderQuantityDisplay(order)
+      : (order.quantity || 0).toLocaleString(),
+    large: true
+  });
   if (order.sheetCount) details.push({ label: 'Sheet / Frame Count', value: order.sheetCount.toLocaleString(), large: true });
   if (order.piecesPerSheet) details.push({ label: 'Per Sheet', value: order.piecesPerSheet });
   details.push({ label: 'Print Type', value: order.printType || '—' });
@@ -2236,7 +2265,7 @@ async function confirmComplete() {
 
   // Coin awards
   unitsDoneToday += net;
-  const cap    = MACHINE_CAPACITY[step?.machine];
+  const cap    = typeof getEffectiveMachineCapacity === 'function' ? getEffectiveMachineCapacity(step?.machine) : null;
   const target = cap?.dailySheets || cap?.dailyUnits || cap?.dailyPouches || null;
   if (target) {
     if (unitsDoneToday >= target * 1.1) {
@@ -2283,7 +2312,7 @@ async function confirmComplete() {
 
 // ── PERFORMANCE PANEL ─────────────────────────────────────────────────
 function updatePerfPanel(machine) {
-  const cap    = machine ? MACHINE_CAPACITY[machine] : null;
+  const cap    = machine && typeof getEffectiveMachineCapacity === 'function' ? getEffectiveMachineCapacity(machine) : null;
   const target = cap ? (cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || null) : null;
   document.getElementById('perf-target').textContent = target ? target.toLocaleString() : '—';
   document.getElementById('perf-done').textContent   = unitsDoneToday.toLocaleString();
@@ -2561,7 +2590,7 @@ async function confirmClockout() {
   // Coin deduction if behind target at EOD
   if (currentJob) {
     const stepMachine = currentJob.workflowSteps?.[currentStepIdx]?.machine;
-    const cap = stepMachine ? MACHINE_CAPACITY[stepMachine] : null;
+    const cap = stepMachine && typeof getEffectiveMachineCapacity === 'function' ? getEffectiveMachineCapacity(stepMachine) : null;
     const target = cap ? (cap.dailySheets || cap.dailyUnits || cap.dailyPouches || null) : null;
     if (target && unitsDoneToday < target * 0.8) {
       await addOperatorPoints(currentOperator, -1, 'Below 80% of daily target at end of shift');

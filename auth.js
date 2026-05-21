@@ -16,105 +16,49 @@ const ROLE_CONFIG = {
   'david-review': {
     label: 'David Review',
     color: '#2563eb',
-    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','machine-issues','organisation','admin'],
+    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','shipping','machine-issues','organisation','admin'],
     canEditAllTickets: false,
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel','machines','dies','organisation','payment','crm-quote','products','product-workflows','roles'],
+    adminTabs: ['personnel','machines','dies','organisation','payment','crm-quote','products','product-workflows','roles','backup'],
   },
   supervisor: {
     label: 'Supervisor',
     color: '#0891b2',
-    pages: ['dashboard','job-ticket','pricing-calculator','quotes','orders','prepress','production-manager','qc-checkout','application-dept','rep-tasks','instagram-leads','organisation'],
+    pages: ['dashboard','job-ticket','pricing-calculator','prepress','production-manager','operator-terminal','qc-checkout','shipping','machine-issues','organisation'],
     canEditAllTickets: true,
     canViewAdmin: false,
     canViewProduction: true,
-    canViewOperator: false,
+    canViewOperator: true,
   },
   'production-manager': {
     label: 'Production Manager',
     color: '#16a34a',
-    pages: ['dashboard','prepress','production-manager','operator-terminal','qc-checkout','organisation','admin'],
+    pages: ['dashboard','job-ticket','prepress','production-manager','operator-terminal','qc-checkout','shipping','machine-issues','organisation','admin'],
     canEditAllTickets: false,
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['machines','dies','organisation','products','product-workflows','inventory'],
-  },
-  'account-manager': {
-    label: 'Account Manager',
-    color: '#d97706',
-    pages: ['dashboard','sales-dashboard','job-ticket','pricing-calculator','quotes','orders','invoices','shipping','application-dept','jm-dashboard','rep-tasks','leads','proofs','instagram-leads','sdr-pipeline-portal'],
-    canEditAllTickets: false,
-    canViewAdmin: false,
-    canViewProduction: true,
-    canViewOperator: false,
-    ownTicketsOnly: true,
-  },
-  sdr: {
-    label: 'Digital SDR',
-    color: '#7c3aed',
-    pages: ['dashboard','sdr-dashboard','sdr-pipeline-portal','leads','instagram-leads'],
-    canEditAllTickets: false,
-    canViewAdmin: false,
-    canViewProduction: false,
-    canViewOperator: false,
-  },
-  'walkin-front-desk': {
-    label: 'Walk-In / Front Desk',
-    color: '#0891b2',
-    pages: ['dashboard','sdr-dashboard','sdr-pipeline-portal','leads','orders'],
-    canEditAllTickets: false,
-    canViewAdmin: false,
-    canViewProduction: false,
-    canViewOperator: false,
+    adminTabs: ['machines','dies','organisation','products','product-workflows'],
   },
   shipping: {
     label: 'Shipping',
     color: '#0d9488',
-    pages: ['dashboard','shipping'],
+    pages: ['dashboard','shipping','qc-checkout'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
     canViewOperator: false,
-  },
-  'job-manager': {
-    label: 'Job Manager',
-    color: '#0891b2',
-    pages: ['dashboard','jm-dashboard','job-ticket','design-task','orders','prepress','proofs','application-dept','qc-checkout','shipping'],
-    canEditAllTickets: true,
-    canViewAdmin: false,
-    canViewProduction: true,
-    canViewOperator: false,
-  },
-  'ops-manager': {
-    label: 'Operations Manager',
-    color: '#dc2626',
-    pages: ['dashboard','ops-manager','jm-dashboard','leads','quotes','orders','prepress','production-manager','qc-checkout','shipping','rep-tasks','proofs','machine-issues','application-dept','organisation','admin','sdr-pipeline-portal'],
-    canEditAllTickets: true,
-    canViewAdmin: true,
-    canViewProduction: true,
-    canViewOperator: true,
-    adminTabs: ['personnel','machines','dies','organisation','products','product-workflows','inventory'],
   },
   operator: {
     label: 'Operator',
     color: '#6b7280',
-    pages: ['dashboard','operator-terminal'],
+    pages: ['dashboard','operator-terminal','machine-issues'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
     canViewOperator: true,
-  },
-  designer: {
-    label: 'Designer',
-    color: '#8b5cf6',
-    pages: ['dashboard','job-ticket','design-task','proofs','leads'],
-    canEditAllTickets: false,
-    canViewAdmin: false,
-    canViewProduction: false,
-    canViewOperator: false,
   },
   prepress: {
     label: 'Prepress',
@@ -162,15 +106,7 @@ const LOCAL_EMAIL_USERS = {
   'mauricio@bazaar-admin.com': { name: 'Mauricio',         role: 'supervisor' },
   'tigran@bazaar-admin.com':   { name: 'Tigran Zohrabyan', role: 'supervisor' },
   'mike@bazaar-admin.com':     { name: 'Mike',             role: 'production-manager' },
-  'gary@bazaar-admin.com':     { name: 'Gary Gharibyan',   role: 'account-manager' },
-  'ernesto@bazaar-admin.com':  { name: 'Ernesto Flores',   role: 'account-manager' },
-  'bob@bazaar-admin.com':      { name: 'Bob Werner',       role: 'account-manager' },
-  'tiko@bazaar-admin.com':     { name: 'Tiko',             role: 'account-manager' },
-  'sdr@bazaar-admin.com':      { name: 'Digital SDR',      role: 'sdr' },
-  'frontdesk@bazaar-admin.com':{ name: 'Front Desk',        role: 'walkin-front-desk' },
   'shipping@bazaar-admin.com': { name: 'Shipping',          role: 'shipping' },
-  'jm@bazaar-admin.com':       { name: 'Job Manager',      role: 'job-manager' },
-  'ops@bazaar-admin.com':      { name: 'Ops Manager',      role: 'ops-manager' },
   'hrach@bazaar-admin.com':    { name: 'Hrach',            role: 'prepress' },
   'qc@bazaar-admin.com':       { name: 'QC Inspector',     role: 'qc' },
   'arsen@bazaar-admin.com':    { name: 'Arsen',            role: 'operator' },
@@ -183,10 +119,6 @@ const LOCAL_EMAIL_USERS = {
   'lisandro@bazaar-admin.com': { name: 'Lisandro',         role: 'operator' },
   'adrian@bazaar-admin.com':   { name: 'Adrian',           role: 'operator' },
   'harry@bazaar-admin.com':    { name: 'Harry',            role: 'operator' },
-  'marianna@bazaar-admin.com': { name: 'Marianna',         role: 'designer' },
-  'harut@bazaar-admin.com':    { name: 'Harut',            role: 'designer' },
-  'taron@bazaar-admin.com':    { name: 'Taron',            role: 'designer' },
-  'chris@bazaar-admin.com':    { name: 'Chris',            role: 'designer' },
 };
 const LOCAL_DEFAULT_PASSWORD = 'Pulse2026!';
 
@@ -266,16 +198,10 @@ const EXTRA_AUTH_USERS = [
 const ROLE_HOME_PAGE = {
   'admin':               'dashboard.html',
   'supervisor':          'dashboard.html',
-  'sdr':                 'sdr-dashboard.html',
-  'walkin-front-desk':   'sdr-dashboard.html',
-  'account-manager':     'sales-dashboard.html',
-  'job-manager':         'jm-dashboard.html',
-  'designer':            'dashboard.html',
   'prepress':            'prepress.html',
   'production-manager':  'production-manager.html',
   'qc':                  'qc-checkout.html',
   'shipping':            'shipping.html',
-  'ops-manager':         'ops-manager.html',
   'operator':            'operator-terminal.html',
   'david-review':        'dashboard.html',
 };
@@ -312,10 +238,71 @@ const _labelStyle = `
   letter-spacing:.04em;
 `;
 
+/** Fill gaps only — names missing from Personnel (no duplicate rows). */
+function mergeLoginPeople(base) {
+  let people = typeof dedupePeopleByName === 'function'
+    ? dedupePeopleByName(base)
+    : (Array.isArray(base) ? base : []);
+  const has = new Set(people.map(p => p.name));
+  const addIfMissing = (entry) => {
+    if (!entry?.name || has.has(entry.name)) return;
+    people.push({
+      name: entry.name,
+      role: entry.role || 'operator',
+      userId: entry.userId != null ? String(entry.userId) : '',
+    });
+    has.add(entry.name);
+  };
+  if (typeof EXTRA_AUTH_USERS !== 'undefined') {
+    EXTRA_AUTH_USERS.forEach(u => addIfMissing({ name: u.name, role: u.role, userId: '' }));
+  }
+  if (typeof LOCAL_EMAIL_USERS !== 'undefined') {
+    Object.values(LOCAL_EMAIL_USERS).forEach(u => addIfMissing({ name: u.name, role: u.role, userId: '' }));
+  }
+  if (typeof OPERATOR_PROFILES !== 'undefined') {
+    Object.entries(OPERATOR_PROFILES).forEach(([name, p]) => {
+      addIfMissing({ name, role: p.role, userId: p.userId });
+    });
+  }
+  return typeof dedupePeopleByName === 'function' ? dedupePeopleByName(people) : people;
+}
+
+/** Add admin / review logins to Personnel if missing (so dropdown + User ID validation stay in sync). */
+async function ensureAuthPersonnelInDb() {
+  if (typeof getAllPersonnel !== 'function' || typeof addPersonnel !== 'function') return;
+  const existing = await getAllPersonnel();
+  const candidates = [];
+  if (typeof EXTRA_AUTH_USERS !== 'undefined') {
+    EXTRA_AUTH_USERS.forEach(u => candidates.push(u));
+  }
+  if (typeof LOCAL_EMAIL_USERS !== 'undefined') {
+    Object.values(LOCAL_EMAIL_USERS).forEach(u => {
+      if (!candidates.some(c => c.name === u.name)) candidates.push({ name: u.name, role: u.role, notes: '' });
+    });
+  }
+  for (const u of candidates) {
+    if (existing.some(p => p.name === u.name)) continue;
+    const prof = typeof OPERATOR_PROFILES !== 'undefined' ? OPERATOR_PROFILES[u.name] : null;
+    await addPersonnel({
+      name: u.name,
+      role: u.role,
+      notes: u.notes || '',
+      facility: prof?.facility || '16th-street',
+      phone: '',
+      active: true,
+      userId: prof?.userId != null ? String(prof.userId) : '',
+    });
+  }
+}
+
 async function injectLoginModal() {
   const accent = '#2563eb';
 
-  // Load personnel for the dropdown — primary source is Admin > Personnel (same DB)
+  if (typeof dedupePersonnelByName === 'function') await dedupePersonnelByName();
+  await ensureAuthPersonnelInDb();
+  if (typeof dedupePersonnelByName === 'function') await dedupePersonnelByName();
+
+  // Primary source: Admin → Personnel; merge only missing static accounts.
   let people = [];
   try {
     if (typeof getAllPersonnel === 'function') {
@@ -323,26 +310,7 @@ async function injectLoginModal() {
     }
   } catch (_) {}
 
-  // Only fall back to static sources when the Personnel DB has no records yet (first-time setup)
-  if (!people.length) {
-    if (typeof OPERATOR_PROFILES !== 'undefined') {
-      Object.entries(OPERATOR_PROFILES).forEach(([name, p]) => {
-        if (!people.some(x => x.name === name)) {
-          people.push({ name, role: p.role, userId: String(p.userId || '') });
-        }
-      });
-    }
-    if (typeof EXTRA_AUTH_USERS !== 'undefined') {
-      EXTRA_AUTH_USERS.forEach(u => {
-        if (!people.some(x => x.name === u.name)) {
-          people.push({ name: u.name, role: u.role, userId: '' });
-        }
-      });
-    }
-    if (!people.length) {
-      people = Object.values(LOCAL_EMAIL_USERS).map(u => ({ name: u.name, role: u.role, userId: '' }));
-    }
-  }
+  people = mergeLoginPeople(people);
   people.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const options = people.map(p =>
@@ -463,7 +431,13 @@ async function submitLogin() {
   } catch (_) {}
 
   if (allPersonnel.length) {
-    const byName = allPersonnel.find(p => p.name === selectedName);
+    const matches = allPersonnel.filter(p => p.name === selectedName);
+    const byName = matches.length
+      ? matches.sort((a, b) => {
+          const score = p => (String(p.userId || '').trim() ? 2 : 0) + (p.active !== false ? 1 : 0);
+          return score(b) - score(a);
+        })[0]
+      : null;
     if (byName) {
       const storedId = String(byName.userId || '').trim();
       if (!storedId) {
@@ -611,7 +585,10 @@ function applyRoleAccess(pageId) {
   });
 
   if (pageId === 'admin') {
-    const allowedTabs = config.adminTabs || (config.canViewAdmin ? 'all' : []);
+    let allowedTabs = config.adminTabs || (config.canViewAdmin ? 'all' : []);
+    if (allowedTabs !== 'all' && config.canViewAdmin && Array.isArray(allowedTabs) && !allowedTabs.includes('backup')) {
+      allowedTabs = [...allowedTabs, 'backup'];
+    }
     if (allowedTabs !== 'all') {
       document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
         const canSee = allowedTabs.includes(btn.dataset.tab);
@@ -661,11 +638,8 @@ function _applyRoleOverrides() {
     const raw = localStorage.getItem('pulse_role_overrides');
     if (!raw) return;
     const overrides = JSON.parse(raw);
-    const allPageKeys = ['dashboard','job-ticket','pricing-calculator','quotes','orders','invoices',
-      'prepress','production-manager','operator-terminal','qc-checkout','machine-issues',
-      'application-dept','shipping','proofs','design-task','rep-tasks','leads','instagram-leads',
-      'sales-dashboard','jm-dashboard','sdr-dashboard','sdr-pipeline-portal','ops-manager',
-      'organisation','admin'];
+    const allPageKeys = ['dashboard','job-ticket','pricing-calculator','prepress','production-manager',
+      'operator-terminal','qc-checkout','machine-issues','shipping','organisation','admin'];
     Object.entries(overrides).forEach(([role, ov]) => {
       if (!ROLE_CONFIG[role]) return;
       if (role === 'admin') return; // admin always retains pages:['all'] — never override
@@ -675,6 +649,12 @@ function _applyRoleOverrides() {
       });
       if (Array.isArray(ov.adminTabs) && ov.adminTabs.length > 0) {
         ROLE_CONFIG[role].adminTabs = [...ov.adminTabs];
+      }
+      if (ROLE_CONFIG[role].canViewAdmin) {
+        const tabs = ROLE_CONFIG[role].adminTabs;
+        if (tabs !== 'all' && Array.isArray(tabs) && !tabs.includes('backup')) {
+          ROLE_CONFIG[role].adminTabs = [...tabs, 'backup'];
+        }
       }
     });
   } catch (_) {}
@@ -708,7 +688,7 @@ async function initAuth(pageId) {
   if (!session) {
     // No session — show the email/password login modal
     // (works for both Supabase and local modes; submitLogin branches internally).
-    injectLoginModal();
+    await injectLoginModal();
     return;
   }
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260518-PW"></script>
+  <script src="shared.js?v=20260520-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI239"></script>
@@ -53,6 +53,8 @@
     <div id="overtimeApprovalText" style="margin-top:6px;font-size:15px;font-weight:700;color:#9a3412;"></div>
     <div id="overtimeApprovalMeta" style="margin-top:6px;font-size:12px;color:#c2410c;"></div>
   </div>
+
+  <div id="jtShippingStatusBanner" style="display:none;"></div>
 
   <form id="ticketForm" onsubmit="return false;">
 
@@ -403,7 +405,7 @@
             <div class="jt-artcut-cutting">
               <div class="jt-artcut-minihead">✂️ Cutting &amp; die</div>
               <div id="productionHints" style="display:none;"></div>
-              <div id="workflowRoutePreview" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;"></div>
+              <div id="workflowRoutePreview" class="jt-workflow-route-preview" style="display:none;"></div>
               <div class="jt-cutting-fields-stack">
                 <div class="field jt-field-label-left">
                   <label>Cut method</label>
@@ -420,7 +422,15 @@
                 </div>
                 <div id="dieBarcodeRow" style="display:none;" class="field jt-field-label-left">
                   <label>Die # / barcode</label>
-                  <input type="text" id="dieName" placeholder="Scan or type die number (e.g. DIE-1042)" class="jt-cutting-full-input">
+                  <div class="jt-die-pick-row">
+                    <select id="dieName" class="jt-cutting-full" onchange="onDiePickChange()">
+                      <option value="">— Select die —</option>
+                    </select>
+                    <button type="button" id="dieInfoBtn" class="jt-die-info-btn" title="See die information" onclick="openDieInfoModal()" disabled aria-label="See die information">
+                      <span class="jt-die-info-icon" aria-hidden="true">ℹ</span>
+                      <span>See info</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -633,6 +643,17 @@
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Artwork Preview">
   <button type="button" class="lightbox-close" onclick="closeLightbox()">✕</button>
+</div>
+
+<!-- Die information (from Admin → Dies) -->
+<div id="dieInfoModal" class="jt-die-info-modal" role="dialog" aria-modal="true" aria-labelledby="dieInfoModalTitle" onclick="if(event.target===this)closeDieInfoModal()">
+  <div class="jt-die-info-panel" onclick="event.stopPropagation()">
+    <div class="jt-die-info-head">
+      <h3 id="dieInfoModalTitle">Die information</h3>
+      <button type="button" class="btn btn-sm" onclick="closeDieInfoModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="jt-die-info-body" id="dieInfoModalBody"></div>
+  </div>
 </div>
 
 <!-- Admin Code Modal (for editing locked job tickets) -->
@@ -889,6 +910,54 @@ document.getElementById('page-styles').textContent = `
   .qp-qr { flex-shrink: 0; }
   .jt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-shrink: 0; }
   .jt-header h2 { font-size: 22px; font-weight: 700; }
+  .jt-shipping-banner {
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #99f6e4;
+    background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 100%);
+  }
+  .jt-shipping-banner-shipped {
+    border-color: #cbd5e1;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+  .jt-shipping-banner-ready { border-color: #99f6e4; }
+  .jt-shipping-banner-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .jt-shipping-banner-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #0f766e;
+  }
+  .jt-shipping-banner-shipped .jt-shipping-banner-title { color: #475569; }
+  .jt-shipping-banner-badge { margin-top: 8px; }
+  .jt-shipping-banner-badge .badge { font-size: 14px; padding: 6px 12px; }
+  .jt-shipping-banner-carrier {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+    max-width: 280px;
+    text-align: right;
+  }
+  .jt-ship-milestones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(15, 118, 110, 0.15);
+  }
+  .jt-shipping-banner-shipped .jt-ship-milestones { border-top-color: rgba(71, 85, 105, 0.2); }
+  .jt-ship-milestone { display: flex; flex-direction: column; gap: 2px; }
+  .jt-ship-milestone-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .jt-ship-milestone-time { font-size: 12px; font-weight: 600; color: #0f172a; }
   .form-section {
     background: var(--card); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
@@ -1114,23 +1183,139 @@ document.getElementById('page-styles').textContent = `
   }
   .jt-artcut-grow { flex: 1 1 300px; min-width: 0; }
   .jt-artcut-cutting { flex: 1 1 300px; min-width: min(100%, 300px); max-width: 100%; }
+  .jt-artcut-cutting > .jt-artcut-minihead { margin-bottom: 4px; }
+  .jt-artcut-cutting #productionHints { margin: 0 0 4px; }
+  .jt-artcut-cutting #productionHints .info-note {
+    margin-bottom: 4px;
+    padding: 6px 10px;
+  }
+  .jt-artcut-cutting #productionHints .info-note:last-child { margin-bottom: 0; }
+  .jt-workflow-route-preview {
+    margin: 4px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font-size: 12px;
+  }
   .jt-cutting-fields-stack {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
     min-width: 0;
+    margin-top: 0;
   }
-  .jt-cutting-fields-stack .field.jt-field-label-left { width: 100%; }
+  .jt-cutting-fields-stack .field.jt-field-label-left {
+    width: 100%;
+    min-height: 0;
+    padding-bottom: 0;
+  }
   .jt-cutting-fields-stack .field.jt-field-label-left label {
     width: 7.5rem;
     max-width: 38%;
+  }
+  .jt-die-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+  .jt-die-pick-row select.jt-cutting-full {
+    flex: 1;
+    min-width: 0;
+  }
+  .jt-die-info-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .jt-die-info-btn:hover:not(:disabled) { background: #eff6ff; border-color: #93c5fd; }
+  .jt-die-info-btn:disabled { opacity: 0.45; cursor: not-allowed; color: var(--text-muted); }
+  .jt-die-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
   }
   select.jt-cutting-full,
   .jt-cutting-full-input {
     width: 100%;
     box-sizing: border-box;
   }
+  .jt-die-info-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 9500;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .jt-die-info-modal.open { display: flex; }
+  .jt-die-info-panel {
+    background: #fff;
+    border-radius: 14px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  }
+  .jt-die-info-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .jt-die-info-head h3 { margin: 0; font-size: 16px; font-weight: 800; }
+  .jt-die-info-body { padding: 16px 18px; overflow-y: auto; }
+  .jt-die-info-thumb {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    margin-bottom: 14px;
+  }
+  .jt-die-info-grid {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: 8px 12px;
+    font-size: 13px;
+  }
+  .jt-die-info-grid dt {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .jt-die-info-grid dd { margin: 0; color: var(--text); line-height: 1.45; word-break: break-word; }
   .jt-special-notes-ta {
     resize: both;
     width: 100%;
@@ -1497,52 +1682,72 @@ let _jtCatalogMaterials = null; // from catalogMaterials
 
 async function loadJtProductCatalog() {
   try {
+    if (typeof initPulseAdminData === 'function') {
+      const cache = await initPulseAdminData();
+      const catalog = cache?.catalog || {};
+      _jtProductCatalog = catalog.products || [];
+      _jtColorModes = catalog.colorModes || [];
+      _jtCatalogFinishing = catalog.finishing || [];
+      _jtCatalogMaterials = catalog.materials || [];
+      return;
+    }
     const [prodCfg, cmCfg, finCfg, matCfg] = await Promise.all([
       getConfig('productCatalog'),
       getConfig('catalogColorModes'),
       getConfig('catalogFinishing'),
       getConfig('catalogMaterials'),
     ]);
-    if (prodCfg?.value && Array.isArray(prodCfg.value) && prodCfg.value.length)
-      _jtProductCatalog = prodCfg.value;
-    if (cmCfg?.value && Array.isArray(cmCfg.value) && cmCfg.value.length)
-      _jtColorModes = cmCfg.value;
-    if (finCfg?.value && Array.isArray(finCfg.value) && finCfg.value.length)
-      _jtCatalogFinishing = finCfg.value;
-    if (matCfg?.value && Array.isArray(matCfg.value) && matCfg.value.length)
-      _jtCatalogMaterials = matCfg.value;
-  } catch (_) {}
+    _jtProductCatalog = prodCfg?.value || [];
+    _jtColorModes = cmCfg?.value || [];
+    _jtCatalogFinishing = finCfg?.value || [];
+    _jtCatalogMaterials = matCfg?.value || [];
+  } catch (_) {
+    _jtProductCatalog = [];
+    _jtColorModes = [];
+    _jtCatalogFinishing = [];
+    _jtCatalogMaterials = [];
+  }
 }
 
-// Populate lamination <select> from catalog finishing items (filtered to lamination types)
+function jtApplyAdminCatalogFromCache() {
+  if (typeof getPulseCatalogProducts === 'function') _jtProductCatalog = getPulseCatalogProducts();
+  if (typeof getPulseCatalogColorModes === 'function') _jtColorModes = getPulseCatalogColorModes();
+  if (typeof getPulseCatalogFinishing === 'function') _jtCatalogFinishing = getPulseCatalogFinishing();
+  if (typeof getPulseCatalogMaterials === 'function') _jtCatalogMaterials = getPulseCatalogMaterials();
+}
+
+function jtCatalogFinishingVersions(namePattern) {
+  if (!_jtCatalogFinishing?.length) return [];
+  const getVers = typeof getCatalogFinishingVersions === 'function'
+    ? getCatalogFinishingVersions
+    : (e) => (Array.isArray(e?.versions) ? e.versions : []);
+  const out = [];
+  for (const f of _jtCatalogFinishing) {
+    const entry = typeof f === 'string' ? { name: f } : f;
+    if (!namePattern.test(entry.name || '')) continue;
+    const vers = getVers(entry);
+    if (vers.length) out.push(...vers);
+  }
+  return [...new Set(out)];
+}
+
+// Populate lamination <select> from catalog finishing versions (e.g. Gloss, Matte under Lamination)
 function populateLaminationOptions(allowedFinishing) {
   const sel = document.getElementById('lamination');
   if (!sel) return;
   const currentVal = sel.value;
   const HARDCODED_LAM = ['Gloss', 'Matte', 'Soft Touch', 'Holo', 'Coating'];
 
-  let options = [];
+  let options = jtCatalogFinishingVersions(/laminat/i);
 
-  // If the catalog has finishing entries with "laminat" in the name, use those
-  if (_jtCatalogFinishing && _jtCatalogFinishing.length) {
-    const catalogNames = _jtCatalogFinishing.map(f => typeof f === 'string' ? f : (f.name || '')).filter(Boolean);
-    const lamItems = catalogNames.filter(n => /laminat/i.test(n));
-    if (lamItems.length) {
-      // Strip "Lamination" suffix if present to keep option labels short (e.g. "Gloss Lamination" → use as-is)
-      options = lamItems;
-    }
-  }
-
-  // If the product restricts finishing, filter lamination options further
-  if (allowedFinishing && allowedFinishing.length) {
-    const prodLam = allowedFinishing.filter(f => /laminat/i.test(f));
-    if (prodLam.length) options = prodLam;
+  if (allowedFinishing && allowedFinishing.length && !allowedFinishing.some(f => /laminat/i.test(f))) {
+    options = [];
   }
 
   if (options.length) {
     sel.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
   } else {
-    sel.innerHTML = HARDCODED_LAM.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = '<option value="">— Configure in Admin → Products —</option>';
   }
 
   if (currentVal && [...sel.options].some(o => o.value === currentVal)) sel.value = currentVal;
@@ -1553,31 +1758,17 @@ function populateFoilOptions(allowedFinishing) {
   const sel = document.getElementById('foilType');
   if (!sel) return;
   const currentVal = sel.value;
-  const HARDCODED_FOIL = [
-    { value: 'Gold',         label: 'Gold Foil' },
-    { value: 'Silver',       label: 'Silver Foil' },
-    { value: 'Rose Gold',    label: 'Rose Gold Foil' },
-    { value: 'Holographic',  label: 'Holographic Foil' },
-    { value: 'Custom',       label: 'Custom Foil' },
-  ];
+  let options = jtCatalogFinishingVersions(/^foil$/i);
+  if (!options.length) options = jtCatalogFinishingVersions(/foil/i);
 
-  let options = [];
-
-  if (_jtCatalogFinishing && _jtCatalogFinishing.length) {
-    const catalogNames = _jtCatalogFinishing.map(f => typeof f === 'string' ? f : (f.name || '')).filter(Boolean);
-    const foilItems = catalogNames.filter(n => /foil/i.test(n));
-    if (foilItems.length) options = foilItems;
-  }
-
-  if (allowedFinishing && allowedFinishing.length) {
-    const prodFoil = allowedFinishing.filter(f => /foil/i.test(f));
-    if (prodFoil.length) options = prodFoil;
+  if (allowedFinishing && allowedFinishing.length && !allowedFinishing.some(f => /foil/i.test(f))) {
+    options = [];
   }
 
   if (options.length) {
     sel.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
   } else {
-    sel.innerHTML = HARDCODED_FOIL.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    sel.innerHTML = '<option value="">— Configure in Admin → Products —</option>';
   }
 
   if (currentVal && [...sel.options].some(o => o.value === currentVal)) sel.value = currentVal;
@@ -1594,11 +1785,12 @@ function populateColorModes(allowedModes) {
     // Per-product allowed color modes
     modes = allowedModes;
   } else if (_jtColorModes && _jtColorModes.length) {
-    // Full catalog color mode list
     modes = _jtColorModes.map(cm => (typeof cm === 'string' ? cm : cm.name || cm)).filter(Boolean);
-  } else {
-    // Hardcoded fallback
-    modes = ['CMYK', 'CMYK+White'];
+  }
+
+  if (!modes.length) {
+    sel.innerHTML = '<option value="">— Configure in Admin → Products —</option>';
+    return;
   }
 
   sel.innerHTML = modes.map(m => `<option value="${m.replace(/"/g,'&quot;')}">${m}</option>`).join('');
@@ -1616,10 +1808,10 @@ function populateColorModes(allowedModes) {
 //   • category names  (old format): ['BOPP', 'Label Sheets']
 //   • individual item names (new format): ['Clear BOPP', 'White BOPP', ...]
 function buildMaterialOptions(productType, facility, catalogProd) {
-  const matSource = _jtCatalogMaterials && _jtCatalogMaterials.length
-    ? _jtCatalogMaterials
-    : (typeof MATERIALS !== 'undefined' ? MATERIALS : []);
-
+  if (!_jtCatalogMaterials?.length) {
+    return '<option value="">— Configure materials in Admin → Products —</option>';
+  }
+  const matSource = _jtCatalogMaterials;
   const allowed = catalogProd?.materials?.length ? catalogProd.materials : null;
 
   let filtered;
@@ -1645,7 +1837,7 @@ function buildMaterialOptions(productType, facility, catalogProd) {
       // If none of the allowed items matched any category, render as a flat list
       if (!filtered.length) {
         return allowed.map(i => `<option value="${i}">${i}</option>`).join('')
-          || renderFilteredMaterialOptions(productType, facility);
+          || '<option value="">— No matching materials in Admin catalogue —</option>';
       }
     }
   }
@@ -1655,7 +1847,7 @@ function buildMaterialOptions(productType, facility, catalogProd) {
     .map(g => `<optgroup label="${g.category}">${g.items.map(i => `<option value="${i}">${i}</option>`).join('')}</optgroup>`)
     .join('');
 
-  return html || renderFilteredMaterialOptions(productType, facility);
+  return html || '<option value="">— Select material —</option>';
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1667,13 +1859,35 @@ window.addEventListener('DOMContentLoaded', async () => {
   populateFoilOptions([]);
   await populateAccountManagers();
   populateApplicationContainerDropdown();
+  loadJtDiesCatalog();
   stampCreationDate();
   updateNoteTypeStyle();
+
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(async () => {
+      jtApplyAdminCatalogFromCache();
+      await populateFacilities(document.getElementById('facility')?.value);
+      populateProductTypes();
+      populateColorModes([]);
+      populateLaminationOptions([]);
+      populateFoilOptions([]);
+      const pt = document.getElementById('productType')?.value;
+      if (pt) onProductTypeChange();
+    });
+  }
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
   const parentId = params.get('parent');
   const fromQuote = params.get('fromQuote');
+
+  if (!orderId && !parentId && typeof getPulseSettings === 'function') {
+    const defFac = getPulseSettings().defaultFacility;
+    if (defFac && !document.getElementById('facility').value) {
+      document.getElementById('facility').value = defFac;
+      onFacilityChange();
+    }
+  }
 
   // Handle pre-fill from quote conversion (MODULE 5)
   if (fromQuote && !parentId && !orderId) {
@@ -1750,33 +1964,106 @@ window.addEventListener('DOMContentLoaded', async () => {
   } else if (orderId) {
     const order = await getOrderByOrderId(orderId);
     if (order) {
-      _jtEditLockMode = null;
-      editingDbId    = order.id;
-      editingOrderId = order.orderId;
-      document.getElementById('pageTitle').textContent = `Edit Job #${orderId}`;
-      document.getElementById('orderIdDisplay').textContent = `Order ID: ${orderId}`;
-      await loadOrderIntoForm(order);
-      // Show Add Sub-Ticket button in header
-      const subBtn = document.getElementById('addSubTicketBtn');
-      subBtn.href = `job-ticket.html?parent=${orderId}`;
-      subBtn.style.display = '';
-      // Show production progress section
-      renderProductionProgressSection(order);
-      // Show order navigator (for parent OR sub-ticket)
-      const navParentId = order.parentOrderId || orderId;
-      await renderOrderNavigator(navParentId, orderId);
-      // prepress-active = locked (prepress reviewing); prepress-paused = editable + blue info banner
-      const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
-      const locked = !editableStatuses.includes(order.status);
-      if (locked) {
-        document.getElementById('prepressReviewInfoBanner')?.remove();
-        applyEditLock(order);
-      } else {
-        renderJobTicketPrepressInfoBanner(order);
-      }
+      await openOrderInEditor(order);
+    }
+  } else if (!parentId && !fromQuote) {
+    const autoOrder = await findAutoOpenRejectedTicket();
+    if (autoOrder) {
+      await openOrderInEditor(autoOrder);
     }
   }
 });
+
+/** Pre-press return snapshot + merge helpers — keep submitted ticket data editable after reject */
+const JT_SNAPSHOT_KEYS = [
+  'customerName', 'customer', 'accountManager', 'jobDescription', 'productType', 'otherProductDesc',
+  'facility', 'material', 'quantity', 'piecesPerSheet', 'sheetCount', 'printType', 'sides', 'colorMode', 'colors',
+  'hasWhiteLayer', 'hasSpecialColor', 'specialColorDetails', 'lamination', 'hasUV', 'hasFoil', 'foilType', 'foilNotes',
+  'hasPerforation', 'perforationNotes', 'finishingNotes', 'applicationService', 'applicationContainerType',
+  'cutMethod', 'dieStatus', 'dieName', 'labelWidth', 'labelHeight', 'boxDepth', 'pouchGusset', 'rollDirection',
+  'customBatching', 'unitsPerRoll', 'packagingInstructions', 'dueDate', 'specialNotes', 'noteType',
+  'workflowTemplate', 'workflowSteps', 'currentStep', 'artworkFiles', 'whiteLayerFile', 'uvFile', 'foilFile', 'skus', 'skuCount',
+  'customerPO', 'quoteRef', 'pricePerUnit', 'orderTotal', 'paymentTerms', 'invoiceNumber', 'invoiceStatus',
+];
+
+function applyJobTicketSnapshotFallback(order) {
+  const snap = order?.jobTicketSnapshotAtReturn;
+  if (!snap) return order;
+  const merged = { ...order };
+  JT_SNAPSHOT_KEYS.forEach(k => {
+    const cur = merged[k];
+    const empty = cur === '' || cur === null || cur === undefined
+      || (k === 'quantity' && !cur)
+      || (k === 'workflowSteps' && (!Array.isArray(cur) || !cur.length));
+    if (empty && snap[k] !== undefined && snap[k] !== null) merged[k] = snap[k];
+  });
+  return merged;
+}
+
+function mergeRejectedTicketSave(previous, formOrder) {
+  const merged = { ...formOrder };
+  JT_SNAPSHOT_KEYS.forEach(k => {
+    const nv = formOrder[k];
+    const pv = previous[k] ?? previous.jobTicketSnapshotAtReturn?.[k];
+    const empty = nv === '' || nv === null || nv === undefined
+      || (k === 'quantity' && !nv)
+      || (k === 'workflowSteps' && (!Array.isArray(nv) || !nv.length));
+    if (empty && pv !== undefined && pv !== null) merged[k] = pv;
+  });
+  if ((!formOrder.skus || !formOrder.skus.length) && previous.skus?.length) merged.skus = previous.skus;
+  return merged;
+}
+
+async function findAutoOpenRejectedTicket() {
+  const role = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
+  const name = typeof getCurrentName === 'function' ? getCurrentName() : null;
+  if (role !== 'account-manager' || !name) return null;
+  const all = await getAllOrders();
+  const needs = all
+    .filter(o => o.status === 'pending-account-manager' && (!o.accountManager || o.accountManager === name))
+    .sort((a, b) => new Date(b.prepressIssueAt || b.updatedAt || 0) - new Date(a.prepressIssueAt || a.updatedAt || 0));
+  return needs[0] || null;
+}
+
+async function openOrderInEditor(order) {
+  if (!order) return;
+  _jtEditLockMode = null;
+  editingDbId = order.id;
+  editingOrderId = order.orderId;
+  document.getElementById('pageTitle').textContent = `Edit Job #${order.orderId}`;
+  document.getElementById('orderIdDisplay').textContent = `Order ID: ${order.orderId}`;
+  window.history.replaceState({}, '', `job-ticket.html?order=${encodeURIComponent(order.orderId)}`);
+  await loadOrderIntoForm(order);
+  const subBtn = document.getElementById('addSubTicketBtn');
+  if (subBtn) {
+    subBtn.href = `job-ticket.html?parent=${order.orderId}`;
+    subBtn.style.display = '';
+  }
+  renderProductionProgressSection(order);
+  const navParentId = order.parentOrderId || order.orderId;
+  await renderOrderNavigator(navParentId, order.orderId);
+  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
+  if (!editableStatuses.includes(order.status)) {
+    document.getElementById('prepressReviewInfoBanner')?.remove();
+    applyEditLock(order);
+  } else {
+    renderJobTicketPrepressInfoBanner(order);
+  }
+  updateSaveButtonForOrder(order);
+  renderQueuePane();
+}
+
+function updateSaveButtonForOrder(order) {
+  const btn = document.getElementById('saveBtn');
+  if (!btn) return;
+  if (order?.status === 'pending-account-manager') {
+    btn.textContent = '💾 Save & send back to Prepress';
+    btn.title = 'Update the ticket with your fixes and return it to Prepress for review';
+  } else {
+    btn.textContent = '💾 Save Job Ticket';
+    btn.title = '';
+  }
+}
 
 // ─── Order Navigator (collapsible) ─────────────────────────────────
 async function renderOrderNavigator(parentId, currentOrderId) {
@@ -1797,11 +2084,13 @@ async function renderOrderNavigator(parentId, currentOrderId) {
     const isDone = doneStatuses.includes(t.status);
     const label = t._isParent ? `#${t.orderId} <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:8px;margin-left:4px;">PARENT</span>` : `#${t.orderId}`;
     const product = t.productType || t.jobDescription || '—';
-    const statusColor = isDone ? '#16a34a' : t.status === 'on-hold' ? '#dc2626' : '#d97706';
+    const statusLabel = (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[t.status]) || t.status || 'new';
+    const statusColor = (typeof STATUS_COLORS !== 'undefined' && STATUS_COLORS[t.status])
+      || (isDone ? '#16a34a' : t.status === 'on-hold' ? '#dc2626' : '#d97706');
     return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:${isCurrent ? '#eff6ff' : 'transparent'};border:${isCurrent ? '1px solid #bfdbfe' : '1px solid transparent'};">
       <span style="font-size:11px;font-weight:${isCurrent?'700':'400'};min-width:80px;">${label}</span>
       <span style="font-size:11px;color:#6b7280;flex:1;">${product}</span>
-      <span style="font-size:10px;color:${statusColor};font-weight:600;">${t.status || 'new'}</span>
+      <span style="font-size:10px;color:${statusColor};font-weight:700;">${statusLabel}</span>
       ${isCurrent
         ? `<span style="font-size:11px;color:#2563eb;font-weight:600;">← you are here</span>`
         : `<a href="job-ticket.html?order=${t.orderId}" style="font-size:11px;color:#2563eb;text-decoration:none;padding:2px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#fff;">Open</a>`
@@ -1872,14 +2161,23 @@ function renderProductionProgressSection(order) {
   const currentStep = steps[currentIdx] || null;
   const nextStep = steps[currentIdx + 1] || null;
 
-  const statusTone = currentTimer
-    ? 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;'
-    : 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;';
-  const statusText = currentTimer
-    ? `${currentTimer.machine} • ${formatElapsedShort(Date.now() - new Date(currentTimer.startedAt).getTime())}`
-    : currentStep
-    ? `${currentStep.machine || 'Next machine'} • not started yet`
-    : 'Workflow not assigned yet';
+  const shipStatuses = ['ready-to-ship', 'waiting-pickup', 'delivery-ready', 'shipped', 'received', 'completed'];
+  const inShipping = shipStatuses.includes(order.status);
+  const shipLabel = (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[order.status]) || order.status;
+  const statusTone = inShipping
+    ? (order.status === 'shipped' || order.status === 'received' || order.status === 'completed'
+      ? 'background:#e2e8f0;color:#1e293b;border:1px solid #cbd5e1;'
+      : 'background:#ccfbf1;color:#0f766e;border:1px solid #99f6e4;')
+    : currentTimer
+      ? 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;'
+      : 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;';
+  const statusText = inShipping
+    ? `Job status: ${shipLabel}${order.shippedAt ? ' · Shipped ' + jtFormatStatusDateTime(order.shippedAt) : ''}`
+    : currentTimer
+      ? `${currentTimer.machine} • ${formatElapsedShort(Date.now() - new Date(currentTimer.startedAt).getTime())}`
+      : currentStep
+        ? `${currentStep.machine || 'Next machine'} • not started yet`
+        : 'Workflow not assigned yet';
 
   const stepsHtml = steps.length
     ? steps.map((step, idx) => {
@@ -1985,14 +2283,6 @@ async function populateAccountManagers() {
       .sort((a, b) => a.localeCompare(b));
   } catch (_) {}
 
-  // Fallback to hardcoded OPERATOR_PROFILES
-  if (!names.length) {
-    names = Object.entries(OPERATOR_PROFILES)
-      .filter(([, p]) => p.role === 'account-manager')
-      .map(([name]) => name)
-      .sort((a, b) => a.localeCompare(b));
-  }
-
   if (names.length) {
     const grp = document.createElement('optgroup');
     grp.label = 'Account Managers';
@@ -2014,38 +2304,20 @@ async function populateFacilities(preserveValue) {
   if (!sel) return;
   const saved = preserveValue || sel.value;
 
-  let facs = [];
-
-  // 1. Try local-JSON store (localStorage bundle)
-  if (window.PulseOrgJsonStore) {
-    try {
-      const bundle = PulseOrgJsonStore.loadRaw();
-      if (bundle && Array.isArray(bundle.facilities) && bundle.facilities.length) {
-        facs = bundle.facilities
-          .filter(f => f.slug && f.name)
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      }
-    } catch (_) {}
-  }
-
-  // 2. Try Supabase
-  if (!facs.length && typeof getSupabaseClient === 'function') {
-    try {
-      const client = getSupabaseClient();
-      const { data } = await client
-        .from('organisation_facilities')
-        .select('slug, name, sort_order')
-        .order('sort_order', { ascending: true });
-      if (data && data.length) facs = data.filter(f => f.slug && f.name);
-    } catch (_) {}
-  }
-
-  // 3. Fall back to shared.js FACILITIES constant
-  if (!facs.length && typeof FACILITIES !== 'undefined') {
-    facs = Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
-  }
+  let facs = typeof getPulseFacilityList === 'function' && getPulseFacilityList().length
+    ? getPulseFacilityList()
+    : (typeof getPulseOrganisationFacilities === 'function'
+      ? await getPulseOrganisationFacilities({ noConstFallback: true })
+      : []);
 
   sel.innerHTML = '<option value="">— Select Facility —</option>';
+  if (!facs.length) {
+    const hint = document.createElement('option');
+    hint.value = '';
+    hint.textContent = '— Configure in Admin → Organisation —';
+    hint.disabled = true;
+    sel.appendChild(hint);
+  }
   facs.forEach(f => {
     const o = document.createElement('option');
     o.value = f.slug;
@@ -2065,18 +2337,12 @@ function populateProductTypes() {
   const currentVal = sel.value;
   sel.innerHTML = '<option value="">— Select Product Type —</option>';
 
-  if (_jtProductCatalog && _jtProductCatalog.length) {
-    // Use admin product catalog — filter by selected facility
-    _jtProductCatalog
-      .filter(p => !facility || !p.facilities || !p.facilities.length || p.facilities.includes(facility))
-      .forEach(p => { sel.innerHTML += `<option value="${p.name}">${p.name}</option>`; });
-  } else {
-    // Fallback: static PRODUCT_TYPES from shared.js
-    for (const [type, info] of Object.entries(PRODUCT_TYPES)) {
-      if (!facility || info.facilities.includes(facility)) {
-        sel.innerHTML += `<option value="${type}">${type}</option>`;
-      }
-    }
+  const products = (_jtProductCatalog || []).filter(p =>
+    !facility || !p.facilities || !p.facilities.length || p.facilities.includes(facility)
+  );
+  products.forEach(p => { sel.innerHTML += `<option value="${p.name}">${p.name}</option>`; });
+  if (!products.length) {
+    sel.innerHTML += '<option value="" disabled>— Configure in Admin → Products —</option>';
   }
 
   if (currentVal) sel.value = currentVal;
@@ -2121,7 +2387,11 @@ function updateNoteTypeStyle() {
 function updateFrameSheetLabels() {
   const facility = document.getElementById('facility').value;
   const productType = document.getElementById('productType')?.value || '';
-  const usesFrames = facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Stickers', 'Diecut Stickers', 'Pouches'].includes(productType);
+  const catalogProd = _jtProductCatalog?.find(p => p.name === productType);
+  const isRollProduct = catalogProd ? !!catalogProd.rollDirection : false;
+  const usesFrames = facility === '16th-street' && (
+    isRollProduct || ['Labels (Sheet)', 'Stickers', 'Diecut Stickers'].includes(productType)
+  );
   const frameWord = usesFrames ? 'Frame' : 'Sheet';
   const framesWord = usesFrames ? 'Frames' : 'Sheets';
   document.getElementById('frameSheetLabel').textContent = framesWord;
@@ -2157,10 +2427,8 @@ function onProductTypeChange() {
 
   if (!productType) return;
 
-  // Prefer admin product catalog; fall back to static PRODUCT_TYPES
   const catalogProd = _jtProductCatalog?.find(p => p.name === productType);
-  const staticInfo  = PRODUCT_TYPES[productType];
-  if (!catalogProd && !staticInfo) return;
+  if (!catalogProd) return;
 
   // ── Materials ──────────────────────────────────────────────
   const matSel = document.getElementById('material');
@@ -2204,9 +2472,7 @@ function onProductTypeChange() {
   }
 
   // ── Print type / roll direction ────────────────────────────
-  const printType = catalogProd
-    ? (catalogProd.rollDirection ? 'Roll' : 'Sheet')
-    : (staticInfo?.defaultPrintType || 'Sheet');
+  const printType = catalogProd.rollDirection ? 'Roll' : 'Sheet';
   document.getElementById('printType').value = printType;
 
   onPrintTypeChange();
@@ -2223,7 +2489,7 @@ function onProductTypeChange() {
   const ppsField = document.getElementById('piecesPerSheet');
   const ppsHint  = document.getElementById('ppsHint');
   delete ppsField.dataset.manualOverride;
-  const defaultPps = staticInfo?.defaultPiecesPerSheet;
+  const defaultPps = catalogProd.defaultPiecesPerSheet;
   if (defaultPps) {
     ppsField.value = defaultPps;
     ppsHint.textContent = `Standard: ${defaultPps} up per sheet (adjust if layout differs)`;
@@ -3050,8 +3316,13 @@ async function updateCapacityHint() {
     else if (['Vinyl Banners','Canvas Prints','Foam Board','Yard Signs','Window Graphics','Floor Graphics','Car Wraps'].includes(pt)) primaryMachine = 'Canon Colorado';
     else { hintEl.innerHTML = ''; return; }
   }
-  const cap = MACHINE_CAPACITY[primaryMachine];
-  if (!cap) { hintEl.innerHTML = ''; return; }
+  const cap = typeof getEffectiveMachineCapacity === 'function'
+    ? getEffectiveMachineCapacity(primaryMachine)
+    : {};
+  if (!cap || (!cap.dailySheets && !cap.dailyUnits && !cap.dailyPouches && !cap.dailySqFt)) {
+    hintEl.innerHTML = '';
+    return;
+  }
 
   // Count active orders on this machine due on or before selected date
   let allOrders;
@@ -3191,11 +3462,151 @@ function onCutMethodChange() {
   autoDetectWorkflow();
 }
 
-function onDieStatusChange() {
+let __jtDiesCache = [];
+
+function jtEscAttr(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function jtDriveThumbFromUrl(url) {
+  if (!url) return null;
+  const m = String(url).match(/\/d\/([^/]+)/);
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w480` : null;
+}
+
+async function loadJtDiesCatalog() {
+  if (typeof getAllDies !== 'function') {
+    __jtDiesCache = [];
+    return;
+  }
+  try {
+    __jtDiesCache = await getAllDies();
+  } catch (_) {
+    __jtDiesCache = [];
+  }
+  __jtDiesCache.sort((a, b) => String(a.dieNumber || '').localeCompare(String(b.dieNumber || ''), undefined, { numeric: true }));
+}
+
+function populateDieSelect(selectedValue) {
+  const sel = document.getElementById('dieName');
+  if (!sel) return;
+  const prev = selectedValue != null ? String(selectedValue) : sel.value;
+  const opts = ['<option value="">— Select die —</option>'];
+  for (const d of __jtDiesCache) {
+    const num = String(d.dieNumber || '').trim();
+    if (!num) continue;
+    const desc = d.description ? ` — ${d.description}` : '';
+    const statusNote = d.status && d.status !== 'active' ? ` [${d.status}]` : '';
+    opts.push(
+      `<option value="${jtEscAttr(num)}" data-die-id="${jtEscAttr(d.id)}">${escHtmlJT(num + desc + statusNote)}</option>`
+    );
+  }
+  sel.innerHTML = opts.join('');
+  if (prev) {
+    const has = [...sel.options].some(o => o.value === prev);
+    if (has) sel.value = prev;
+    else {
+      const o = document.createElement('option');
+      o.value = prev;
+      o.textContent = `${prev} (not in catalog)`;
+      o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  onDiePickChange();
+}
+
+function getSelectedJtDie() {
+  const sel = document.getElementById('dieName');
+  if (!sel || !sel.value) return null;
+  const opt = sel.selectedOptions[0];
+  const dieId = opt?.dataset?.dieId;
+  if (dieId) {
+    const hit = __jtDiesCache.find(d => String(d.id) === String(dieId));
+    if (hit) return hit;
+  }
+  return __jtDiesCache.find(d => String(d.dieNumber) === sel.value) || null;
+}
+
+function onDiePickChange() {
+  const btn = document.getElementById('dieInfoBtn');
+  if (btn) btn.disabled = !getSelectedJtDie();
+}
+
+async function setDiePickValue(value) {
+  const val = value != null ? String(value).trim() : '';
+  if (!val) {
+    const sel = document.getElementById('dieName');
+    if (sel) sel.value = '';
+    onDiePickChange();
+    return;
+  }
+  await loadJtDiesCatalog();
+  populateDieSelect(val);
+}
+
+function openDieInfoModal() {
+  const die = getSelectedJtDie();
+  if (!die) return;
+  const modal = document.getElementById('dieInfoModal');
+  const body = document.getElementById('dieInfoModalBody');
+  const title = document.getElementById('dieInfoModalTitle');
+  if (!modal || !body) return;
+
+  if (title) title.textContent = `Die #${die.dieNumber}`;
+
+  const thumb = jtDriveThumbFromUrl(die.photos_url);
+  const thumbHtml = thumb
+    ? `<img class="jt-die-info-thumb" src="${jtEscAttr(thumb)}" alt="Die preview" onerror="this.style.display='none'">`
+    : '';
+
+  const rows = [
+    ['Description', die.description],
+    ['Cut sizes', die.cut_sizes],
+    ['Type', die.die_type],
+    ['Machine', die.machine],
+    ['Status', die.status],
+    ['Customer', die.customer],
+    ['Barcode', die.barcode],
+    ['Uses', die.usageCount != null ? String(die.usageCount) : null],
+    ['Last used', die.lastUsed ? (typeof formatDate === 'function' ? formatDate(die.lastUsed) : die.lastUsed) : null],
+    ['Dieline PDF', die.template_pdf],
+    ['Notes', die.notes],
+  ].filter(([, v]) => v != null && String(v).trim() !== '');
+
+  const grid = rows.map(([label, val]) =>
+    `<dt>${escHtmlJT(label)}</dt><dd>${escHtmlJT(String(val))}</dd>`
+  ).join('');
+
+  const viewLink = die.photos_url
+    ? `<p style="margin:12px 0 0;"><a href="${jtEscAttr(die.photos_url)}" target="_blank" rel="noopener" class="btn btn-sm">Open preview in Drive</a></p>`
+    : '';
+
+  body.innerHTML = `${thumbHtml}<dl class="jt-die-info-grid">${grid}</dl>${viewLink}`;
+  modal.classList.add('open');
+}
+
+function closeDieInfoModal() {
+  const modal = document.getElementById('dieInfoModal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function onDieStatusChange() {
   const cutMethod = document.getElementById('cutMethod').value;
   const dieStatus = document.getElementById('dieStatus').value;
   const requiresDie = ['die-cut', 'gm-die'].includes(cutMethod);
-  document.getElementById('dieBarcodeRow').style.display = (requiresDie && dieStatus === 'existing') ? 'flex' : 'none';
+  const showPick = requiresDie && dieStatus === 'existing';
+  document.getElementById('dieBarcodeRow').style.display = showPick ? 'flex' : 'none';
+  if (showPick) {
+    const sel = document.getElementById('dieName');
+    const keep = sel ? sel.value : '';
+    await loadJtDiesCatalog();
+    populateDieSelect(keep);
+  } else {
+    const sel = document.getElementById('dieName');
+    if (sel) sel.value = '';
+    onDiePickChange();
+  }
   autoDetectWorkflow();
 }
 
@@ -3220,7 +3631,7 @@ function updateJetFXNote() {
   if (!hintsDiv) return;
   if (hints.length === 0) { hintsDiv.style.display = 'none'; return; }
   hintsDiv.style.display = 'block';
-  hintsDiv.innerHTML = hints.map(h => `<div class="info-note" style="margin-bottom:6px;">${h.icon} <strong>${h.title}:</strong> ${h.text}</div>`).join('');
+  hintsDiv.innerHTML = hints.map(h => `<div class="info-note">${h.icon} <strong>${h.title}:</strong> ${h.text}</div>`).join('');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3239,11 +3650,7 @@ function getJobOptionsForProductWorkflow() {
 }
 
 function getResolvedWorkflowMachineNames() {
-  if (_jtResolvedMachineNames?.length) return _jtResolvedMachineNames;
-  const workflowKey = document.getElementById('workflowTemplate')?.value || '';
-  if (workflowKey.startsWith('product-workflow:')) return [];
-  const tpl = workflowKey ? WORKFLOW_TEMPLATES[workflowKey] : null;
-  return tpl?.steps || [];
+  return _jtResolvedMachineNames?.length ? _jtResolvedMachineNames : [];
 }
 
 async function loadProductWorkflowConfig(catalogProd) {
@@ -3299,15 +3706,22 @@ function renderWorkflowRoutePreview() {
   if (!el) return;
   const names = getResolvedWorkflowMachineNames();
   if (!names.length) {
-    el.style.display = 'none';
-    el.innerHTML = '';
+    if (_jtWorkflowSource === 'missing') {
+      el.style.display = 'block';
+      el.innerHTML = typeof renderPulseAdminEmptyState === 'function'
+        ? renderPulseAdminEmptyState('No production workflow configured for this product.', 'Admin → Product Workflows — link this product to machine steps.')
+        : 'Configure workflow in Admin → Product Workflows.';
+    } else {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
     return;
   }
   const srcLabel = _jtWorkflowSource === 'db' ? 'Admin config'
-    : (_jtWorkflowSource === 'default' ? 'Default template' : 'Legacy auto-detect');
+    : (_jtWorkflowSource === 'default' ? 'Default template' : '');
   el.style.display = 'block';
-  el.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;font-size:10px;letter-spacing:0.05em;">Production route · ${srcLabel}</div>
-    <ol style="margin:0;padding-left:18px;">${names.map(m => `<li style="margin:4px 0;">${escHtmlJT(m)}</li>`).join('')}</ol>`;
+  el.innerHTML = `<div style="font-weight:700;margin-bottom:4px;color:var(--text-muted);text-transform:uppercase;font-size:10px;letter-spacing:0.05em;">Production route · ${srcLabel}</div>
+    <ol style="margin:0;padding-left:18px;">${names.map(m => `<li style="margin:2px 0;">${escHtmlJT(m)}</li>`).join('')}</ol>`;
 }
 
 async function applyProductWorkflowFromConfig() {
@@ -3344,12 +3758,10 @@ async function applyProductWorkflowFromConfig() {
     console.warn('[Product workflow]', e);
   }
 
-  const detectedKey = legacyAutoDetectWorkflowKey();
   _jtWorkflowConfig = null;
-  _jtWorkflowSource = 'legacy';
-  if (tplInput) tplInput.value = (detectedKey && WORKFLOW_TEMPLATES[detectedKey]) ? detectedKey : '';
-  const tpl = detectedKey ? WORKFLOW_TEMPLATES[detectedKey] : null;
-  _jtResolvedMachineNames = tpl?.steps || [];
+  _jtWorkflowSource = 'missing';
+  _jtResolvedMachineNames = [];
+  if (tplInput) tplInput.value = '';
   renderWorkflowRoutePreview();
   updateJetFXNote();
   updateCapacityHint();
@@ -3369,24 +3781,7 @@ async function buildWorkflowStepsForSave() {
     }
   }
 
-  const workflowKey = document.getElementById('workflowTemplate')?.value || '';
-  const workflowTpl = (workflowKey && !workflowKey.startsWith('product-workflow:'))
-    ? WORKFLOW_TEMPLATES[workflowKey]
-    : null;
-  if (!workflowTpl?.steps?.length) return [];
-
-  return workflowTpl.steps.map((machine, i) => ({
-    id: generateStepId(),
-    machine,
-    operation: (MACHINES[machine]?.operations?.[0]) || 'Processing',
-    status: 'pending',
-    assignedTo: null,
-    startedAt: null,
-    completedAt: null,
-    unitsLost: 0,
-    notes: '',
-    stepIndex: i,
-  }));
+  return [];
 }
 
 // Artwork — main files (single SKU mode)
@@ -3552,11 +3947,31 @@ async function saveTicket(suppressRedirect = false) {
     if (!desc) { alert('Please describe the product type.'); return; }
   }
 
+  if (productType && productType !== 'Other') {
+    if (!_jtProductCatalog?.length) {
+      alert('Product catalogue is empty. Configure products in Admin → Products before saving.');
+      return;
+    }
+    if (!document.getElementById('facility').value) {
+      alert('Please select a Facility (configure in Admin → Organisation if the list is empty).');
+      return;
+    }
+    const wfSteps = await buildWorkflowStepsForSave();
+    if (!wfSteps.length) {
+      alert('No production workflow is configured for this product type. Set it up in Admin → Product Workflows, then try again.');
+      return;
+    }
+  }
+
   const btn = document.getElementById('saveBtn');
+  const savingLabel = editingDbId && (await getOrder(editingDbId).catch(() => null))?.status === 'pending-account-manager'
+    ? 'Sending to Prepress...'
+    : 'Saving...';
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.textContent = savingLabel;
 
   try {
+    const workflowKey = document.getElementById('workflowTemplate')?.value || '';
     let workflowSteps = await buildWorkflowStepsForSave();
 
     // Auto-insert Application Dept step when application service is active
@@ -3736,10 +4151,10 @@ async function saveTicket(suppressRedirect = false) {
       confirmationReason: capOrder?._capacityOverride ? (capOrder._confirmationReason || 'Needs overtime approval')
         : '',
       holdReason: (dueDateCheck.isRush && !rushApproved) ? 'Rush order waiting for supervisor approval' : '',
-      artworkFiles: allArtwork.filter(a => a.role === 'main'),
-      whiteLayerFile: singleFileData.white || null,
-      uvFile: singleFileData.uv || null,
-      foilFile: singleFileData.foil || null,
+      artworkFiles: skuList.length > 0 ? [] : allArtwork.filter(a => a.role === 'main'),
+      whiteLayerFile: skuList.length > 0 ? null : (singleFileData.white || null),
+      uvFile: skuList.length > 0 ? null : (singleFileData.uv || null),
+      foilFile: skuList.length > 0 ? null : (singleFileData.foil || null),
       skus: skuList.length > 0 ? skuList : null,
       skuCount: skuList.length || 0,
       // Sales & Billing
@@ -3756,13 +4171,20 @@ async function saveTicket(suppressRedirect = false) {
 
     if (editingDbId) {
       const previousOrder = await getOrder(editingDbId);
+      if (previousOrder?.status === 'pending-account-manager') {
+        order = mergeRejectedTicketSave(previousOrder, order);
+      }
       // Preserve dueDate if form field was cleared or unchanged
       if (!order.dueDate && previousOrder?.dueDate) order.dueDate = previousOrder.dueDate;
       // Preserve artwork files if none were newly uploaded
-      if ((!order.artworkFiles || !order.artworkFiles.length) && previousOrder?.artworkFiles?.length) order.artworkFiles = previousOrder.artworkFiles;
-      if (!order.whiteLayerFile && previousOrder?.whiteLayerFile) order.whiteLayerFile = previousOrder.whiteLayerFile;
-      if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
-      if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
+      if (!skuList.length) {
+        if ((!order.artworkFiles || !order.artworkFiles.length) && previousOrder?.artworkFiles?.length) {
+          order.artworkFiles = previousOrder.artworkFiles;
+        }
+        if (!order.whiteLayerFile && previousOrder?.whiteLayerFile) order.whiteLayerFile = previousOrder.whiteLayerFile;
+        if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
+        if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
+      }
       if (previousOrder?.status === 'pending-account-manager') {
         const resubmittedAt = new Date().toISOString();
         order.status = 'prepress';
@@ -3770,6 +4192,7 @@ async function saveTicket(suppressRedirect = false) {
         order.prepressResubmittedAt = resubmittedAt;
         order.prepressResubmittedBy = order.accountManager || 'Account Manager';
         order.prepressComment = '';
+        order.jobTicketSnapshotAtReturn = null;
         order.conversationHistory = [];
         order.notesLog = [];
       }
@@ -3831,7 +4254,7 @@ async function saveTicket(suppressRedirect = false) {
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
       if (order.materialShortage) {
-        await addActivity({ orderId: order.orderId, type: 'alert', message: `Low stock alert for ${order.material || 'material'} at ${FACILITIES[order.facility]?.name || order.facility}`, by: order.accountManager || 'User' });
+        await addActivity({ orderId: order.orderId, type: 'alert', message: `Low stock alert for ${order.material || 'material'} at ${typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(order.facility) : order.facility}`, by: order.accountManager || 'User' });
       }
       if (isRushDueTodayAndNotInProduction(order)) {
         try {
@@ -3860,10 +4283,113 @@ async function saveTicket(suppressRedirect = false) {
 // ─────────────────────────────────────────────────────────────
 // Load order into form (editing mode)
 // ─────────────────────────────────────────────────────────────
+function jtFormatStatusDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${date} · ${time}`;
+}
+
+function jtGetReadyToShipDate(order) {
+  if (!order) return null;
+  if (order.qcPassedAt) return order.qcPassedAt;
+  const steps = order.workflowSteps || [];
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i];
+    const label = ((s.machine || '') + ' ' + (s.operation || '')).toLowerCase();
+    if ((label.includes('qc') || label.includes('ready to ship')) && s.completedAt) {
+      return s.completedAt;
+    }
+  }
+  return null;
+}
+
+function jtOrderHasShippingContext(order) {
+  const s = String(order?.status || '').trim();
+  if (['ready-to-ship', 'waiting-pickup', 'delivery-ready', 'shipped', 'received', 'completed'].includes(s)) {
+    return true;
+  }
+  if (order?.waitingPickupAt || order?.deliveryReadyAt || order?.shippedAt || order?.receivedAt) return true;
+  if (s === 'qc-checkout' && order?.qcPassedAt) return true;
+  return false;
+}
+
+function renderJobTicketShippingBanner(order) {
+  const slot = document.getElementById('jtShippingStatusBanner');
+  if (!slot) return;
+  slot.style.display = 'none';
+  slot.innerHTML = '';
+  if (!order || !jtOrderHasShippingContext(order)) return;
+
+  const status = order.status || '';
+  const badgeHtml = typeof renderStatusBadge === 'function'
+    ? renderStatusBadge(status)
+    : `<span class="badge badge-${status}">${STATUS_LABELS?.[status] || status}</span>`;
+
+  const milestones = [];
+  const readyToShip = jtGetReadyToShipDate(order);
+  if (readyToShip) milestones.push(['Ready to ship', readyToShip]);
+  if (order.waitingPickupAt) milestones.push(['Label created', order.waitingPickupAt]);
+  if (order.deliveryReadyAt) milestones.push(['Delivery ready', order.deliveryReadyAt]);
+  if (order.shippedAt) milestones.push(['Shipped', order.shippedAt]);
+  if (order.receivedAt) milestones.push(['Delivered', order.receivedAt]);
+  else if (order.pickupCompletedAt || (order.pickupCompletedBy && order.shippedAt)) {
+    milestones.push(['Picked up', order.pickupCompletedAt || order.shippedAt]);
+  }
+
+  const carrier = order.carrier || order.packingSlip?.carrier || '';
+  const tracking = order.trackingNumber || order.packingSlip?.tracking || '';
+  const shipMeta = [carrier, tracking].filter(Boolean).join(' · ') || '';
+
+  const rowsHtml = milestones.map(([label, iso]) =>
+    `<div class="jt-ship-milestone">
+      <span class="jt-ship-milestone-label">${label}</span>
+      <span class="jt-ship-milestone-time">${jtFormatStatusDateTime(iso)}</span>
+    </div>`
+  ).join('');
+
+  const shippedHighlight = status === 'shipped' || status === 'received' || status === 'completed'
+    ? ' jt-shipping-banner-shipped'
+    : status === 'ready-to-ship' || status === 'delivery-ready' || status === 'waiting-pickup'
+      ? ' jt-shipping-banner-ready'
+      : '';
+
+  slot.className = 'jt-shipping-banner' + shippedHighlight;
+  slot.style.display = 'block';
+  slot.innerHTML = `
+    <div class="jt-shipping-banner-top">
+      <div>
+        <div class="jt-shipping-banner-title">Shipping status</div>
+        <div class="jt-shipping-banner-badge">${badgeHtml}</div>
+      </div>
+      ${shipMeta ? `<div class="jt-shipping-banner-carrier">${shipMeta.replace(/</g, '&lt;')}</div>` : ''}
+    </div>
+    ${rowsHtml ? `<div class="jt-ship-milestones">${rowsHtml}</div>` : ''}
+  `;
+
+  const display = document.getElementById('orderIdDisplay');
+  if (display) {
+    display.innerHTML = `Order ID: ${order.orderId || '—'} · ${badgeHtml}`;
+  }
+}
+
+function clearJobTicketShippingBanner() {
+  const slot = document.getElementById('jtShippingStatusBanner');
+  if (slot) {
+    slot.style.display = 'none';
+    slot.innerHTML = '';
+    slot.className = '';
+  }
+}
+
 async function loadOrderIntoForm(order) {
+  order = applyJobTicketSnapshotFallback(order);
   renderAccountManagerIssueBanner(order);
   renderCurrentStepTimerBanner(order);
   renderOvertimeApprovalBanner(order);
+  renderJobTicketShippingBanner(order);
   document.getElementById('facility').value = order.facility || '';
   await new Promise(r => setTimeout(r, 10));
   populateProductTypes();
@@ -3990,8 +4516,8 @@ async function loadOrderIntoForm(order) {
   document.getElementById('cutMethod').value = order.cutMethod || 'none';
   onCutMethodChange();
   document.getElementById('dieStatus').value = order.dieStatus || 'existing';
-  onDieStatusChange();
-  document.getElementById('dieName').value = order.dieName || '';
+  await onDieStatusChange();
+  await setDiePickValue(order.dieName || '');
 
   // Due date / notes
   document.getElementById('dueDate').value = order.dueDate || '';
@@ -4002,28 +4528,30 @@ async function loadOrderIntoForm(order) {
   const noteTypeEl = document.querySelector(`input[name="noteType"][value="${noteTypeVal}"]`);
   if (noteTypeEl) { noteTypeEl.checked = true; updateNoteTypeStyle(); }
 
-  // Artwork
-  if (order.artworkFiles && order.artworkFiles.length > 0) {
-    artworkDataList = order.artworkFiles.map(a => ({ ...a, role: a.role || 'main' }));
-    renderArtworkThumbs();
-  }
+  const hasSkuVersions = order.skus && Array.isArray(order.skus) && order.skus.length > 0;
 
-  // Layer file previews
-  if (order.whiteLayerFile) {
-    singleFileData.white = order.whiteLayerFile;
-    renderInlinePreview('whiteLayerPreview', order.whiteLayerFile, 'white');
-  }
-  if (order.uvFile) {
-    singleFileData.uv = order.uvFile;
-    renderInlinePreview('uvFilePreview', order.uvFile, 'uv');
-  }
-  if (order.foilFile) {
-    singleFileData.foil = order.foilFile;
-    renderInlinePreview('foilFilePreview', order.foilFile, 'foil');
+  // Artwork — order-level files only for single-SKU tickets (not when SKU versions exist)
+  if (!hasSkuVersions) {
+    if (order.artworkFiles && order.artworkFiles.length > 0) {
+      artworkDataList = order.artworkFiles.map(a => ({ ...a, role: a.role || 'main' }));
+      renderArtworkThumbs();
+    }
+    if (order.whiteLayerFile) {
+      singleFileData.white = order.whiteLayerFile;
+      renderInlinePreview('whiteLayerPreview', order.whiteLayerFile, 'white');
+    }
+    if (order.uvFile) {
+      singleFileData.uv = order.uvFile;
+      renderInlinePreview('uvFilePreview', order.uvFile, 'uv');
+    }
+    if (order.foilFile) {
+      singleFileData.foil = order.foilFile;
+      renderInlinePreview('foilFilePreview', order.foilFile, 'foil');
+    }
   }
 
   // Multi-SKU mode
-  if (order.skus && Array.isArray(order.skus) && order.skus.length > 0) {
+  if (hasSkuVersions) {
     skuList = order.skus.map(s => ({ ...s }));
     showMultiSkuMode();
     renderSKUs();
@@ -4408,8 +4936,14 @@ async function renderQueuePane() {
     const dueColor = diffDays === null ? '#6b7280' : diffDays < 0 ? '#dc2626' : diffDays <= 1 ? '#d97706' : '#16a34a';
     const dueShort = diffDays === null ? '' : diffDays < 0 ? Math.abs(diffDays)+'d overdue' : diffDays === 0 ? 'Due today' : diffDays+'d left';
     const cutShort = jtCutShort(o.cutMethod);
-    const statusColors = {'prepress':'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626','in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706','ready-to-ship':'#2563eb'};
+    const statusColors = typeof STATUS_COLORS !== 'undefined' ? STATUS_COLORS : {
+      prepress:'#2563eb','prepress-active':'#16a34a','prepress-paused':'#d97706','pending-account-manager':'#dc2626',
+      'in-production':'#16a34a','on-hold':'#dc2626','new':'#d97706','pending-review':'#d97706',
+      'ready-to-ship':'#0d9488','waiting-pickup':'#ca8a04','delivery-ready':'#0891b2','shipped':'#475569',
+      received:'#047857',completed:'#6d28d9','qc-checkout':'#7c3aed',
+    };
     const sColor = statusColors[o.status] || '#9ca3af';
+    const statusLabel = (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[o.status]) || o.status || 'new';
     const editableStatuses = ['prepress','on-hold','new','pending-account-manager','prepress-paused'];
     const isLocked = !editableStatuses.includes(o.status);
     const salesLock = isLocked ? '<span aria-label="Locked — read-only for sales" title="Sales cannot edit this order directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>' : '';
@@ -4425,7 +4959,8 @@ async function renderQueuePane() {
     if (dueShort) lineBits.push('<span style="color:' + dueColor + ';font-weight:600;">' + dueShort + '</span>');
     return '<div class="qp-card' + (isActive ? ' qp-card-active' : '') + '"' + (isLocked ? ' data-locked="true"' : '') + ' onclick="window.location.href=\'job-ticket.html?order=' + o.orderId + '\'">'
       + '<div class="qp-card-info">'
-      + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock + ' <span style="font-size:10px;font-weight:400;color:' + sColor + ';">\u25cf ' + o.status + '</span></div>'
+      + '<div class="qp-card-id">#' + o.orderId + facilityTag + salesLock
+      + ' <span style="font-size:11px;font-weight:700;color:' + sColor + ';margin-left:6px;">' + statusLabel + '</span></div>'
       + '<div class="qp-card-customer">' + (o.customerName||o.customer||'\u2014') + '</div>'
       + '<div class="qp-card-meta">' + lineBits.join(' · ') + '</div>'
       + '<div class="qp-card-meta">' + (o.material ? '\ud83e\uddfe '+o.material : '') + (o.accountManager ? (o.material?' \u00b7 ':'')+o.accountManager : '') + '</div>'
@@ -4466,6 +5001,7 @@ function resetToNewTicket() {
   editingOrderId = null;
   editingDbId = null;
   _parentOrderId = null;
+  clearJobTicketShippingBanner();
   artworkDataList = [];
   singleFileData = { white: null, uv: null, foil: null };
   rushApproved = false;
@@ -4478,6 +5014,7 @@ function resetToNewTicket() {
   // Reset UI state
   document.getElementById('pageTitle').textContent = 'New Job Ticket';
   document.getElementById('orderIdDisplay').textContent = '';
+  clearJobTicketShippingBanner();
   const subBtn = document.getElementById('addSubTicketBtn');
   if (subBtn) subBtn.style.display = 'none';
   const lockBanner = document.getElementById('editLockBanner');
@@ -4580,7 +5117,6 @@ async function loadGate3DesignTasks() {
       return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-left:3px solid ${color};border-radius:8px;margin-bottom:6px;font-size:13px;">
         <span style="flex:1;font-weight:600;">${escHtmlJT(t.title || 'Design Task')}</span>
         <span style="font-size:11px;font-weight:600;color:${color};">${label}</span>
-        <a href="design-task.html" style="font-size:11px;color:#2563eb;text-decoration:none;">Open →</a>
       </div>`;
     }).join('');
   } catch (e) {

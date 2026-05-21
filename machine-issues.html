@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Report Issue — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260520-ISSUE1"></script>
   <script src="auth.js?v=20260419-PUL70"></script>
   <style id="page-styles"></style>
 </head>
@@ -12,44 +12,80 @@
 <div id="nav"></div>
 
 <div style="max-width:1100px;margin:0 auto;padding:24px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-    <div>
-      <h2 style="margin:0;font-size:22px;font-weight:700;">🛠 Report Issue</h2>
-      <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Log issues, find past fixes, track downtime patterns</p>
-    </div>
-    <button class="btn btn-primary" onclick="openNewIssueModal()">+ Report Issue</button>
-  </div>
-
-  <!-- Machine selector + stats -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-    <button class="qp-filter-btn active" data-mf="all" onclick="setMachineFilter('all')">All Machines</button>
-    <button class="qp-filter-btn" data-mf="HP Indigo 6K" onclick="setMachineFilter('HP Indigo 6K')">6K Press</button>
-    <button class="qp-filter-btn" data-mf="HP Indigo 15K" onclick="setMachineFilter('HP Indigo 15K')">15K Press</button>
-    <button class="qp-filter-btn" data-mf="GM Die Cutter w/ JetFX" onclick="setMachineFilter('GM Die Cutter w/ JetFX')">GM Die</button>
-    <button class="qp-filter-btn" data-mf="Karlville Poucher" onclick="setMachineFilter('Karlville Poucher')">Poucher</button>
-    <button class="qp-filter-btn" data-mf="Scodix" onclick="setMachineFilter('Scodix')">Scodix</button>
-    <button class="qp-filter-btn" data-mf="Canon Colorado" onclick="setMachineFilter('Canon Colorado')">Canon</button>
-    <button class="qp-filter-btn" data-mf="open" onclick="setMachineFilter('open')">🔴 Open Issues</button>
+  <div style="margin-bottom:16px;">
+    <h2 style="margin:0;font-size:22px;font-weight:700;">🛠 Report Issue</h2>
+    <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0;">Log issues, find past fixes, track downtime patterns</p>
   </div>
 
   <!-- Stats bar -->
   <div id="issueStatsBar" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;"></div>
 
-  <!-- AI Symptom Matcher -->
+  <!-- Report new issue (primary) -->
+  <div id="reportCard" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    <h3 style="margin:0 0 14px;font-size:15px;font-weight:700;">Report new issue</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="field">
+        <label>Machine *</label>
+        <select id="r_machine" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="">— Select machine —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Problem source *</label>
+        <select id="r_problemSource" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;"></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="field">
+        <label>Problem category</label>
+        <select id="r_problemCategory" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="">— Optional —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Severity *</label>
+        <select id="r_severity" onchange="toggleReportDowntime()" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="minor">⚠️ Minor — still running</option>
+          <option value="moderate">🟡 Moderate — reduced capacity</option>
+          <option value="critical">🔴 Critical — machine down</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Reported by</label>
+        <input type="text" id="r_reporter" readonly style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;background:#f9fafb;color:#6b7280;">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Symptom / problem description *</label>
+      <textarea id="r_symptom" rows="3" placeholder="Describe exactly what's happening — be specific..." style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
+    </div>
+    <div id="r_downtimeRow" style="display:none;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:200px;">
+        <label>Downtime start</label>
+        <input type="datetime-local" id="r_downStart" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;padding-bottom:8px;">
+        <input type="checkbox" id="r_stoppedNow" onchange="setStoppedNow()"> Machine stopped now
+      </label>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-primary" onclick="logNewIssue()">Log open issue</button>
+    </div>
+  </div>
+
+  <!-- Search past fixes + filter issue list -->
   <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 18px;margin-bottom:18px;">
-    <div style="font-weight:700;font-size:13px;color:#0369a1;margin-bottom:8px;">🤖 AI Symptom Matcher — describe what's happening</div>
-    <div style="display:flex;gap:8px;">
-      <input type="text" id="symptomInput" placeholder="e.g. 6K press showing ink streak on right side of sheet..." style="flex:1;padding:8px 12px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;">
-      <select id="symptomMachine" style="padding:8px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;">
+    <div style="font-weight:700;font-size:13px;color:#0369a1;margin-bottom:4px;">🔍 Search past fixes before logging</div>
+    <p style="margin:0 0 10px;font-size:11px;color:#0369a1;">Machine filter applies to the issue list below.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="symptomInput" placeholder="e.g. ink streak on right side of sheet..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;">
+      <select id="symptomMachine" onchange="renderAll()" style="padding:8px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;min-width:180px;">
         <option value="">All machines</option>
-        <option value="HP Indigo 6K">HP Indigo 6K</option>
-        <option value="HP Indigo 15K">HP Indigo 15K</option>
-        <option value="GM Die Cutter w/ JetFX">GM Die Cutter</option>
-        <option value="Karlville Poucher">Karlville Poucher</option>
-        <option value="Scodix">Scodix</option>
-        <option value="Canon Colorado">Canon Colorado</option>
       </select>
-      <button class="btn btn-primary" onclick="matchSymptom()">🔍 Find Fixes</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="listOpenOnly" onchange="renderAll()"> Open issues only
+      </label>
+      <button class="btn btn-primary" onclick="matchSymptom()">Find fixes</button>
     </div>
     <div id="symptomResults" style="margin-top:10px;"></div>
   </div>
@@ -58,75 +94,89 @@
   <div id="issueList"></div>
 </div>
 
-<!-- New Issue Modal -->
-<div id="issueModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
+<!-- Edit Issue Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;padding:28px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
-    <h3 style="margin:0 0 18px;font-size:17px;" id="issueModalTitle">🔧 Report Machine Issue</h3>
-
+    <h3 style="margin:0 0 18px;font-size:17px;" id="editModalTitle">Edit issue</h3>
     <div class="field" style="margin-bottom:12px;">
       <label>Machine *</label>
-      <select id="i_machine" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
-        <option value="">— Select Machine —</option>
-        <option value="HP Indigo 6K">HP Indigo 6K</option>
-        <option value="HP Indigo 15K">HP Indigo 15K</option>
-        <option value="GM Die Cutter w/ JetFX">GM Die Cutter w/ JetFX</option>
-        <option value="GM Laser Cutter w/ JetFX">GM Laser Cutter w/ JetFX</option>
-        <option value="Karlville Poucher">Karlville Poucher</option>
-        <option value="Scodix">Scodix</option>
-        <option value="Laminator (Nobelus)">Laminator (Nobelus)</option>
-        <option value="Moll Brothers Cutter">Moll Brothers Cutter</option>
-        <option value="Moll Brothers Folder-Gluer">Moll Brothers Folder-Gluer</option>
-        <option value="Canon Colorado">Canon Colorado</option>
-        <option value="Duplo">Duplo</option>
-        <option value="Guillotine Cutter">Guillotine Cutter</option>
-      </select>
+      <select id="e_machine" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;"></select>
     </div>
-
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="field">
+        <label>Problem source</label>
+        <select id="e_problemSource" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;"></select>
+      </div>
+      <div class="field">
+        <label>Problem category</label>
+        <select id="e_problemCategory" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="">— Optional —</option>
+        </select>
+      </div>
+    </div>
     <div class="field" style="margin-bottom:12px;">
-      <label>Symptom / Problem Description *</label>
-      <textarea id="i_symptom" rows="3" placeholder="Describe exactly what's happening — be specific..." style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
+      <label>Symptom *</label>
+      <textarea id="e_symptom" rows="3" style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
       <div class="field">
         <label>Severity</label>
-        <select id="i_severity" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-          <option value="minor">⚠️ Minor — still running</option>
-          <option value="moderate">🟡 Moderate — reduced capacity</option>
-          <option value="critical">🔴 Critical — machine down</option>
+        <select id="e_severity" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          <option value="minor">Minor</option>
+          <option value="moderate">Moderate</option>
+          <option value="critical">Critical</option>
         </select>
       </div>
       <div class="field">
-        <label>Reported By</label>
-        <select id="i_reporter" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-          <option value="">— Select operator —</option>
-        </select>
+        <label>Reported by</label>
+        <input type="text" id="e_reporter" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
       </div>
     </div>
-
     <div class="field" style="margin-bottom:12px;">
-      <label>Down Time Start (if machine stopped)</label>
-      <input type="datetime-local" id="i_downStart" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      <label>Downtime start</label>
+      <input type="datetime-local" id="e_downStart" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
     </div>
-
-    <div class="field" style="margin-bottom:12px;">
-      <label>Resolution / Fix Applied</label>
-      <textarea id="i_resolution" rows="2" placeholder="What fixed it? (fill in when resolved)" style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
-    </div>
-
-    <div class="field" style="margin-bottom:12px;">
-      <label>Down Time End (when back online)</label>
-      <input type="datetime-local" id="i_downEnd" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
-    </div>
-
-    <div class="field" style="margin-bottom:16px;">
-      <label>Technician / Service Company</label>
-      <input type="text" id="i_technician" placeholder="e.g. HP Service, self-resolved..." style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
-    </div>
-
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button class="btn" onclick="closeIssueModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveIssue()">💾 Save Issue</button>
+      <button class="btn" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditIssue()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resolve Modal -->
+<div id="resolveModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9001;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:17px;">Mark as fixed</h3>
+    <p id="resolveModalSub" style="margin:0 0 16px;font-size:12px;color:var(--text-muted);"></p>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Fix / solution description *</label>
+      <textarea id="v_resolution" rows="3" placeholder="What fixed it?" style="resize:vertical;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></textarea>
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>How we got this information *</label>
+      <select id="v_fixSource" onchange="toggleFixSourceOther()" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;"></select>
+    </div>
+    <div class="field" id="v_fixSourceOtherRow" style="display:none;margin-bottom:12px;">
+      <label>Other — describe</label>
+      <input type="text" id="v_fixSourceOther" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="field">
+        <label>Downtime end</label>
+        <input type="datetime-local" id="v_downEnd" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+      </div>
+      <div class="field">
+        <label>Resolved by</label>
+        <input type="text" id="v_resolvedBy" readonly style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;background:#f9fafb;color:#6b7280;">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Technician / vendor (optional)</label>
+      <input type="text" id="v_technician" placeholder="e.g. HP Service" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeResolveModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResolve()">Save &amp; close issue</button>
     </div>
   </div>
 </div>
@@ -135,11 +185,17 @@
 injectThemeCSS();
 document.getElementById('nav').innerHTML = renderNav('machine-issues');
 initAuth('machine-issues');
-document.getElementById('page-styles').textContent = ``;
+document.getElementById('page-styles').textContent = `
+  #r_downtimeRow { display: none; }
+  #r_downtimeRow.show { display: flex; }
+`;
 
 let _issues = [];
-let _machineFilter = 'all';
+let _machineNames = [];
 let _editingIssueId = null;
+let _resolvingIssueId = null;
+let _matcherPrefill = null;
+let _lastMatcherResults = [];
 
 const SEVERITY_CONFIG = {
   minor:    { label: '⚠️ Minor',    color: '#d97706', bg: '#fef3c7' },
@@ -147,100 +203,267 @@ const SEVERITY_CONFIG = {
   critical: { label: '🔴 Critical', color: '#dc2626', bg: '#fee2e2' },
 };
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadIssues();
-  renderAll();
-  populateReporterDropdown();
-});
+const PROBLEM_SOURCES = window.PULSE_PROBLEM_SOURCE_LABELS || {};
+const PROBLEM_CATEGORIES = window.PULSE_PROBLEM_CATEGORY_LABELS || {};
+const FIX_SOURCES = window.PULSE_FIX_SOURCE_LABELS || {};
 
-function loadIssues() {
-  try { _issues = JSON.parse(localStorage.getItem('pulse_machine_issues') || '[]'); } catch(e) { _issues = []; }
+function label(map, key, other) {
+  return typeof pulseIssueLabel === 'function' ? pulseIssueLabel(map, key, other) : (map[key] || key || '—');
 }
-function saveIssues() { localStorage.setItem('pulse_machine_issues', JSON.stringify(_issues)); }
 
-function populateReporterDropdown() {
-  const sel = document.getElementById('i_reporter');
-  Object.keys(OPERATOR_PROFILES).sort().forEach(name => {
-    const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+function toLocalDatetimeValue(d) {
+  const dt = d instanceof Date ? d : new Date(d);
+  const pad = n => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fillSelectOptions(sel, map, includeEmpty, emptyLabel) {
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = includeEmpty ? `<option value="">${emptyLabel || '— Select —'}</option>` : '';
+  Object.entries(map).forEach(([k, v]) => {
+    if (k === 'legacy') return;
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+window.addEventListener('DOMContentLoaded', () => initPage());
+
+async function initPage() {
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+  fillSelectOptions(document.getElementById('r_problemSource'), PROBLEM_SOURCES, false);
+  fillSelectOptions(document.getElementById('r_problemCategory'), PROBLEM_CATEGORIES, true, '— Optional —');
+  fillSelectOptions(document.getElementById('e_problemSource'), PROBLEM_SOURCES, true, '— Select —');
+  fillSelectOptions(document.getElementById('e_problemCategory'), PROBLEM_CATEGORIES, true, '— Optional —');
+  fillSelectOptions(document.getElementById('v_fixSource'), FIX_SOURCES, true, '— Select —');
+  const session = typeof getSession === 'function' ? getSession() : null;
+  const name = session?.name || '';
+  document.getElementById('r_reporter').value = name;
+  document.getElementById('v_resolvedBy').value = name;
+  document.getElementById('r_machine').addEventListener('change', syncMatcherMachineFromReport);
+  await refreshMachineDropdowns();
+  loadIssues();
+  migrateIssues();
+  renderAll();
+  toggleReportDowntime();
+  if (typeof onDBUpdate === 'function') {
+    onDBUpdate(async (data) => {
+      if (data?.store === 'config' || data?.store === 'organisation') {
+        if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
+        await refreshMachineDropdowns();
+      }
+    });
+  }
+}
+
+async function refreshMachineDropdowns() {
+  _machineNames = typeof getPulseReportIssueMachines === 'function'
+    ? await getPulseReportIssueMachines()
+    : (typeof getPulseMachineNames === 'function' ? getPulseMachineNames() : []);
+  const selects = ['r_machine', 'e_machine', 'symptomMachine'];
+  selects.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    const isMatcher = id === 'symptomMachine';
+    sel.innerHTML = isMatcher
+      ? '<option value="">All machines</option>'
+      : '<option value="">— Select machine —</option>';
+    _machineNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
   });
 }
 
-function setMachineFilter(f) {
-  _machineFilter = f;
-  document.querySelectorAll('.qp-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.mf === f));
-  renderAll();
+function syncMatcherMachineFromReport() {
+  const m = document.getElementById('r_machine').value;
+  if (m) {
+    document.getElementById('symptomMachine').value = m;
+    renderAll();
+  }
+}
+
+function getListFilters() {
+  const machine = document.getElementById('symptomMachine')?.value || '';
+  const openOnly = document.getElementById('listOpenOnly')?.checked || false;
+  return { machine, openOnly };
+}
+
+function toggleReportDowntime() {
+  const sev = document.getElementById('r_severity').value;
+  const row = document.getElementById('r_downtimeRow');
+  row.classList.toggle('show', sev === 'critical');
+}
+
+function setStoppedNow() {
+  if (document.getElementById('r_stoppedNow').checked) {
+    document.getElementById('r_downStart').value = toLocalDatetimeValue(new Date());
+  }
+}
+
+function toggleFixSourceOther() {
+  const show = document.getElementById('v_fixSource').value === 'other';
+  document.getElementById('v_fixSourceOtherRow').style.display = show ? 'block' : 'none';
+}
+
+function loadIssues() {
+  try { _issues = JSON.parse(localStorage.getItem('pulse_machine_issues') || '[]'); } catch (e) { _issues = []; }
+}
+
+function saveIssues() {
+  localStorage.setItem('pulse_machine_issues', JSON.stringify(_issues));
+}
+
+function migrateIssues() {
+  let changed = false;
+  _issues = _issues.map(i => {
+    const next = { ...i };
+    if (!next.problemSource) { next.problemSource = 'legacy'; changed = true; }
+    return next;
+  });
+  if (changed) saveIssues();
 }
 
 function renderAll() {
   loadIssues();
-  let issues = _machineFilter === 'all' ? _issues
-    : _machineFilter === 'open' ? _issues.filter(i => !i.resolvedAt)
-    : _issues.filter(i => i.machine === _machineFilter);
+  const { machine, openOnly } = getListFilters();
+  let issues = [..._issues];
+  if (openOnly) issues = issues.filter(i => !i.resolvedAt);
+  if (machine) issues = issues.filter(i => i.machine === machine);
+  issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  issues = [...issues].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  // Stats
   const open = _issues.filter(i => !i.resolvedAt).length;
-  const critical = _issues.filter(i => i.severity === 'critical').length;
-  const totalDownMs = _issues.reduce((s,i) => {
+  const critical = _issues.filter(i => !i.resolvedAt && i.severity === 'critical').length;
+  const totalDownMs = _issues.reduce((s, i) => {
     if (i.downStart && i.downEnd) s += new Date(i.downEnd) - new Date(i.downStart);
     return s;
   }, 0);
   const totalDownHrs = Math.round(totalDownMs / 3600000);
-
-  // Machine breakdown
   const machineCounts = {};
-  _issues.forEach(i => { machineCounts[i.machine] = (machineCounts[i.machine]||0)+1; });
-  const topMachine = Object.entries(machineCounts).sort((a,b)=>b[1]-a[1])[0];
+  _issues.forEach(i => { if (i.machine) machineCounts[i.machine] = (machineCounts[i.machine] || 0) + 1; });
+  const topMachine = Object.entries(machineCounts).sort((a, b) => b[1] - a[1])[0];
 
   document.getElementById('issueStatsBar').innerHTML = `
     <div class="stat-item"><div class="stat-value" style="color:#dc2626;">${open}</div><div class="stat-label">Open Issues</div></div>
-    <div class="stat-item"><div class="stat-value" style="color:#d97706;">${critical}</div><div class="stat-label">Critical Events</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:#d97706;">${critical}</div><div class="stat-label">Open Critical</div></div>
     <div class="stat-item"><div class="stat-value" style="color:#6b7280;">${_issues.length}</div><div class="stat-label">Total Logged</div></div>
     <div class="stat-item"><div class="stat-value" style="color:#7c3aed;">${totalDownHrs}h</div><div class="stat-label">Total Downtime</div></div>
-    ${topMachine ? `<div class="stat-item"><div class="stat-value" style="color:#dc2626;font-size:14px;">${topMachine[0].replace('HP Indigo ','')}</div><div class="stat-label">Most Issues (${topMachine[1]})</div></div>` : ''}
+    ${topMachine ? `<div class="stat-item"><div class="stat-value" style="color:#dc2626;font-size:14px;">${escapeHtml(topMachine[0].replace('HP Indigo ', ''))}</div><div class="stat-label">Most Issues (${topMachine[1]})</div></div>` : ''}
   `;
 
+  const filterHint = machine || openOnly
+    ? ` (${[machine, openOnly ? 'open only' : ''].filter(Boolean).join(' · ')})`
+    : '';
   document.getElementById('issueList').innerHTML = issues.length === 0
-    ? '<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No issues logged yet.</div>'
+    ? `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">No issues${filterHint ? ' for this filter' + filterHint : ' logged yet'}.</div>`
     : issues.map(i => issueCard(i)).join('');
 }
 
 function issueCard(i) {
   const sev = SEVERITY_CONFIG[i.severity] || SEVERITY_CONFIG.minor;
   const isOpen = !i.resolvedAt;
+  const srcLabel = label(PROBLEM_SOURCES, i.problemSource, i.problemSourceOther);
+  const catLabel = i.problemCategory ? label(PROBLEM_CATEGORIES, i.problemCategory) : '';
+  const fixSrcLabel = i.fixSource ? label(FIX_SOURCES, i.fixSource, i.fixSourceOther) : '';
   let downtime = '';
   if (i.downStart && i.downEnd) {
     const ms = new Date(i.downEnd) - new Date(i.downStart);
-    const hrs = Math.floor(ms/3600000);
-    const mins = Math.floor((ms%3600000)/60000);
+    const hrs = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
     downtime = `⏱️ Down: ${hrs}h ${mins}m`;
   } else if (i.downStart && !i.downEnd) {
-    downtime = `⏱️ Still down since ${new Date(i.downStart).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    downtime = `⏱️ Still down since ${new Date(i.downStart).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
   }
-  return `<div style="background:#fff;border:1px solid ${isOpen ? sev.color+'44' : '#e5e7eb'};border-left:4px solid ${isOpen ? sev.color : '#d1d5db'};border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+  return `<div id="issue-${escapeHtml(i.id)}" style="background:#fff;border:1px solid ${isOpen ? sev.color + '44' : '#e5e7eb'};border-left:4px solid ${isOpen ? sev.color : '#d1d5db'};border-radius:8px;padding:14px 16px;margin-bottom:10px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-weight:700;font-size:14px;">${i.machine}</span>
+          <span style="font-weight:700;font-size:14px;">${escapeHtml(i.machine)}</span>
           <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${sev.bg};color:${sev.color};font-weight:600;">${sev.label}</span>
           ${isOpen ? '<span style="font-size:11px;background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-weight:600;">OPEN</span>' : '<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-weight:600;">✓ Resolved</span>'}
         </div>
-        <div style="font-size:13px;color:#374151;margin-top:6px;">${i.symptom}</div>
-        ${i.resolution ? `<div style="font-size:12px;color:#16a34a;margin-top:6px;background:#f0fdf4;padding:4px 8px;border-radius:4px;">✅ Fix: ${i.resolution}</div>` : ''}
+        <div style="font-size:12px;color:#6b7280;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+          <span>📍 ${escapeHtml(srcLabel)}</span>
+          ${catLabel ? `<span>🏷 ${escapeHtml(catLabel)}</span>` : ''}
+        </div>
+        <div style="font-size:13px;color:#374151;margin-top:6px;">${escapeHtml(i.symptom)}</div>
+        ${i.resolution ? `<div style="font-size:12px;color:#16a34a;margin-top:6px;background:#f0fdf4;padding:6px 10px;border-radius:4px;"><strong>Fix:</strong> ${escapeHtml(i.resolution)}${fixSrcLabel ? `<div style="font-size:11px;color:#15803d;margin-top:4px;">Learned via: ${escapeHtml(fixSrcLabel)}</div>` : ''}</div>` : ''}
         <div style="font-size:11px;color:#9ca3af;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;">
           <span>📅 ${new Date(i.createdAt).toLocaleDateString()}</span>
-          ${i.reporter ? `<span>👤 ${i.reporter}</span>` : ''}
-          ${i.technician ? `<span>🔧 ${i.technician}</span>` : ''}
+          ${i.reporter ? `<span>👤 ${escapeHtml(i.reporter)}</span>` : ''}
+          ${i.resolvedBy ? `<span>✅ ${escapeHtml(i.resolvedBy)}</span>` : ''}
+          ${i.technician ? `<span>🔧 ${escapeHtml(i.technician)}</span>` : ''}
           ${downtime ? `<span style="color:#d97706;">${downtime}</span>` : ''}
         </div>
       </div>
-      <div style="display:flex;gap:4px;flex-shrink:0;">
-        <button onclick="editIssue('${i.id}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
-        ${isOpen ? `<button onclick="resolveIssue('${i.id}')" class="btn btn-sm" style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;">✅ Resolve</button>` : ''}
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-direction:column;">
+        <button onclick="editIssue('${escapeHtml(i.id)}')" class="btn btn-sm" style="font-size:11px;">Edit</button>
+        ${isOpen ? `<button onclick="openResolveModal('${escapeHtml(i.id)}')" class="btn btn-sm" style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;">Mark as fixed</button>` : ''}
       </div>
     </div>
   </div>`;
+}
+
+// ── Log new open issue ───────────────────────────────────
+function logNewIssue() {
+  const machine = document.getElementById('r_machine').value;
+  const symptom = document.getElementById('r_symptom').value.trim();
+  const problemSource = document.getElementById('r_problemSource').value;
+  if (!machine || !symptom || !problemSource) {
+    alert('Machine, problem source, and symptom description are required.');
+    return;
+  }
+  const severity = document.getElementById('r_severity').value;
+  const downStartRaw = document.getElementById('r_downStart').value;
+  const issue = {
+    id: 'ISS-' + Date.now(),
+    machine,
+    symptom,
+    severity,
+    problemSource,
+    problemCategory: document.getElementById('r_problemCategory').value || null,
+    reporter: document.getElementById('r_reporter').value || null,
+    downStart: (severity === 'critical' && downStartRaw) ? new Date(downStartRaw).toISOString() : null,
+    downEnd: null,
+    resolution: null,
+    fixSource: null,
+    fixSourceOther: null,
+    technician: null,
+    resolvedAt: null,
+    resolvedBy: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  loadIssues();
+  _issues.unshift(issue);
+  saveIssues();
+  clearReportForm();
+  renderAll();
+  const el = document.getElementById('issue-' + issue.id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function clearReportForm() {
+  document.getElementById('r_machine').value = '';
+  document.getElementById('r_problemSource').selectedIndex = 0;
+  document.getElementById('r_problemCategory').value = '';
+  document.getElementById('r_symptom').value = '';
+  document.getElementById('r_severity').value = 'minor';
+  document.getElementById('r_downStart').value = '';
+  document.getElementById('r_stoppedNow').checked = false;
+  toggleReportDowntime();
 }
 
 // ── Symptom Matcher ──────────────────────────────────────
@@ -249,109 +472,162 @@ function matchSymptom() {
   const machine = document.getElementById('symptomMachine').value;
   if (!symptom) { alert('Describe the symptom first.'); return; }
   loadIssues();
-
   const resolved = _issues.filter(i => i.resolvedAt && i.resolution);
   const scored = resolved.map(i => {
-    const text = (i.symptom + ' ' + i.machine).toLowerCase();
+    const text = (i.symptom + ' ' + i.machine + ' ' + (i.resolution || '')).toLowerCase();
     const syWords = symptom.split(/\s+/);
     const matches = syWords.filter(w => w.length > 3 && text.includes(w)).length;
     const machineMatch = machine && i.machine === machine ? 3 : 0;
     return { ...i, score: matches + machineMatch };
-  }).filter(i => i.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+  }).filter(i => i.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
   const box = document.getElementById('symptomResults');
   if (scored.length === 0) {
+    _lastMatcherResults = [];
     box.innerHTML = '<div style="color:#9ca3af;font-size:12px;">No matching past issues found. Log this as a new issue to build the knowledge base.</div>';
     return;
   }
-  box.innerHTML = `<div style="font-weight:600;font-size:12px;color:#0369a1;margin-bottom:8px;">Top ${scored.length} matching past fix${scored.length!==1?'es':''}:</div>` +
-    scored.map((i,idx) => `<div style="background:#fff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:600;font-size:12px;">#${idx+1} — ${i.machine}</span>
+  _lastMatcherResults = scored;
+  box.innerHTML = `<div style="font-weight:600;font-size:12px;color:#0369a1;margin-bottom:8px;">Top ${scored.length} matching past fix${scored.length !== 1 ? 'es' : ''}:</div>`;
+  scored.forEach((i, idx) => {
+    const fixSrc = i.fixSource ? label(FIX_SOURCES, i.fixSource, i.fixSourceOther) : '—';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:6px;';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-weight:600;font-size:12px;">#${idx + 1} — ${escapeHtml(i.machine)}</span>
         <span style="font-size:10px;color:#6b7280;">${new Date(i.createdAt).toLocaleDateString()}</span>
       </div>
-      <div style="font-size:12px;color:#374151;margin-top:4px;">Problem: ${i.symptom}</div>
-      <div style="font-size:12px;color:#16a34a;margin-top:4px;font-weight:600;">✅ Fix: ${i.resolution}</div>
-      ${i.technician ? `<div style="font-size:11px;color:#6b7280;">Technician: ${i.technician}</div>` : ''}
-    </div>`).join('');
+      <div style="font-size:12px;color:#374151;margin-top:4px;">Problem: ${escapeHtml(i.symptom)}</div>
+      <div style="font-size:12px;color:#16a34a;margin-top:4px;font-weight:600;">Fix: ${escapeHtml(i.resolution)}</div>
+      <div style="font-size:11px;color:#0369a1;margin-top:4px;">Learned via: ${escapeHtml(fixSrc)}</div>
+      ${i.technician ? `<div style="font-size:11px;color:#6b7280;">Technician: ${escapeHtml(i.technician)}</div>` : ''}`;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm';
+    btn.style.cssText = 'margin-top:8px;font-size:11px;';
+    btn.textContent = 'Use this fix';
+    btn.onclick = () => useMatcherFix(idx);
+    card.appendChild(btn);
+    box.appendChild(card);
+  });
 }
 
-// ── Modal ────────────────────────────────────────────────
-function openNewIssueModal() {
-  _editingIssueId = null;
-  document.getElementById('issueModalTitle').textContent = '🔧 Report Machine Issue';
-  document.getElementById('i_machine').value = '';
-  document.getElementById('i_symptom').value = '';
-  document.getElementById('i_severity').value = 'minor';
-  document.getElementById('i_reporter').value = '';
-  document.getElementById('i_downStart').value = '';
-  document.getElementById('i_downEnd').value = '';
-  document.getElementById('i_resolution').value = '';
-  document.getElementById('i_technician').value = '';
-  document.getElementById('issueModal').style.display = 'flex';
+function useMatcherFix(idx) {
+  const hit = _lastMatcherResults[idx];
+  if (!hit) return;
+  _matcherPrefill = {
+    resolution: hit.resolution,
+    fixSource: hit.fixSource,
+    fixSourceOther: hit.fixSourceOther,
+    technician: hit.technician,
+  };
+  const open = _issues.filter(i => !i.resolvedAt);
+  if (open.length === 1) {
+    openResolveModal(open[0].id);
+    return;
+  }
+  alert('Open an issue and click Mark as fixed — the fix text will be pre-filled.');
 }
 
+// ── Edit modal ───────────────────────────────────────────
 function editIssue(id) {
   loadIssues();
   const i = _issues.find(x => x.id === id);
   if (!i) return;
   _editingIssueId = id;
-  document.getElementById('issueModalTitle').textContent = 'Edit Issue — ' + i.machine;
-  document.getElementById('i_machine').value = i.machine || '';
-  document.getElementById('i_symptom').value = i.symptom || '';
-  document.getElementById('i_severity').value = i.severity || 'minor';
-  document.getElementById('i_reporter').value = i.reporter || '';
-  document.getElementById('i_downStart').value = i.downStart ? i.downStart.slice(0,16) : '';
-  document.getElementById('i_downEnd').value = i.downEnd ? i.downEnd.slice(0,16) : '';
-  document.getElementById('i_resolution').value = i.resolution || '';
-  document.getElementById('i_technician').value = i.technician || '';
-  document.getElementById('issueModal').style.display = 'flex';
+  document.getElementById('editModalTitle').textContent = 'Edit issue — ' + (i.machine || '');
+  document.getElementById('e_machine').value = i.machine || '';
+  document.getElementById('e_problemSource').value = i.problemSource === 'legacy' ? '' : (i.problemSource || '');
+  document.getElementById('e_problemCategory').value = i.problemCategory || '';
+  document.getElementById('e_symptom').value = i.symptom || '';
+  document.getElementById('e_severity').value = i.severity || 'minor';
+  document.getElementById('e_reporter').value = i.reporter || '';
+  document.getElementById('e_downStart').value = i.downStart ? toLocalDatetimeValue(i.downStart) : '';
+  document.getElementById('editModal').style.display = 'flex';
 }
 
-function closeIssueModal() { document.getElementById('issueModal').style.display = 'none'; }
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  _editingIssueId = null;
+}
 
-function saveIssue() {
-  const machine = document.getElementById('i_machine').value;
-  const symptom = document.getElementById('i_symptom').value.trim();
+function saveEditIssue() {
+  const machine = document.getElementById('e_machine').value;
+  const symptom = document.getElementById('e_symptom').value.trim();
   if (!machine || !symptom) { alert('Machine and symptom are required.'); return; }
   loadIssues();
-  const resolution = document.getElementById('i_resolution').value.trim();
-  const downEnd = document.getElementById('i_downEnd').value;
-  const issue = {
-    id: _editingIssueId || ('ISS-' + Date.now()),
+  const idx = _issues.findIndex(x => x.id === _editingIssueId);
+  if (idx < 0) return;
+  const prev = _issues[idx];
+  _issues[idx] = {
+    ...prev,
     machine,
     symptom,
-    severity: document.getElementById('i_severity').value,
-    reporter: document.getElementById('i_reporter').value,
-    downStart: document.getElementById('i_downStart').value || null,
-    downEnd: downEnd || null,
-    resolution,
-    technician: document.getElementById('i_technician').value.trim(),
-    resolvedAt: (resolution && downEnd) ? new Date().toISOString() : (_editingIssueId ? _issues.find(x=>x.id===_editingIssueId)?.resolvedAt : null),
-    createdAt: _editingIssueId ? (_issues.find(x=>x.id===_editingIssueId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    severity: document.getElementById('e_severity').value,
+    problemSource: document.getElementById('e_problemSource').value || 'legacy',
+    problemCategory: document.getElementById('e_problemCategory').value || null,
+    reporter: document.getElementById('e_reporter').value.trim() || null,
+    downStart: document.getElementById('e_downStart').value
+      ? new Date(document.getElementById('e_downStart').value).toISOString()
+      : prev.downStart,
     updatedAt: new Date().toISOString(),
   };
-  if (_editingIssueId) {
-    const idx = _issues.findIndex(x => x.id === _editingIssueId);
-    if (idx >= 0) _issues[idx] = issue; else _issues.unshift(issue);
-  } else {
-    _issues.unshift(issue);
-  }
   saveIssues();
-  closeIssueModal();
+  closeEditModal();
   renderAll();
 }
 
-function resolveIssue(id) {
+// ── Resolve modal ────────────────────────────────────────
+function openResolveModal(id) {
   loadIssues();
-  const idx = _issues.findIndex(x => x.id === id);
+  const i = _issues.find(x => x.id === id);
+  if (!i) return;
+  _resolvingIssueId = id;
+  document.getElementById('resolveModalSub').textContent = (i.machine || '') + ' — ' + (i.symptom || '').slice(0, 80);
+  const pre = _matcherPrefill;
+  document.getElementById('v_resolution').value = pre?.resolution || '';
+  document.getElementById('v_fixSource').value = pre?.fixSource || '';
+  document.getElementById('v_fixSourceOther').value = pre?.fixSourceOther || '';
+  document.getElementById('v_technician').value = pre?.technician || '';
+  document.getElementById('v_downEnd').value = toLocalDatetimeValue(new Date());
+  const session = typeof getSession === 'function' ? getSession() : null;
+  document.getElementById('v_resolvedBy').value = session?.name || '';
+  toggleFixSourceOther();
+  _matcherPrefill = null;
+  document.getElementById('resolveModal').style.display = 'flex';
+}
+
+function closeResolveModal() {
+  document.getElementById('resolveModal').style.display = 'none';
+  _resolvingIssueId = null;
+}
+
+function saveResolve() {
+  const resolution = document.getElementById('v_resolution').value.trim();
+  const fixSource = document.getElementById('v_fixSource').value;
+  if (!resolution || !fixSource) {
+    alert('Fix description and how we got this information are required.');
+    return;
+  }
+  const fixSourceOther = document.getElementById('v_fixSourceOther').value.trim();
+  if (fixSource === 'other' && !fixSourceOther) {
+    alert('Please describe the fix source.');
+    return;
+  }
+  loadIssues();
+  const idx = _issues.findIndex(x => x.id === _resolvingIssueId);
   if (idx < 0) return;
-  const resolution = prompt('What fixed it? (Brief description)');
-  if (!resolution) return;
+  const downEndRaw = document.getElementById('v_downEnd').value;
   _issues[idx].resolution = resolution;
+  _issues[idx].fixSource = fixSource;
+  _issues[idx].fixSourceOther = fixSource === 'other' ? fixSourceOther : null;
+  _issues[idx].technician = document.getElementById('v_technician').value.trim() || null;
+  _issues[idx].downEnd = downEndRaw ? new Date(downEndRaw).toISOString() : new Date().toISOString();
   _issues[idx].resolvedAt = new Date().toISOString();
-  if (!_issues[idx].downEnd) _issues[idx].downEnd = new Date().toISOString();
+  _issues[idx].resolvedBy = document.getElementById('v_resolvedBy').value || null;
+  _issues[idx].updatedAt = new Date().toISOString();
   saveIssues();
+  closeResolveModal();
   renderAll();
 }
 </script>
