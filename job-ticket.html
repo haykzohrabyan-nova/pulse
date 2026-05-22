@@ -6,6 +6,7 @@
   <title>Job Ticket — Bazaar Print</title>
   <script src="shared.js?v=20260520-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
+  <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI239"></script>
   <script src="auth.js?v=20260427-PRI239"></script>
@@ -4039,33 +4040,6 @@ async function saveTicket(suppressRedirect = false) {
       }
     }
 
-    // Material Availability Check
-    const materialVal = document.getElementById('material')?.value;
-    if (materialVal && !editingDbId) {
-      const matCheck = await checkMaterialForOrder({
-        material: materialVal,
-        facility,
-        quantity,
-        sheetCount: parseInt(document.getElementById('sheetCount').value) || Math.ceil(quantity / (parseInt(document.getElementById('piecesPerSheet').value) || 1)),
-        piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
-        printType: document.getElementById('printType')?.value || 'Sheet',
-      });
-
-      if (matCheck.warnings.length > 0) {
-        const critical = matCheck.warnings.filter(w => w.level === 'critical');
-        const others = matCheck.warnings.filter(w => w.level !== 'critical');
-        if (critical.length > 0) {
-          const msg = critical.map(w => w.message + '\n' + (w.details || '')).join('\n\n');
-          // Always save — just flag it. No blocking prompt.
-          alert(`🔴 MATERIAL SHORTAGE\n\n${msg}\n\nJob ticket will still be saved. Pulse will flag it for admin/inventory follow-up and highlight it for review.`);
-          capOrder._materialShortage = true;
-          capOrder._materialShortageDetails = matCheck.availability;
-        } else if (others.length > 0) {
-          alert(others.map(w => w.message).join('\n\n'));
-        }
-      }
-    }
-
     const colorMode = document.getElementById('colorMode').value;
     const hasFoil = document.getElementById('hasFoil').checked;
     const customBatching = document.getElementById('customBatching').checked;
@@ -4253,9 +4227,6 @@ async function saveTicket(suppressRedirect = false) {
       }
       await addOrder(order);
       await addActivity({ orderId: order.orderId, type: 'create', message: `Job ticket created for ${customerName}`, by: order.accountManager || 'User' });
-      if (order.materialShortage) {
-        await addActivity({ orderId: order.orderId, type: 'alert', message: `Low stock alert for ${order.material || 'material'} at ${typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(order.facility) : order.facility}`, by: order.accountManager || 'User' });
-      }
       if (isRushDueTodayAndNotInProduction(order)) {
         try {
           await triggerOrderSmsAlert('rushDueTodayNotInProduction', order, (smsOrder) =>

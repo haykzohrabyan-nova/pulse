@@ -6,6 +6,7 @@
   <title>Admin — Bazaar Print</title>
   <script src="shared.js?v=20260521-BACKUP4"></script>
   <script src="organisation-local-store.js"></script>
+  <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260521-PWCFG3"></script>
   <script src="auth.js?v=20260521-SUPASESS2"></script>
@@ -131,34 +132,6 @@
         title="Quote"
         src="crm-quote.html?embedded=admin&amp;v=20260520-QP4"
       ></iframe>
-    </div>
-
-    <!-- ══════════════════════════════════════════ INVENTORY ══ -->
-    <div class="tab-pane" id="tab-inventory">
-      <div class="pane-header">
-        <h2>Material Inventory</h2>
-        <button class="btn btn-primary" onclick="openInventoryModal()">+ Add Material</button>
-      </div>
-      <div class="inv-filter-row">
-        <select id="invFacilityFilter" onchange="renderInventory()">
-          <option value="all">All Facilities</option>
-          <option value="16th-street">16th Street</option>
-          <option value="boyd-street">Boyd Street</option>
-        </select>
-        <select id="invPeriodFilter" onchange="renderInventory()">
-          <option value="7">7-Day Trend</option>
-          <option value="14">14-Day Trend</option>
-          <option value="30">30-Day Trend</option>
-        </select>
-      </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr>
-            <th>Material</th><th>Facility</th><th>On Hand</th><th>Unit</th><th>Reorder Point</th><th>Usage (Period)</th><th>Suggested Order</th><th>Status</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="inventoryTableBody"></tbody>
-        </table>
-      </div>
     </div>
 
     <!-- ════════════════════════════════════ PURCHASE ORDERS ══ -->
@@ -595,43 +568,6 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('dieModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveDie()">Save Die</button>
-    </div>
-  </div>
-</div>
-
-<!-- Inventory Modal -->
-<div class="modal-overlay" id="inventoryModal">
-  <div class="modal">
-    <h2 id="invModalTitle">Add Material</h2>
-    <input type="hidden" id="invDbId">
-    <div class="modal-form">
-      <div class="field"><label>Material Name *</label>
-        <select id="invMaterial">
-          <option value="">— Select —</option>
-        </select>
-      </div>
-      <div class="field"><label>Or enter custom material name</label><input type="text" id="invMaterialCustom" placeholder="Custom name"></div>
-      <div class="field"><label>Facility</label>
-        <select id="invFacility">
-          <option value="16th-street">16th Street</option>
-          <option value="boyd-street">Boyd Street</option>
-        </select>
-      </div>
-      <div class="field"><label>Quantity on Hand *</label><input type="number" id="invQty" min="0" value="0"></div>
-      <div class="field"><label>Unit</label>
-        <select id="invUnit">
-          <option value="sheets">Sheets</option>
-          <option value="linear-feet">Linear Feet</option>
-          <option value="sq-ft">Sq Ft</option>
-          <option value="rolls">Rolls</option>
-          <option value="units">Units</option>
-        </select>
-      </div>
-      <div class="field"><label>Reorder Point</label><input type="number" id="invReorderPoint" min="0" value="100"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('inventoryModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveInventoryItem()">Save</button>
     </div>
   </div>
 </div>
@@ -1320,12 +1256,6 @@ Object.keys(MACHINES).forEach(m => kbMachineEl.innerHTML += `<option value="${m}
 const kbOpEl = document.getElementById('kbOperation');
 OPERATIONS.forEach(o => kbOpEl.innerHTML += `<option value="${o}">${o}</option>`);
 
-// Populate inventory material dropdown
-const invMatEl = document.getElementById('invMaterial');
-MATERIALS.forEach(g => {
-  g.items.forEach(i => invMatEl.innerHTML += `<option value="${i}">${i}</option>`);
-});
-
 // ── Active Tab ────────────────────────────────────────────
 const ADMIN_TAB_IDS = [
   'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
@@ -1349,7 +1279,6 @@ async function loadTab(tab) {
   await renderAdminAlerts();
   if (tab === 'personnel') await loadPersonnel();
   else if (tab === 'dies') await loadDies();
-  else if (tab === 'inventory') await loadInventory();
   else if (tab === 'purchase-orders') await loadPOs();
   else if (tab === 'machines') renderMachines();
   else if (tab === 'organisation') {
@@ -1375,22 +1304,8 @@ async function loadTab(tab) {
 async function renderAdminAlerts() {
   const el = document.getElementById('adminAlerts');
   if (!el) return;
-  const orders = (await getAllOrders()).filter(o => o.materialShortage && !['completed','shipped','received','cancelled'].includes(o.status));
-  if (!orders.length) {
-    el.style.display = 'none';
-    el.innerHTML = '';
-    return;
-  }
-  const preview = orders.slice(0, 6).map(o => `#${o.orderId} • ${o.customerName || o.customer || '—'} • ${o.material || 'Material TBD'}`).join('<br>');
-  const extra = orders.length > 6 ? `<div style="margin-top:6px;font-size:12px;color:#9f1239;">+ ${orders.length - 6} more flagged order(s)</div>` : '';
-  el.style.display = '';
-  el.innerHTML = `
-    <div style="background:#fff1f2;border:1px solid #fda4af;border-radius:12px;padding:14px 16px;">
-      <div style="font-weight:700;color:#9f1239;">📦 Low material stock alerts (${orders.length})</div>
-      <div style="font-size:13px;color:#881337;margin-top:6px;line-height:1.5;">These orders were saved successfully but need inventory/admin review before production continues.</div>
-      <div style="margin-top:8px;font-size:13px;color:#881337;line-height:1.6;">${preview}</div>
-      ${extra}
-    </div>`;
+  el.style.display = 'none';
+  el.innerHTML = '';
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -1638,7 +1553,6 @@ const BACKUP_ADMIN_TAB_LABELS = {
   machines: '⚙️ Machines',
   dies: '🔧 Dies',
   organisation: 'Organisation',
-  inventory: '📦 Inventory',
   'purchase-orders': '🛒 Purchase Orders',
   knowledge: '💡 Knowledge Base',
   'qa-rules': '✅ QA Rules',
@@ -1650,21 +1564,26 @@ const BACKUP_ADMIN_TAB_LABELS = {
 
 let _roleOverrides = {};
 
-// ── Custom Roles List (merged from ROLE_CONFIG + user additions) ──────────────
+// Personnel role dropdown (synced with config.customRoles in Supabase)
+const PERSONNEL_ROLE_OPTIONS = [
+  { key: 'supervisor', label: 'Supervisor', color: '#0891b2' },
+  { key: 'account-manager', label: 'Account Manager', color: '#ea580c' },
+  { key: 'prepress', label: 'Prepress', color: '#6b7280' },
+  { key: 'production-manager', label: 'Production Manager', color: '#16a34a' },
+  { key: 'operator', label: 'Operator', color: '#6b7280' },
+  { key: 'qc', label: 'QC Inspector', color: '#0d9488' },
+  { key: 'shipping', label: 'Shipping', color: '#0d9488' },
+];
+
 let _customRoles = [];
 
-async function loadCustomRoles() {
-  if (_customRoles.length) return; // already loaded
+async function loadCustomRoles(force) {
+  if (!force && _customRoles.length) return;
   const saved = await getConfig('customRoles');
   if (saved?.value && Array.isArray(saved.value) && saved.value.length) {
     _customRoles = saved.value;
   } else {
-    // Seed from ROLE_CONFIG so the dropdown includes all defined roles
-    _customRoles = Object.entries(ROLE_CONFIG).map(([key, cfg]) => ({
-      key,
-      label: cfg.label || key,
-      color: cfg.color || '#6b7280',
-    }));
+    _customRoles = PERSONNEL_ROLE_OPTIONS.map((r) => ({ ...r }));
     await setConfig('customRoles', _customRoles);
   }
 }
@@ -2154,7 +2073,8 @@ function populateFacilityDropdown(selectedSlug) {
   sel.value = selectedSlug || '';
 }
 
-function openPersonnelModal(person) {
+async function openPersonnelModal(person) {
+  await loadCustomRoles(true);
   document.getElementById('personnelModalTitle').textContent = person ? 'Edit Personnel' : 'Add Personnel';
   document.getElementById('personnelId').value = person?.id || '';
   document.getElementById('pName').value = person?.name || '';
@@ -2630,97 +2550,6 @@ async function saveDie() {
   } catch(e) { alert('Error saving die: ' + e.message); }
 }
 
-// ── INVENTORY ─────────────────────────────────────────────
-let allInventory = [];
-async function loadInventory() {
-  allInventory = await getAllInventory();
-  renderInventory();
-}
-
-async function renderInventory() {
-  const facilityFilter = document.getElementById('invFacilityFilter')?.value || 'all';
-  const period = parseInt(document.getElementById('invPeriodFilter')?.value || '7');
-  const filtered = facilityFilter === 'all' ? allInventory : allInventory.filter(i => i.facility === facilityFilter);
-  const tbody = document.getElementById('inventoryTableBody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">No inventory items. Add materials to track stock.</td></tr>';
-    return;
-  }
-  // Render rows with usage trend
-  const rows = await Promise.all(filtered.map(async item => {
-    const trend = await getUsageTrend(item.material, item.facility, period);
-    const isLow = item.quantityOnHand <= item.reorderPoint;
-    const statusLabel = isLow ? `<span class="status-low">⚠️ Reorder</span>` : `<span class="status-ok">OK</span>`;
-    return `
-      <tr>
-        <td style="font-weight:600;">${item.material}</td>
-        <td>${FACILITIES[item.facility]?.name?.split(' —')[0] || item.facility}</td>
-        <td style="font-weight:700;${isLow ? 'color:var(--red)' : ''}">${item.quantityOnHand?.toLocaleString() || 0}</td>
-        <td>${item.unit || 'sheets'}</td>
-        <td>${item.reorderPoint || 0}</td>
-        <td>${trend.periodTotal > 0 ? trend.periodTotal.toLocaleString() : '—'}</td>
-        <td>${trend.suggestedOrder > 0 ? '<strong>' + trend.suggestedOrder.toLocaleString() + '</strong>' : '—'}</td>
-        <td>${statusLabel}</td>
-        <td>
-          <button class="btn btn-sm" onclick="editInventoryItem(${item.id})">Edit</button>
-          <button class="btn btn-sm btn-success" onclick="quickRestock(${item.id})">+ Restock</button>
-        </td>
-      </tr>
-    `;
-  }));
-  tbody.innerHTML = rows.join('');
-}
-
-function openInventoryModal(item) {
-  document.getElementById('invModalTitle').textContent = item ? 'Edit Material' : 'Add Material';
-  document.getElementById('invDbId').value = item?.id || '';
-  document.getElementById('invMaterial').value = item?.material || '';
-  document.getElementById('invMaterialCustom').value = '';
-  document.getElementById('invFacility').value = item?.facility || '16th-street';
-  document.getElementById('invQty').value = item?.quantityOnHand || 0;
-  document.getElementById('invUnit').value = item?.unit || 'sheets';
-  document.getElementById('invReorderPoint').value = item?.reorderPoint || 100;
-  document.getElementById('inventoryModal').classList.add('active');
-}
-
-async function editInventoryItem(id) {
-  const item = allInventory.find(i => i.id === id);
-  if (item) openInventoryModal(item);
-}
-
-async function quickRestock(id) {
-  const qty = parseInt(prompt('Enter quantity to add:', '500') || '0');
-  if (!qty || qty <= 0) return;
-  const item = allInventory.find(i => i.id === id);
-  if (!item) return;
-  await updateInventoryItem(id, {
-    quantityOnHand: (item.quantityOnHand || 0) + qty,
-    lastRestocked: new Date().toISOString()
-  });
-  await loadInventory();
-}
-
-async function saveInventoryItem() {
-  const id = parseInt(document.getElementById('invDbId').value) || null;
-  const materialFromList = document.getElementById('invMaterial').value;
-  const materialCustom = document.getElementById('invMaterialCustom').value.trim();
-  const material = materialCustom || materialFromList;
-  if (!material) { alert('Material name is required.'); return; }
-  const data = {
-    material,
-    facility: document.getElementById('invFacility').value,
-    quantityOnHand: parseInt(document.getElementById('invQty').value) || 0,
-    unit: document.getElementById('invUnit').value,
-    reorderPoint: parseInt(document.getElementById('invReorderPoint').value) || 0
-  };
-  try {
-    if (id) await updateInventoryItem(id, data);
-    else await addInventoryItem(data);
-    closeModal('inventoryModal');
-    await loadInventory();
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
 // ── PURCHASE ORDERS ───────────────────────────────────────
 let allPOs = [];
 let poLineItemsData = [];
@@ -2878,8 +2707,7 @@ async function markPOReceived(id) {
   if (!name) return;
   await receivePO(id, name);
   await loadPOs();
-  await loadInventory();
-  alert('✅ PO received! Inventory updated.');
+  alert('✅ PO marked as received.');
 }
 
 // ── MACHINES ──────────────────────────────────────────────
@@ -3079,7 +2907,7 @@ function renderBackupIncludedTabsList() {
   if (exclEl) {
     const excluded = typeof PULSE_ADMIN_BACKUP_EXCLUDED_TABS !== 'undefined'
       ? PULSE_ADMIN_BACKUP_EXCLUDED_TABS
-      : ['payment', 'crm-quote', 'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings'];
+      : ['payment', 'crm-quote', 'purchase-orders', 'knowledge', 'qa-rules', 'settings'];
     exclEl.innerHTML = excluded.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
   }
 }
