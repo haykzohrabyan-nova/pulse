@@ -4231,7 +4231,6 @@ function selectPwProduct(catalogId) {
   const row = pwResolveWorkflowForProduct(prod);
   pwEditorSteps = pwCloneSteps(row?.steps || []);
   pwDbRowId = row?.id || null;
-  const prod = catProducts.find(p => p.id === catalogId);
   const def = typeof getDefaultProductWorkflowForCatalogName === 'function'
     ? getDefaultProductWorkflowForCatalogName(prod?.name || '')
     : { primaryFacility: '16th' };
