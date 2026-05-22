@@ -4,7 +4,7 @@
 // ============================================================
 
 const DB_NAME = 'BazaarPrintDB';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const PULSE_UI_VERSION = 'v21';
 
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-local-notifications]')) {
@@ -14,13 +14,14 @@ if (typeof document !== 'undefined' && !document.querySelector('script[data-puls
   document.head.appendChild(localConfigScript);
 }
 
-// Load pulse-config.local.js (gitignored) if present — sets PULSE_SUPABASE_URL,
-// PULSE_SUPABASE_ANON_KEY, PULSE_STORAGE_BACKEND for supabase-client.js
+// pulse-config.js (committed) then pulse-config.local.js (optional overrides)
 if (typeof document !== 'undefined' && !document.querySelector('script[data-pulse-config]')) {
-  const pulseConfigScript = document.createElement('script');
-  pulseConfigScript.src = 'pulse-config.local.js';
-  pulseConfigScript.dataset.pulseConfig = 'true';
-  document.head.appendChild(pulseConfigScript);
+  ['pulse-config.js', 'pulse-config.local.js'].forEach((src) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.dataset.pulseConfig = 'true';
+    document.head.appendChild(s);
+  });
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -3643,11 +3644,8 @@ function openDB() {
         op.createIndex('operatorName', 'operatorName', { unique: false });
         op.createIndex('date', 'date', { unique: false });
       }
-      // Material Inventory — v3
-      if (!db.objectStoreNames.contains('inventory')) {
-        const inv = db.createObjectStore('inventory', { keyPath: 'id', autoIncrement: true });
-        inv.createIndex('material', 'material', { unique: false });
-        inv.createIndex('facility', 'facility', { unique: false });
+      if (db.objectStoreNames.contains('inventory')) {
+        db.deleteObjectStore('inventory');
       }
       // Purchase Orders — v3
       if (!db.objectStoreNames.contains('purchase_orders')) {
@@ -3686,7 +3684,7 @@ function _add(storeName, data) {
 
 const _AUTO_INC_STORES = new Set([
   'orders', 'personnel', 'devices', 'activity_log', 'knowledge_base', 'reprints',
-  'dies', 'operator_sessions', 'operator_points', 'inventory', 'purchase_orders', 'invoices',
+  'dies', 'operator_sessions', 'operator_points', 'purchase_orders', 'invoices',
 ]);
 
 /** IndexedDB auto-increment keys are numbers; onclick handlers often pass string ids. */
@@ -4201,10 +4199,10 @@ const PULSE_MIGRATION_ADMIN_TABS = [
 ];
 const PULSE_ADMIN_BACKUP_TABS = [...PULSE_MIGRATION_ADMIN_TABS];
 const PULSE_ADMIN_BACKUP_EXCLUDED_TABS = [
-  'payment', 'crm-quote', 'inventory', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
+  'payment', 'crm-quote', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
 ];
 
-/** Production IndexedDB stores in backup (no inventory / purchase_orders). */
+/** Production IndexedDB stores in backup (no purchase_orders). */
 const PULSE_BACKUP_STORES = [
   'orders', 'personnel', 'devices', 'activity_log', 'knowledge_base', 'reprints',
   'dies', 'invoices', 'operator_sessions', 'operator_points',
@@ -5608,118 +5606,6 @@ function generateDieBarcode(dieNumber) {
   return `DIE-${dieNumber}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
 }
 
-// ── Material Inventory ────────────────────────────────────
-
-function addInventoryItem(item) {
-  return _add('inventory', {
-    ...item,
-    createdAt: new Date().toISOString(),
-    lastRestocked: item.lastRestocked || null,
-    quantityOnHand: item.quantityOnHand || 0,
-    unit: item.unit || 'sheets', // sheets, linear-feet, sq-ft, rolls, units
-    reorderPoint: item.reorderPoint || 0,
-    usageHistory: [], // { date, quantityUsed, orderId }
-  });
-}
-
-function getAllInventory() { return _getAll('inventory'); }
-function updateInventoryItem(id, changes) { return _update('inventory', id, changes); }
-
-// Check if we have enough material for an order — includes pending orders' demand
-async function checkMaterialAvailability(material, facility, quantityNeeded) {
-  const all = await getAllInventory();
-  const match = all.find(i => i.material === material && i.facility === facility);
-  const onHand = match?.quantityOnHand || 0;
-
-  // Calculate total demand from pending/in-production orders using the same material
-  const allOrders = await getAllOrders();
-  const pendingDemand = allOrders
-    .filter(o => !['completed','shipped','received','cancelled'].includes(o.status) && o.material === material && o.facility === facility)
-    .reduce((sum, o) => sum + (o.sheetCount || o.quantity || 0), 0);
-
-  const totalNeeded = pendingDemand + quantityNeeded;
-  const shortfall = Math.max(0, totalNeeded - onHand);
-  const shortfallForThisOrder = Math.max(0, quantityNeeded - Math.max(0, onHand - pendingDemand));
-
-  return {
-    available: shortfallForThisOrder === 0,
-    onHand,
-    needed: quantityNeeded,
-    pendingDemand,
-    totalNeeded,
-    shortfall,
-    shortfallForThisOrder,
-    inventoryId: match?.id || null,
-    noInventoryRecord: !match,
-  };
-}
-
-// Full material check for a new order — returns warnings and suggestions
-async function checkMaterialForOrder(order) {
-  const material = order.material;
-  const facility = order.facility;
-  const sheetCount = order.sheetCount || Math.ceil((order.quantity || 0) / (order.piecesPerSheet || 1));
-
-  if (!material || !facility) return { ok: true, warnings: [] };
-
-  const check = await checkMaterialAvailability(material, facility, sheetCount);
-  const warnings = [];
-
-  if (check.noInventoryRecord) {
-    warnings.push({
-      level: 'info',
-      message: `⚠️ Material "${material}" has no inventory record at ${FACILITIES[facility]?.name || facility}. Add it in Admin → Inventory to enable tracking.`,
-    });
-    return { ok: true, warnings }; // Don't block — just inform
-  }
-
-  if (!check.available) {
-    warnings.push({
-      level: 'critical',
-      message: `🔴 MATERIAL SHORTAGE: "${material}" — need ${sheetCount.toLocaleString()} (${order.printType === 'Roll' ? 'frames' : 'sheets'}) but only ${Math.max(0, check.onHand - check.pendingDemand).toLocaleString()} available after pending orders.`,
-      details: `On hand: ${check.onHand.toLocaleString()} | Already committed: ${check.pendingDemand.toLocaleString()} | This order needs: ${sheetCount.toLocaleString()} | Shortfall: ${check.shortfallForThisOrder.toLocaleString()}`,
-    });
-  } else if (check.onHand > 0 && (check.onHand - check.totalNeeded) < (check.onHand * 0.2)) {
-    // Less than 20% remaining after this order
-    const remaining = check.onHand - check.totalNeeded;
-    warnings.push({
-      level: 'warning',
-      message: `⚠️ LOW STOCK WARNING: "${material}" will be at ${remaining.toLocaleString()} after this order + pending. Consider reordering.`,
-    });
-  }
-
-  return {
-    ok: warnings.every(w => w.level !== 'critical'),
-    warnings,
-    availability: check,
-  };
-}
-
-// Record material received from PO
-async function receiveMaterial(inventoryId, quantityReceived, poId) {
-  const item = await _get('inventory', inventoryId);
-  if (!item) return null;
-  return _update('inventory', inventoryId, {
-    quantityOnHand: (item.quantityOnHand || 0) + quantityReceived,
-    lastRestocked: new Date().toISOString(),
-    lastPO: poId,
-  });
-}
-
-// Calculate usage trend (1 week, 2 weeks, 1 month) for reorder suggestions
-async function getUsageTrend(material, facility, periodDays) {
-  const all = await getAllInventory();
-  const match = all.find(i => i.material === material && i.facility === facility);
-  if (!match || !match.usageHistory || match.usageHistory.length === 0) return { dailyAvg: 0, periodTotal: 0, suggestedOrder: 0 };
-  const cutoff = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString();
-  const recentUsage = match.usageHistory.filter(u => u.date >= cutoff);
-  const periodTotal = recentUsage.reduce((s, u) => s + (u.quantityUsed || 0), 0);
-  const dailyAvg = periodTotal / periodDays;
-  // Suggest enough for the same period + 20% buffer
-  const suggestedOrder = Math.ceil(dailyAvg * periodDays * 1.2);
-  return { dailyAvg: Math.round(dailyAvg), periodTotal, suggestedOrder };
-}
-
 // ── Purchase Orders ───────────────────────────────────────
 
 async function generatePONumber() {
@@ -5751,12 +5637,6 @@ function updatePurchaseOrder(id, changes) { return _update('purchase_orders', id
 async function receivePO(poId, receivedBy) {
   const po = await _get('purchase_orders', poId);
   if (!po) return null;
-  // Update inventory for each item in PO
-  for (const item of (po.items || [])) {
-    if (item.inventoryId) {
-      await receiveMaterial(item.inventoryId, item.quantity, po.poNumber);
-    }
-  }
   return _update('purchase_orders', poId, {
     status: 'received',
     actualDelivery: new Date().toISOString(),

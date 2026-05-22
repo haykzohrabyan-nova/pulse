@@ -42,6 +42,15 @@ const ROLE_CONFIG = {
     canViewOperator: true,
     adminTabs: ['machines','dies','organisation','products','product-workflows'],
   },
+  'account-manager': {
+    label: 'Account Manager',
+    color: '#ea580c',
+    pages: ['dashboard','job-ticket','pricing-calculator'],
+    canEditAllTickets: false,
+    canViewAdmin: false,
+    canViewProduction: false,
+    canViewOperator: false,
+  },
   shipping: {
     label: 'Shipping',
     color: '#0d9488',

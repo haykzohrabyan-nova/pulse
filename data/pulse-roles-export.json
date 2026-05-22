@@ -1,0 +1,516 @@
+{
+  "_meta": {
+    "version": 1,
+    "exportedAt": "2026-05-22T00:21:15.063Z",
+    "project": "gkyupebgulpgwugsbvny",
+    "instructions": [
+      "Edit customRoles (dropdown labels/colors), rolePermissions (matrix), personnel (Admin table).",
+      "profilesLogin: optional — updates profiles.role for Supabase sign-in (underscore keys: account_manager).",
+      "Push: node scripts/push-pulse-roles.mjs",
+      "Then Admin → Roles → Save Changes once to refresh localStorage pulse_role_overrides.",
+      "Add matching entries to auth.js ROLE_CONFIG for new keys (e.g. sales, account-manager) before deploy."
+    ],
+    "pageKeys": [
+      "dashboard",
+      "job-ticket",
+      "pricing-calculator",
+      "prepress",
+      "production-manager",
+      "operator-terminal",
+      "qc-checkout",
+      "machine-issues",
+      "shipping",
+      "organisation",
+      "admin"
+    ],
+    "adminTabKeys": [
+      "personnel",
+      "machines",
+      "dies",
+      "organisation",
+      "payment",
+      "crm-quote",
+      "products",
+      "product-workflows",
+      "roles",
+      "qa-rules",
+      "settings",
+      "backup"
+    ],
+    "remoteHad": {
+      "customRoles": true,
+      "rolePermissions": false,
+      "personnel": false
+    }
+  },
+  "customRoles": [
+    { "key": "supervisor", "label": "Supervisor", "color": "#0891b2" },
+    { "key": "account-manager", "label": "Account Manager", "color": "#ea580c" },
+    { "key": "prepress", "label": "Prepress", "color": "#6b7280" },
+    { "key": "production-manager", "label": "Production Manager", "color": "#16a34a" },
+    { "key": "operator", "label": "Operator", "color": "#6b7280" },
+    { "key": "qc", "label": "QC Inspector", "color": "#0d9488" },
+    { "key": "shipping", "label": "Shipping", "color": "#0d9488" }
+  ],
+  "rolePermissions": {
+    "supervisor": {
+      "pages": [
+        "dashboard",
+        "job-ticket",
+        "pricing-calculator",
+        "prepress",
+        "production-manager",
+        "operator-terminal",
+        "qc-checkout",
+        "shipping",
+        "machine-issues",
+        "organisation"
+      ],
+      "canEditAllTickets": true,
+      "canViewAdmin": false,
+      "canViewProduction": true,
+      "canViewOperator": true
+    },
+    "account-manager": {
+      "pages": [
+        "dashboard",
+        "job-ticket",
+        "pricing-calculator"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": false,
+      "canViewProduction": false,
+      "canViewOperator": false
+    },
+    "prepress": {
+      "pages": [
+        "dashboard",
+        "prepress",
+        "job-ticket"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": false,
+      "canViewProduction": true,
+      "canViewOperator": false
+    },
+    "production-manager": {
+      "pages": [
+        "dashboard",
+        "job-ticket",
+        "prepress",
+        "production-manager",
+        "operator-terminal",
+        "qc-checkout",
+        "shipping",
+        "machine-issues",
+        "organisation",
+        "admin"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": true,
+      "canViewProduction": true,
+      "canViewOperator": true,
+      "adminTabs": [
+        "machines",
+        "dies",
+        "organisation",
+        "products",
+        "product-workflows"
+      ]
+    },
+    "operator": {
+      "pages": [
+        "dashboard",
+        "operator-terminal",
+        "machine-issues"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": false,
+      "canViewProduction": false,
+      "canViewOperator": true
+    },
+    "qc": {
+      "pages": [
+        "dashboard",
+        "qc-checkout",
+        "shipping"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": false,
+      "canViewProduction": false,
+      "canViewOperator": false
+    },
+    "shipping": {
+      "pages": [
+        "dashboard",
+        "shipping",
+        "qc-checkout"
+      ],
+      "canEditAllTickets": false,
+      "canViewAdmin": false,
+      "canViewProduction": false,
+      "canViewOperator": false
+    }
+  },
+  "personnel": [
+    {
+      "name": "Abel",
+      "role": "operator",
+      "userId": "ABE1000",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "efa98057-9a5d-4c92-83a6-40434be78d32",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Admin",
+      "role": "admin",
+      "userId": "ADM1001",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "ed3c7772-2b33-49f4-b32e-b3d644f3771d",
+      "_loginRole": "admin"
+    },
+    {
+      "name": "Adrian",
+      "role": "operator",
+      "userId": "ADR1002",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "20b6e477-a905-4679-9960-676becc745df",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Arsen",
+      "role": "operator",
+      "userId": "ARS1003",
+      "facility": "boyd-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "dc4472d3-41f9-4091-bfe4-508ab0bffdd1",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Avgustin",
+      "role": "operator",
+      "userId": "AVG1004",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "c342f3f0-5709-4242-b27f-e7b1beef3d80",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Bob Werner",
+      "role": "account-manager",
+      "userId": "BOB1005",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "52996b80-d09f-41a3-a157-5ed2f1134410",
+      "_loginRole": "account_manager"
+    },
+    {
+      "name": "Ernesto Flores",
+      "role": "account-manager",
+      "userId": "ERN1006",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "5634f534-fecf-4799-b3fd-c674cad03186",
+      "_loginRole": "account_manager"
+    },
+    {
+      "name": "Gary Gharibyan",
+      "role": "account-manager",
+      "userId": "GAR1007",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "5275b1e3-7b69-43b2-8713-4a3857bd754b",
+      "_loginRole": "account_manager"
+    },
+    {
+      "name": "Harry",
+      "role": "operator",
+      "userId": "HAR1008",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "9a3e6c19-6a74-48dc-ae23-53f70234dc37",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Hayk Zohrabyan",
+      "role": "admin",
+      "userId": "HAY1009",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "b304b34f-cb12-4161-a733-c3b300108a3f",
+      "_loginRole": "admin"
+    },
+    {
+      "name": "Hrach",
+      "role": "prepress",
+      "userId": "HRA1010",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "a51c4eca-cb5d-47a0-b2d4-6e5c4c861dd9",
+      "_loginRole": "prepress"
+    },
+    {
+      "name": "Jaime",
+      "role": "operator",
+      "userId": "JAI1011",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "61f30c65-ddd8-4636-94c8-d8148670bdfb",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Juan",
+      "role": "operator",
+      "userId": "JUA1012",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "06c66f20-bc7d-4926-87ba-7bca62301e30",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Lisandro",
+      "role": "operator",
+      "userId": "LIS1013",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "9926cd45-0b8b-46bc-add1-dd2a51ed3500",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Mauricio",
+      "role": "qc",
+      "userId": "MAU1014",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "4df35250-a1c7-48cd-9a3b-610fcb289d0b",
+      "_loginRole": "qc"
+    },
+    {
+      "name": "Mike",
+      "role": "production-manager",
+      "userId": "MIK1015",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "b2b4a7c4-91a7-462c-8978-a3079fd46127",
+      "_loginRole": "production_manager"
+    },
+    {
+      "name": "QC Inspector",
+      "role": "qc",
+      "userId": "QCI1016",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "60d36c40-ca8d-4676-9d6e-defb5fafa74a",
+      "_loginRole": "qc"
+    },
+    {
+      "name": "Tigran Zohrabyan",
+      "role": "supervisor",
+      "userId": "TIG1017",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "c34ee7b8-4522-4f2b-8080-0ce40957b713",
+      "_loginRole": "supervisor"
+    },
+    {
+      "name": "Tiko",
+      "role": "account-manager",
+      "userId": "TIK1018",
+      "facility": "",
+      "phone": "",
+      "active": true,
+      "_profileId": "231631d6-862f-4e27-88e4-c7058fc42efd",
+      "_loginRole": "account_manager"
+    },
+    {
+      "name": "Tuoyo",
+      "role": "operator",
+      "userId": "TUO1019",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "faa154f2-50e7-4f8d-8459-4fbce3bf5001",
+      "_loginRole": "operator"
+    },
+    {
+      "name": "Vahe",
+      "role": "operator",
+      "userId": "VAH1020",
+      "facility": "16th-street",
+      "phone": "",
+      "active": true,
+      "_profileId": "f15dd4d7-6b37-489b-ac19-e6583fa024c8",
+      "_loginRole": "operator"
+    }
+  ],
+  "profilesLogin": [
+    {
+      "id": "efa98057-9a5d-4c92-83a6-40434be78d32",
+      "display_name": "Abel",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "ed3c7772-2b33-49f4-b32e-b3d644f3771d",
+      "display_name": "Admin",
+      "role": "admin",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "20b6e477-a905-4679-9960-676becc745df",
+      "display_name": "Adrian",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "dc4472d3-41f9-4091-bfe4-508ab0bffdd1",
+      "display_name": "Arsen",
+      "role": "operator",
+      "facility": "boyd-street",
+      "active": true
+    },
+    {
+      "id": "c342f3f0-5709-4242-b27f-e7b1beef3d80",
+      "display_name": "Avgustin",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "52996b80-d09f-41a3-a157-5ed2f1134410",
+      "display_name": "Bob Werner",
+      "role": "account_manager",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "5634f534-fecf-4799-b3fd-c674cad03186",
+      "display_name": "Ernesto Flores",
+      "role": "account_manager",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "5275b1e3-7b69-43b2-8713-4a3857bd754b",
+      "display_name": "Gary Gharibyan",
+      "role": "account_manager",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "9a3e6c19-6a74-48dc-ae23-53f70234dc37",
+      "display_name": "Harry",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "b304b34f-cb12-4161-a733-c3b300108a3f",
+      "display_name": "Hayk Zohrabyan",
+      "role": "admin",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "a51c4eca-cb5d-47a0-b2d4-6e5c4c861dd9",
+      "display_name": "Hrach",
+      "role": "prepress",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "61f30c65-ddd8-4636-94c8-d8148670bdfb",
+      "display_name": "Jaime",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "06c66f20-bc7d-4926-87ba-7bca62301e30",
+      "display_name": "Juan",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "9926cd45-0b8b-46bc-add1-dd2a51ed3500",
+      "display_name": "Lisandro",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "4df35250-a1c7-48cd-9a3b-610fcb289d0b",
+      "display_name": "Mauricio",
+      "role": "qc",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "b2b4a7c4-91a7-462c-8978-a3079fd46127",
+      "display_name": "Mike",
+      "role": "production_manager",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "60d36c40-ca8d-4676-9d6e-defb5fafa74a",
+      "display_name": "QC Inspector",
+      "role": "qc",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "c34ee7b8-4522-4f2b-8080-0ce40957b713",
+      "display_name": "Tigran Zohrabyan",
+      "role": "supervisor",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "231631d6-862f-4e27-88e4-c7058fc42efd",
+      "display_name": "Tiko",
+      "role": "account_manager",
+      "facility": null,
+      "active": true
+    },
+    {
+      "id": "faa154f2-50e7-4f8d-8459-4fbce3bf5001",
+      "display_name": "Tuoyo",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    },
+    {
+      "id": "f15dd4d7-6b37-489b-ac19-e6583fa024c8",
+      "display_name": "Vahe",
+      "role": "operator",
+      "facility": "16th-street",
+      "active": true
+    }
+  ]
+}

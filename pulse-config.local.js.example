@@ -1,7 +1,7 @@
-// pulse-config.local.js — Supabase connection config for Pulse
+// pulse-config.local.js — Optional overrides (gitignored)
 // ─────────────────────────────────────────────────────────────
-// Copy this file to pulse-config.local.js (gitignored) and fill in your values.
-// This file is loaded automatically by shared.js on every page.
+// Production uses committed pulse-config.js on Vercel.
+// Copy this file to pulse-config.local.js only if you need to override URL/key locally.
 //
 // To switch to Supabase backend:
 //   1. Fill in the values below
