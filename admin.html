@@ -1598,6 +1598,12 @@ function populateRoleDropdown(selectedVal) {
     opt.textContent = r.label;
     sel.appendChild(opt);
   });
+  if (current && !Array.from(sel.options).some((o) => o.value === current)) {
+    const opt = document.createElement('option');
+    opt.value = current;
+    opt.textContent = personnelRoleLabel(current);
+    sel.appendChild(opt);
+  }
   if (current) sel.value = current;
 }
 
