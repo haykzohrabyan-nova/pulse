@@ -1710,6 +1710,32 @@ async function loadJtProductCatalog() {
   }
 }
 
+async function waitForJtSupabaseSession(maxMs = 10000) {
+  if (window.PULSE_STORAGE_BACKEND !== 'supabase' || typeof window.supabaseGetSession !== 'function') return;
+  const step = 200;
+  let t = 0;
+  while (t < maxMs) {
+    try {
+      const s = await window.supabaseGetSession();
+      if (s) return;
+    } catch (_) {}
+    if (!document.getElementById('loginOverlay')) return;
+    await new Promise(r => setTimeout(r, step));
+    t += step;
+  }
+}
+
+async function refreshJtCatalogUi() {
+  await loadJtProductCatalog();
+  await populateFacilities(document.getElementById('facility')?.value);
+  populateProductTypes();
+  populateColorModes([]);
+  populateLaminationOptions([]);
+  populateFoilOptions([]);
+  const pt = document.getElementById('productType')?.value;
+  if (pt) onProductTypeChange();
+}
+
 function jtApplyAdminCatalogFromCache() {
   if (typeof getPulseCatalogProducts === 'function') _jtProductCatalog = getPulseCatalogProducts();
   if (typeof getPulseCatalogColorModes === 'function') _jtColorModes = getPulseCatalogColorModes();
@@ -1852,12 +1878,8 @@ function buildMaterialOptions(productType, facility, catalogProd) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  await loadJtProductCatalog();
-  await populateFacilities();
-  populateProductTypes();
-  populateColorModes([]);
-  populateLaminationOptions([]);
-  populateFoilOptions([]);
+  await waitForJtSupabaseSession();
+  await refreshJtCatalogUi();
   await populateAccountManagers();
   populateApplicationContainerDropdown();
   loadJtDiesCatalog();
@@ -1867,15 +1889,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (typeof registerPulseAdminConfigRefresh === 'function') {
     registerPulseAdminConfigRefresh(async () => {
       jtApplyAdminCatalogFromCache();
-      await populateFacilities(document.getElementById('facility')?.value);
-      populateProductTypes();
-      populateColorModes([]);
-      populateLaminationOptions([]);
-      populateFoilOptions([]);
-      const pt = document.getElementById('productType')?.value;
-      if (pt) onProductTypeChange();
+      await refreshJtCatalogUi();
     });
   }
+  window.addEventListener('pulse:auth-ready', () => { refreshJtCatalogUi(); });
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
