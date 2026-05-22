@@ -28,7 +28,7 @@
     <h1>Wipe Pulse data in this browser</h1>
     <p>Runs <code>wipeAllPulseBrowserData()</code> from <code>shared.js</code>. This removes:</p>
     <ul>
-      <li>All <strong>IndexedDB</strong> stores in <code>BazaarPrintDB</code> (orders, invoices, personnel, dies, inventory, …)</li>
+      <li>All <strong>IndexedDB</strong> stores in <code>BazaarPrintDB</code> (orders, invoices, personnel, dies, purchase orders, …)</li>
       <li><strong>localStorage</strong> keys starting with <code>pulse_</code>, Supabase auth tokens (<code>sb-*-auth-token</code>), and admin-next state</li>
       <li><strong>sessionStorage</strong> <code>pulse_session</code> and <code>op_operator</code> — you’ll need to log in again</li>
     </ul>
