@@ -524,6 +524,7 @@ async function submitLogin() {
   }
   applyRoleAccess(currentPage);
   injectUserBadge();
+  window.dispatchEvent(new CustomEvent('pulse:auth-ready'));
   if (typeof renderQueuePane === 'function') renderQueuePane();
 }
 
@@ -599,19 +600,32 @@ function applyRoleAccess(pageId) {
       allowedTabs = [...allowedTabs, 'backup'];
     }
     if (allowedTabs !== 'all') {
+      const allowed = Array.isArray(allowedTabs) ? allowedTabs : [];
       document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
-        const canSee = allowedTabs.includes(btn.dataset.tab);
+        const canSee = allowed.includes(btn.dataset.tab);
         btn.style.display = canSee ? '' : 'none';
       });
-      document.querySelectorAll('.tab-pane[id^="tab-"]').forEach(pane => {
+      document.querySelectorAll('.admin-content > .tab-pane[id^="tab-"]').forEach(pane => {
         const tabId = pane.id.replace('tab-', '');
-        const canSee = allowedTabs.includes(tabId);
-        pane.style.display = canSee ? '' : 'none';
-        pane.classList.toggle('active', canSee && tabId === allowedTabs[0]);
+        const canSee = allowed.includes(tabId);
+        if (!canSee) {
+          pane.style.display = 'none';
+          pane.classList.remove('active');
+        } else {
+          pane.style.removeProperty('display');
+        }
       });
-      if (allowedTabs[0] && typeof switchTab === 'function') {
-        setTimeout(() => switchTab(allowedTabs[0]), 0);
+      const first = allowed[0];
+      if (first && typeof switchTab === 'function') {
+        setTimeout(() => switchTab(first), 0);
       }
+    } else {
+      document.querySelectorAll('.admin-content > .tab-pane[id^="tab-"]').forEach(pane => {
+        pane.style.removeProperty('display');
+      });
+      document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+        btn.style.removeProperty('display');
+      });
     }
   }
 }
@@ -718,6 +732,7 @@ async function initAuth(pageId) {
 
   applyRoleAccess(pageId);
   injectUserBadge();
+  window.dispatchEvent(new CustomEvent('pulse:auth-ready'));
 }
 
 function _injectAuthLoader() {

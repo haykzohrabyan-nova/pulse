@@ -668,7 +668,19 @@ async function loadAll() {
   __orgLocalPeopleFallback = [];
 
   const { data: orgs, error: oe } = await client.from('organisations').select('*').limit(1);
-  if (oe) throw oe;
+  if (oe) {
+    if (/permission denied|42501/i.test(oe.message || '')) {
+      showBanner(
+        'Supabase denied access to organisation tables (missing GRANT). Run migration 032_grant_organisation_tables.sql on your project (Supabase SQL Editor or `npx supabase db push`). Until then, showing facilities from this browser’s local organisation seed — job tickets use the same seed, which is why they can show facilities while this tab errors.',
+        true
+      );
+      await loadAllFromJsonStore();
+      updateOrgJsonToolbarVisibility();
+      document.getElementById('orgRoot').style.display = 'flex';
+      return;
+    }
+    throw oe;
+  }
   let org = (orgs && orgs[0]) || null;
   if (!org) {
     organisationId = null;
@@ -1211,6 +1223,9 @@ async function saveFacilityModal() {
     PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
     closeModal('facilityModal');
     if (typeof showPageToast === 'function') showPageToast('Facility saved.', 'success');
+    if (typeof pulseCascadeFacilityDisplayRefresh === 'function') {
+      try { await pulseCascadeFacilityDisplayRefresh(); } catch (e) { console.warn('[Organisation] facility cascade', e); }
+    }
     renderFacilityList();
     if (!id) {
       const created = facilities.find(f => f.slug === slug);
@@ -1262,6 +1277,9 @@ async function saveFacilityModal() {
   closeModal('facilityModal');
   if (typeof showPageToast === 'function') showPageToast('Facility saved.', 'success');
   await loadAll();
+  if (typeof pulseCascadeFacilityDisplayRefresh === 'function') {
+    try { await pulseCascadeFacilityDisplayRefresh(); } catch (e) { console.warn('[Organisation] facility cascade', e); }
+  }
   if (!id) {
     const created = facilities.find(f => f.slug === slug);
     if (created) selectFacility(created.id);
@@ -1314,6 +1332,8 @@ function openHardwareModal(hwId) {
 async function saveHardwareModal() {
   if (!selectedFacilityId) return;
   const id = document.getElementById('hwModalId').value;
+  const prevHw = id ? (hardwareByFacility[selectedFacilityId] || []).find(x => x.id === id) : null;
+  const oldMachineName = prevHw?.machine_name;
   const pick = document.getElementById('hwModalMachinePick');
   const machine_name = (pick && pick.value ? pick.value : document.getElementById('hwModalName').value || '').trim();
   const opsRaw = document.getElementById('hwModalOps').value;
@@ -1366,6 +1386,13 @@ async function saveHardwareModal() {
     }
     hardwareByFacility[selectedFacilityId] = list;
     PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    if (oldMachineName && oldMachineName !== machine_name && typeof pulseCascadeMachineDisplayRename === 'function') {
+      try { await pulseCascadeMachineDisplayRename(oldMachineName, machine_name); } catch (e) { console.warn('[Organisation] machine cascade', e); }
+    }
+    if (typeof syncPulseMachineryFromOrganisation === 'function') syncPulseMachineryFromOrganisation();
+    if (typeof refreshPulseAdminData === 'function') {
+      try { await refreshPulseAdminData(); } catch (_) {}
+    }
     closeModal('hardwareModal');
     renderFacilityPanel();
     return;
@@ -1396,6 +1423,13 @@ async function saveHardwareModal() {
       active: true
     });
     if (error) { alert(error.message); return; }
+  }
+  if (oldMachineName && oldMachineName !== machine_name && typeof pulseCascadeMachineDisplayRename === 'function') {
+    try { await pulseCascadeMachineDisplayRename(oldMachineName, machine_name); } catch (e) { console.warn('[Organisation] machine cascade', e); }
+  }
+  if (typeof syncPulseMachineryFromOrganisation === 'function') syncPulseMachineryFromOrganisation();
+  if (typeof refreshPulseAdminData === 'function') {
+    try { await refreshPulseAdminData(); } catch (_) {}
   }
   closeModal('hardwareModal');
   await loadAll();
@@ -1455,6 +1489,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         : 'Could not reach Supabase. Check your network and confirm PULSE_SUPABASE_URL in pulse-config.local.js matches your project.';
     } else if (/JWT|Invalid API key|invalid api key/i.test(raw)) {
       friendly = 'Supabase rejected the API key. Open pulse-config.local.js and paste a fresh anon (public) key from Supabase → Settings → API, then reload.';
+    } else if (/permission denied|42501/i.test(raw)) {
+      friendly = 'Permission denied on organisation tables. In Supabase, run migration 032_grant_organisation_tables.sql (or apply all pending migrations with `npx supabase db push --linked`). Job tickets may still show facilities from browser localStorage until cloud org data is readable.';
     } else if (/relation .* does not exist|column .* does not exist/i.test(raw)) {
       friendly = 'Database is missing a column or table. Run the latest Supabase migrations (017–020) for organisation_facilities, then reload.';
     }
