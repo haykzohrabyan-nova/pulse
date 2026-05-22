@@ -79,6 +79,14 @@
   } else {
     document.getElementById('nav').innerHTML = renderNav('dashboard');
     initAuth('dashboard');
+    if (typeof initPulseAdminData === 'function') initPulseAdminData().catch(() => {});
+    window.addEventListener('pulse:reference-data-changed', () => {
+      if (typeof refreshPulseAdminData === 'function') {
+        refreshPulseAdminData().then(() => refresh()).catch(() => refresh());
+      } else {
+        refresh();
+      }
+    });
   }
 
   document.getElementById('page-styles').textContent = `
@@ -1141,7 +1149,7 @@
         <div><strong>Lamination:</strong> ${o.lamination || '—'}</div>
         <div><strong>Finishing:</strong> ${finishStr}</div>
         <div><strong>Cutting:</strong> ${cutStr}</div>
-        <div><strong>Facility:</strong> ${FACILITIES[o.facility]?.name || o.facility}</div>
+        <div><strong>Facility:</strong> ${typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(o.facility) : (FACILITIES[o.facility]?.name || o.facility)}</div>
         <div><strong>Due:</strong> <span class="card-due ${dueClass(o.dueDate)}">${formatDate(o.dueDate)}</span></div>
         ${o.specialNotes ? `<div style="grid-column:span 2;"><strong>Notes:</strong> ${o.specialNotes}</div>` : ''}
       </div>

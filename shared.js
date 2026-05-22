@@ -4786,6 +4786,223 @@ async function getPulseOrganisationFacilities(opts = {}) {
   return [];
 }
 
+/** In-memory facility labels (Organisation is source of truth for display names). */
+let _pulseFacilityBySlug = new Map();
+
+async function refreshPulseFacilityCache() {
+  const list = await getPulseOrganisationFacilities({ noConstFallback: false });
+  _pulseFacilityBySlug = new Map(list.map(f => [f.slug, f.name]));
+  return list;
+}
+
+function pulseNotifyReferenceDataChanged(detail = {}) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('pulse:reference-data-changed', { detail }));
+  if (window.parent !== window) {
+    try {
+      window.parent.postMessage({ type: 'pulse:reference-data-changed', ...detail }, '*');
+    } catch (_) {}
+  }
+}
+
+const PULSE_ORDER_RENAME_FIELDS = {
+  productType: 'product_type',
+  material: 'material',
+  colorMode: 'color_mode',
+  colors: 'color_mode',
+  lamination: 'lamination',
+  foilType: 'foil_type',
+  finishingNotes: 'finishing',
+};
+
+function _renameStringInArray(arr, oldVal, newVal) {
+  if (!oldVal || !newVal || oldVal === newVal || !Array.isArray(arr)) return arr;
+  let changed = false;
+  const out = arr.map(v => {
+    if (v === oldVal) { changed = true; return newVal; }
+    return v;
+  });
+  return changed ? out : arr;
+}
+
+function _renameInCatalogProducts(products, field, oldVal, newVal) {
+  if (!oldVal || !newVal || oldVal === newVal || !Array.isArray(products)) return { products, changed: 0 };
+  let changed = 0;
+  const next = products.map(p => {
+    const arr = _renameStringInArray(p[field], oldVal, newVal);
+    if (arr !== p[field]) { changed++; return { ...p, [field]: arr }; }
+    return p;
+  });
+  return { products: next, changed };
+}
+
+async function _supabaseBulkRenameColumn(table, column, oldVal, newVal) {
+  if (!oldVal || !newVal || oldVal === newVal) return 0;
+  if (typeof getSupabaseClient !== 'function') return 0;
+  const supa = getSupabaseClient();
+  if (!supa) return 0;
+  const { data, error } = await supa.from(table).update({ [column]: newVal }).eq(column, oldVal).select('id');
+  if (error) throw error;
+  return (data || []).length;
+}
+
+async function _cascadeOrdersFieldRename(orderField, oldVal, newVal) {
+  if (!oldVal || !newVal || oldVal === newVal) return 0;
+  const col = PULSE_ORDER_RENAME_FIELDS[orderField];
+  if (!col) return 0;
+  if (typeof window !== 'undefined' && window.PULSE_STORAGE_BACKEND === 'supabase') {
+    return _supabaseBulkRenameColumn('orders', col, oldVal, newVal);
+  }
+  if (typeof getAllOrders !== 'function' || typeof updateOrder !== 'function') return 0;
+  const orders = await getAllOrders();
+  let n = 0;
+  for (const o of orders) {
+    const cur = o[orderField] ?? (orderField === 'colorMode' ? o.colors : undefined);
+    if (cur !== oldVal) continue;
+    const patch = { [orderField]: newVal };
+    if (orderField === 'colorMode') patch.colors = newVal;
+    await updateOrder(o.id || o._supaId || o.orderId, patch);
+    n++;
+  }
+  return n;
+}
+
+async function pulseCascadeFacilitySlugRename(oldSlug, newSlug) {
+  if (!oldSlug || !newSlug || oldSlug === newSlug) return {};
+  const report = { personnel: 0, orders: 0, settings: 0 };
+
+  if (typeof getConfig === 'function' && typeof setConfig === 'function') {
+    const personnel = _configStoredValue(await getConfig('personnel')) || [];
+    if (Array.isArray(personnel) && personnel.some(p => p.facility === oldSlug)) {
+      const next = personnel.map(p => p.facility === oldSlug ? { ...p, facility: newSlug } : p);
+      await setConfig('personnel', next);
+      report.personnel = next.filter(p => p.facility === newSlug).length;
+    }
+    const defFac = _configStoredValue(await getConfig('defaultFacility'));
+    if (defFac === oldSlug) {
+      await setConfig('defaultFacility', newSlug);
+      report.settings = 1;
+    }
+  }
+
+  if (typeof window !== 'undefined' && window.PULSE_STORAGE_BACKEND === 'supabase') {
+    report.orders = await _supabaseBulkRenameColumn('orders', 'facility', oldSlug, newSlug);
+  } else if (typeof getAllOrders === 'function' && typeof updateOrder === 'function') {
+    const orders = await getAllOrders();
+    for (const o of orders) {
+      if (o.facility !== oldSlug) continue;
+      await updateOrder(o.id || o._supaId || o.orderId, { facility: newSlug });
+      report.orders++;
+    }
+  }
+
+  await refreshPulseFacilityCache();
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
+  pulseNotifyReferenceDataChanged({ scope: 'facility-slug', oldSlug, newSlug, report });
+  return report;
+}
+
+async function pulseCascadeFacilityDisplayRefresh() {
+  await refreshPulseFacilityCache();
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
+  pulseNotifyReferenceDataChanged({ scope: 'facility-name' });
+}
+
+async function pulseCascadeProductWorkflowName(catalogId, oldName, newName) {
+  if (!newName || (oldName === newName && !catalogId)) return 0;
+  let n = 0;
+  if (typeof window !== 'undefined' && window.PULSE_STORAGE_BACKEND === 'supabase' && typeof getSupabaseClient === 'function') {
+    const supa = getSupabaseClient();
+    if (supa && catalogId) {
+      const { data, error } = await supa.from('product_workflows')
+        .update({ product_name: newName })
+        .eq('product_catalog_id', catalogId)
+        .select('id');
+      if (error) throw error;
+      n += (data || []).length;
+    }
+    if (supa && oldName && oldName !== newName) {
+      const { data, error } = await supa.from('product_workflows')
+        .update({ product_name: newName })
+        .eq('product_name', oldName)
+        .select('id');
+      if (error) throw error;
+      n += (data || []).length;
+    }
+    return n;
+  }
+  if (typeof getAllProductWorkflows !== 'function' || typeof upsertProductWorkflow !== 'function') return 0;
+  const all = await getAllProductWorkflows();
+  for (const wf of all) {
+    const matchId = catalogId && wf.productCatalogId === catalogId;
+    const matchName = oldName && wf.productName === oldName;
+    if (!matchId && !matchName) continue;
+    await upsertProductWorkflow({ ...wf, productName: newName, productCatalogId: catalogId || wf.productCatalogId });
+    n++;
+  }
+  return n;
+}
+
+async function pulseCascadeProductRename(catalogId, oldName, newName) {
+  if (!oldName || !newName || oldName === newName) return { orders: 0, workflows: 0 };
+  const orders = await _cascadeOrdersFieldRename('productType', oldName, newName);
+  const workflows = await pulseCascadeProductWorkflowName(catalogId, oldName, newName);
+  pulseNotifyReferenceDataChanged({ scope: 'product', catalogId, oldName, newName, orders, workflows });
+  return { orders, workflows };
+}
+
+async function pulseCascadeCatalogItemRename(kind, oldName, newName, opts = {}) {
+  if (!oldName || !newName || oldName === newName) return { orders: 0, catalogProducts: 0 };
+  const report = { orders: 0, catalogProducts: 0 };
+  const productField = kind === 'colorMode' ? 'colorModes' : kind === 'finishing' ? 'finishing' : null;
+
+  if (productField && typeof getConfig === 'function' && typeof setConfig === 'function') {
+    const products = _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.products)) || [];
+    const { products: next, changed } = _renameInCatalogProducts(products, productField, oldName, newName);
+    if (changed) {
+      await setConfig(PULSE_CATALOG_KEYS.products, next);
+      report.catalogProducts = changed;
+    }
+  }
+
+  const orderField = kind === 'colorMode' ? 'colorMode'
+    : kind === 'material' ? 'material'
+    : kind === 'finishing' ? 'finishingNotes'
+    : null;
+  if (orderField) report.orders = await _cascadeOrdersFieldRename(orderField, oldName, newName);
+
+  if (kind === 'product' && opts.catalogId) {
+    report.workflows = await pulseCascadeProductWorkflowName(opts.catalogId, oldName, newName);
+  }
+
+  pulseNotifyReferenceDataChanged({ scope: 'catalog', kind, oldName, newName, report });
+  return report;
+}
+
+/** Rename machine display name in Admin capacity overrides (Organisation hardware rename). */
+async function pulseCascadeMachineDisplayRename(oldName, newName) {
+  if (!oldName || !newName || oldName === newName) return 0;
+  if (typeof getConfig !== 'function' || typeof setConfig !== 'function') return 0;
+  const cap = _configStoredValue(await getConfig('machineCapacity')) || {};
+  if (!cap[oldName]) return 0;
+  const next = { ...cap };
+  next[newName] = next[oldName];
+  delete next[oldName];
+  await setConfig('machineCapacity', next);
+  if (typeof loadPulseMachineCapacityOverrides === 'function') await loadPulseMachineCapacityOverrides();
+  pulseNotifyReferenceDataChanged({ scope: 'machine', oldName, newName });
+  return 1;
+}
+
+function _detectSingleItemRename(oldItems, newItems) {
+  const oldArr = oldItems || [];
+  const newArr = newItems || [];
+  const removed = oldArr.filter(i => !newArr.includes(i));
+  const added = newArr.filter(i => !oldArr.includes(i));
+  if (removed.length === 1 && added.length === 1) return { oldName: removed[0], newName: added[0] };
+  return null;
+}
+
 let _pulseOrgMachines = null;
 let _pulseOrgCapacityByMachine = {};
 let _pulseMachineCapOverrides = {};
@@ -4917,7 +5134,7 @@ async function initPulseAdminData(opts = {}) {
 
     syncPulseMachineryFromOrganisation();
     await loadPulseMachineCapacityOverrides();
-    const facilities = await getPulseOrganisationFacilities({ noConstFallback: true });
+    const facilities = await refreshPulseFacilityCache();
     const settings = await _loadPulseSettingsFromConfig();
 
     _pulseAdminCache = {
@@ -4947,8 +5164,11 @@ function getPulseFacilityList() {
 
 function getPulseFacilityLabel(slug) {
   if (!slug) return '—';
+  if (_pulseFacilityBySlug.has(slug)) return _pulseFacilityBySlug.get(slug);
   const found = getPulseFacilityList().find(f => f.slug === slug);
-  return found?.name || String(slug);
+  if (found?.name) return found.name;
+  if (typeof FACILITIES !== 'undefined' && FACILITIES[slug]?.name) return FACILITIES[slug].name;
+  return String(slug);
 }
 
 function getPulseCatalogProducts() {
@@ -5092,6 +5312,15 @@ if (typeof window !== 'undefined') {
   window.pulseCatalogNeedsRecovery = pulseCatalogNeedsRecovery;
   window.ensurePulseAdminCatalog = ensurePulseAdminCatalog;
   window.getPulseOrganisationFacilities = getPulseOrganisationFacilities;
+  window.refreshPulseFacilityCache = refreshPulseFacilityCache;
+  window.pulseNotifyReferenceDataChanged = pulseNotifyReferenceDataChanged;
+  window.pulseCascadeFacilityDisplayRefresh = pulseCascadeFacilityDisplayRefresh;
+  window.pulseCascadeFacilitySlugRename = pulseCascadeFacilitySlugRename;
+  window.pulseCascadeProductRename = pulseCascadeProductRename;
+  window.pulseCascadeCatalogItemRename = pulseCascadeCatalogItemRename;
+  window.pulseCascadeMachineDisplayRename = pulseCascadeMachineDisplayRename;
+  window.pulseRenameInCatalogProducts = _renameInCatalogProducts;
+  window.pulseDetectSingleItemRename = _detectSingleItemRename;
   window.syncPulseMachineryFromOrganisation = syncPulseMachineryFromOrganisation;
   window.loadPulseMachineCapacityOverrides = loadPulseMachineCapacityOverrides;
   window.getEffectiveMachineCapacity = getEffectiveMachineCapacity;

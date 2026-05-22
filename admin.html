@@ -4,12 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Bazaar Print</title>
+  <style id="admin-tab-critical">
+    /* Must load even if page script fails — only one admin tab visible at a time */
+    .admin-content > .tab-pane { display: none !important; }
+    .admin-content > .tab-pane.active { display: block !important; }
+    #tab-organisation.active,
+    #tab-payment.active,
+    #tab-crm-quote.active { padding: 0 !important; }
+  </style>
   <script src="shared.js?v=20260521-BACKUP4"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260521-PWCFG3"></script>
-  <script src="auth.js?v=20260521-SUPASESS2"></script>
+  <script src="auth.js?v=20260522-TABS1"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -1247,11 +1255,15 @@ document.getElementById('page-styles').textContent = `
   .pw-pick-alt input[type="checkbox"] { width:16px; height:16px; accent-color:#d97706; flex-shrink:0; }
 `;
 
-// Populate KB machine options
+// Populate KB machine options (modal may be unused on some tabs)
 const kbMachineEl = document.getElementById('kbMachine');
-Object.keys(MACHINES).forEach(m => kbMachineEl.innerHTML += `<option value="${m}">${m}</option>`);
+if (kbMachineEl && typeof MACHINES !== 'undefined') {
+  Object.keys(MACHINES).forEach(m => { kbMachineEl.innerHTML += `<option value="${m}">${m}</option>`; });
+}
 const kbOpEl = document.getElementById('kbOperation');
-OPERATIONS.forEach(o => kbOpEl.innerHTML += `<option value="${o}">${o}</option>`);
+if (kbOpEl && typeof OPERATIONS !== 'undefined') {
+  OPERATIONS.forEach(o => { kbOpEl.innerHTML += `<option value="${o}">${o}</option>`; });
+}
 
 // ── Active Tab ────────────────────────────────────────────
 const ADMIN_TAB_IDS = [
@@ -1265,10 +1277,18 @@ function getAdminTabFromUrl() {
 }
 
 let activeTab = 'personnel';
+function adminTabPanes() {
+  return document.querySelectorAll('.admin-content > .tab-pane[id^="tab-"]');
+}
+
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+  adminTabPanes().forEach(p => {
+    const on = p.id === `tab-${tab}`;
+    p.classList.toggle('active', on);
+    if (on) p.style.removeProperty('display');
+  });
   loadTab(tab);
 }
 
@@ -1889,21 +1909,30 @@ async function waitForSupabaseSession() {
   }
 }
 
+async function onPulseReferenceDataChanged() {
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
+  if (activeTab === 'personnel') await loadPersonnel();
+  else if (activeTab === 'machines') renderMachines();
+  else if (activeTab === 'products') await loadProductsTab();
+  else if (activeTab === 'product-workflows') await loadProductWorkflowsTab();
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
   await waitForSupabaseSession();
   await recoverCatalogIfNeeded();
   await loadCustomRoles();
   await seedKnowledge();
   const urlTab = getAdminTabFromUrl();
-  if (urlTab) {
-    setTimeout(() => switchTab(urlTab), 50);
-  } else {
-    await loadTab(activeTab);
-  }
+  switchTab(urlTab || activeTab);
   onDBUpdate(async (data) => { await loadTab(activeTab); });
   window.addEventListener('pulse:auth-ready', async () => {
     await recoverCatalogIfNeeded();
-    await loadTab(activeTab);
+    switchTab(activeTab);
+  });
+  window.addEventListener('pulse:reference-data-changed', () => { onPulseReferenceDataChanged(); });
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'pulse:reference-data-changed') onPulseReferenceDataChanged();
   });
   // Update app dept total when inputs change
   ['appDeptPeople', 'appDeptUnitsPerPerson'].forEach(id => {
@@ -1951,7 +1980,7 @@ async function loadPersonnel() {
       <td style="font-weight:600;">${p.name}</td>
       <td>${personnelRoleLabel(p.role)}</td>
       <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
-      <td>${FACILITIES[p.facility]?.name || p.facility || '—'}</td>
+      <td>${typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(p.facility) : (FACILITIES[p.facility]?.name || p.facility || '—')}</td>
       <td>${p.phone || '—'}</td>
       <td><span class="${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
       <td>
@@ -3391,10 +3420,21 @@ function openCatColorModeModal(id) {
   document.getElementById('catColorModeModal').classList.add('active');
 }
 
+function showCascadeToast(label, report) {
+  if (!report || typeof showPageToast !== 'function') return;
+  const parts = [];
+  if (report.orders) parts.push(`${report.orders} order(s)`);
+  if (report.catalogProducts) parts.push(`${report.catalogProducts} product config(s)`);
+  if (report.workflows) parts.push(`${report.workflows} workflow(s)`);
+  if (parts.length) showPageToast(`${label}: updated ${parts.join(', ')}.`, 'success');
+}
+
 async function saveCatColorMode() {
   const name = document.getElementById('catCMName').value.trim();
   if (!name) { alert('Name is required.'); return; }
   const description = document.getElementById('catCMDesc').value.trim();
+  const prev = catEditingId.colorModes ? catColorModes.find(x => x.id === catEditingId.colorModes) : null;
+  const oldName = prev?.name;
   if (catEditingId.colorModes) {
     const idx = catColorModes.findIndex(x => x.id === catEditingId.colorModes);
     if (idx >= 0) catColorModes[idx] = { ...catColorModes[idx], name, description };
@@ -3402,8 +3442,21 @@ async function saveCatColorMode() {
     catColorModes.push({ id: catalogUID(), name, description });
   }
   await setConfig(CAT_KEYS.colorModes, catColorModes);
+  let report = null;
+  if (oldName && oldName !== name && typeof pulseRenameInCatalogProducts === 'function') {
+    const { products, changed } = pulseRenameInCatalogProducts(catProducts, 'colorModes', oldName, name);
+    if (changed) {
+      catProducts = products;
+      await setConfig(CAT_KEYS.products, catProducts);
+    }
+    if (typeof pulseCascadeCatalogItemRename === 'function') {
+      report = await pulseCascadeCatalogItemRename('colorMode', oldName, name);
+    }
+  }
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
   closeModal('catColorModeModal');
   renderCatColorModes();
+  showCascadeToast('Color mode renamed', report);
 }
 
 async function deleteCatColorMode(id) {
@@ -3468,6 +3521,7 @@ function removeCatMatItem(idx) {
 async function saveCatMaterial() {
   const category = document.getElementById('catMatCategory').value.trim();
   if (!category) { alert('Category name is required.'); return; }
+  const prev = catEditingId.materials ? catMaterials.find(x => x.id === catEditingId.materials) : null;
   if (catEditingId.materials) {
     const idx = catMaterials.findIndex(x => x.id === catEditingId.materials);
     if (idx >= 0) catMaterials[idx] = { ...catMaterials[idx], category, items: [...catMatItems] };
@@ -3475,8 +3529,23 @@ async function saveCatMaterial() {
     catMaterials.push({ id: catalogUID(), category, items: [...catMatItems] });
   }
   await setConfig(CAT_KEYS.materials, catMaterials);
+  let report = null;
+  const pair = prev && typeof pulseDetectSingleItemRename === 'function'
+    ? pulseDetectSingleItemRename(prev.items, catMatItems) : null;
+  if (pair && typeof pulseCascadeCatalogItemRename === 'function') {
+    if (typeof pulseRenameInCatalogProducts === 'function') {
+      const { products, changed } = pulseRenameInCatalogProducts(catProducts, 'materials', pair.oldName, pair.newName);
+      if (changed) {
+        catProducts = products;
+        await setConfig(CAT_KEYS.products, catProducts);
+      }
+    }
+    report = await pulseCascadeCatalogItemRename('material', pair.oldName, pair.newName);
+  }
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
   closeModal('catMaterialModal');
   renderCatMaterials();
+  showCascadeToast('Material renamed', report);
 }
 
 async function deleteCatMaterial(id) {
@@ -3574,6 +3643,8 @@ async function saveCatFinishing() {
   const versions = collectCatFinVersionsFromDom();
   const pending = (document.getElementById('catFinVersionInput')?.value || '').trim();
   if (pending && !versions.some(v => v.toLowerCase() === pending.toLowerCase())) versions.push(pending);
+  const prev = catEditingId.finishing ? catFinishing.find(x => x.id === catEditingId.finishing) : null;
+  const oldName = prev?.name;
   if (catEditingId.finishing) {
     const idx = catFinishing.findIndex(x => x.id === catEditingId.finishing);
     if (idx >= 0) catFinishing[idx] = { ...catFinishing[idx], name, versions };
@@ -3582,8 +3653,21 @@ async function saveCatFinishing() {
   }
   catFinishing = normalizeCatFinishingList(catFinishing);
   await setConfig(CAT_KEYS.finishing, catFinishing);
+  let report = null;
+  if (oldName && oldName !== name && typeof pulseRenameInCatalogProducts === 'function') {
+    const { products, changed } = pulseRenameInCatalogProducts(catProducts, 'finishing', oldName, name);
+    if (changed) {
+      catProducts = products;
+      await setConfig(CAT_KEYS.products, catProducts);
+    }
+    if (typeof pulseCascadeCatalogItemRename === 'function') {
+      report = await pulseCascadeCatalogItemRename('finishing', oldName, name);
+    }
+  }
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
   closeModal('catFinishingModal');
   renderCatFinishing();
+  showCascadeToast('Finishing renamed', report);
 }
 
 async function deleteCatFinishing(id) {
@@ -3595,6 +3679,7 @@ async function deleteCatFinishing(id) {
 
 // ── Products ───────────────────────────────────────────────
 function catFacilityLabel(slug) {
+  if (typeof getPulseFacilityLabel === 'function') return getPulseFacilityLabel(slug);
   if (typeof FACILITIES !== 'undefined' && FACILITIES[slug]) return FACILITIES[slug].name;
   return String(slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -3711,6 +3796,10 @@ async function saveCatProduct() {
   const name = document.getElementById('catProdName').value.trim();
   if (!name) { alert('Product name is required.'); return; }
 
+  const prev = catEditingId.products ? catProducts.find(x => x.id === catEditingId.products) : null;
+  const oldName = prev?.name;
+  const catalogId = prev?.id || catEditingId.products;
+
   const data = {
     name,
     facilities:   [...document.querySelectorAll('input[name="catProdFac"]:checked')].map(el => el.value),
@@ -3722,15 +3811,26 @@ async function saveCatProduct() {
     notes:        document.getElementById('catProdNotes').value.trim(),
   };
 
+  let savedId = catalogId;
   if (catEditingId.products) {
     const idx = catProducts.findIndex(x => x.id === catEditingId.products);
     if (idx >= 0) catProducts[idx] = { ...catProducts[idx], ...data };
+    savedId = catProducts[idx].id;
   } else {
-    catProducts.push({ id: catalogUID(), ...data });
+    savedId = catalogUID();
+    catProducts.push({ id: savedId, ...data });
   }
   await setConfig(CAT_KEYS.products, catProducts);
+  let report = null;
+  if (oldName && oldName !== name && typeof pulseCascadeProductRename === 'function') {
+    report = await pulseCascadeProductRename(savedId, oldName, name);
+  }
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
   closeModal('catProductModal');
   renderCatProducts();
+  if (report && (report.orders || report.workflows)) {
+    showCascadeToast('Product renamed', { orders: report.orders, workflows: report.workflows });
+  }
 }
 
 async function deleteCatProduct(id) {
