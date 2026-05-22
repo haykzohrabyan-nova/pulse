@@ -1684,12 +1684,31 @@ let _jtCatalogMaterials = null; // from catalogMaterials
 async function loadJtProductCatalog() {
   try {
     if (typeof initPulseAdminData === 'function') {
-      const cache = await initPulseAdminData();
+      const cache = await initPulseAdminData({ seedCatalog: true });
       const catalog = cache?.catalog || {};
       _jtProductCatalog = catalog.products || [];
       _jtColorModes = catalog.colorModes || [];
       _jtCatalogFinishing = catalog.finishing || [];
       _jtCatalogMaterials = catalog.materials || [];
+      if (!_jtProductCatalog.length && typeof repairPulseAdminCatalog === 'function') {
+        await repairPulseAdminCatalog({ force: true });
+        if (typeof refreshPulseAdminData === 'function') {
+          await refreshPulseAdminData();
+          jtApplyAdminCatalogFromCache();
+        }
+      }
+      if (!_jtProductCatalog.length && typeof getConfig === 'function') {
+        const [prodCfg, cmCfg, finCfg, matCfg] = await Promise.all([
+          getConfig('productCatalog'),
+          getConfig('catalogColorModes'),
+          getConfig('catalogFinishing'),
+          getConfig('catalogMaterials'),
+        ]);
+        _jtProductCatalog = (prodCfg && (prodCfg.value || prodCfg)) || [];
+        _jtColorModes = (cmCfg && (cmCfg.value || cmCfg)) || [];
+        _jtCatalogFinishing = (finCfg && (finCfg.value || finCfg)) || [];
+        _jtCatalogMaterials = (matCfg && (matCfg.value || matCfg)) || [];
+      }
       return;
     }
     const [prodCfg, cmCfg, finCfg, matCfg] = await Promise.all([
@@ -2325,7 +2344,7 @@ async function populateFacilities(preserveValue) {
   let facs = typeof getPulseFacilityList === 'function' && getPulseFacilityList().length
     ? getPulseFacilityList()
     : (typeof getPulseOrganisationFacilities === 'function'
-      ? await getPulseOrganisationFacilities({ noConstFallback: true })
+      ? await getPulseOrganisationFacilities({ noConstFallback: false })
       : []);
 
   sel.innerHTML = '<option value="">— Select Facility —</option>';
