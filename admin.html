@@ -212,9 +212,6 @@
   </div>
   <p style="color:#6b7280;font-size:13px;margin:0 0 14px;">Check a cell to grant access, uncheck to revoke. Changes take effect on next login.</p>
   <div id="rolesMatrixWrap" style="overflow-x:auto;"></div>
-  <h3 style="font-size:15px;font-weight:700;margin:24px 0 10px;">Admin tab access</h3>
-  <p style="color:#6b7280;font-size:13px;margin:0 0 10px;">Which tabs appear on the Admin page for each role (requires <strong>View Admin</strong>).</p>
-  <div id="rolesAdminTabsWrap" style="overflow-x:auto;"></div>
   <div style="margin-top:28px;">
     <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Current User Assignments</h3>
     <div id="roleUserList"></div>
@@ -1533,21 +1530,6 @@ const ROLES_SPECIAL = [
   { key: 'canViewOperator',    label: 'View Operator' },
 ];
 
-const ROLES_ADMIN_TABS = [
-  { key: 'personnel', label: 'Personnel' },
-  { key: 'machines', label: 'Machines' },
-  { key: 'dies', label: 'Dies' },
-  { key: 'organisation', label: 'Organisation' },
-  { key: 'payment', label: 'Payment' },
-  { key: 'crm-quote', label: 'Quote' },
-  { key: 'products', label: 'Products' },
-  { key: 'product-workflows', label: 'Workflow Config' },
-  { key: 'roles', label: 'Roles' },
-  { key: 'qa-rules', label: 'QA Rules' },
-  { key: 'settings', label: 'Settings' },
-  { key: 'backup', label: 'Export / Import' },
-];
-
 const BACKUP_ADMIN_TAB_LABELS = {
   personnel: '👥 Personnel',
   machines: '⚙️ Machines',
@@ -1566,6 +1548,7 @@ let _roleOverrides = {};
 
 // Personnel role dropdown (synced with config.customRoles in Supabase)
 const PERSONNEL_ROLE_OPTIONS = [
+  { key: 'admin', label: 'Admin', color: '#7c3aed' },
   { key: 'supervisor', label: 'Supervisor', color: '#0891b2' },
   { key: 'account-manager', label: 'Account Manager', color: '#ea580c' },
   { key: 'prepress', label: 'Prepress', color: '#6b7280' },
@@ -1577,13 +1560,25 @@ const PERSONNEL_ROLE_OPTIONS = [
 
 let _customRoles = [];
 
+/** Merge DB/custom roles with canonical options so Admin is never missing from the dropdown. */
+function mergePersonnelRoleList(list) {
+  const byKey = new Map((Array.isArray(list) ? list : []).map((r) => [r.key, r]));
+  PERSONNEL_ROLE_OPTIONS.forEach((r) => {
+    if (!byKey.has(r.key)) byKey.set(r.key, { ...r });
+  });
+  return Array.from(byKey.values()).sort((a, b) =>
+    String(a.label || a.key).localeCompare(String(b.label || b.key))
+  );
+}
+
 async function loadCustomRoles(force) {
   if (!force && _customRoles.length) return;
   const saved = await getConfig('customRoles');
-  if (saved?.value && Array.isArray(saved.value) && saved.value.length) {
-    _customRoles = saved.value;
-  } else {
-    _customRoles = PERSONNEL_ROLE_OPTIONS.map((r) => ({ ...r }));
+  const fromDb = saved?.value && Array.isArray(saved.value) && saved.value.length
+    ? saved.value
+    : null;
+  _customRoles = mergePersonnelRoleList(fromDb || PERSONNEL_ROLE_OPTIONS);
+  if (!fromDb || fromDb.length !== _customRoles.length || !fromDb.some((r) => r.key === 'admin')) {
     await setConfig('customRoles', _customRoles);
   }
 }
@@ -1738,8 +1733,6 @@ async function renderRoles() {
   html += `</tbody></table></div>`;
   wrap.innerHTML = html;
 
-  renderRolesAdminTabsMatrix();
-
   // User assignments list
   const el = document.getElementById('roleUserList');
   if (!el) return;
@@ -1758,61 +1751,10 @@ async function renderRoles() {
   el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows || '<div style="padding:16px;color:#9ca3af;font-size:13px;">No users found.</div>'}</div>`;
 }
 
-function _baseAdminTabsForRole(roleKey, baseCfg) {
-  if (baseCfg.adminTabs === 'all' || (roleKey === 'admin' && baseCfg.canViewAdmin)) {
-    return ROLES_ADMIN_TABS.map(t => t.key);
-  }
-  if (baseCfg.canViewAdmin && Array.isArray(baseCfg.adminTabs) && baseCfg.adminTabs.length) {
-    const tabs = [...baseCfg.adminTabs];
-    if (!tabs.includes('backup')) tabs.push('backup');
-    return tabs;
-  }
-  if (Array.isArray(baseCfg.adminTabs) && baseCfg.adminTabs.length) return [...baseCfg.adminTabs];
-  return baseCfg.canViewAdmin ? ROLES_ADMIN_TABS.map(t => t.key) : [];
-}
-
-function renderRolesAdminTabsMatrix() {
-  const wrap = document.getElementById('rolesAdminTabsWrap');
-  if (!wrap) return;
-  const thBase = 'padding:6px 3px;border-bottom:2px solid #e2e8f0;min-width:42px;max-width:42px;background:#f8fafc;text-align:center;vertical-align:bottom;';
-  const rotLabel = (text) =>
-    `<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;font-weight:600;color:#374151;padding:4px 0;margin:0 auto;">${text}</div>`;
-  let html = `<div style="border:1px solid #e2e8f0;border-radius:12px;background:#fff;">
-    <table style="border-collapse:collapse;font-size:12px;min-width:max-content;width:100%;">
-      <thead><tr>
-        <th style="position:sticky;left:0;z-index:3;background:#f8fafc;padding:10px 16px;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;min-width:200px;text-align:left;">Role</th>
-        ${ROLES_ADMIN_TABS.map(t => `<th style="${thBase}">${rotLabel(t.label)}</th>`).join('')}
-      </tr></thead><tbody>`;
-  _customRoles.forEach((role, ri) => {
-    const roleKey = role.key;
-    const baseCfg = ROLE_CONFIG[roleKey] || {};
-    const overrides = _roleOverrides[roleKey] || {};
-    const baseTabs = _baseAdminTabsForRole(roleKey, baseCfg);
-    const tabs = Array.isArray(overrides.adminTabs) && overrides.adminTabs.length
-      ? overrides.adminTabs
-      : baseTabs;
-    const bg = ri % 2 === 0 ? '#fff' : '#f9fafb';
-    const isAdminRole = roleKey === 'admin';
-    html += `<tr><td style="position:sticky;left:0;z-index:1;background:${bg};padding:7px 16px;border-bottom:1px solid #f1f5f9;border-right:2px solid #e2e8f0;font-weight:600;">${role.label || roleKey}</td>`;
-    ROLES_ADMIN_TABS.forEach(t => {
-      const checked = tabs.includes(t.key) ? 'checked' : '';
-      const disabled = isAdminRole ? 'disabled title="Admin has all admin tabs"' : '';
-      html += `<td style="padding:3px;text-align:center;border-bottom:1px solid #f1f5f9;background:${bg};">
-        <input type="checkbox" ${checked} ${disabled} data-role="${roleKey}" data-admin-tab="${t.key}"
-          onchange="roleMatrixChange(this)" style="width:15px;height:15px;accent-color:#6366f1;">
-      </td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table></div>';
-  wrap.innerHTML = html;
-}
-
 function roleMatrixChange(cb) {
   const role = cb.dataset.role;
   const page = cb.dataset.page;
   const special = cb.dataset.special;
-  const adminTab = cb.dataset.adminTab;
   if (!_roleOverrides[role]) _roleOverrides[role] = {};
 
   if (page) {
@@ -1828,16 +1770,6 @@ function roleMatrixChange(cb) {
     }
   } else if (special) {
     _roleOverrides[role][special] = cb.checked;
-  } else if (adminTab) {
-    const baseCfg = ROLE_CONFIG[role] || {};
-    if (!Array.isArray(_roleOverrides[role].adminTabs) || _roleOverrides[role].adminTabs.length === 0) {
-      _roleOverrides[role].adminTabs = [..._baseAdminTabsForRole(role, baseCfg)];
-    }
-    if (cb.checked) {
-      if (!_roleOverrides[role].adminTabs.includes(adminTab)) _roleOverrides[role].adminTabs.push(adminTab);
-    } else {
-      _roleOverrides[role].adminTabs = _roleOverrides[role].adminTabs.filter(t => t !== adminTab);
-    }
   }
 
   const status = document.getElementById('rolesSaveStatus');

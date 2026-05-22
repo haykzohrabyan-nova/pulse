@@ -102,8 +102,6 @@ workflow_override_log (PM machine swap audit; migration 023)
 dies (customer_id → customers)
 
 materials
-  └── inventory (material_id, per facility)
-        └── inventory_usage (inventory_id, order_id)
 
 vendors
   ├── vendor_materials (vendor_id)
