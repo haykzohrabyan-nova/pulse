@@ -370,6 +370,132 @@ function useOrganisationLocalJson() {
   return false;
 }
 
+async function getSupabaseSessionSafe() {
+  if (typeof window.supabaseGetSession !== 'function') return null;
+  try { return await window.supabaseGetSession(); } catch (_) { return null; }
+}
+
+function defaultOrganisationBundleForSeed() {
+  if (window.PulseOrgJsonStore && typeof PulseOrgJsonStore.defaultBundle === 'function') {
+    return PulseOrgJsonStore.defaultBundle();
+  }
+  return {
+    organisation: {
+      id: '00000000-0000-4000-8000-000000000001',
+      name: 'Bazaar Print',
+      short_description: 'Master production organisation for Pulse — facilities and hardware below.',
+      website_url: '',
+      logo_url: ''
+    },
+    facilities: [],
+    hardwareByFacilityId: {}
+  };
+}
+
+async function seedOrganisationDefaultsInSupabase(client) {
+  const bundle = defaultOrganisationBundleForSeed();
+  const orgPayload = {
+    id: bundle.organisation.id || undefined,
+    name: bundle.organisation.name || 'Bazaar Print',
+    short_description: bundle.organisation.short_description || '',
+    website_url: bundle.organisation.website_url || null,
+    logo_url: bundle.organisation.logo_url || null
+  };
+
+  let orgRow;
+  {
+    const { data, error } = await client
+      .from('organisations')
+      .upsert(orgPayload, { onConflict: 'id' })
+      .select('*')
+      .single();
+    if (error && /website_url/i.test(error.message || '')) {
+      const fallbackPayload = { ...orgPayload };
+      delete fallbackPayload.website_url;
+      const retry = await client
+        .from('organisations')
+        .upsert(fallbackPayload, { onConflict: 'id' })
+        .select('*')
+        .single();
+      if (retry.error) throw retry.error;
+      orgRow = retry.data;
+    } else if (error) {
+      throw error;
+    } else {
+      orgRow = data;
+    }
+  }
+
+  const facilitiesSeed = Array.isArray(bundle.facilities) ? bundle.facilities : [];
+  for (const fac of facilitiesSeed) {
+    const facPayload = {
+      id: fac.id || undefined,
+      organisation_id: orgRow.id,
+      slug: fac.slug,
+      name: fac.name || fac.slug,
+      description: fac.description || '',
+      address: fac.address || null,
+      manager_id: fac.manager_id || null,
+      sort_order: fac.sort_order ?? 0
+    };
+    let facErr = null;
+    {
+      const { error } = await client
+        .from('organisation_facilities')
+        .upsert(facPayload, { onConflict: 'organisation_id,slug' });
+      facErr = error;
+    }
+    if (facErr && /address|manager_id/i.test(facErr.message || '')) {
+      const fallbackFacPayload = {
+        id: facPayload.id,
+        organisation_id: facPayload.organisation_id,
+        slug: facPayload.slug,
+        name: facPayload.name,
+        description: facPayload.description,
+        sort_order: facPayload.sort_order
+      };
+      const retry = await client
+        .from('organisation_facilities')
+        .upsert(fallbackFacPayload, { onConflict: 'organisation_id,slug' });
+      if (retry.error) throw retry.error;
+    } else if (facErr) {
+      throw facErr;
+    }
+  }
+
+  const { data: facRows, error: facRowsErr } = await client
+    .from('organisation_facilities')
+    .select('id, slug')
+    .eq('organisation_id', orgRow.id);
+  if (facRowsErr) throw facRowsErr;
+  const facIdBySlug = new Map((facRows || []).map(f => [f.slug, f.id]));
+  const hwByFac = bundle.hardwareByFacilityId || {};
+
+  for (const fac of facilitiesSeed) {
+    const facilityId = facIdBySlug.get(fac.slug);
+    if (!facilityId) continue;
+    const hwRows = Array.isArray(hwByFac[fac.id]) ? hwByFac[fac.id] : [];
+    for (const hw of hwRows) {
+      const hwPayload = {
+        id: hw.id || undefined,
+        facility_id: facilityId,
+        machine_name: hw.machine_name || '',
+        operations: Array.isArray(hw.operations) ? hw.operations : [],
+        daily_capacity_value: hw.daily_capacity_value ?? null,
+        daily_capacity_unit: hw.daily_capacity_unit ?? null,
+        notes: hw.notes || '',
+        sort_order: hw.sort_order ?? 0,
+        active: hw.active !== false
+      };
+      const { error } = await client
+        .from('organisation_hardware')
+        .upsert(hwPayload, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  }
+  return orgRow;
+}
+
 async function waitForSupabaseClient(maxMs) {
   const cap = maxMs == null ? 10000 : maxMs;
   const step = 150;
@@ -648,7 +774,7 @@ async function loadAllFromJsonStore() {
   document.getElementById('orgRoot').style.display = 'flex';
 }
 
-async function loadAll() {
+async function loadAll(opts = {}) {
   if (useOrganisationLocalJson()) {
     await loadAllFromJsonStore();
     return;
@@ -658,6 +784,16 @@ async function loadAll() {
   if (!client) {
     document.getElementById('orgRoot').style.display = 'flex';
     showBanner('Supabase client did not become ready. Check pulse-config.local.js (URL + anon key) and the browser console, or set PULSE_ORG_STORAGE = "local-json" to use local JSON only.', true);
+    return;
+  }
+  const supaSession = await getSupabaseSessionSafe();
+  if (!supaSession) {
+    showBanner(
+      'Supabase session is missing, so cloud organisation rows are not readable in this tab. Please log in again. Showing local fallback data.',
+      true
+    );
+    await loadAllFromJsonStore();
+    document.getElementById('orgRoot').style.display = 'flex';
     return;
   }
   hideBanner();
@@ -683,6 +819,18 @@ async function loadAll() {
   }
   let org = (orgs && orgs[0]) || null;
   if (!org) {
+    if (opts.autoSeed !== false) {
+      try {
+        await seedOrganisationDefaultsInSupabase(client);
+        if (typeof showPageToast === 'function') {
+          showPageToast('Organisation defaults restored from seed.', 'success');
+        }
+        await loadAll({ autoSeed: false });
+        return;
+      } catch (seedError) {
+        console.warn('[Organisation] seed from defaults failed:', seedError);
+      }
+    }
     organisationId = null;
     organisationSaved = false;
     organisationEditMode = true;
