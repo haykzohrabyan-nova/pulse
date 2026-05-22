@@ -1911,7 +1911,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       await refreshJtCatalogUi();
     });
   }
-  window.addEventListener('pulse:auth-ready', () => { refreshJtCatalogUi(); });
+  window.addEventListener('pulse:auth-ready', async () => {
+    await refreshJtCatalogUi();
+    await renderQueuePane();
+  });
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -4985,11 +4988,13 @@ async function renderQueuePane() {
 
 
 // Init queue pane — visible by default on left side
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   _queuePaneVisible = true;
   document.getElementById('queuePane').classList.remove('collapsed');
   document.getElementById('showQueueBtn').style.display = 'none';
-  renderQueuePane();
+  await waitForJtSupabaseSession();
+  await renderQueuePane();
+  setTimeout(() => { renderQueuePane(); }, 1200);
 }, { once: false });
 
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
