@@ -487,18 +487,32 @@ async function submitLogin() {
   let resolvedRole = String(personRecord.role || 'operator').replace(/_/g, '-');
 
   if (_supaActive()) {
-    // ── Supabase: sign in with derived email + userId as password ──
+    // ── Supabase: require a real auth session in cloud mode ──
     setLoading(true);
     try {
       const email = _getUserEmail(selectedName);
-      await window.supabaseSignIn(email, enteredId);
+      let signedIn = false;
+      try {
+        await window.supabaseSignIn(email, enteredId);
+        signedIn = true;
+      } catch (_) {
+        // Fallback for seeded users (shared temporary password).
+        if (LOCAL_DEFAULT_PASSWORD && enteredId !== LOCAL_DEFAULT_PASSWORD) {
+          await window.supabaseSignIn(email, LOCAL_DEFAULT_PASSWORD);
+          signedIn = true;
+        }
+      }
+      if (!signedIn) throw new Error('Supabase sign-in failed');
+      const session = await window.supabaseGetSession();
+      if (!session?.user?.id) throw new Error('Supabase session not established');
       const profile = await window.supabaseGetProfile();
       if (profile) {
         resolvedRole = String(profile.role || resolvedRole).replace(/_/g, '-');
         resolvedName = profile.display_name || resolvedName;
       }
     } catch (_) {
-      // Personnel record matched — allow login even if Supabase auth fails
+      _showLoginError('Cloud login failed. Use your Supabase password (or Pulse2026! if not changed yet).');
+      return;
     } finally {
       setLoading(false);
     }
