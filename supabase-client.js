@@ -1543,9 +1543,13 @@
     catch (e) { console.error('[Pulse/Supabase] getAllMachines:', e); return []; }
   };
 
-  window.getAllProductWorkflows = async function () {
+  window.getAllProductWorkflows = async function (opts = {}) {
     try { return await _getAllProductWorkflows(); }
-    catch (e) { console.error('[Pulse/Supabase] getAllProductWorkflows:', e); return []; }
+    catch (e) {
+      console.error('[Pulse/Supabase] getAllProductWorkflows:', e);
+      if (opts.strict) throw e;
+      return [];
+    }
   };
 
   window.getProductWorkflowByCatalogId = async function (catalogId) {

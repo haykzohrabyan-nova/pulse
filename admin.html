@@ -3275,7 +3275,8 @@ async function resetAllWorkflowsToDefaults() {
     pwSelectedCatalogId = catProducts[0]?.id || null;
     await loadProductWorkflowsTab();
     if (pwSelectedCatalogId) {
-      const row = pwWorkflowByCatalog.get(pwSelectedCatalogId);
+      const prod0 = catProducts.find(p => p.id === pwSelectedCatalogId);
+      const row = pwResolveWorkflowForProduct(prod0);
       pwEditorSteps = pwCloneSteps(row?.steps || []);
       pwDbRowId = row?.id || null;
       renderPwEditor();
@@ -3843,6 +3844,7 @@ async function openProductWorkflowForCatalog(catalogId) {
 // ── PRODUCT WORKFLOWS ─────────────────────────────────────
 let pwMachines = [];
 let pwWorkflowByCatalog = new Map();
+let pwWorkflowByName = new Map();
 let pwSelectedCatalogId = null;
 let pwEditorSteps = [];
 let pwDbRowId = null;
@@ -3977,6 +3979,15 @@ function pwCloneSteps(steps) {
 }
 
 async function ensureCatProductsForPw() {
+  if (window.PULSE_STORAGE_BACKEND === 'supabase') {
+    const prodCfg = await getConfig(CAT_KEYS.products);
+    catProducts = Array.isArray(prodCfg) ? prodCfg : (prodCfg?.value ?? null);
+    if (!catProducts?.length && typeof repairPulseAdminCatalog === 'function') {
+      const c = await repairPulseAdminCatalog();
+      catProducts = c.products || [];
+    }
+    return;
+  }
   if (typeof catProducts !== 'undefined' && catProducts?.length) return;
   if (typeof ensurePulseAdminCatalog === 'function') {
     const c = await ensurePulseAdminCatalog();
@@ -3991,15 +4002,43 @@ async function ensureCatProductsForPw() {
   }
 }
 
+function pwNormName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+/** Index workflows by catalog id and by product name (handles stale catalog ids in SQL). */
+function pwBuildWorkflowMaps(workflows, catalogProducts) {
+  const byCatalog = new Map();
+  const byName = new Map();
+  const catalogIds = new Set((catalogProducts || []).map((p) => p.id));
+  for (const w of workflows || []) {
+    if (!w?.productCatalogId) continue;
+    byCatalog.set(w.productCatalogId, w);
+    const nk = pwNormName(w.productName);
+    if (!nk) continue;
+    const prev = byName.get(nk);
+    const prefer =
+      catalogIds.has(w.productCatalogId) &&
+      (!prev || !catalogIds.has(prev.productCatalogId) ||
+        (w.steps || []).length > (prev.steps || []).length);
+    if (!prev || prefer) byName.set(nk, w);
+  }
+  return { byCatalog, byName };
+}
+
+function pwResolveWorkflowForProduct(product) {
+  if (!product) return null;
+  if (pwWorkflowByCatalog.has(product.id)) return pwWorkflowByCatalog.get(product.id);
+  const byName = pwWorkflowByName.get(pwNormName(product.name));
+  return byName || null;
+}
+
 async function loadProductWorkflowsTab() {
   const listEl = document.getElementById('pwProductList');
   try {
+    if (typeof waitForSupabaseSession === 'function') await waitForSupabaseSession();
     if (typeof syncPulseMachineryFromOrganisation === 'function') {
       syncPulseMachineryFromOrganisation();
-    }
-    if (typeof repairPulseAdminCatalog === 'function') {
-      const repaired = await repairPulseAdminCatalog();
-      if (repaired?.products?.length) catProducts = repaired.products;
     }
     await ensureCatProductsForPw();
     if (!Array.isArray(catProducts)) catProducts = [];
@@ -4026,11 +4065,25 @@ async function loadProductWorkflowsTab() {
         }
       }
     }
-    const workflows = typeof getAllProductWorkflows === 'function' ? await getAllProductWorkflows() : [];
-    pwWorkflowByCatalog = new Map(workflows.map(w => [w.productCatalogId, w]));
+    let workflows = [];
+    if (window.PULSE_STORAGE_BACKEND === 'supabase' && typeof window.supabaseGetSession === 'function') {
+      const sess = await window.supabaseGetSession();
+      if (!sess) {
+        if (listEl) {
+          listEl.innerHTML = '<div style="padding:16px;color:var(--red);font-size:13px;">Sign in to load product workflows from Supabase.</div>';
+        }
+        return;
+      }
+    }
+    if (typeof getAllProductWorkflows === 'function') {
+      workflows = await getAllProductWorkflows({ strict: true });
+    }
+    const maps = pwBuildWorkflowMaps(workflows, catProducts);
+    pwWorkflowByCatalog = maps.byCatalog;
+    pwWorkflowByName = maps.byName;
     if (!pwSelectedCatalogId && catProducts.length) {
       pwSelectedCatalogId = catProducts[0].id;
-      const row = pwWorkflowByCatalog.get(pwSelectedCatalogId);
+      const row = pwResolveWorkflowForProduct(catProducts[0]);
       pwEditorSteps = pwCloneSteps(row?.steps || []);
       pwDbRowId = row?.id || null;
       const prod0 = catProducts[0];
@@ -4059,7 +4112,8 @@ function renderPwProductList() {
     return;
   }
   el.innerHTML = items.map(p => {
-    const configured = pwWorkflowByCatalog.has(p.id) && (pwWorkflowByCatalog.get(p.id).steps || []).length;
+    const wf = pwResolveWorkflowForProduct(p);
+    const configured = wf && (wf.steps || []).length;
     const pending = typeof isProductWorkflowDefaultUnmapped === 'function' && isProductWorkflowDefaultUnmapped(p.name);
     const active = p.id === pwSelectedCatalogId ? ' active' : '';
     const badgeClass = pending ? 'pending' : (configured ? 'ok' : 'missing');
@@ -4073,7 +4127,8 @@ function renderPwProductList() {
 
 function selectPwProduct(catalogId) {
   pwSelectedCatalogId = catalogId;
-  const row = pwWorkflowByCatalog.get(catalogId);
+  const prod = catProducts.find(p => p.id === catalogId);
+  const row = pwResolveWorkflowForProduct(prod);
   pwEditorSteps = pwCloneSteps(row?.steps || []);
   pwDbRowId = row?.id || null;
   const prod = catProducts.find(p => p.id === catalogId);
@@ -4660,8 +4715,11 @@ async function savePwWorkflow() {
     ? getDefaultProductWorkflowForCatalogName(prod.name)
     : { primaryFacility: '16th' };
   const primaryFacility = pwPrimaryFacility || def.primaryFacility || '16th';
+  const existing = pwResolveWorkflowForProduct(prod);
+  let rowId = pwDbRowId || existing?.id;
+  if (existing && existing.productCatalogId !== prod.id) rowId = undefined;
   const payload = {
-    id: pwDbRowId || undefined,
+    id: rowId || undefined,
     productCatalogId: prod.id,
     productName: prod.name,
     primaryFacility,
