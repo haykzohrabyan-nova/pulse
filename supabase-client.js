@@ -804,7 +804,10 @@
 
   window.addOrder = async function (order) {
     try { return await _addOrder(order); }
-    catch (e) { console.error('[Pulse/Supabase] addOrder:', e); return _origAddOrder ? _origAddOrder(order) : null; }
+    catch (e) {
+      console.error('[Pulse/Supabase] addOrder:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
   };
 
   window.updateOrder = async function (id, changes) {
