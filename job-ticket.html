@@ -4843,8 +4843,10 @@ async function renderQueuePane() {
     }
   }
 
-  // Sidebar queue: omit child job tickets (sub-tickets linked via parentOrderId).
-  const sidebarOrdersOnly = allOrders.filter(o => !o.parentOrderId);
+  // Sidebar queue: prefer parent/root tickets, but if dataset is sub-tickets only,
+  // fall back to showing all rows so queue never appears empty.
+  const rootOrders = allOrders.filter(o => !o.parentOrderId);
+  const sidebarOrdersOnly = rootOrders.length ? rootOrders : allOrders;
 
   const statusFilter = statusSelect?.value || 'active';
   const attentionBox = document.getElementById('queueAttentionBox');
