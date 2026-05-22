@@ -524,7 +524,7 @@
       return 'Order not found or you do not have permission to update it. Refresh the page and try again.';
     }
     if (/permission denied|row-level security|42501/i.test(msg)) {
-      return 'You do not have permission to update this order. Ask an admin to grant shipping access (migration 022).';
+      return 'You do not have permission to update this order. Your DB role is missing an orders update policy; run the latest RLS migrations and verify profiles.role for this user.';
     }
     return msg;
   }
