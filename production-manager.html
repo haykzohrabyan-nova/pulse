@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -572,6 +572,7 @@ function renderList() {
 function renderOrderRow(order) {
   const dueClass = getDueClass(order.dueDate);
   const isExpanded = order.id === activeOrderId;
+  const orderIdEsc = String(order.id).replace(/'/g, "\\'");
   const line = getProductionLine(order);
   const lineInfo = PRODUCTION_LINES[line];
   const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
@@ -579,7 +580,7 @@ function renderOrderRow(order) {
 
   return `
     <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
-      <div class="order-row-header" onclick="toggleOrderRow(${order.id})">
+      <div class="order-row-header" onclick="toggleOrderRow('${orderIdEsc}')">
         <span class="order-id">#${order.orderId}${reprintTag} ${renderRushFlag(order)}</span>
         <span class="order-status">${renderStatusBadge(order.status)}</span>
         <span class="order-customer">${order.customer || order.customerName}</span>
@@ -617,9 +618,9 @@ function renderOrderBody(order) {
         ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
         <div class="step-status ${step.status}">${step.status}</div>
         <div style="display:flex;gap:4px;">
-          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button class="btn btn-sm" onclick="openRedirectModal(${order.id},'${step.id || i}',${i})">🔀 Swap</button>` : ''}
-          <button class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="openAssignModal(${order.id},'${step.id || i}')">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
-          <button class="btn btn-sm btn-danger" onclick="removeStepByIndex(${order.id},${i})">✕</button>
+          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button class="btn btn-sm" onclick="openRedirectModal('${orderIdEsc}','${step.id || i}',${i})">🔀 Swap</button>` : ''}
+          <button class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="openAssignModal('${orderIdEsc}','${step.id || i}')">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
+          <button class="btn btn-sm btn-danger" onclick="removeStepByIndex('${orderIdEsc}',${i})">✕</button>
         </div>
       </div>
     `;
@@ -655,7 +656,7 @@ function renderOrderBody(order) {
     <div class="workflow-steps-section">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Workflow Steps</h4>
-        <button class="btn btn-sm" onclick="openAddStepModal(${order.id})">+ Add Step</button>
+        <button class="btn btn-sm" onclick="openAddStepModal('${orderIdEsc}')">+ Add Step</button>
       </div>
       <div class="workflow-steps-list">${stepsHtml}</div>
     </div>
@@ -681,45 +682,45 @@ function getActionButtons(order) {
 
   // Prepress operations are handled in the Prepress module — not shown here
   if (order.status === 'new' || order.status === 'pending-review') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'in-production')">▶ Start Production</button>`);
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus('${orderIdEsc}','in-production')">▶ Start Production</button>`);
   }
   if (order.status === 'pending-confirmation') {
-    btns.push(`<button class="btn btn-sm btn-success" onclick="approveConfirmation(${order.id})">✅ Approve OT / Confirm</button>`);
-    btns.push(`<button class="btn btn-sm btn-danger" onclick="rejectConfirmation(${order.id})">❌ Reject — Put On Hold</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="approveConfirmation('${orderIdEsc}')">✅ Approve OT / Confirm</button>`);
+    btns.push(`<button class="btn btn-sm btn-danger" onclick="rejectConfirmation('${orderIdEsc}')">❌ Reject — Put On Hold</button>`);
   }
   if (order.status === 'pending-account-manager') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus(${order.id},'prepress')">↩ Issue Resolved — Return to Prepress</button>`);
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus('${orderIdEsc}','prepress')">↩ Issue Resolved — Return to Prepress</button>`);
   }
   if (order.status === 'in-production') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="advanceStep(${order.id})">⏭ Next Step</button>`);
-    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus(${order.id},'on-hold')">⏸ Put On Hold</button>`);
-    btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'qc-checkout')">🔍 Send to QC</button>`);
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="advanceStep('${orderIdEsc}')">⏭ Next Step</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus('${orderIdEsc}','on-hold')">⏸ Put On Hold</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus('${orderIdEsc}','qc-checkout')">🔍 Send to QC</button>`);
   }
   if (order.status === 'on-hold') {
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'resume')">▶ Resume Production</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','resume')">▶ Resume Production</button>`);
   }
   if (order.status === 'qc-checkout') {
     btns.push(`<a href="qc-checkout.html?order=${order.orderId}" class="btn btn-sm btn-primary">🔍 Go to QC</a>`);
   }
   if (order.status === 'qc-failed') {
-    btns.push(`<button class="btn btn-sm btn-primary" onclick="returnToProductionFromQCFail(${order.id})">↩ Return to Production</button>`);
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="returnToProductionFromQCFail('${orderIdEsc}')">↩ Return to Production</button>`);
   }
   if (order.status === 'ready-to-ship') {
     btns.push(`<a href="shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'shipped')">📦 Mark Shipped</button>`);
-    btns.push(`<button class="btn btn-sm" onclick="changeStatus(${order.id},'waiting-pickup')">🏪 Waiting Pickup</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','shipped')">📦 Mark Shipped</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus('${orderIdEsc}','waiting-pickup')">🏪 Waiting Pickup</button>`);
   }
   if (order.status === 'shipped' || order.status === 'waiting-pickup') {
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'received')">📬 Mark Received</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','received')">📬 Mark Received</button>`);
   }
   if (order.status === 'received') {
-    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus(${order.id},'completed')">✅ Mark Completed</button>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','completed')">✅ Mark Completed</button>`);
   }
   if (['shipped', 'waiting-pickup', 'received', 'completed'].includes(order.status)) {
     btns.push(`<a href="shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
   }
   if (!['ready-to-ship', 'shipped', 'received', 'completed'].includes(order.status)) {
-    btns.push(`<button class="btn btn-sm btn-warning" onclick="openReprintModal(${order.id})">🖨 Reprint/Shortage</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="openReprintModal('${orderIdEsc}')">🖨 Reprint/Shortage</button>`);
   }
 
   return btns.join('');
