@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Report Issue — Bazaar Print</title>
-  <script src="shared.js?v=20260520-ISSUE1"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
+  <script src="organisation-local-store.js"></script>
+  <script src="pulse-config.js"></script>
+  <script src="pulse-config.local.js"></script>
   <script src="auth.js?v=20260419-PUL70"></script>
   <style id="page-styles"></style>
 </head>
@@ -239,6 +242,9 @@ window.addEventListener('DOMContentLoaded', () => initPage());
 
 async function initPage() {
   if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(async () => { await refreshMachineDropdowns(); });
+  }
   fillSelectOptions(document.getElementById('r_problemSource'), PROBLEM_SOURCES, false);
   fillSelectOptions(document.getElementById('r_problemCategory'), PROBLEM_CATEGORIES, true, '— Optional —');
   fillSelectOptions(document.getElementById('e_problemSource'), PROBLEM_SOURCES, true, '— Select —');

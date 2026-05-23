@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Dashboard — Bazaar Print</title>
-  <script src="shared.js?v=20260501-NAVFIX"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
+  <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
   <script src="supabase-client.js?v=20260427-PRI240"></script>
@@ -79,14 +80,27 @@
   } else {
     document.getElementById('nav').innerHTML = renderNav('dashboard');
     initAuth('dashboard');
-    if (typeof initPulseAdminData === 'function') initPulseAdminData().catch(() => {});
-    window.addEventListener('pulse:reference-data-changed', () => {
-      if (typeof refreshPulseAdminData === 'function') {
-        refreshPulseAdminData().then(() => refresh()).catch(() => refresh());
-      } else {
-        refresh();
-      }
-    });
+  }
+
+  function getDashApplicationDailyCapacity() {
+    const s = typeof getPulseSettings === 'function' ? getPulseSettings() : {};
+    if (s.appDeptCapacity != null && s.appDeptCapacity > 0) return s.appDeptCapacity;
+    const raw = s.appDeptCapacityRaw || {};
+    const people = raw.people || raw.peoplePerShift;
+    const upp = raw.unitsPerPerson || raw.unitsPerPersonPerDay;
+    if (people && upp) return people * upp;
+    const cap = typeof getEffectiveMachineCapacity === 'function'
+      ? getEffectiveMachineCapacity('Application Dept')
+      : (typeof MACHINE_CAPACITY !== 'undefined' ? MACHINE_CAPACITY['Application Dept'] : null);
+    return cap?.dailyUnits || 6000;
+  }
+
+  function getDashMachineDailyCap(machineName) {
+    const cap = typeof getEffectiveMachineCapacity === 'function'
+      ? getEffectiveMachineCapacity(machineName)
+      : (typeof MACHINE_CAPACITY !== 'undefined' ? MACHINE_CAPACITY[machineName] : null);
+    if (!cap) return null;
+    return cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || cap.dailyLinearFeet || null;
   }
 
   document.getElementById('page-styles').textContent = `
@@ -318,17 +332,17 @@
         dieHTML = `<span class="card-die no-die">⚠️ No die</span>`;
       }
     }
-    // On hold / shortage indicators
+    // On hold indicators
     const holdHTML = order.status === 'on-hold' ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">⏸ ${order.holdReason || 'On Hold'}</div>` : '';
-    const shortageHTML = order.materialShortage ? `<div style="font-size:10px;color:var(--red);margin-top:2px;">📦 Low stock alert${order.material ? ` • ${order.material}` : ''}</div>` : '';
     const reprintHTML = order.isReprint ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🔁 Recreated from #${order.reprintOfOrderId || '—'}${order.reprintReason ? ` • ${order.reprintReason}` : ''}</div>` : '';
     const accountManagerIssueHTML = order.status === 'pending-account-manager' ? `<div style="font-size:10px;color:#b91c1c;margin-top:2px;">⚠ Waiting on ${order.accountManager || 'account manager'}${order.prepressIssueComment ? ` • ${order.prepressIssueComment}` : ''}</div>` : '';
     const overtimeHTML = order.needsConfirmation || order.status === 'pending-confirmation'
       ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;">🕒 ${order.confirmationReason || 'Pending overtime approval'}</div>`
       : '';
     const currentProductionStep = order.status === 'in-production' ? (order.workflowSteps || [])[order.currentStep || 0] : null;
+    const prepressWorker = typeof getPulsePrepressWorkerLabel === 'function' ? getPulsePrepressWorkerLabel(order) : 'Prepress';
     const prepressHTML = order.status === 'prepress-active'
-      ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 Hrach is working on this</div>`
+      ? `<div style="font-size:10px;color:#15803d;margin-top:2px;">🟢 ${prepressWorker} is working on this</div>`
       : order.status === 'prepress-paused'
       ? `<div style="font-size:10px;color:#b45309;margin-top:2px;">⏸ Prepress paused</div>`
       : order.status === 'pending-account-manager'
@@ -342,10 +356,7 @@
     // Queue visualization classes
     let queueClass = '';
     let statusDot = '';
-    if (order.materialShortage) {
-      queueClass = 'card-hold';
-      statusDot = '<span class="card-status-dot" style="background:var(--red);"></span>';
-    } else if (order.status === 'prepress-active' || order.status === 'in-production') {
+    if (order.status === 'prepress-active' || order.status === 'in-production') {
       queueClass = 'card-active';
       statusDot = '<span class="card-status-dot" style="background:#16a34a;"></span>';
     } else if (order.status === 'on-hold') {
@@ -409,7 +420,6 @@
       <div class="card-desc">${order.productType || order.jobDescription || '—'}</div>
       ${parentLinkHTML}
       ${holdHTML}
-      ${shortageHTML}
       ${reprintHTML}
       ${accountManagerIssueHTML}
       ${overtimeHTML}
@@ -554,7 +564,7 @@
         const currentStep = steps[currentStepIdx];
 
         if (isPrepressStatus(order.status)) {
-          // Prepress queue stays in the Prepress column until Hrach completes it
+          // Prepress queue stays in the Prepress column until prepress completes it
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
         } else if (order.status === 'ready-to-ship') {
@@ -597,7 +607,7 @@
         const appJobs = stageBuckets['Application'];
         const totalUnits = appJobs.reduce((s, o) => s + (o.quantity || 0), 0);
         // TODO: get real capacity from config — placeholder 6000/day
-        const dailyCapacity = 6000;
+        const dailyCapacity = getDashApplicationDailyCapacity();
         const pct = Math.min(100, Math.round((totalUnits / dailyCapacity) * 100));
         const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--yellow)' : 'var(--green)';
         appCapacityHTML = `<div class="app-capacity">
@@ -632,9 +642,8 @@
         };
         const machine = stageToMachine[stageName];
         if (!machine) return null;
-        const cap = MACHINE_CAPACITY[machine];
-        if (!cap) return null;
-        const dailyCap = cap.dailySheets || cap.dailyUnits || cap.dailyPouches || cap.dailySqFt || 1;
+        const dailyCap = getDashMachineDailyCap(machine);
+        if (!dailyCap) return null;
         // Sum sheets/units across all active orders hitting this machine today
         let totalLoad = 0;
         (stageBuckets[stageName] || []).forEach(o => {
@@ -1245,11 +1254,29 @@
   onDBUpdate(() => refresh());
 
   async function init() {
+    if (typeof waitForPulseAuthReady === 'function') await waitForPulseAuthReady();
+    if (typeof waitForPulseSupabaseSession === 'function') await waitForPulseSupabaseSession();
     await openDB();
+    if (typeof initPulseAdminData === 'function') {
+      try { await initPulseAdminData(); } catch (e) { console.warn('[Pulse] dashboard admin bootstrap', e); }
+    }
+    if (typeof registerPulseAdminConfigRefresh === 'function') {
+      registerPulseAdminConfigRefresh(() => refresh());
+    }
+    if (!DASH_EMBEDDED) {
+      window.addEventListener('pulse:reference-data-changed', () => {
+        if (typeof refreshPulseAdminData === 'function') {
+          refreshPulseAdminData().then(() => refresh()).catch(() => refresh());
+        } else {
+          refresh();
+        }
+      });
+    }
     refresh();
     setInterval(refresh, 5000);
   }
   init();
+  window.addEventListener('pulse:auth-ready', () => refresh());
 </script>
 <script src="seed-data.js?v=20260413-1513"></script>
 </body>
