@@ -6787,8 +6787,69 @@ function isPulseArtImageFile(f) {
   return /\.(png|jpe?g|gif|webp|tif|tiff|bmp)$/i.test(f?.name || '');
 }
 
+function normalizeJobTicketSku(sku) {
+  if (!sku || typeof sku !== 'object') return sku;
+  const s = { ...sku };
+  if (!s.artworkDataUrl) {
+    s.artworkDataUrl = s.dataUrl || s.artwork_url || s.artworkUrl
+      || (s.artwork && (s.artwork.dataUrl || s.artwork.url)) || null;
+  }
+  if (!s.artworkName) s.artworkName = s.artwork_name || s.fileName || s.artwork?.name || '';
+  if (!s.artworkType) s.artworkType = s.artwork_type || s.artwork?.type || '';
+  if (!s.whiteDataUrl) {
+    s.whiteDataUrl = s.white_data_url || s.whiteLayerFile?.dataUrl || s.white?.dataUrl || null;
+  }
+  if (!s.whiteName) s.whiteName = s.white_name || s.whiteLayerFile?.name || s.white?.name || '';
+  if (!s.uvDataUrl) s.uvDataUrl = s.uv_data_url || s.uvFile?.dataUrl || s.uv?.dataUrl || null;
+  if (!s.uvName) s.uvName = s.uv_name || s.uvFile?.name || s.uv?.name || '';
+  if (!s.foilDataUrl) s.foilDataUrl = s.foil_data_url || s.foilFile?.dataUrl || s.foil?.dataUrl || null;
+  if (!s.foilName) s.foilName = s.foil_name || s.foilFile?.name || s.foil?.name || '';
+  return s;
+}
+
+function normalizeJobTicketOrderMedia(order) {
+  if (!order || typeof order !== 'object') return order;
+  const o = { ...order };
+  if (Array.isArray(o.skus)) o.skus = o.skus.map(normalizeJobTicketSku);
+  return o;
+}
+
+function mergeJobTicketSkuMedia(nextSkus, previousSkus) {
+  if (!Array.isArray(nextSkus) || !nextSkus.length) {
+    return Array.isArray(previousSkus) && previousSkus.length
+      ? previousSkus.map(normalizeJobTicketSku)
+      : nextSkus;
+  }
+  if (!Array.isArray(previousSkus) || !previousSkus.length) {
+    return nextSkus.map(normalizeJobTicketSku);
+  }
+  const mediaKeys = [
+    'artworkDataUrl', 'artworkName', 'artworkType',
+    'whiteDataUrl', 'whiteName', 'uvDataUrl', 'uvName', 'foilDataUrl', 'foilName',
+  ];
+  return nextSkus.map((sku, i) => {
+    const norm = normalizeJobTicketSku(sku);
+    const prev = normalizeJobTicketSku(
+      previousSkus[i] || previousSkus.find(p => p && norm.name && p.name === norm.name)
+    );
+    if (!prev) return norm;
+    const merged = { ...prev, ...norm };
+    mediaKeys.forEach(k => {
+      if (!merged[k] && prev[k]) merged[k] = prev[k];
+    });
+    return merged;
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.normalizeJobTicketSku = normalizeJobTicketSku;
+  window.normalizeJobTicketOrderMedia = normalizeJobTicketOrderMedia;
+  window.mergeJobTicketSkuMedia = mergeJobTicketSkuMedia;
+}
+
 function getOrderSkuArtFiles(sku) {
   if (!sku) return [];
+  sku = normalizeJobTicketSku(sku);
   const files = [];
   if (sku.artworkDataUrl) {
     files.push({ name: sku.artworkName || 'Main artwork', type: sku.artworkType || '', dataUrl: sku.artworkDataUrl });
