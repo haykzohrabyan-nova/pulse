@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260523-admin-interconnect"></script>
+  <script src="shared.js?v=20260523-jt-lock"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -661,10 +661,10 @@
 <div id="adminCodeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
     <div style="font-size:20px;font-weight:800;margin-bottom:6px;">🔒 Manager Approval Required</div>
-    <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">This job ticket is in a stage that requires manager approval to edit. Enter your manager confirmation ID to unlock editing.</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">This job ticket is view-only at its current stage. Enter a supervisor or manager <strong>Personnel User ID</strong> from Admin → Personnel to unlock editing.</div>
     <div style="margin-bottom:14px;">
-      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Manager Confirmation ID</label>
-      <input type="password" id="adminCodeInput" placeholder="Enter manager confirmation ID" autocomplete="off"
+      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Supervisor User ID</label>
+      <input type="password" id="adminCodeInput" placeholder="Personnel User ID" autocomplete="off"
         style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;"
         onkeydown="if(event.key==='Enter')verifyAdminCode()">
     </div>
@@ -1627,7 +1627,7 @@ document.addEventListener('change', e => {
   if (e.target.closest('#ticketForm')) _formDirty = true;
 });
 
-/** Read-only lock for non-editable stages. prepress-active = prepress reviewing (locked); prepress-paused stays editable with info banner only. */
+/** Read-only lock for non-editable stages (prepress, post-prepress, etc.). Session supervisor unlock overrides. */
 let _jtEditLockMode = null; // 'status-locked' | null
 
 function orderStatusIsPrepressPaused(o) {
@@ -1652,23 +1652,135 @@ function renderJobTicketPrepressInfoBanner(order) {
   if (container && header) container.insertBefore(banner, header.nextSibling);
 }
 
-/** Re-disable inputs after innerHTML refresh (renderArtworkThumbs / renderInlinePreview). */
-function syncJtTicketReadOnlyDom() {
-  if (!_jtEditLockMode) return;
+function shouldLockJobTicket(order) {
+  if (!order) return false;
+  if (typeof hasJobTicketEditUnlock === 'function' && hasJobTicketEditUnlock(order.orderId)) return false;
+  return typeof isJobTicketStatusLocked === 'function'
+    ? isJobTicketStatusLocked(order.status)
+    : false;
+}
+
+function _jtReadOnlyDomSkip(el) {
+  if (!el) return true;
+  if (el.closest('#jtReadOnlyArtifacts')) return true;
+  if (el.closest('#editLockBanner')) return true;
+  if (el.closest('.pulse-art-thumb-wrap') || el.closest('.pulse-art-thumb')) return true;
+  if (el.closest('#lightbox')) return true;
+  return false;
+}
+
+/** Apply view-only state without hiding field values (readOnly + hide save actions). */
+function applyJtFormReadOnlyState(locked) {
   const form = document.getElementById('ticketForm');
   if (!form) return;
-  form.querySelectorAll('input,select,textarea,button').forEach(el => { el.disabled = true; });
-  const topSave = document.getElementById('saveBtn');
-  if (topSave) {
-    topSave.disabled = true;
-    topSave.style.display = 'none';
-  }
-  document.querySelectorAll('.save-bar button').forEach(btn => {
-    btn.disabled = true;
-    btn.style.display = 'none';
+  form.classList.toggle('jt-form-locked', !!locked);
+
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    if (_jtReadOnlyDomSkip(el)) return;
+    if (locked) {
+      if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'file') {
+        el.disabled = true;
+      } else if (el.tagName === 'SELECT') {
+        el.disabled = true;
+      } else {
+        el.readOnly = true;
+        el.disabled = false;
+      }
+    } else {
+      el.readOnly = false;
+      el.disabled = false;
+    }
   });
-  const g3 = document.getElementById('createDesignTaskBtn');
-  if (g3) g3.disabled = true;
+
+  form.querySelectorAll('button').forEach(el => {
+    if (_jtReadOnlyDomSkip(el)) return;
+    el.disabled = !!locked;
+  });
+
+  ['saveBtn', 'addSkuBtn', 'createDesignTaskBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (locked) {
+      el.disabled = true;
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+      el.disabled = false;
+    }
+  });
+  document.querySelectorAll('.save-bar button').forEach(btn => {
+    if (locked) {
+      btn.disabled = true;
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = '';
+      btn.disabled = false;
+    }
+  });
+}
+
+function releaseJtTicketReadOnlyDom() {
+  applyJtFormReadOnlyState(false);
+  document.getElementById('jtReadOnlyArtifacts')?.remove();
+}
+
+/** Re-apply lock after innerHTML refresh (renderArtworkThumbs / renderSKUs). */
+function syncJtTicketReadOnlyDom() {
+  if (!_jtEditLockMode) return;
+  applyJtFormReadOnlyState(true);
+}
+
+function renderJobTicketReadOnlyArtifacts(order) {
+  document.getElementById('jtReadOnlyArtifacts')?.remove();
+  if (!order || typeof renderOrderSkuSection !== 'function') return;
+  const html = renderOrderSkuSection(order);
+  if (!html || !html.trim()) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'jtReadOnlyArtifacts';
+  wrap.style.cssText = 'margin-bottom:16px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;';
+  wrap.innerHTML = `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;margin-bottom:10px;">Saved artwork &amp; SKU versions (view only)</div>${html}`;
+
+  const anchor = document.getElementById('editLockBanner') || document.querySelector('.jt-header');
+  if (anchor && anchor.parentNode) {
+    anchor.insertAdjacentElement('afterend', wrap);
+  }
+}
+
+function renderSKUsReadOnly() {
+  const container = document.getElementById('skuList');
+  if (!container || !skuList.length) return;
+
+  const hasWhite = document.getElementById('colorMode')?.value === 'CMYK+White';
+  const hasUV = document.getElementById('hasUV')?.checked || false;
+  const hasFoil = document.getElementById('hasFoil')?.checked || false;
+  let fileCols = 1;
+  if (hasWhite) fileCols++;
+  if (hasUV) fileCols++;
+  if (hasFoil) fileCols++;
+
+  container.innerHTML = skuList.map((sku, i) => {
+    const safeName = typeof escHtmlJT === 'function' ? escHtmlJT(sku.name || '') : (sku.name || '');
+    return `
+    <div class="sku-row" style="opacity:0.95;">
+      <div class="sku-header">
+        <div class="sku-version-num">#${i + 1}</div>
+        <div class="sku-field sku-field-name"><label>SKU name</label><div style="font-size:13px;font-weight:600;padding:8px 0;">${safeName || '—'}</div></div>
+        <div class="sku-field sku-field-qty"><label>Qty</label><div style="font-size:13px;font-weight:600;padding:8px 0;">${(sku.quantity || 0).toLocaleString()}</div></div>
+      </div>
+      <div class="sku-files" style="grid-template-columns:repeat(${fileCols}, minmax(0, 1fr));">
+        <div class="sku-file-slot"><label>Main artwork</label>${jtSkuThumbViewOnly(sku.artworkDataUrl, sku.artworkName)}</div>
+        ${hasWhite ? `<div class="sku-file-slot"><label>White</label>${jtSkuThumbViewOnly(sku.whiteDataUrl, sku.whiteName)}</div>` : ''}
+        ${hasUV ? `<div class="sku-file-slot"><label>UV</label>${jtSkuThumbViewOnly(sku.uvDataUrl, sku.uvName)}</div>` : ''}
+        ${hasFoil ? `<div class="sku-file-slot"><label>Foil</label>${jtSkuThumbViewOnly(sku.foilDataUrl, sku.foilName)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const addBtn = document.getElementById('addSkuBtn');
+  if (addBtn) addBtn.style.display = 'none';
+  const summary = document.getElementById('skuSummary');
+  if (summary) summary.style.display = skuList.length ? 'block' : 'none';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2005,6 +2117,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const order = await getOrderByOrderId(orderId);
     if (order) {
       await openOrderInEditor(order);
+      if (params.get('saved') === '1') {
+        showJobTicketSavedToast(order.orderId);
+      }
     }
   } else if (!parentId && !fromQuote) {
     const autoOrder = await findAutoOpenRejectedTicket();
@@ -2067,30 +2182,45 @@ async function findAutoOpenRejectedTicket() {
 
 async function openOrderInEditor(order) {
   if (!order) return;
+  let fresh = order;
+  if (order.orderId && typeof getOrderByOrderId === 'function') {
+    try {
+      const loaded = await getOrderByOrderId(order.orderId);
+      if (loaded) fresh = loaded;
+    } catch (_) {}
+  }
+
   _jtEditLockMode = null;
-  editingDbId = order.id;
-  editingOrderId = order.orderId;
-  document.getElementById('pageTitle').textContent = `Edit Job #${order.orderId}`;
-  document.getElementById('orderIdDisplay').textContent = `Order ID: ${order.orderId}`;
-  window.history.replaceState({}, '', `job-ticket.html?order=${encodeURIComponent(order.orderId)}`);
-  await loadOrderIntoForm(order);
+  document.getElementById('editLockBanner')?.remove();
+  document.getElementById('jtReadOnlyArtifacts')?.remove();
+  editingDbId = fresh.id;
+  editingOrderId = fresh.orderId;
+  document.getElementById('pageTitle').textContent = `Edit Job #${fresh.orderId}`;
+  document.getElementById('orderIdDisplay').textContent = `Order ID: ${fresh.orderId}`;
+  window.history.replaceState({}, '', `job-ticket.html?order=${encodeURIComponent(fresh.orderId)}`);
+  await loadOrderIntoForm(fresh);
   const subBtn = document.getElementById('addSubTicketBtn');
   if (subBtn) {
-    subBtn.href = `job-ticket.html?parent=${order.orderId}`;
+    subBtn.href = `job-ticket.html?parent=${fresh.orderId}`;
     subBtn.style.display = '';
   }
-  renderProductionProgressSection(order);
-  const navParentId = order.parentOrderId || order.orderId;
-  await renderOrderNavigator(navParentId, order.orderId);
-  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
-  if (!editableStatuses.includes(order.status)) {
-    document.getElementById('prepressReviewInfoBanner')?.remove();
-    applyEditLock(order);
+  renderProductionProgressSection(fresh);
+  const navParentId = fresh.parentOrderId || fresh.orderId;
+  await renderOrderNavigator(navParentId, fresh.orderId);
+
+  if (shouldLockJobTicket(fresh)) {
+    applyEditLock(fresh);
   } else {
-    renderJobTicketPrepressInfoBanner(order);
+    releaseJtTicketReadOnlyDom();
+    document.getElementById('prepressReviewInfoBanner')?.remove();
   }
-  updateSaveButtonForOrder(order);
+
+  updateSaveButtonForOrder(fresh);
   renderQueuePane();
+
+  if (fresh.id && typeof showGate3Section === 'function') {
+    showGate3Section(fresh.id);
+  }
 }
 
 function updateSaveButtonForOrder(order) {
@@ -2815,6 +2945,16 @@ function removeSKUFile(idx, type) {
   renderSKUs();
 }
 
+function jtSkuThumbViewOnly(dataUrl, name) {
+  if (!dataUrl) return '<span style="font-size:11px;color:var(--text-muted);">—</span>';
+  const safe = String(dataUrl).replace(/'/g, "\\'");
+  const label = (name || 'file').replace(/"/g, '&quot;');
+  if (String(dataUrl).startsWith('data:image') || /\.(png|jpe?g|gif|webp|tif?f)$/i.test(name || '')) {
+    return `<div class="sku-file-thumb-wrap"><img src="${dataUrl}" alt="${label}" title="Click to preview" onclick="openLightbox('${safe}')" style="cursor:pointer;"></div>`;
+  }
+  return `<div class="sku-file-thumb-wrap"><div class="sku-file-pdf" title="Click to preview" onclick="openLightbox('${safe}')" style="cursor:pointer;">📄</div><span>${label}</span></div>`;
+}
+
 function skuFileThumbHTML(skuIdx, fileType) {
   const sku = skuList[skuIdx];
   if (!sku) return '';
@@ -3275,17 +3415,25 @@ function applyEditLock(order) {
   if (!form) return;
 
   document.getElementById('editLockBanner')?.remove();
-
-  syncJtTicketReadOnlyDom();
+  document.getElementById('prepressReviewInfoBanner')?.remove();
 
   const isPrepressActive = orderStatusIsPrepressActive(order);
-  const detailText = isPrepressActive
-    ? 'Prepress review is active on this job. The job ticket cannot be edited until prepress pauses review or finishes.'
-    : 'Please note you cannot edit already approved or rejected job tickets. Ticket editing is done in pop up window. Direct editing is only available for Prepress Not Started and On Hold tickets.';
+  const isPrepressPaused = orderStatusIsPrepressPaused(order);
+  const statusLabel = (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[order.status]) || order.status;
+  let detailText = `This ticket is in <strong>${statusLabel}</strong> and is view-only. Enter a supervisor Personnel User ID to unlock editing.`;
+  if (isPrepressActive) {
+    detailText = 'Prepress review is active. The job ticket is view-only until a supervisor unlocks it or prepress completes review.';
+  } else if (isPrepressPaused) {
+    detailText = 'Prepress has paused on this job. The ticket is view-only until a supervisor unlocks editing.';
+  }
 
-  const titleText = isPrepressActive ? '🔒 Editing Locked — Prepress Review Active' : '🔒 Editing Locked';
+  const titleText = isPrepressActive
+    ? 'View only — Prepress review active'
+    : isPrepressPaused
+      ? 'View only — Prepress paused'
+      : 'View only — ticket locked';
 
-  const managerBtnHtml = `<button type="button" onclick="openAdminCodeModal()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔑 Manager Edit</button>`;
+  const managerBtnHtml = `<button type="button" onclick="openAdminCodeModal()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔑 Supervisor unlock</button>`;
 
   const banner = document.createElement('div');
   banner.id = 'editLockBanner';
@@ -3293,13 +3441,17 @@ function applyEditLock(order) {
   banner.innerHTML = `
     <div>
       <div style="font-size:13px;font-weight:800;color:#9a3412;text-transform:uppercase;">${titleText}</div>
-      <div style="font-size:12px;color:#c2410c;margin-top:4px;">${detailText}</div>
+      <div style="font-size:12px;color:#c2410c;margin-top:4px;line-height:1.45;">${detailText}</div>
     </div>
     ${managerBtnHtml}
   `;
   const container = document.querySelector('.jt-container');
   const header = document.querySelector('.jt-header');
   if (container && header) container.insertBefore(banner, header.nextSibling);
+
+  renderJobTicketReadOnlyArtifacts(order);
+  if (skuList.length > 0) renderSKUsReadOnly();
+  applyJtFormReadOnlyState(true);
 }
 
 function openAdminCodeModal() {
@@ -3312,25 +3464,47 @@ function closeAdminCodeModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function verifyAdminCode() {
+async function verifyAdminCode() {
   const code = document.getElementById('adminCodeInput').value.trim();
   const result = document.getElementById('adminCodeResult');
-  if (code.length >= 4) {
-    _jtEditLockMode = null;
-    // Unlock form
-    const form = document.getElementById('ticketForm');
-    if (form) form.querySelectorAll('input,select,textarea,button').forEach(el => { el.disabled = false; });
-    document.getElementById('saveBtn').disabled = false;
-    const banner = document.getElementById('editLockBanner');
-    if (banner) { banner.style.background = '#d4edda'; banner.style.borderColor = 'var(--green)'; banner.innerHTML = '<div style="font-size:13px;font-weight:700;color:#166534;">✅ Manager edit unlocked.</div>'; }
-    // PUL-137 Req 6: Restore save buttons when manager unlocks editing
-    const topSaveBtn = document.getElementById('saveBtn');
-    if (topSaveBtn) topSaveBtn.style.display = '';
-    document.querySelectorAll('.save-bar button').forEach(btn => { btn.style.display = ''; });
-    closeAdminCodeModal();
-  } else {
-    result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
+  const verification = typeof verifyPulseSupervisorEditCode === 'function'
+    ? await verifyPulseSupervisorEditCode(code)
+    : { ok: code.length >= 4 };
+
+  if (!verification.ok) {
+    result.innerHTML = `<span style="color:var(--red);">${verification.message || 'Invalid supervisor ID.'}</span>`;
+    return;
   }
+
+  if (editingOrderId && typeof setJobTicketEditUnlock === 'function') {
+    setJobTicketEditUnlock(editingOrderId);
+  }
+  _jtEditLockMode = null;
+  releaseJtTicketReadOnlyDom();
+
+  const banner = document.getElementById('editLockBanner');
+  const who = verification.person?.name || 'Supervisor';
+  if (banner) {
+    banner.style.background = '#d4edda';
+    banner.style.borderColor = 'var(--green)';
+    banner.innerHTML = `<div style="font-size:13px;font-weight:700;color:#166534;">Unlocked for editing by ${who}.</div>`;
+  }
+
+  if (editingOrderId && typeof addActivity === 'function') {
+    try {
+      await addActivity({
+        orderId: editingOrderId,
+        type: 'manager-edit-unlock',
+        message: `Supervisor unlocked job ticket for editing (${who})`,
+        by: who,
+      });
+    } catch (_) {}
+  }
+
+  if (skuList.length > 0 && typeof renderSKUs === 'function') renderSKUs();
+
+  closeAdminCodeModal();
+  result.innerHTML = '';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3925,6 +4099,15 @@ function closeLightbox() {
 // ─────────────────────────────────────────────────────────────
 let _lastSavedOrderId = null;
 async function saveTicket(suppressRedirect = false) {
+  if (_jtEditLockMode && editingOrderId) {
+    const unlocked = typeof hasJobTicketEditUnlock === 'function' && hasJobTicketEditUnlock(editingOrderId);
+    if (!unlocked) {
+      alert('This job ticket is locked. A supervisor must unlock it before you can save changes.');
+      openAdminCodeModal();
+      return;
+    }
+  }
+
   let existingOrderForEdit = null;
   if (editingDbId) {
     try {
@@ -3933,6 +4116,13 @@ async function saveTicket(suppressRedirect = false) {
       if (orderStatusIsPrepressActive(current)) {
         alert('Prepress review is active — the job ticket cannot be saved until review is paused or completed.');
         return;
+      }
+      if (current && shouldLockJobTicket(current)) {
+        const unlocked = typeof hasJobTicketEditUnlock === 'function' && hasJobTicketEditUnlock(current.orderId);
+        if (!unlocked) {
+          alert('This job ticket is locked at its current stage. Supervisor unlock is required to save.');
+          return;
+        }
       }
     } catch (_) {}
   }
@@ -4237,8 +4427,8 @@ async function saveTicket(suppressRedirect = false) {
           console.warn('Rush SMS failed:', e);
         }
       }
-      // PUL-137 Fix #2: Stay on job-ticket.html after editing — do not redirect to production-manager.
-      window.location.href = `job-ticket.html?saved=${encodeURIComponent(editingOrderId)}`;
+      // Reload ticket so SKU/artwork panels render from saved Supabase data.
+      window.location.href = `job-ticket.html?order=${encodeURIComponent(editingOrderId)}&saved=1`;
     } else {
       const allOrders = await getAllOrders();
       const userTypedId = document.getElementById('jobTicketNumber').value.trim();
@@ -4969,8 +5159,7 @@ async function renderQueuePane() {
     };
     const sColor = statusColors[o.status] || '#9ca3af';
     const statusLabel = (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[o.status]) || o.status || 'new';
-    const editableStatuses = ['prepress','on-hold','new','pending-account-manager','prepress-paused'];
-    const isLocked = !editableStatuses.includes(o.status);
+    const isLocked = typeof shouldLockJobTicket === 'function' ? shouldLockJobTicket(o) : false;
     const salesLock = isLocked ? '<span aria-label="Locked — read-only for sales" title="Sales cannot edit this order directly" style="font-size:11px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">🔒 Sales view only</span>' : '';
     const facilityTag = o.facility === 'boyd-street'
       ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">Boyd</span>'
@@ -5012,9 +5201,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => { renderQueuePane(); }, 1200);
 }, { once: false });
 
+function showJobTicketSavedToast(savedOrderId) {
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);display:flex;align-items:center;gap:14px;white-space:nowrap;';
+  toast.innerHTML = `Job ticket #${savedOrderId} saved. <button type="button" onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 9000);
+}
+
 function showAfterSavePrompt(savedOrderId, customerName, rep) {
-  // Stay on job-ticket.html — navigate to a fresh form and show a success toast
-  window.location.href = `job-ticket.html?saved=${encodeURIComponent(savedOrderId)}`;
+  window.location.href = `job-ticket.html?order=${encodeURIComponent(savedOrderId)}&saved=1`;
 }
 
 // PUL-137 Req 9: Reset the page to a fresh blank ticket without a full browser reload.
@@ -5035,6 +5231,10 @@ function resetToNewTicket() {
 
   // Reset form fields
   _jtEditLockMode = null;
+  if (editingOrderId && typeof clearJobTicketEditUnlock === 'function') {
+    clearJobTicketEditUnlock(editingOrderId);
+  }
+  releaseJtTicketReadOnlyDom();
   const form = document.getElementById('ticketForm');
   if (form) form.reset();
 
@@ -5059,21 +5259,14 @@ function resetToNewTicket() {
   window.history.replaceState({}, '', 'job-ticket.html');
 }
 
-// Show success toast when arriving from a just-saved ticket
-(function checkSavedToast() {
+// Legacy ?saved= URLs → reload ticket with artwork/SKU panel
+(function redirectLegacySavedParam() {
   const params = new URLSearchParams(window.location.search);
   const savedId = params.get('saved');
-  if (!savedId) return;
-  // Clean URL so refresh doesn't re-show
-  window.history.replaceState({}, '', 'job-ticket.html');
-  // Show toast after DOM ready
-  window.addEventListener('DOMContentLoaded', () => {
-    const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);display:flex;align-items:center;gap:14px;white-space:nowrap;';
-    toast.innerHTML = `✅ Job Ticket #${savedId} saved! <a href="job-ticket.html?parent=${encodeURIComponent(savedId)}" style="color:#86efac;text-decoration:underline;font-weight:700;">➕ Add Sub-Ticket</a> <button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1;padding:0 2px;" title="Dismiss">✕</button>`;
-    document.body.appendChild(toast);
-    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 9000);
-  }, { once: true });
+  const orderId = params.get('order');
+  if (savedId && !orderId) {
+    window.location.replace(`job-ticket.html?order=${encodeURIComponent(savedId)}&saved=1`);
+  }
 })()
 
 // ============================================================
@@ -5101,7 +5294,7 @@ function showGate3Section(orderUUID) {
   section.style.display = '';
   loadGate3DesignTasks();
   loadGate3DesignerOptions();
-  syncJtTicketReadOnlyDom();
+  if (_jtEditLockMode) applyJtFormReadOnlyState(true);
 }
 
 async function loadGate3DesignTasks() {

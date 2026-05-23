@@ -5358,6 +5358,97 @@ async function waitForPulseSupabaseSession(maxMs = 15000) {
   return null;
 }
 
+// ── Job ticket edit lock (status + supervisor unlock) ─────────
+
+const JT_EDITABLE_STATUSES = ['new', 'on-hold', 'pending-account-manager'];
+
+const JT_SUPERVISOR_UNLOCK_ROLES = new Set([
+  'admin', 'supervisor', 'david-review', 'production-manager', 'job_manager', 'ops_manager',
+]);
+
+function isJobTicketStatusLocked(status) {
+  const s = String(status || '').trim().toLowerCase();
+  return !JT_EDITABLE_STATUSES.includes(s);
+}
+
+function _jtUnlockStorageKey(orderId) {
+  return `pulse_jt_unlock_${String(orderId || '').trim()}`;
+}
+
+function setJobTicketEditUnlock(orderId) {
+  if (!orderId) return;
+  try {
+    sessionStorage.setItem(_jtUnlockStorageKey(orderId), String(Date.now()));
+  } catch (_) {}
+}
+
+function clearJobTicketEditUnlock(orderId) {
+  if (!orderId) return;
+  try {
+    sessionStorage.removeItem(_jtUnlockStorageKey(orderId));
+  } catch (_) {}
+}
+
+function clearAllJobTicketEditUnlocks() {
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith('pulse_jt_unlock_')) keys.push(k);
+    }
+    keys.forEach(k => sessionStorage.removeItem(k));
+  } catch (_) {}
+}
+
+function hasJobTicketEditUnlock(orderId) {
+  if (!orderId) return false;
+  try {
+    return !!sessionStorage.getItem(_jtUnlockStorageKey(orderId));
+  } catch (_) {
+    return false;
+  }
+}
+
+function _normalizePersonnelRole(role) {
+  return String(role || '').trim().toLowerCase().replace(/_/g, '-');
+}
+
+/** Validate supervisor/manager Personnel User ID for job-ticket unlock. */
+async function verifyPulseSupervisorEditCode(code) {
+  const entered = String(code || '').trim();
+  if (!entered) return { ok: false, message: 'Enter a supervisor confirmation ID.' };
+
+  let people = [];
+  try {
+    if (typeof getAllPersonnel === 'function') {
+      people = await getAllPersonnel();
+    }
+  } catch (_) {}
+
+  const match = (people || []).find(p => {
+    if (p && p.active === false) return false;
+    const uid = String(p.userId || '').trim();
+    if (!uid || uid !== entered) return false;
+    return JT_SUPERVISOR_UNLOCK_ROLES.has(_normalizePersonnelRole(p.role));
+  });
+
+  if (match) {
+    return { ok: true, person: match };
+  }
+
+  if (typeof OPERATOR_PROFILES !== 'undefined') {
+    for (const [name, profile] of Object.entries(OPERATOR_PROFILES)) {
+      const uid = String(profile.userId || '').trim();
+      if (!uid || uid !== entered) continue;
+      if (JT_SUPERVISOR_UNLOCK_ROLES.has(_normalizePersonnelRole(profile.role))) {
+        return { ok: true, person: { name, ...profile } };
+      }
+    }
+  }
+
+  return { ok: false, message: 'Invalid supervisor ID. Use a Personnel User ID for a supervisor or manager.' };
+}
+
 async function refreshPulseAdminData() {
   _pulseAdminInitPromise = null;
   const cache = await initPulseAdminData({ force: true });
@@ -5421,6 +5512,13 @@ if (typeof window !== 'undefined') {
   window.refreshPulseAdminData = refreshPulseAdminData;
   window.waitForPulseAuthReady = waitForPulseAuthReady;
   window.waitForPulseSupabaseSession = waitForPulseSupabaseSession;
+  window.JT_EDITABLE_STATUSES = JT_EDITABLE_STATUSES;
+  window.isJobTicketStatusLocked = isJobTicketStatusLocked;
+  window.setJobTicketEditUnlock = setJobTicketEditUnlock;
+  window.clearJobTicketEditUnlock = clearJobTicketEditUnlock;
+  window.clearAllJobTicketEditUnlocks = clearAllJobTicketEditUnlocks;
+  window.hasJobTicketEditUnlock = hasJobTicketEditUnlock;
+  window.verifyPulseSupervisorEditCode = verifyPulseSupervisorEditCode;
   window.getPulseOrgMachines = function () {
     if (!_pulseOrgMachines) syncPulseMachineryFromOrganisation();
     return _pulseOrgMachines || [];

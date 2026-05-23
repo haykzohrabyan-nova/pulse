@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Production Manager — Bazaar Print</title>
-  <script src="shared.js?v=20260523-admin-interconnect"></script>
+  <script src="shared.js?v=20260523-jt-lock"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -710,11 +710,11 @@ function di(label, val) {
 function getActionButtons(order) {
   const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const btns = [];
-  const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
-  if (editableStatuses.includes(order.status)) {
-    btns.push(`<button class="btn btn-sm" onclick="window.location='job-ticket.html?order=${order.orderId}'">✏️ Edit Ticket</button>`);
+  const ticketLocked = typeof isJobTicketStatusLocked === 'function' && isJobTicketStatusLocked(order.status);
+  if (ticketLocked) {
+    btns.push(`<a href="job-ticket.html?order=${encodeURIComponent(order.orderId)}" class="btn btn-sm">👁 View Job Ticket</a>`);
   } else {
-    btns.push(`<button class="btn btn-sm" style="opacity:0.5;cursor:default;" title="Ticket locked — order is past the editable stage" disabled>🔒 Ticket Locked</button>`);
+    btns.push(`<a href="job-ticket.html?order=${encodeURIComponent(order.orderId)}" class="btn btn-sm">✏️ Edit Job Ticket</a>`);
   }
 
   // Prepress operations are handled in the Prepress module — not shown here
@@ -997,10 +997,16 @@ async function openAssignModal(dbId, stepId) {
   assignTargetOrderDbId = dbId;
   assignTargetStepId = stepId;
   const personnel = await getAllPersonnel();
+  const operators = personnel.filter(p => {
+    if (p.active === false) return false;
+    const role = String(p.role || 'operator').replace(/_/g, '-').toLowerCase();
+    return role === 'operator';
+  });
   const sel = document.getElementById('assignSelect');
   sel.innerHTML = '<option value="">— Select —</option>';
-  personnel.filter(p => p.active).forEach(p => {
-    sel.innerHTML += `<option value="${p.name}">${p.name} (${p.role || 'operator'})</option>`;
+  operators.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  operators.forEach(p => {
+    sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
   });
   document.getElementById('assignModal').classList.add('active');
 }
