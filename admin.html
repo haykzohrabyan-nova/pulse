@@ -12,11 +12,11 @@
     #tab-payment.active,
     #tab-crm-quote.active { padding: 0 !important; }
   </style>
-  <script src="shared.js?v=20260523-jt-lock"></script>
+  <script src="shared.js?v=20260523-admin-personnel"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260521-PWCFG3"></script>
+  <script src="supabase-client.js?v=20260523-admin-personnel"></script>
   <script src="auth.js?v=20260522-TABS1"></script>
   <style id="page-styles"></style>
 </head>
@@ -1968,6 +1968,10 @@ function generatePersonnelUserId() {
   document.getElementById('pUserId').value = `${name}${seed}`;
 }
 
+function personnelRowIdAttr(id) {
+  return JSON.stringify(String(id ?? ''));
+}
+
 async function loadPersonnel() {
   const people = await getAllPersonnel();
   const tbody = document.getElementById('personnelTableBody');
@@ -1975,7 +1979,10 @@ async function loadPersonnel() {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
     return;
   }
-  tbody.innerHTML = people.map(p => `
+  tbody.innerHTML = people.map(p => {
+    const idAttr = personnelRowIdAttr(p.id);
+    const nameAttr = JSON.stringify(String(p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+    return `
     <tr>
       <td style="font-weight:600;">${p.name}</td>
       <td>${personnelRoleLabel(p.role)}</td>
@@ -1984,11 +1991,11 @@ async function loadPersonnel() {
       <td>${p.phone || '—'}</td>
       <td><span class="${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
       <td>
-        <button class="btn btn-sm" onclick="editPersonnel(${p.id})">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deletePersonnelConfirm(${p.id}, '${p.name.replace(/'/g,"\\'")}')">Delete</button>
+        <button type="button" class="btn btn-sm" onclick="editPersonnel(${idAttr})">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deletePersonnelConfirm(${idAttr}, ${nameAttr})">Delete</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function _waitForSupabaseClient(maxMs = 8000) {
@@ -2055,8 +2062,10 @@ async function openPersonnelModal(person) {
 
 async function editPersonnel(id) {
   const all = await getAllPersonnel();
-  const p = all.find(x => x.id === id);
+  const key = String(id ?? '');
+  const p = all.find(x => String(x.id) === key);
   if (p) openPersonnelModal(p);
+  else alert('Personnel record not found. Refresh the page and try again.');
 }
 
 async function savePersonnel() {
@@ -2068,7 +2077,8 @@ async function savePersonnel() {
   if (!facility) { alert('Facility is required.'); return; }
   const userId = document.getElementById('pUserId').value.trim();
   if (!userId) { alert('User ID is required.'); return; }
-  const id = parseInt(document.getElementById('personnelId').value) || null;
+  const idRaw = document.getElementById('personnelId').value.trim();
+  const id = idRaw || null;
   const data = {
     name,
     role,
@@ -2087,8 +2097,12 @@ async function savePersonnel() {
 
 async function deletePersonnelConfirm(id, name) {
   if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
-  await deletePersonnel(id);
-  await loadPersonnel();
+  try {
+    await deletePersonnel(id);
+    await loadPersonnel();
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
+  }
 }
 
 async function bulkSetUserIds() {
@@ -2099,11 +2113,15 @@ async function bulkSetUserIds() {
   const all = await getAllPersonnel();
   if (!all.length) { alert('No personnel found.'); return; }
   if (!confirm(`This will set the User ID to "${id}" for all ${all.length} personnel records. Continue?`)) return;
-  for (const p of all) {
-    await updatePersonnel(p.id, { ...p, userId: id });
+  try {
+    for (const p of all) {
+      await updatePersonnel(p.id, { ...p, userId: id });
+    }
+    await loadPersonnel();
+    alert(`✓ Updated ${all.length} records to User ID "${id}".`);
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
   }
-  await loadPersonnel();
-  alert(`✓ Updated ${all.length} records to User ID "${id}".`);
 }
 
 // ── DIE MASTER DATA ────────────────────────────────────────
