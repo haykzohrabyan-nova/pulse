@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260523-jt-sku"></script>
+  <script src="shared.js?v=20260523-jt-am-lock"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-jt-sku"></script>
+  <script src="supabase-client.js?v=20260523-jt-am-lock"></script>
   <script src="auth.js?v=20260427-PRI239"></script>
   <style id="page-styles"></style>
 </head>
@@ -33,6 +33,7 @@
       <!-- PUL-137 Req 9: New Ticket button — clears selection and resets to blank without page reload when already on a new form; navigates to fresh form when editing -->
       <button type="button" class="btn" id="newTicketBtn" onclick="resetToNewTicket()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;">✏️ New Ticket</button>
       <a id="addSubTicketBtn" href="#" class="btn" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;">➕ Add Sub-Ticket</a>
+      <button type="button" class="btn btn-primary" id="editLockedBtn" onclick="openAdminCodeModal()" style="display:none;background:#2563eb;color:#fff;border:none;">✏️ Edit</button>
       <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
     </div>
   </div>
@@ -1688,9 +1689,32 @@ function renderJobTicketPrepressInfoBanner(order) {
 function shouldLockJobTicket(order) {
   if (!order) return false;
   if (typeof hasJobTicketEditUnlock === 'function' && hasJobTicketEditUnlock(order.orderId)) return false;
+  const role = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
   return typeof isJobTicketStatusLocked === 'function'
-    ? isJobTicketStatusLocked(order.status)
+    ? isJobTicketStatusLocked(order.status, { role })
     : false;
+}
+
+function updateJtHeaderActions(order) {
+  const saveBtn = document.getElementById('saveBtn');
+  const editBtn = document.getElementById('editLockedBtn');
+  if (!saveBtn || !editBtn) return;
+
+  const isEditing = !!editingOrderId;
+  const locked = isEditing && order && shouldLockJobTicket(order);
+
+  if (locked) {
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    saveBtn.disabled = true;
+  } else {
+    editBtn.style.display = 'none';
+    if (isEditing) {
+      saveBtn.style.display = '';
+      saveBtn.disabled = false;
+    }
+  }
+  if (order) updateSaveButtonForOrder(order);
 }
 
 function _jtReadOnlyDomSkip(el) {
@@ -1698,6 +1722,7 @@ function _jtReadOnlyDomSkip(el) {
   if (el.closest('#jtReadOnlyArtifacts')) return true;
   if (el.closest('#editLockBanner')) return true;
   if (el.closest('.pulse-art-thumb-wrap') || el.closest('.pulse-art-thumb')) return true;
+  if (el.closest('.sku-file-thumb-wrap') || el.closest('.artwork-thumb')) return true;
   if (el.closest('#lightbox')) return true;
   return false;
 }
@@ -1755,6 +1780,7 @@ function applyJtFormReadOnlyState(locked) {
 function releaseJtTicketReadOnlyDom() {
   applyJtFormReadOnlyState(false);
   document.getElementById('jtReadOnlyArtifacts')?.remove();
+  if (editingOrderId) updateJtHeaderActions({ orderId: editingOrderId });
 }
 
 /** Re-apply lock after innerHTML refresh (renderArtworkThumbs / renderSKUs). */
@@ -2250,7 +2276,7 @@ async function openOrderInEditor(order) {
     document.getElementById('prepressReviewInfoBanner')?.remove();
   }
 
-  updateSaveButtonForOrder(fresh);
+  updateJtHeaderActions(fresh);
   renderQueuePane();
 
   if (fresh.id && typeof showGate3Section === 'function') {
@@ -3491,6 +3517,7 @@ function applyEditLock(order) {
   );
   if (skuList.length > 0) renderSKUsReadOnly();
   applyJtFormReadOnlyState(true);
+  updateJtHeaderActions(order);
 }
 
 function openAdminCodeModal() {
@@ -3542,6 +3569,7 @@ async function verifyAdminCode() {
 
   if (skuList.length > 0 && typeof renderSKUs === 'function') renderSKUs();
 
+  updateJtHeaderActions({ orderId: editingOrderId });
   closeAdminCodeModal();
   result.innerHTML = '';
 }
@@ -4427,6 +4455,9 @@ async function saveTicket(suppressRedirect = false) {
       if (previousOrder?.status === 'pending-account-manager') {
         order = mergeRejectedTicketSave(previousOrder, order);
       }
+      if (previousOrder?.status) {
+        order.status = previousOrder.status;
+      }
       // Preserve dueDate if form field was cleared or unchanged
       if (!order.dueDate && previousOrder?.dueDate) order.dueDate = previousOrder.dueDate;
       // Preserve artwork files if none were newly uploaded
@@ -4438,12 +4469,15 @@ async function saveTicket(suppressRedirect = false) {
         if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
         if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
       }
-      if ((!order.skus || !order.skus.length) && previousOrder?.skus?.length) {
+      if (previousOrder?.skus?.length) {
+        const nextSkus = skuList.length > 0 ? skuList : (order.skus || previousOrder.skus);
+        order.skus = typeof mergeJobTicketSkuMedia === 'function'
+          ? mergeJobTicketSkuMedia(nextSkus, previousOrder.skus)
+          : (nextSkus.length ? nextSkus : previousOrder.skus);
+        order.skuCount = order.skus.length;
+      } else if ((!order.skus || !order.skus.length) && previousOrder?.skus?.length) {
         order.skus = previousOrder.skus;
         order.skuCount = previousOrder.skuCount || previousOrder.skus.length;
-      } else if (skuList.length > 0 && previousOrder?.skus?.length && typeof mergeJobTicketSkuMedia === 'function') {
-        order.skus = mergeJobTicketSkuMedia(skuList, previousOrder.skus);
-        order.skuCount = order.skus.length;
       }
       if (previousOrder?.status === 'pending-account-manager') {
         const resubmittedAt = new Date().toISOString();
@@ -4471,8 +4505,20 @@ async function saveTicket(suppressRedirect = false) {
           console.warn('Rush SMS failed:', e);
         }
       }
-      // Reload ticket so SKU/artwork panels render from saved Supabase data.
-      window.location.href = `job-ticket.html?order=${encodeURIComponent(editingOrderId)}&saved=1`;
+      // Reload ticket in-place so SKU/artwork panels render from saved Supabase data.
+      const savedOrderId = editingOrderId;
+      btn.disabled = false;
+      updateSaveButtonForOrder(order);
+      let reloaded = null;
+      try {
+        reloaded = await getOrderByOrderId(savedOrderId);
+      } catch (_) {}
+      if (reloaded) {
+        await openOrderInEditor(reloaded);
+        showJobTicketSavedToast(savedOrderId);
+      } else {
+        window.location.href = `job-ticket.html?order=${encodeURIComponent(savedOrderId)}&saved=1`;
+      }
     } else {
       const allOrders = await getAllOrders();
       const userTypedId = document.getElementById('jobTicketNumber').value.trim();

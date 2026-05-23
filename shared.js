@@ -5360,15 +5360,25 @@ async function waitForPulseSupabaseSession(maxMs = 15000) {
 
 // ── Job ticket edit lock (status + supervisor unlock) ─────────
 
-const JT_EDITABLE_STATUSES = ['new', 'on-hold', 'pending-account-manager'];
+// Account manager may edit until prepress starts review; after that supervisor unlock is required.
+const JT_EDITABLE_STATUSES = ['new', 'on-hold', 'pending-account-manager', 'prepress'];
+
+const JT_LOCKED_STATUSES = [
+  'prepress-active', 'prepress-paused', 'pending-review', 'pending-confirmation',
+  'in-production', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'waiting-pickup',
+  'completed', 'shipped', 'received', 'delivery-ready',
+];
 
 const JT_SUPERVISOR_UNLOCK_ROLES = new Set([
   'admin', 'supervisor', 'david-review', 'production-manager', 'job_manager', 'ops_manager',
 ]);
 
-function isJobTicketStatusLocked(status) {
+function isJobTicketStatusLocked(status, _options) {
   const s = String(status || '').trim().toLowerCase();
-  return !JT_EDITABLE_STATUSES.includes(s);
+  if (!s) return false;
+  if (JT_EDITABLE_STATUSES.includes(s)) return false;
+  if (JT_LOCKED_STATUSES.includes(s)) return true;
+  return true;
 }
 
 function _jtUnlockStorageKey(orderId) {
@@ -5513,6 +5523,7 @@ if (typeof window !== 'undefined') {
   window.waitForPulseAuthReady = waitForPulseAuthReady;
   window.waitForPulseSupabaseSession = waitForPulseSupabaseSession;
   window.JT_EDITABLE_STATUSES = JT_EDITABLE_STATUSES;
+  window.JT_LOCKED_STATUSES = JT_LOCKED_STATUSES;
   window.isJobTicketStatusLocked = isJobTicketStatusLocked;
   window.setJobTicketEditUnlock = setJobTicketEditUnlock;
   window.clearJobTicketEditUnlock = clearJobTicketEditUnlock;
