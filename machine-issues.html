@@ -8,6 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
+  <script src="supabase-client.js?v=20260523-mi1"></script>
   <script src="auth.js?v=20260419-PUL70"></script>
   <style id="page-styles"></style>
 </head>
@@ -241,6 +242,9 @@ function fillSelectOptions(sel, map, includeEmpty, emptyLabel) {
 window.addEventListener('DOMContentLoaded', () => initPage());
 
 async function initPage() {
+  if (typeof waitForPulseSupabaseSession === 'function') {
+    await waitForPulseSupabaseSession(8000).catch(() => {});
+  }
   if (typeof initPulseAdminData === 'function') await initPulseAdminData();
   if (typeof registerPulseAdminConfigRefresh === 'function') {
     registerPulseAdminConfigRefresh(async () => { await refreshMachineDropdowns(); });
@@ -256,7 +260,7 @@ async function initPage() {
   document.getElementById('v_resolvedBy').value = name;
   document.getElementById('r_machine').addEventListener('change', syncMatcherMachineFromReport);
   await refreshMachineDropdowns();
-  loadIssues();
+  await loadIssues();
   migrateIssues();
   renderAll();
   toggleReportDowntime();
@@ -324,11 +328,39 @@ function toggleFixSourceOther() {
   document.getElementById('v_fixSourceOtherRow').style.display = show ? 'block' : 'none';
 }
 
-function loadIssues() {
+function useMachineIssuesSupabase() {
+  return window.PULSE_STORAGE_BACKEND === 'supabase'
+    && typeof window.getAllMachineIssues === 'function'
+    && typeof window.usePulseSupabaseStorage === 'function';
+}
+
+async function loadIssues() {
+  if (useMachineIssuesSupabase()) {
+    try {
+      _issues = await getAllMachineIssues();
+      return;
+    } catch (e) {
+      console.error('[Report Issue] load from Supabase:', e);
+    }
+  }
   try { _issues = JSON.parse(localStorage.getItem('pulse_machine_issues') || '[]'); } catch (e) { _issues = []; }
 }
 
+async function saveIssue(issue) {
+  if (useMachineIssuesSupabase()) {
+    const isNew = !issue.id || String(issue.id).startsWith('ISS-');
+    const saved = isNew ? await insertMachineIssue(issue) : await updateMachineIssue(issue);
+    const idx = _issues.findIndex(x => x.id === issue.id);
+    if (idx >= 0) _issues[idx] = saved;
+    else _issues.unshift(saved);
+    return saved;
+  }
+  localStorage.setItem('pulse_machine_issues', JSON.stringify(_issues));
+  return issue;
+}
+
 function saveIssues() {
+  if (useMachineIssuesSupabase()) return;
   localStorage.setItem('pulse_machine_issues', JSON.stringify(_issues));
 }
 
@@ -339,11 +371,10 @@ function migrateIssues() {
     if (!next.problemSource) { next.problemSource = 'legacy'; changed = true; }
     return next;
   });
-  if (changed) saveIssues();
+  if (changed && !useMachineIssuesSupabase()) saveIssues();
 }
 
 function renderAll() {
-  loadIssues();
   const { machine, openOnly } = getListFilters();
   let issues = [..._issues];
   if (openOnly) issues = issues.filter(i => !i.resolvedAt);
@@ -423,7 +454,7 @@ function issueCard(i) {
 }
 
 // ── Log new open issue ───────────────────────────────────
-function logNewIssue() {
+async function logNewIssue() {
   const machine = document.getElementById('r_machine').value;
   const symptom = document.getElementById('r_symptom').value.trim();
   const problemSource = document.getElementById('r_problemSource').value;
@@ -452,13 +483,22 @@ function logNewIssue() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  loadIssues();
-  _issues.unshift(issue);
-  saveIssues();
-  clearReportForm();
-  renderAll();
-  const el = document.getElementById('issue-' + issue.id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  try {
+    await loadIssues();
+    if (useMachineIssuesSupabase()) {
+      await saveIssue(issue);
+    } else {
+      _issues.unshift(issue);
+      saveIssues();
+    }
+    clearReportForm();
+    renderAll();
+    const el = document.getElementById('issue-' + (useMachineIssuesSupabase() ? _issues[0].id : issue.id));
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) {
+    console.error('[Report Issue] logNewIssue:', e);
+    alert('Could not save issue: ' + (e?.message || e));
+  }
 }
 
 function clearReportForm() {
@@ -473,11 +513,11 @@ function clearReportForm() {
 }
 
 // ── Symptom Matcher ──────────────────────────────────────
-function matchSymptom() {
+async function matchSymptom() {
   const symptom = document.getElementById('symptomInput').value.toLowerCase().trim();
   const machine = document.getElementById('symptomMachine').value;
   if (!symptom) { alert('Describe the symptom first.'); return; }
-  loadIssues();
+  await loadIssues();
   const resolved = _issues.filter(i => i.resolvedAt && i.resolution);
   const scored = resolved.map(i => {
     const text = (i.symptom + ' ' + i.machine + ' ' + (i.resolution || '')).toLowerCase();
@@ -536,8 +576,8 @@ function useMatcherFix(idx) {
 }
 
 // ── Edit modal ───────────────────────────────────────────
-function editIssue(id) {
-  loadIssues();
+async function editIssue(id) {
+  await loadIssues();
   const i = _issues.find(x => x.id === id);
   if (!i) return;
   _editingIssueId = id;
@@ -557,15 +597,15 @@ function closeEditModal() {
   _editingIssueId = null;
 }
 
-function saveEditIssue() {
+async function saveEditIssue() {
   const machine = document.getElementById('e_machine').value;
   const symptom = document.getElementById('e_symptom').value.trim();
   if (!machine || !symptom) { alert('Machine and symptom are required.'); return; }
-  loadIssues();
+  await loadIssues();
   const idx = _issues.findIndex(x => x.id === _editingIssueId);
   if (idx < 0) return;
   const prev = _issues[idx];
-  _issues[idx] = {
+  const updated = {
     ...prev,
     machine,
     symptom,
@@ -578,14 +618,24 @@ function saveEditIssue() {
       : prev.downStart,
     updatedAt: new Date().toISOString(),
   };
-  saveIssues();
-  closeEditModal();
-  renderAll();
+  try {
+    if (useMachineIssuesSupabase()) {
+      _issues[idx] = await saveIssue(updated);
+    } else {
+      _issues[idx] = updated;
+      saveIssues();
+    }
+    closeEditModal();
+    renderAll();
+  } catch (e) {
+    console.error('[Report Issue] saveEditIssue:', e);
+    alert('Could not save changes: ' + (e?.message || e));
+  }
 }
 
 // ── Resolve modal ────────────────────────────────────────
-function openResolveModal(id) {
-  loadIssues();
+async function openResolveModal(id) {
+  await loadIssues();
   const i = _issues.find(x => x.id === id);
   if (!i) return;
   _resolvingIssueId = id;
@@ -608,7 +658,7 @@ function closeResolveModal() {
   _resolvingIssueId = null;
 }
 
-function saveResolve() {
+async function saveResolve() {
   const resolution = document.getElementById('v_resolution').value.trim();
   const fixSource = document.getElementById('v_fixSource').value;
   if (!resolution || !fixSource) {
@@ -620,21 +670,34 @@ function saveResolve() {
     alert('Please describe the fix source.');
     return;
   }
-  loadIssues();
+  await loadIssues();
   const idx = _issues.findIndex(x => x.id === _resolvingIssueId);
   if (idx < 0) return;
   const downEndRaw = document.getElementById('v_downEnd').value;
-  _issues[idx].resolution = resolution;
-  _issues[idx].fixSource = fixSource;
-  _issues[idx].fixSourceOther = fixSource === 'other' ? fixSourceOther : null;
-  _issues[idx].technician = document.getElementById('v_technician').value.trim() || null;
-  _issues[idx].downEnd = downEndRaw ? new Date(downEndRaw).toISOString() : new Date().toISOString();
-  _issues[idx].resolvedAt = new Date().toISOString();
-  _issues[idx].resolvedBy = document.getElementById('v_resolvedBy').value || null;
-  _issues[idx].updatedAt = new Date().toISOString();
-  saveIssues();
-  closeResolveModal();
-  renderAll();
+  const updated = {
+    ..._issues[idx],
+    resolution,
+    fixSource,
+    fixSourceOther: fixSource === 'other' ? fixSourceOther : null,
+    technician: document.getElementById('v_technician').value.trim() || null,
+    downEnd: downEndRaw ? new Date(downEndRaw).toISOString() : new Date().toISOString(),
+    resolvedAt: new Date().toISOString(),
+    resolvedBy: document.getElementById('v_resolvedBy').value || null,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    if (useMachineIssuesSupabase()) {
+      _issues[idx] = await saveIssue(updated);
+    } else {
+      _issues[idx] = updated;
+      saveIssues();
+    }
+    closeResolveModal();
+    renderAll();
+  } catch (e) {
+    console.error('[Report Issue] saveResolve:', e);
+    alert('Could not save resolution: ' + (e?.message || e));
+  }
 }
 </script>
 </body>

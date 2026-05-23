@@ -35,7 +35,7 @@ DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
 CREATE POLICY "profiles_select_admin"
   ON profiles FOR SELECT
   USING (
-    current_user_role() IN (
+    current_user_role()::text IN (
       'admin', 'supervisor', 'production_manager', 'david_review'
     )
   );
@@ -44,15 +44,15 @@ CREATE POLICY "profiles_select_admin"
 DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
 CREATE POLICY "profiles_update_admin"
   ON profiles FOR UPDATE
-  USING (current_user_role() IN ('admin', 'david_review'));
+  USING (current_user_role()::text IN ('admin', 'david_review'));
 
 -- David Review can read/write config (legacy personnel JSON during transition)
 DROP POLICY IF EXISTS "config_update_admin" ON config;
 CREATE POLICY "config_update_admin"
   ON config FOR UPDATE
-  USING (current_user_role() IN ('admin', 'david_review'));
+  USING (current_user_role()::text IN ('admin', 'david_review'));
 
 DROP POLICY IF EXISTS "config_insert_admin" ON config;
 CREATE POLICY "config_insert_admin"
   ON config FOR INSERT
-  WITH CHECK (current_user_role() IN ('admin', 'david_review'));
+  WITH CHECK (current_user_role()::text IN ('admin', 'david_review'));

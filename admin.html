@@ -16,7 +16,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-profiles-personnel"></script>
+  <script src="supabase-client.js?v=20260523-personnel-sync"></script>
   <script src="auth.js?v=20260522-TABS1"></script>
   <style id="page-styles"></style>
 </head>
@@ -1758,22 +1758,38 @@ async function renderRoles() {
   html += `</tbody></table></div>`;
   wrap.innerHTML = html;
 
-  // User assignments list
+  // User assignments — same source as Personnel tab + login (getAllPersonnel → profiles + config)
   const el = document.getElementById('roleUserList');
   if (!el) return;
-  const rows = Object.entries(OPERATOR_PROFILES)
-    .concat((typeof EXTRA_AUTH_USERS !== 'undefined' ? EXTRA_AUTH_USERS.map(u => [u.name, u]) : []))
-    .concat([['Hayk Zohrabyan', { role: 'admin', notes: 'Owner / Admin' }]])
-    .map(([name, p]) => {
-      const customRole = _customRoles.find(r => r.key === p.role);
-      const cfg = customRole || ROLE_CONFIG[p.role] || { label: p.role, color: '#6b7280' };
+  let people = [];
+  try {
+    if (typeof getAllPersonnel === 'function') people = await getAllPersonnel();
+  } catch (e) {
+    console.warn('[Admin] roleUserList getAllPersonnel:', e);
+  }
+  if (!people.length && typeof OPERATOR_PROFILES !== 'undefined') {
+    people = Object.entries(OPERATOR_PROFILES).map(([name, p]) => ({
+      name,
+      role: p.role,
+      notes: p.notes || '',
+      userId: p.userId != null ? String(p.userId) : '',
+    }));
+  }
+  const rows = people
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))
+    .map(p => {
+      const roleKey = String(p.role || 'operator').replace(/_/g, '-');
+      const customRole = _customRoles.find(r => r.key === roleKey);
+      const cfg = customRole || ROLE_CONFIG[roleKey] || { label: roleKey, color: '#6b7280' };
+      const uid = p.userId ? ` · ID ${p.userId}` : '';
+      const status = p.active === false ? ' · inactive' : '';
       return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
-        <span style="font-weight:600;min-width:160px;">${name}</span>
-        <span style="padding:2px 10px;border-radius:10px;background:${cfg.color}22;color:${cfg.color};font-size:11px;font-weight:600;">${cfg.label || p.role}</span>
-        <span style="color:#9ca3af;font-size:11px;">${p.notes || ''}</span>
+        <span style="font-weight:600;min-width:160px;">${escapeHtml(p.name)}</span>
+        <span style="padding:2px 10px;border-radius:10px;background:${cfg.color}22;color:${cfg.color};font-size:11px;font-weight:600;">${escapeHtml(cfg.label || roleKey)}</span>
+        <span style="color:#9ca3af;font-size:11px;">${escapeHtml((p.notes || '') + uid + status)}</span>
       </div>`;
     }).join('');
-  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows || '<div style="padding:16px;color:#9ca3af;font-size:13px;">No users found.</div>'}</div>`;
+  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">${rows || '<div style="padding:16px;color:#9ca3af;font-size:13px;">No personnel yet. Add users in the Personnel tab.</div>'}</div>`;
 }
 
 function roleMatrixChange(cb) {
@@ -2008,8 +2024,20 @@ function generatePersonnelUserId() {
   document.getElementById('pUserId').value = `${name}${seed}`;
 }
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function loadPersonnel() {
-  const people = await getAllPersonnel();
+  let people = [];
+  try {
+    people = await getAllPersonnel();
+  } catch (e) {
+    console.error('[Admin] loadPersonnel:', e);
+    if (typeof showPageToast === 'function') {
+      showPageToast('Could not load personnel from database. Check you are signed in.', 'error', 6000);
+    }
+  }
   _personnelCache = people;
   const tbody = document.getElementById('personnelTableBody');
   if (people.length === 0) {
@@ -2137,6 +2165,10 @@ async function savePersonnel() {
     else await addPersonnel(data);
     closeModal('personnelModal');
     await loadPersonnel();
+    if (activeTab === 'roles') await renderRoles();
+    if (typeof pulseNotifyReferenceDataChanged === 'function') {
+      pulseNotifyReferenceDataChanged({ scope: 'personnel' });
+    }
   } catch(e) { alert('Error: ' + e.message); }
 }
 
@@ -2145,6 +2177,10 @@ async function deletePersonnelConfirm(id, name) {
   try {
     await deletePersonnel(id);
     await loadPersonnel();
+    if (activeTab === 'roles') await renderRoles();
+    if (typeof pulseNotifyReferenceDataChanged === 'function') {
+      pulseNotifyReferenceDataChanged({ scope: 'personnel' });
+    }
   } catch (e) {
     alert('Error: ' + (e.message || e));
   }

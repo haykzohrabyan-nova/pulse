@@ -507,7 +507,14 @@ async function submitLogin() {
       if (!session?.user?.id) throw new Error('Supabase session not established');
       const profile = await window.supabaseGetProfile();
       if (profile) {
-        resolvedRole = String(profile.role || resolvedRole).replace(/_/g, '-');
+        const dbRole = String(profile.role || resolvedRole).replace(/_/g, '-');
+        const personnelRole = String(personRecord.role || '').replace(/_/g, '-');
+        if (personnelRole && dbRole !== personnelRole) {
+          console.warn(
+            `[Pulse] Personnel role (${personnelRole}) differs from profiles.role (${dbRole}). Database permissions use profiles.role.`
+          );
+        }
+        resolvedRole = dbRole;
         resolvedName = profile.display_name || resolvedName;
       }
     } catch (_) {
