@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="supabase-client.js?v=20260523-PM1"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -344,8 +344,13 @@ document.getElementById('page-styles').textContent = `
 
 // State
 let allOrders = [];
-/** Job tickets that have left prepress and are in production / QC / shipping (or done). */
-const PM_APPROVED_PRODUCTION_STATUSES = ['pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'waiting-pickup', 'completed', 'shipped', 'received'];
+let pmLastLoadError = null;
+/** Production pipeline: prepress through shipped (for “Approved — production queue” filter). */
+const PM_APPROVED_PRODUCTION_STATUSES = [
+  'prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review',
+  'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'waiting-pickup',
+  'completed', 'shipped', 'received', 'delivery-ready',
+];
 let currentStatusFilter = 'all';
 let currentFacilityFilter = 'all';
 let activeOrderId = null; // the DB id currently expanded
@@ -402,8 +407,12 @@ function populatePmFacilityFilter() {
 }
 
 // ── Init ──────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+async function bootstrapProductionManager() {
+  if (typeof waitForPulseAuthReady === 'function') await waitForPulseAuthReady();
+  if (typeof waitForPulseSupabaseSession === 'function') await waitForPulseSupabaseSession();
+  if (typeof initPulseAdminData === 'function') {
+    try { await initPulseAdminData(); } catch (e) { console.warn('[Pulse] PM admin bootstrap', e); }
+  }
   populatePmFacilityFilter();
   populatePmMachineSelectors();
   if (typeof registerPulseAdminConfigRefresh === 'function') {
@@ -420,6 +429,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     const order = allOrders.find(o => o.orderId === orderId);
     if (order) openDetail(order.id);
   }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  bootstrapProductionManager().catch(e => console.error('[Pulse] production-manager init', e));
+  window.addEventListener('pulse:auth-ready', () => {
+    loadOrders().catch(e => console.error('[Pulse] production-manager reload', e));
+  });
   onDBUpdate(async (data) => {
     if (data.store === 'orders' || data.store === 'reprints' || data.store === 'personnel') {
       await loadOrders();
@@ -429,6 +445,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOrders() {
   allOrders = await getAllOrders();
+  pmLastLoadError = window.PULSE_LAST_ORDERS_ERROR || null;
+  if (!Array.isArray(allOrders)) allOrders = [];
   allOrders.sort((a, b) => getPrioritySortValue(a) - getPrioritySortValue(b));
   renderSidebarStats();
   renderList();
@@ -562,7 +580,14 @@ function renderList() {
 
   const container = document.getElementById('orderList');
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;">No orders found.</div>';
+    let msg = 'No orders match the current filters. Try <strong>Status: All</strong> and <strong>All Facilities</strong>.';
+    if (pmLastLoadError) {
+      const detail = pmLastLoadError.message || String(pmLastLoadError);
+      msg = `Could not load job tickets from the database.<br><span style="font-size:12px;">${detail}</span><br>Sign in with Admin, Supervisor, or Production Manager and refresh.`;
+    } else if (!allOrders.length) {
+      msg = `No job tickets found for your account.<br><a href="job-ticket.html" class="btn btn-primary" style="margin-top:12px;display:inline-block;">+ New Job Ticket</a>`;
+    }
+    container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px;line-height:1.5;max-width:480px;margin:0 auto;">${msg}</div>`;
     return;
   }
 

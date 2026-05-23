@@ -795,8 +795,19 @@
   };
 
   window.getAllOrders = async function () {
+    window.PULSE_LAST_ORDERS_ERROR = null;
     try { return await _getAllOrders(); }
-    catch (e) { console.error('[Pulse/Supabase] getAllOrders:', e); return _origGetAllOrders ? _origGetAllOrders() : []; }
+    catch (e) {
+      console.error('[Pulse/Supabase] getAllOrders:', e);
+      window.PULSE_LAST_ORDERS_ERROR = e;
+      if (_origGetAllOrders) {
+        try {
+          const local = await _origGetAllOrders();
+          if (local?.length) return local;
+        } catch (_) {}
+      }
+      return [];
+    }
   };
 
   window.getOrder = async function (id) {

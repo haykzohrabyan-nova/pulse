@@ -12,7 +12,7 @@
     #tab-payment.active,
     #tab-crm-quote.active { padding: 0 !important; }
   </style>
-  <script src="shared.js?v=20260521-BACKUP4"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -289,8 +289,7 @@
           <div class="field" style="margin-bottom:12px;">
             <label>Default Facility</label>
             <select id="defaultFacility" onchange="saveSettingDebounced()">
-              <option value="16th-street">16th Street</option>
-              <option value="boyd-street">Boyd Street</option>
+              <option value="">— Configure Organisation facilities —</option>
             </select>
           </div>
           <div class="field">
@@ -1915,6 +1914,7 @@ async function onPulseReferenceDataChanged() {
   else if (activeTab === 'machines') renderMachines();
   else if (activeTab === 'products') await loadProductsTab();
   else if (activeTab === 'product-workflows') await loadProductWorkflowsTab();
+  else if (activeTab === 'settings') await loadSettings();
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -2829,7 +2829,29 @@ async function saveKBEntry() {
 }
 
 // ── SETTINGS ──────────────────────────────────────────────
+function populateAdminDefaultFacilitySelect() {
+  const sel = document.getElementById('defaultFacility');
+  if (!sel) return;
+  const saved = sel.value;
+  const facilities = typeof getPulseFacilityList === 'function' ? getPulseFacilityList() : [];
+  sel.innerHTML = '';
+  if (!facilities.length) {
+    sel.innerHTML = '<option value="">— Add facilities in Organisation —</option>';
+    return;
+  }
+  facilities.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.slug;
+    opt.textContent = f.name || f.slug;
+    sel.appendChild(opt);
+  });
+  const settings = typeof getPulseSettings === 'function' ? getPulseSettings() : {};
+  const pick = saved || settings.defaultFacility || facilities[0]?.slug || '';
+  if (pick) sel.value = pick;
+}
+
 async function loadSettings() {
+  populateAdminDefaultFacilitySelect();
   const appDeptConfig = await getConfig('appDeptCapacity');
   if (appDeptConfig?.value) {
     document.getElementById('appDeptPeople').value = appDeptConfig.value.people || 3;

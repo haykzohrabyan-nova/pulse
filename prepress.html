@@ -266,12 +266,21 @@ let currentUser_prepress = null;
 const PREPRESS_VISIBLE_STATUSES = ['prepress','prepress-active','prepress-paused','pending-account-manager','pending-review','in-production'];
 const PREPRESS_APPROVED_PRODUCTION_STATUSES = ['pending-review','in-production'];
 
-window.addEventListener('DOMContentLoaded', async () => {
+async function bootstrapPrepress() {
+  if (typeof waitForPulseAuthReady === 'function') await waitForPulseAuthReady();
+  if (typeof waitForPulseSupabaseSession === 'function') await waitForPulseSupabaseSession();
   if (typeof initPulseAdminData === 'function') await initPulseAdminData();
   if (typeof registerPulseAdminConfigRefresh === 'function') {
     registerPulseAdminConfigRefresh(() => { if (selectedOrderId) renderDetail(); });
   }
   await loadOrders();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  bootstrapPrepress().catch(e => console.error('[Pulse] prepress init', e));
+  window.addEventListener('pulse:auth-ready', () => {
+    loadOrders().catch(e => console.error('[Pulse] prepress reload', e));
+  });
   onDBUpdate(async (data) => {
     if (data.store === 'orders') await loadOrders();
   });

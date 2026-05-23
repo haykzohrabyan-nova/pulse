@@ -624,6 +624,29 @@ const PRODUCTION_LINES = {
   }
 };
 
+function _pulseFacilityIsBoydLine(slug) {
+  if (!slug) return false;
+  if (slug === 'boyd-street') return true;
+  const list = typeof getPulseFacilityList === 'function' ? getPulseFacilityList() : [];
+  const row = list.find(f => f.slug === slug);
+  if (row && /boyd/i.test(`${row.slug} ${row.name}`)) return true;
+  return /boyd/i.test(String(slug));
+}
+
+/** Prepress assignee for UI (order field, else single Admin prepress person, else generic). */
+function getPulsePrepressWorkerLabel(order) {
+  const by = (order && (order.prepressStartedBy || order.prepressLastUpdatedBy)) || '';
+  if (String(by).trim()) return String(by).trim();
+  const names = _pulseAdminCache?.prepressPersonnel;
+  if (Array.isArray(names) && names.length === 1) return names[0];
+  return 'Prepress';
+}
+
+function _isPrepressPersonnelRole(role) {
+  const r = String(role || '').toLowerCase();
+  return r.includes('prepress');
+}
+
 // Determine production line from order data
 function getProductionLine(order) {
   const steps = order.workflowSteps || [];
@@ -631,7 +654,7 @@ function getProductionLine(order) {
   // Check workflow steps first
   if (machines.some(m => m && m.includes('6K'))) return '6k';
   if (machines.some(m => m && m.includes('15K'))) return '15k';
-  if (order.facility === 'boyd-street') return 'boyd';
+  if (_pulseFacilityIsBoydLine(order.facility)) return 'boyd';
   // Fallback: check workflow template
   if (order.workflowTemplate) {
     if (order.workflowTemplate.startsWith('6k')) return '6k';
@@ -5102,8 +5125,12 @@ async function _loadPulseSettingsFromConfig() {
     getConfig('defaultQCInspector'),
   ]);
   const appVal = _configStoredValue(appDept) || {};
+  let appDeptCapacity = appVal.dailyUnits != null ? appVal.dailyUnits : null;
+  if (appDeptCapacity == null && appVal.people && appVal.unitsPerPerson) {
+    appDeptCapacity = appVal.people * appVal.unitsPerPerson;
+  }
   return {
-    appDeptCapacity: appVal.dailyUnits != null ? appVal.dailyUnits : null,
+    appDeptCapacity,
     appDeptCapacityRaw: appVal,
     defaultFacility: _configStoredValue(defFac) || '',
     defaultQCInspector: String(_configStoredValue(defQc) || '').trim(),
@@ -5136,12 +5163,21 @@ async function initPulseAdminData(opts = {}) {
     await loadPulseMachineCapacityOverrides();
     const facilities = await refreshPulseFacilityCache();
     const settings = await _loadPulseSettingsFromConfig();
+    let prepressPersonnel = [];
+    try {
+      const people = await getAllPersonnel();
+      prepressPersonnel = (people || [])
+        .filter(p => p && p.active !== false && _isPrepressPersonnelRole(p.role))
+        .map(p => p.name)
+        .filter(Boolean);
+    } catch (_) {}
 
     _pulseAdminCache = {
       catalog,
       facilities,
       machines: typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [],
       settings,
+      prepressPersonnel,
       loadedAt: Date.now(),
     };
     return _pulseAdminCache;
@@ -5284,6 +5320,44 @@ function registerPulseAdminConfigRefresh(handler) {
   if (typeof handler === 'function') _pulseAdminConfigRefreshHandlers.push(handler);
 }
 
+/** Wait until auth.js has finished (session or login modal). */
+function waitForPulseAuthReady(maxMs = 20000) {
+  if (typeof getSession === 'function' && getSession()) {
+    return Promise.resolve(getSession());
+  }
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('pulse:auth-ready', onReady);
+      resolve(typeof getSession === 'function' ? getSession() : null);
+    };
+    const onReady = () => finish();
+    window.addEventListener('pulse:auth-ready', onReady);
+    setTimeout(finish, maxMs);
+  });
+}
+
+/** Wait for Supabase JWT after login (no-op when using IndexedDB). */
+async function waitForPulseSupabaseSession(maxMs = 15000) {
+  if (window.PULSE_STORAGE_BACKEND !== 'supabase' || typeof window.supabaseGetSession !== 'function') {
+    return null;
+  }
+  const step = 200;
+  for (let t = 0; t < maxMs; t += step) {
+    try {
+      const s = await window.supabaseGetSession();
+      if (s) return s;
+    } catch (_) {}
+    if (!document.getElementById('loginOverlay') && !document.getElementById('authLoader')) {
+      return typeof getSession === 'function' ? getSession() : null;
+    }
+    await new Promise(r => setTimeout(r, step));
+  }
+  return null;
+}
+
 async function refreshPulseAdminData() {
   _pulseAdminInitPromise = null;
   const cache = await initPulseAdminData({ force: true });
@@ -5334,6 +5408,7 @@ if (typeof window !== 'undefined') {
   window.getPulseCatalogColorModes = getPulseCatalogColorModes;
   window.getPulseCatalogFinishing = getPulseCatalogFinishing;
   window.getPulseSettings = getPulseSettings;
+  window.getPulsePrepressWorkerLabel = getPulsePrepressWorkerLabel;
   window.getPulseMachineNames = getPulseMachineNames;
   window.getPulseReportIssueMachines = getPulseReportIssueMachines;
   window.PULSE_PROBLEM_SOURCE_LABELS = PULSE_PROBLEM_SOURCE_LABELS;
@@ -5344,6 +5419,8 @@ if (typeof window !== 'undefined') {
   window.renderPulseAdminEmptyState = renderPulseAdminEmptyState;
   window.registerPulseAdminConfigRefresh = registerPulseAdminConfigRefresh;
   window.refreshPulseAdminData = refreshPulseAdminData;
+  window.waitForPulseAuthReady = waitForPulseAuthReady;
+  window.waitForPulseSupabaseSession = waitForPulseSupabaseSession;
   window.getPulseOrgMachines = function () {
     if (!_pulseOrgMachines) syncPulseMachineryFromOrganisation();
     return _pulseOrgMachines || [];
