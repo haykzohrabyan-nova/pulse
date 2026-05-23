@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -3925,9 +3925,11 @@ function closeLightbox() {
 // ─────────────────────────────────────────────────────────────
 let _lastSavedOrderId = null;
 async function saveTicket(suppressRedirect = false) {
+  let existingOrderForEdit = null;
   if (editingDbId) {
     try {
       const current = await getOrder(editingDbId);
+      existingOrderForEdit = current || null;
       if (orderStatusIsPrepressActive(current)) {
         alert('Prepress review is active — the job ticket cannot be saved until review is paused or completed.');
         return;
@@ -3996,7 +3998,14 @@ async function saveTicket(suppressRedirect = false) {
       alert('Please select a Facility (configure in Admin → Organisation if the list is empty).');
       return;
     }
-    const wfSteps = await buildWorkflowStepsForSave();
+    let wfSteps = await buildWorkflowStepsForSave();
+    if (!wfSteps.length && editingDbId && existingOrderForEdit?.workflowSteps?.length) {
+      // Editing legacy/older tickets: keep previously saved route if current catalog/workflow link is missing.
+      wfSteps = existingOrderForEdit.workflowSteps.map((s, i) => ({
+        ...s,
+        stepIndex: s.stepIndex ?? i,
+      }));
+    }
     if (!wfSteps.length) {
       alert('No production workflow is configured for this product type. Set it up in Admin → Product Workflows, then try again.');
       return;
@@ -4152,14 +4161,14 @@ async function saveTicket(suppressRedirect = false) {
       status: capOrder?._capacityOverride ? 'pending-confirmation'
         : (dueDateCheck.isRush && rushApproved) ? 'prepress'
         : dueDateCheck.isRush ? 'on-hold'
-        : 'prepress',  // all new tickets start at prepress for Hrach to review & approve
+        : 'prepress',  // new tickets queue for prepress review
       isRush: dueDateCheck.isRush || false,
       rushApprovedBy: rushApproved ? ((typeof getCurrentName === 'function' && getCurrentName()) || 'Supervisor') : null,
       rushApprovedAt: rushApproved ? new Date().toISOString() : null,
       capacityOverride: capOrder?._capacityOverride || false,
       capacityDetails: capOrder?._capacityDetails || null,
-      materialShortage: capOrder?._materialShortage || false,
-      materialShortageDetails: capOrder?._materialShortageDetails || null,
+      materialShortage: false,
+      materialShortageDetails: null,
       needsConfirmation: !!capOrder?._capacityOverride,
       confirmationReason: capOrder?._capacityOverride ? (capOrder._confirmationReason || 'Needs overtime approval')
         : '',
@@ -4183,7 +4192,7 @@ async function saveTicket(suppressRedirect = false) {
     };
 
     if (editingDbId) {
-      const previousOrder = await getOrder(editingDbId);
+      const previousOrder = existingOrderForEdit || await getOrder(editingDbId);
       if (previousOrder?.status === 'pending-account-manager') {
         order = mergeRejectedTicketSave(previousOrder, order);
       }
@@ -4197,6 +4206,10 @@ async function saveTicket(suppressRedirect = false) {
         if (!order.whiteLayerFile && previousOrder?.whiteLayerFile) order.whiteLayerFile = previousOrder.whiteLayerFile;
         if (!order.uvFile && previousOrder?.uvFile) order.uvFile = previousOrder.uvFile;
         if (!order.foilFile && previousOrder?.foilFile) order.foilFile = previousOrder.foilFile;
+      }
+      if ((!order.skus || !order.skus.length) && previousOrder?.skus?.length) {
+        order.skus = previousOrder.skus;
+        order.skuCount = previousOrder.skuCount || previousOrder.skus.length;
       }
       if (previousOrder?.status === 'pending-account-manager') {
         const resubmittedAt = new Date().toISOString();
