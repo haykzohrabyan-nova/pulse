@@ -741,6 +741,50 @@
   const _origSetConfig        = window.setConfig;
   const _origGetAllConfigEntries = window.getAllConfigEntries;
   const _origGetAllPersonnel    = window.getAllPersonnel;
+  const _origAddPersonnel       = window.addPersonnel;
+  const _origUpdatePersonnel    = window.updatePersonnel;
+  const _origDeletePersonnel    = window.deletePersonnel;
+
+  function _newPersonnelId(prefix = 'p') {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function _normalizePersonnelList(list) {
+    let changed = false;
+    const out = (Array.isArray(list) ? list : []).map((p, i) => {
+      const row = { ...(p || {}) };
+      if (row.id == null || row.id === '') {
+        row.id = row._profileId || (row.userId ? `uid:${row.userId}` : _newPersonnelId(`p${i}`));
+        changed = true;
+      }
+      if (row.active === undefined) row.active = true;
+      return row;
+    });
+    return { list: out, changed };
+  }
+
+  async function _getPersonnelList() {
+    const rec = await _supaGetConfig('personnel');
+    let list = rec?.value && Array.isArray(rec.value) ? rec.value : [];
+    const { list: normalized, changed } = _normalizePersonnelList(list);
+    if (changed && normalized.length) {
+      await _supaSetConfig('personnel', normalized);
+    }
+    return normalized;
+  }
+
+  async function _savePersonnelList(list) {
+    await _supaSetConfig('personnel', list);
+    if (_origSetConfig) {
+      try { await _origSetConfig('personnel', list); } catch (_) {}
+    }
+  }
+
+  function _notifyPersonnelChanged() {
+    if (typeof pulseNotifyReferenceDataChanged === 'function') {
+      pulseNotifyReferenceDataChanged({ scope: 'personnel' });
+    }
+  }
 
   async function _supaGetConfig(key) {
     const supa = await _getClient();
@@ -791,12 +835,65 @@
 
   window.getAllPersonnel = async function () {
     try {
-      const rec = await _supaGetConfig('personnel');
-      if (rec?.value && Array.isArray(rec.value) && rec.value.length) return rec.value;
+      const list = await _getPersonnelList();
+      if (list.length) return list;
     } catch (e) {
       console.error('[Pulse/Supabase] getAllPersonnel:', e);
     }
     return _origGetAllPersonnel ? _origGetAllPersonnel() : [];
+  };
+
+  window.addPersonnel = async function (person) {
+    try {
+      const list = await _getPersonnelList();
+      const row = {
+        ...(person || {}),
+        id: person?.id || _newPersonnelId('p'),
+        createdAt: person?.createdAt || new Date().toISOString(),
+        active: person?.active !== false,
+      };
+      list.push(row);
+      await _savePersonnelList(list);
+      _notifyPersonnelChanged();
+      return row.id;
+    } catch (e) {
+      console.error('[Pulse/Supabase] addPersonnel:', e);
+      if (_origAddPersonnel) return _origAddPersonnel(person);
+      throw e;
+    }
+  };
+
+  window.updatePersonnel = async function (id, changes) {
+    try {
+      const key = String(id ?? '');
+      const list = await _getPersonnelList();
+      const idx = list.findIndex(p => String(p.id) === key);
+      if (idx < 0) throw new Error('Personnel record not found');
+      list[idx] = { ...list[idx], ...(changes || {}), id: list[idx].id };
+      await _savePersonnelList(list);
+      _notifyPersonnelChanged();
+      return list[idx];
+    } catch (e) {
+      console.error('[Pulse/Supabase] updatePersonnel:', e);
+      if (_origUpdatePersonnel) return _origUpdatePersonnel(id, changes);
+      throw e;
+    }
+  };
+
+  window.deletePersonnel = async function (id) {
+    try {
+      const key = String(id ?? '');
+      const list = await _getPersonnelList();
+      const next = list.filter(p => String(p.id) !== key);
+      if (next.length === list.length) throw new Error('Personnel record not found');
+      await _savePersonnelList(next);
+      _notifyPersonnelChanged();
+      return true;
+    } catch (e) {
+      console.error('[Pulse/Supabase] deletePersonnel:', e);
+      if (_origDeletePersonnel) return _origDeletePersonnel(id);
+      throw e;
+    }
   };
 
   window.getAllOrders = async function () {
