@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="supabase-client.js?v=20260523-OP1"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -233,36 +233,27 @@ document.getElementById('page-styles').textContent = `
   .qc-sku-panel:last-child { margin-bottom: 0; }
   .qc-sku-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     padding: 14px 16px;
     background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
     border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
-  .qc-sku-thumb-wrap {
-    flex-shrink: 0;
-    width: 120px;
-    height: 120px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    overflow: hidden;
-    background: #fff;
+  .qc-sku-thumb-empty {
+    width: 110px;
+    height: 110px;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .qc-sku-thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    cursor: pointer;
-    display: block;
-  }
-  .qc-sku-thumb-empty {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
     text-align: center;
+    background: #f1f5f9;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
     padding: 8px;
+    box-sizing: border-box;
   }
   .qc-sku-header-meta { flex: 1; min-width: 0; }
   .qc-sku-header-label {
@@ -293,6 +284,84 @@ document.getElementById('page-styles').textContent = `
     color: var(--text-muted);
     text-transform: uppercase;
   }
+  /* ── SKU badge on left panel cards ── */
+  .qj-sku-badge {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── Artwork gallery ── */
+  .qc-art-gallery {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 4px 0;
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+  .qc-art-gallery-job {
+    padding: 0;
+    min-width: unset;
+  }
+  .qc-art-layer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    max-width: 120px;
+  }
+  .qc-art-layer img.qc-sku-thumb {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    display: block;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .qc-art-layer img.qc-sku-thumb:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .qc-art-layer-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    word-break: break-word;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .qc-art-doc-tile {
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .qc-art-doc-tile:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .qc-job-art-section {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+  }
+  .qc-job-art-section .section-title { margin-bottom: 12px; }
+
   .qc-sku-checklist-inner { padding: 0; }
   .qc-sku-checklist-inner .section-title {
     margin: 0;
@@ -562,8 +631,11 @@ async function renderLeftPanel() {
     const isActive = selectedOrder && selectedOrder.id === o.id;
     const due = o.dueDate ? formatDate(o.dueDate) : '';
     const overdue = o.dueDate && new Date(o.dueDate) < new Date() ? ' style="color:var(--red)"' : '';
-    return `<div class="qj-card${isActive ? ' active' : ''}" onclick="selectOrder(${JSON.stringify(o).replace(/"/g, '&quot;')})">
-      <div class="qj-id">#${o.orderId}</div>
+    const skuCount = (o.skus || []).filter(s => s && (s.name || s.quantity)).length;
+    const skuBadge = skuCount > 1 ? `<span class="qj-sku-badge">${skuCount} SKUs</span>` : '';
+    const idAttr = String(o.id ?? '').replace(/'/g, "\\'");
+    return `<div class="qj-card${isActive ? ' active' : ''}" onclick="selectOrder('${idAttr}')">
+      <div class="qj-id">#${o.orderId} ${skuBadge}</div>
       <div class="qj-customer">${o.customerName || o.customer || '—'}</div>
       <div class="qj-meta">${o.productType || ''}${due ? ` · <span${overdue}>Due ${due}</span>` : ''}</div>
     </div>`;
@@ -572,9 +644,22 @@ async function renderLeftPanel() {
 
 // ── Select Order ──────────────────────────────────────────
 async function selectOrder(orderOrId) {
-  if (typeof orderOrId === 'number') {
-    const all = await getAllOrders();
-    selectedOrder = all.find(o => o.id === orderOrId);
+  if (typeof orderOrId === 'string' || typeof orderOrId === 'number') {
+    try {
+      // Try direct DB fetch first (works in Supabase mode with full specs/artwork)
+      const fetched = typeof getOrder === 'function'
+        ? await getOrder(orderOrId)
+        : null;
+      if (fetched) {
+        selectedOrder = fetched;
+      } else {
+        const all = await getAllOrders();
+        selectedOrder = all.find(o => o.id == orderOrId || o.orderId == orderOrId) || null;
+      }
+    } catch (e) {
+      const all = await getAllOrders();
+      selectedOrder = all.find(o => o.id == orderOrId || o.orderId == orderOrId) || null;
+    }
   } else {
     selectedOrder = orderOrId;
   }
@@ -667,32 +752,70 @@ function qcEscAttr(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+function renderQcArtThumb(url, label, clickable) {
+  if (!url) return '';
+  const open = clickable !== false ? `onclick="window.open(this.src,'_blank')" style="cursor:pointer;"` : '';
+  return `<div class="qc-art-layer">
+    <img src="${qcEscAttr(url)}" alt="${qcEscAttr(label)}" class="qc-sku-thumb" ${open}>
+    <div class="qc-art-layer-label">${qcEscAttr(label)}</div>
+  </div>`;
+}
+
+function renderQcArtFileTile(f) {
+  if (!f?.dataUrl) return '';
+  const isImg = /^data:image\//i.test(f.dataUrl) || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.name || '');
+  if (isImg) return renderQcArtThumb(f.dataUrl, f.name || 'Artwork', true);
+  return `<div class="qc-art-layer">
+    <div class="qc-art-doc-tile" onclick="window.open('${qcEscAttr(f.dataUrl)}','_blank')">📄</div>
+    <div class="qc-art-layer-label">${qcEscAttr(f.name || 'File')}</div>
+  </div>`;
+}
+
 function renderSkuHeaderHtml(sku, index) {
   const name = sku?.name?.trim() || `SKU ${index + 1}`;
   const qty = (Number(sku?.quantity) || 0).toLocaleString();
   const files = typeof getOrderSkuArtFiles === 'function' ? getOrderSkuArtFiles(sku) : [];
-  const main = files.find(f => f.dataUrl) || null;
-  const thumb = main
-    ? `<img src="${qcEscAttr(main.dataUrl)}" alt="${qcEscAttr(name)}" class="qc-sku-thumb" onclick="window.open(this.src,'_blank')">`
-    : `<div class="qc-sku-thumb-empty">No artwork</div>`;
-  const layers = [];
-  if (sku?.whiteDataUrl) layers.push('White');
-  if (sku?.uvDataUrl) layers.push('UV');
-  if (sku?.foilDataUrl) layers.push('Foil');
-  const layersLine = layers.length
-    ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Layers: ${layers.join(' · ')}</div>`
-    : '';
+
+  let gallery = '';
+  if (files.length) {
+    gallery = `<div class="qc-art-gallery">${files.map(f => renderQcArtFileTile(f)).join('')}</div>`;
+  } else {
+    gallery = `<div class="qc-art-gallery"><div class="qc-sku-thumb-empty">No artwork<br>uploaded</div></div>`;
+  }
+
   return `
     <div class="qc-sku-header">
-      <div class="qc-sku-thumb-wrap">${thumb}</div>
+      ${gallery}
       <div class="qc-sku-header-meta">
         <div class="qc-sku-header-label">SKU ${index + 1}</div>
         <div class="qc-sku-header-name">${qcEscAttr(name)}</div>
         <div class="qc-sku-header-qty">${qty}</div>
         <div class="qc-sku-header-qty-unit">pieces</div>
-        ${layersLine}
       </div>
     </div>`;
+}
+
+function renderJobArtworkSectionHtml(order) {
+  // Collect job-level artwork files (not per-SKU)
+  const files = [];
+  const seen = new Set();
+  const addFile = (f) => {
+    if (!f?.dataUrl) return;
+    const key = f.dataUrl.slice(0, 64);
+    if (seen.has(key)) return;
+    seen.add(key);
+    files.push(f);
+  };
+  (order.artworkFiles || []).forEach(f => addFile({ name: f.name || 'Artwork', dataUrl: f.dataUrl }));
+  if (order.whiteLayerFile?.dataUrl) addFile({ name: order.whiteLayerFile.name || 'White layer', dataUrl: order.whiteLayerFile.dataUrl });
+  if (order.uvFile?.dataUrl)          addFile({ name: order.uvFile.name         || 'UV layer',    dataUrl: order.uvFile.dataUrl });
+  if (order.foilFile?.dataUrl)        addFile({ name: order.foilFile.name       || 'Foil layer',  dataUrl: order.foilFile.dataUrl });
+
+  if (!files.length) return '';
+  return `<div class="card qc-job-art-section">
+    <div class="section-title">🖼 Job Artwork Files</div>
+    <div class="qc-art-gallery qc-art-gallery-job">${files.map(f => renderQcArtFileTile(f)).join('')}</div>
+  </div>`;
 }
 
 function renderChecklistGridHtml(skuKey, sku) {
@@ -719,10 +842,14 @@ function renderChecklistGridHtml(skuKey, sku) {
 function renderOrderChecklists(order) {
   const wrap = document.getElementById('qcChecklistsWrap');
   if (!wrap) return;
+
+  // Inject job-level artwork at top (before per-SKU checklists)
+  const artHtml = renderJobArtworkSectionHtml(order);
+
   const skus = getQcSkuList(order);
 
   if (!skus.length) {
-    wrap.innerHTML = `
+    wrap.innerHTML = artHtml + `
       <div class="card qc-checklist-card qc-sku-panel">
         <div class="qc-sku-checklist-inner">
           <h3 class="section-title">✅ QC Checklist</h3>
@@ -732,7 +859,7 @@ function renderOrderChecklists(order) {
     return;
   }
 
-  wrap.innerHTML = skus.map((sku, i) => {
+  wrap.innerHTML = artHtml + skus.map((sku, i) => {
     const key = qcSkuKey(i);
     return `
       <div class="card qc-checklist-card qc-sku-panel">
