@@ -520,8 +520,9 @@
     return inserted.id;
   }
 
-  function _formatPulseDbError(err) {
+  async function _formatPulseDbError(err, op = 'update') {
     const msg = err?.message || err?.details || String(err || 'Unknown error');
+    const verb = op === 'insert' ? 'create' : 'update';
     if (/invalid input value for enum order_status/i.test(msg)) {
       if (/delivery-ready/i.test(msg)) {
         return 'The database does not support the “delivery-ready” status yet. Run Supabase migration 021_delivery_ready_status.sql, then try again.';
@@ -532,10 +533,22 @@
       return 'This status is not allowed in the database yet. Ask an admin to apply the latest Supabase migrations.';
     }
     if (/PGRST116|0 rows|not found/i.test(msg)) {
-      return 'Order not found or you do not have permission to update it. Refresh the page and try again.';
+      return `Order not found or you do not have permission to ${verb} it. Refresh the page and try again.`;
     }
-    if (/permission denied|row-level security|42501/i.test(msg)) {
-      return 'You do not have permission to update this order. Your DB role is missing an orders update policy; run the latest RLS migrations and verify profiles.role for this user.';
+    if (/permission denied|row-level security|42501|insufficient permissions|was blocked/i.test(msg)) {
+      let roleLine = '';
+      try {
+        const profile = await _getCurrentProfile();
+        if (profile?.role) {
+          roleLine = ` Your Supabase profiles.role is “${profile.role}” (this controls database access, not the Personnel label).`;
+        } else {
+          roleLine = ' No profiles row was found for your login — ask an admin to fix your auth user.';
+        }
+      } catch (_) {}
+      const orderHint = op === 'update'
+        ? ' Saving with ?order= in the URL updates an existing ticket; use “New ticket” for a fresh create.'
+        : '';
+      return `You do not have permission to ${verb} this order.${roleLine}${orderHint} Apply migrations 034 and 038 on Supabase if you should have access.`;
     }
     return msg;
   }
@@ -888,6 +901,26 @@
     );
   }
 
+  async function _syncConfigPersonnelRow(person) {
+    if (!person?.name) return;
+    try {
+      const list = await _getPersonnelList();
+      const key = String(person.name).trim().toLowerCase();
+      const idx = list.findIndex(p => String(p.name || '').trim().toLowerCase() === key);
+      const row = {
+        ...(idx >= 0 ? list[idx] : {}),
+        ...person,
+        id: idx >= 0 ? list[idx].id : _stablePersonnelId(person, list.length),
+        name: person.name,
+      };
+      if (idx >= 0) list[idx] = row;
+      else list.push(row);
+      await _savePersonnelList(list);
+    } catch (e) {
+      console.warn('[Pulse/Supabase] _syncConfigPersonnelRow:', e);
+    }
+  }
+
   async function _updateProfilePersonnel(id, changes) {
     const supa = await _getClient();
     const patch = {};
@@ -905,8 +938,10 @@
       ({ data, error } = await supa.from('profiles').update(patch).eq('id', id).select().single());
     }
     if (error) throw error;
+    const mapped = _profileRowToPersonnel(data, changes.userId);
+    await _syncConfigPersonnelRow(mapped);
     _notifyPersonnelChanged();
-    return _profileRowToPersonnel(data, changes.userId);
+    return mapped;
   }
 
   async function _supaGetConfig(key) {
@@ -956,19 +991,67 @@
     }
   };
 
+  function _mergePersonnelRows(primary, secondary) {
+    if (!secondary) return primary;
+    if (!primary) return secondary;
+    const profileId = primary._profileId || primary.id;
+    const useProfileId = _isProfileUuid(profileId) ? profileId : (secondary._profileId || secondary.id);
+    return {
+      ...secondary,
+      ...primary,
+      id: useProfileId || primary.id || secondary.id,
+      _profileId: _isProfileUuid(profileId) ? profileId : (secondary._profileId || null),
+      name: primary.name || secondary.name,
+      role: primary.role || secondary.role,
+      facility: primary.facility || secondary.facility,
+      userId: primary.userId || secondary.userId || '',
+      phone: primary.phone || secondary.phone || '',
+      active: primary.active !== false && secondary.active !== false,
+      shift: primary.shift || secondary.shift || '',
+      machines: (Array.isArray(primary.machines) && primary.machines.length)
+        ? primary.machines
+        : (secondary.machines || []),
+      notes: primary.notes || secondary.notes || '',
+    };
+  }
+
   window.getAllPersonnel = async function () {
+    const byName = new Map();
+    const addPerson = (p) => {
+      if (!p?.name) return;
+      const key = String(p.name).trim().toLowerCase();
+      const prev = byName.get(key);
+      byName.set(key, prev ? _mergePersonnelRows(p, prev) : { ...p });
+    };
+
+    let fromConfig = [];
+    let fromProfiles = [];
     try {
-      const fromProfiles = await _fetchPersonnelFromProfiles();
-      if (fromProfiles.length) return fromProfiles;
-    } catch (e) {
-      console.error('[Pulse/Supabase] getAllPersonnel (profiles):', e);
-    }
-    try {
-      const list = await _getPersonnelList();
-      if (list.length) return list;
+      fromConfig = await _getPersonnelList();
     } catch (e) {
       console.error('[Pulse/Supabase] getAllPersonnel (config):', e);
     }
+    try {
+      fromProfiles = await _fetchPersonnelFromProfiles();
+    } catch (e) {
+      console.error('[Pulse/Supabase] getAllPersonnel (profiles):', e);
+    }
+
+    // config.personnel (legacy JSON) first, then profiles table overwrites — single merged list
+    fromConfig.forEach(addPerson);
+    fromProfiles.forEach(addPerson);
+
+    if (byName.size) {
+      return Array.from(byName.values()).sort((a, b) =>
+        String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })
+      );
+    }
+
+    try {
+      const list = await _getPersonnelList();
+      if (list.length) return list;
+    } catch (_) {}
+
     return _origGetAllPersonnel ? _origGetAllPersonnel() : [];
   };
 
@@ -1104,7 +1187,7 @@
     try { return await _addOrder(order); }
     catch (e) {
       console.error('[Pulse/Supabase] addOrder:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e, 'insert'));
     }
   };
 
@@ -1112,7 +1195,7 @@
     try { return await _updateOrder(id, changes); }
     catch (e) {
       console.error('[Pulse/Supabase] updateOrder:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e, 'update'));
     }
   };
 

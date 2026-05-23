@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-PM1"></script>
+  <script src="supabase-client.js?v=20260523-PM2"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -360,6 +360,26 @@ let assignTargetOrderDbId = null;
 let assignTargetStepId = null;
 let addStepTargetOrderDbId = null;
 
+function pmStepKey(step, index) {
+  return step?.id != null && step.id !== '' ? String(step.id) : String(index);
+}
+
+function pmFindOrder(dbId) {
+  const key = String(dbId ?? '');
+  return allOrders.find(o => String(o.id ?? '') === key || String(o.orderId ?? '') === key);
+}
+
+function pmAssignStep(orderDbId, stepKey, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  openAssignModal(orderDbId, stepKey).catch(err => {
+    console.error('[Pulse] openAssignModal', err);
+    showPageToast('Could not open assign dialog: ' + (err?.message || err), 'error', 6000);
+  });
+}
+
 function populatePmMachineSelectors() {
   const machineSelect = document.getElementById('newStepMachine');
   if (!machineSelect) return;
@@ -640,11 +660,13 @@ function renderOrderBody(order) {
   const stepsHtml = steps.length > 0 ? steps.map((step, i) => {
     const isCurrent = i === currentStep && order.status === 'in-production';
     const isCompleted = step.status === 'completed';
+    const stepKeyEsc = pmStepKey(step, i).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const machineLabel = step.machine || step.operation || 'Unnamed step';
     return `
       <div class="step-row ${isCurrent ? 'step-current' : ''} ${isCompleted ? 'step-completed' : ''}">
         <div class="step-num ${isCurrent ? 'num-current' : ''} ${isCompleted ? 'num-completed' : ''}">${i + 1}</div>
         <div class="step-machine">
-          ${step.machine}
+          ${machineLabel}
           ${step.redirectedFrom ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">↩ was ${step.redirectedFrom}</span>` : ''}
           ${step.isSplit ? `<span style="font-size:10px;color:var(--purple);margin-left:4px;">✂️ SPLIT: ${(step.splitQuantity||0).toLocaleString()} units</span>` : ''}
           ${step.partialRedirect ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">→ ${(step.partialRedirectQty||0).toLocaleString()} sent to ${step.partialRedirectTo}</span>` : ''}
@@ -654,9 +676,9 @@ function renderOrderBody(order) {
         ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
         <div class="step-status ${step.status}">${step.status}</div>
         <div style="display:flex;gap:4px;">
-          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button class="btn btn-sm" onclick="openRedirectModal('${orderIdEsc}','${step.id || i}',${i})">🔀 Swap</button>` : ''}
-          <button class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="openAssignModal('${orderIdEsc}','${step.id || i}')">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
-          <button class="btn btn-sm btn-danger" onclick="removeStepByIndex('${orderIdEsc}',${i})">✕</button>
+          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button type="button" class="btn btn-sm" onclick="event.stopPropagation(); openRedirectModal('${orderIdEsc}','${stepKeyEsc}',${i})">🔀 Swap</button>` : ''}
+          <button type="button" class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="pmAssignStep('${orderIdEsc}','${stepKeyEsc}', event)">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
+          <button type="button" class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeStepByIndex('${orderIdEsc}',${i})">✕</button>
         </div>
       </div>
     `;
@@ -995,8 +1017,24 @@ function syncReprintFromSheetQty() {
 // ── Assign Modal ──────────────────────────────────────────
 async function openAssignModal(dbId, stepId) {
   assignTargetOrderDbId = dbId;
-  assignTargetStepId = stepId;
-  const personnel = await getAllPersonnel();
+  assignTargetStepId = String(stepId ?? '');
+  const order = pmFindOrder(dbId);
+  if (!order) {
+    throw new Error('Job ticket not found. Refresh the page and try again.');
+  }
+  const targetKey = assignTargetStepId;
+  const stepExists = (order.workflowSteps || []).some((s, i) => pmStepKey(s, i) === targetKey);
+  if (!stepExists) {
+    throw new Error('Workflow step not found on this ticket.');
+  }
+  let personnel = [];
+  try {
+    personnel = await getAllPersonnel();
+  } catch (e) {
+    console.error('[Pulse] getAllPersonnel', e);
+    throw new Error('Could not load personnel list.');
+  }
+  if (!Array.isArray(personnel)) personnel = [];
   const operators = personnel.filter(p => {
     if (p.active === false) return false;
     const role = String(p.role || 'operator').replace(/_/g, '-').toLowerCase();
@@ -1008,6 +1046,9 @@ async function openAssignModal(dbId, stepId) {
   operators.forEach(p => {
     sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
   });
+  if (!operators.length) {
+    sel.innerHTML += '<option value="" disabled>No active operators — add them in Admin → Personnel</option>';
+  }
   document.getElementById('assignModal').classList.add('active');
 }
 function closeAssignModal() {
@@ -1017,16 +1058,30 @@ function closeAssignModal() {
 async function confirmAssign() {
   const name = document.getElementById('assignSelect').value;
   if (!name) { showPageToast('Please select an operator.', 'warning'); return; }
-  const order = allOrders.find(o => o.id === assignTargetOrderDbId);
-  if (!order) return;
-  const steps = order.workflowSteps.map((s, i) => {
-    const matches = s.id ? s.id === assignTargetStepId : String(i) === assignTargetStepId;
+  const order = pmFindOrder(assignTargetOrderDbId);
+  if (!order) {
+    showPageToast('Job ticket not found. Refresh the page and try again.', 'error');
+    return;
+  }
+  const targetKey = String(assignTargetStepId ?? '');
+  const steps = (order.workflowSteps || []).map((s, i) => {
+    const matches = pmStepKey(s, i) === targetKey;
     return matches ? { ...s, assignedTo: name } : s;
   });
-  await updateOrder(assignTargetOrderDbId, { workflowSteps: steps });
-  await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
-  closeAssignModal();
-  await loadOrders();
+  if (!(order.workflowSteps || []).some((s, i) => pmStepKey(s, i) === targetKey)) {
+    showPageToast('Could not find that workflow step. Refresh and try again.', 'warning');
+    return;
+  }
+  try {
+    await updateOrder(order.id, { workflowSteps: steps });
+    await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
+    closeAssignModal();
+    await loadOrders();
+    showPageToast(`${name} assigned to workflow step.`, 'success', 3000);
+  } catch (e) {
+    console.error('[Pulse] confirmAssign', e);
+    showPageToast('Assign failed: ' + (e?.message || e), 'error', 6000);
+  }
 }
 
 // ── Add Step Modal ────────────────────────────────────────
