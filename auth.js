@@ -505,7 +505,10 @@ async function submitLogin() {
       if (!signedIn) throw new Error('Supabase sign-in failed');
       const session = await window.supabaseGetSession();
       if (!session?.user?.id) throw new Error('Supabase session not established');
-      const profile = await window.supabaseGetProfile();
+      let profile = await window.supabaseGetProfile();
+      if (!profile && typeof window.supabaseEnsureProfile === 'function') {
+        profile = await window.supabaseEnsureProfile();
+      }
       if (profile) {
         const dbRole = String(profile.role || resolvedRole).replace(/_/g, '-');
         const personnelRole = String(personRecord.role || '').replace(/_/g, '-');
@@ -516,6 +519,11 @@ async function submitLogin() {
         }
         resolvedRole = dbRole;
         resolvedName = profile.display_name || resolvedName;
+      } else {
+        _showLoginError(
+          'Your Supabase account has no profiles row. Apply migration 039 on the database, or ask an admin to add your profile in Supabase.'
+        );
+        return;
       }
     } catch (_) {
       _showLoginError('Cloud login failed. Use your Supabase password (or Pulse2026! if not changed yet).');
@@ -715,7 +723,10 @@ async function initAuth(pageId) {
     try {
       const session = await window.supabaseGetSession();
       if (session) {
-        const profile = await window.supabaseGetProfile();
+        let profile = await window.supabaseGetProfile();
+        if (!profile && typeof window.supabaseEnsureProfile === 'function') {
+          profile = await window.supabaseEnsureProfile();
+        }
         if (profile) {
           // DB role uses underscores; ROLE_CONFIG uses hyphens
           const role = String(profile.role || 'operator').replace(/_/g, '-');
