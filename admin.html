@@ -12,11 +12,11 @@
     #tab-payment.active,
     #tab-crm-quote.active { padding: 0 !important; }
   </style>
-  <script src="shared.js?v=20260523-admin-personnel"></script>
+  <script src="shared.js?v=20260523-profiles-personnel"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-admin-personnel"></script>
+  <script src="supabase-client.js?v=20260523-profiles-personnel"></script>
   <script src="auth.js?v=20260522-TABS1"></script>
   <style id="page-styles"></style>
 </head>
@@ -1939,6 +1939,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updateAppDeptTotal);
   });
+  const personnelBody = document.getElementById('personnelTableBody');
+  if (personnelBody) {
+    personnelBody.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.personnel-edit-btn');
+      if (editBtn) {
+        editPersonnel(editBtn.getAttribute('data-personnel-id') || '');
+        return;
+      }
+      const delBtn = e.target.closest('.personnel-delete-btn');
+      if (delBtn) {
+        deletePersonnelConfirm(
+          delBtn.getAttribute('data-personnel-id') || '',
+          delBtn.getAttribute('data-personnel-name') || ''
+        );
+      }
+    });
+  }
 });
 
 function updateAppDeptTotal() {
@@ -1948,6 +1965,29 @@ function updateAppDeptTotal() {
 }
 
 // ── PERSONNEL ─────────────────────────────────────────────
+let _personnelCache = [];
+
+function _findPersonnelRecord(all, id) {
+  const key = String(id ?? '');
+  return all.find(p =>
+    String(p.id) === key ||
+    String(p._profileId) === key ||
+    (key.startsWith('uid:') && String(p.userId) === key.slice(4)) ||
+    (key.startsWith('name:') && String(p.name || '').trim().toLowerCase().replace(/\s+/g, '_') === key.slice(5))
+  );
+}
+
+function _personnelFacilityLabel(facility) {
+  if (!facility) return '—';
+  if (typeof getPulseFacilityLabel === 'function') return getPulseFacilityLabel(facility);
+  if (typeof FACILITIES !== 'undefined' && FACILITIES[facility]?.name) return FACILITIES[facility].name;
+  return facility;
+}
+
+function _personnelFacilityForModal(person) {
+  if (!person?.facility) return '';
+  return _personnelFacilityLabel(person.facility);
+}
 function personnelRoleLabel(role) {
   if (!role) return '—';
   // Check live custom roles list first (covers all ROLE_CONFIG roles + user-added)
@@ -1968,31 +2008,29 @@ function generatePersonnelUserId() {
   document.getElementById('pUserId').value = `${name}${seed}`;
 }
 
-function personnelRowIdAttr(id) {
-  return JSON.stringify(String(id ?? ''));
-}
-
 async function loadPersonnel() {
   const people = await getAllPersonnel();
+  _personnelCache = people;
   const tbody = document.getElementById('personnelTableBody');
   if (people.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
     return;
   }
   tbody.innerHTML = people.map(p => {
-    const idAttr = personnelRowIdAttr(p.id);
-    const nameAttr = JSON.stringify(String(p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+    const id = String(p.id ?? '');
+    const safeId = id.replace(/"/g, '&quot;');
+    const safeName = String(p.name || '').replace(/"/g, '&quot;');
     return `
     <tr>
       <td style="font-weight:600;">${p.name}</td>
       <td>${personnelRoleLabel(p.role)}</td>
       <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
-      <td>${typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(p.facility) : (FACILITIES[p.facility]?.name || p.facility || '—')}</td>
+      <td>${_personnelFacilityLabel(p.facility)}</td>
       <td>${p.phone || '—'}</td>
       <td><span class="${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
       <td>
-        <button type="button" class="btn btn-sm" onclick="editPersonnel(${idAttr})">Edit</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="deletePersonnelConfirm(${idAttr}, ${nameAttr})">Delete</button>
+        <button type="button" class="btn btn-sm personnel-edit-btn" data-personnel-id="${safeId}">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger personnel-delete-btn" data-personnel-id="${safeId}" data-personnel-name="${safeName}">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -2056,14 +2094,18 @@ async function openPersonnelModal(person) {
   document.getElementById('pUserId').value = person?.userId || '';
   document.getElementById('pPhone').value = person?.phone || '';
   document.getElementById('pActive').checked = person?.active !== false;
-  populateFacilityDropdown(person?.facility || null);
+  populateFacilityDropdown(_personnelFacilityForModal(person));
   document.getElementById('personnelModal').classList.add('active');
 }
 
 async function editPersonnel(id) {
-  const all = await getAllPersonnel();
   const key = String(id ?? '');
-  const p = all.find(x => String(x.id) === key);
+  let p = _findPersonnelRecord(_personnelCache, key);
+  if (!p) {
+    const all = await getAllPersonnel();
+    _personnelCache = all;
+    p = _findPersonnelRecord(all, key);
+  }
   if (p) openPersonnelModal(p);
   else alert('Personnel record not found. Refresh the page and try again.');
 }
@@ -2073,8 +2115,11 @@ async function savePersonnel() {
   if (!name) { alert('Name is required.'); return; }
   const role = document.getElementById('pRole').value;
   if (!role) { alert('Role is required.'); return; }
-  const facility = document.getElementById('pFacility').value;
-  if (!facility) { alert('Facility is required.'); return; }
+  const facilityInput = document.getElementById('pFacility').value;
+  const facilitySlug = typeof pulseResolveFacilitySlug === 'function'
+    ? pulseResolveFacilitySlug(facilityInput)
+    : facilityInput;
+  if (!facilitySlug) { alert('Facility is required.'); return; }
   const userId = document.getElementById('pUserId').value.trim();
   if (!userId) { alert('User ID is required.'); return; }
   const idRaw = document.getElementById('personnelId').value.trim();
@@ -2082,8 +2127,8 @@ async function savePersonnel() {
   const data = {
     name,
     role,
-    facility,
-    userId: document.getElementById('pUserId').value.trim(),
+    facility: facilitySlug,
+    userId,
     phone: document.getElementById('pPhone').value.trim(),
     active: document.getElementById('pActive').checked
   };
@@ -3926,6 +3971,13 @@ async function catImportSection(section, input) {
 }
 
 async function importCatalogFromDefaultFile() {
+  if (window.PULSE_STORAGE_BACKEND === 'supabase') {
+    if (typeof repairPulseAdminCatalog === 'function') {
+      const c = await repairPulseAdminCatalog({ force: true });
+      return !!(c?.colorModes?.length && c?.products?.length);
+    }
+    return false;
+  }
   try {
     const r = await fetch('data/pulse-catalog-default.json', { cache: 'no-store' });
     if (!r.ok) return false;
