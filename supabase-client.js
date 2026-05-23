@@ -140,14 +140,18 @@
       framesWasted:             order.framesWasted             ?? 0,
       skus:                     order.skus                     || null,
       skuCount:                 order.skuCount                 || 0,
-      // Artwork file metadata only (bytes live in R2 via PRI-237)
+      // Keep inline dataUrl payloads for now so existing UI previews remain stable.
       artworkFiles: (order.artworkFiles || []).map(f => ({
         name:  f.name,
         size:  f.size,
         type:  f.type,
         role:  f.role || 'main',
+        dataUrl: f.dataUrl || null,
         r2Key: f.r2Key || null, // populated after R2 upload (PRI-237)
       })),
+      whiteLayerFile:           order.whiteLayerFile           || null,
+      uvFile:                   order.uvFile                   || null,
+      foilFile:                 order.foilFile                 || null,
       customerPO:               order.customerPO               || null,
       quoteRef:                 order.quoteRef                 || null,
       pricePerUnit:             order.pricePerUnit             ?? null,
@@ -343,6 +347,9 @@
       skus:                     s.skus                     || null,
       skuCount:                 s.skuCount                 || 0,
       artworkFiles:             s.artworkFiles             || [],
+      whiteLayerFile:           s.whiteLayerFile           || null,
+      uvFile:                   s.uvFile                   || null,
+      foilFile:                 s.foilFile                 || null,
       customerPO:               s.customerPO               || '',
       quoteRef:                 s.quoteRef                 || '',
       pricePerUnit:             s.pricePerUnit             ?? null,
