@@ -749,12 +749,104 @@
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   }
 
+  function _stablePersonnelId(row, index) {
+    if (row._profileId) return String(row._profileId);
+    if (row.id != null && row.id !== '') return String(row.id);
+    if (row.userId != null && String(row.userId).trim()) return `uid:${String(row.userId).trim()}`;
+    const nameKey = String(row.name || '').trim().toLowerCase().replace(/\s+/g, '_');
+    if (nameKey) return `name:${nameKey}`;
+    return _newPersonnelId(`p${index}`);
+  }
+
+  function _personnelRoleToDb(role) {
+    return String(role || 'operator').trim().replace(/-/g, '_');
+  }
+
+  function _personnelRoleFromDb(role) {
+    return String(role || 'operator').trim().replace(/_/g, '-');
+  }
+
+  function _resolveFacilitySlugForDb(facilityInput) {
+    if (typeof pulseResolveFacilitySlug === 'function') {
+      return pulseResolveFacilitySlug(facilityInput);
+    }
+    const raw = String(facilityInput || '').trim();
+    if (raw === '16th-street' || raw === 'boyd-street') return raw;
+    return null;
+  }
+
+  function _profileRowToPersonnel(row, userIdOverride) {
+    const userId = userIdOverride != null
+      ? String(userIdOverride)
+      : (row.pulse_user_id != null ? String(row.pulse_user_id) : '');
+    return {
+      id: row.id,
+      _profileId: row.id,
+      name: row.display_name,
+      role: _personnelRoleFromDb(row.role),
+      facility: row.facility || '',
+      phone: row.phone || '',
+      userId,
+      active: row.active !== false,
+      shift: row.shift_start || '',
+      machines: row.machines || [],
+      notes: row.notes || '',
+    };
+  }
+
+  function _isProfileUuid(id) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id || ''));
+  }
+
+  async function _fetchPersonnelFromProfiles() {
+    const supa = await _getClient();
+    const baseCols = 'id, display_name, role, facility, phone, active, shift_start, machines, notes';
+    let { data, error } = await supa
+      .from('profiles')
+      .select(`${baseCols}, pulse_user_id`)
+      .order('display_name');
+    if (error?.code === '42703') {
+      ({ data, error } = await supa.from('profiles').select(baseCols).order('display_name'));
+    }
+    if (error) throw error;
+    const rows = data || [];
+    const userIdByName = await _legacyPersonnelUserIdMap();
+    return rows.map(row => {
+      const legacyUid = userIdByName.get(String(row.display_name || '').trim().toLowerCase());
+      const uid = row.pulse_user_id != null && String(row.pulse_user_id).trim()
+        ? row.pulse_user_id
+        : legacyUid;
+      return _profileRowToPersonnel(row, uid);
+    });
+  }
+
+  async function _legacyPersonnelUserIdMap() {
+    const map = new Map();
+    try {
+      const rec = await _supaGetConfig('personnel');
+      const list = rec?.value && Array.isArray(rec.value) ? rec.value : [];
+      list.forEach(p => {
+        const name = String(p?.name || '').trim().toLowerCase();
+        const uid = String(p?.userId || '').trim();
+        if (name && uid) map.set(name, uid);
+      });
+    } catch (_) {}
+    if (typeof OPERATOR_PROFILES !== 'undefined') {
+      Object.entries(OPERATOR_PROFILES).forEach(([name, prof]) => {
+        const key = String(name).trim().toLowerCase();
+        if (!map.has(key) && prof?.userId != null) map.set(key, String(prof.userId));
+      });
+    }
+    return map;
+  }
+
   function _normalizePersonnelList(list) {
     let changed = false;
     const out = (Array.isArray(list) ? list : []).map((p, i) => {
       const row = { ...(p || {}) };
-      if (row.id == null || row.id === '') {
-        row.id = row._profileId || (row.userId ? `uid:${row.userId}` : _newPersonnelId(`p${i}`));
+      const stableId = _stablePersonnelId(row, i);
+      if (String(row.id ?? '') !== stableId) {
+        row.id = stableId;
         changed = true;
       }
       if (row.active === undefined) row.active = true;
@@ -768,7 +860,7 @@
     let list = rec?.value && Array.isArray(rec.value) ? rec.value : [];
     const { list: normalized, changed } = _normalizePersonnelList(list);
     if (changed && normalized.length) {
-      await _supaSetConfig('personnel', normalized);
+      try { await _supaSetConfig('personnel', normalized); } catch (_) {}
     }
     return normalized;
   }
@@ -784,6 +876,37 @@
     if (typeof pulseNotifyReferenceDataChanged === 'function') {
       pulseNotifyReferenceDataChanged({ scope: 'personnel' });
     }
+  }
+
+  function _findPersonnelInList(list, id) {
+    const key = String(id ?? '');
+    return list.find(p =>
+      String(p.id) === key ||
+      String(p._profileId) === key ||
+      (key.startsWith('uid:') && String(p.userId) === key.slice(4)) ||
+      (key.startsWith('name:') && String(p.name || '').trim().toLowerCase().replace(/\s+/g, '_') === key.slice(5))
+    );
+  }
+
+  async function _updateProfilePersonnel(id, changes) {
+    const supa = await _getClient();
+    const patch = {};
+    if (changes.name != null) patch.display_name = String(changes.name).trim();
+    if (changes.role != null) patch.role = _personnelRoleToDb(changes.role);
+    if (changes.facility != null) patch.facility = _resolveFacilitySlugForDb(changes.facility);
+    if (changes.phone != null) patch.phone = String(changes.phone).trim() || null;
+    if (changes.active != null) patch.active = !!changes.active;
+    if (changes.userId != null) patch.pulse_user_id = String(changes.userId).trim() || null;
+
+    let query = supa.from('profiles').update(patch).eq('id', id);
+    let { data, error } = await query.select().single();
+    if (error?.code === '42703' && patch.pulse_user_id !== undefined) {
+      delete patch.pulse_user_id;
+      ({ data, error } = await supa.from('profiles').update(patch).eq('id', id).select().single());
+    }
+    if (error) throw error;
+    _notifyPersonnelChanged();
+    return _profileRowToPersonnel(data, changes.userId);
   }
 
   async function _supaGetConfig(key) {
@@ -835,20 +958,44 @@
 
   window.getAllPersonnel = async function () {
     try {
+      const fromProfiles = await _fetchPersonnelFromProfiles();
+      if (fromProfiles.length) return fromProfiles;
+    } catch (e) {
+      console.error('[Pulse/Supabase] getAllPersonnel (profiles):', e);
+    }
+    try {
       const list = await _getPersonnelList();
       if (list.length) return list;
     } catch (e) {
-      console.error('[Pulse/Supabase] getAllPersonnel:', e);
+      console.error('[Pulse/Supabase] getAllPersonnel (config):', e);
     }
     return _origGetAllPersonnel ? _origGetAllPersonnel() : [];
   };
 
   window.addPersonnel = async function (person) {
+    const name = String(person?.name || '').trim();
+    if (!name) throw new Error('Name is required');
+
+    try {
+      const supa = await _getClient();
+      const { data: existing } = await supa
+        .from('profiles')
+        .select('id')
+        .eq('display_name', name)
+        .maybeSingle();
+      if (existing?.id) {
+        await _updateProfilePersonnel(existing.id, person);
+        return existing.id;
+      }
+    } catch (e) {
+      console.warn('[Pulse/Supabase] addPersonnel profiles lookup:', e);
+    }
+
     try {
       const list = await _getPersonnelList();
       const row = {
         ...(person || {}),
-        id: person?.id || _newPersonnelId('p'),
+        id: person?.id || _stablePersonnelId(person || {}, list.length),
         createdAt: person?.createdAt || new Date().toISOString(),
         active: person?.active !== false,
       };
@@ -859,16 +1006,32 @@
     } catch (e) {
       console.error('[Pulse/Supabase] addPersonnel:', e);
       if (_origAddPersonnel) return _origAddPersonnel(person);
-      throw e;
+      throw new Error(
+        'Could not add personnel. Create the user in Supabase Auth first (Authentication → Users), then set their User ID here.'
+      );
     }
   };
 
   window.updatePersonnel = async function (id, changes) {
+    const key = String(id ?? '');
+    if (_isProfileUuid(key)) {
+      try {
+        return await _updateProfilePersonnel(key, changes || {});
+      } catch (e) {
+        console.error('[Pulse/Supabase] updatePersonnel (profiles):', e);
+        throw e;
+      }
+    }
+
     try {
-      const key = String(id ?? '');
       const list = await _getPersonnelList();
-      const idx = list.findIndex(p => String(p.id) === key);
-      if (idx < 0) throw new Error('Personnel record not found');
+      const idx = list.findIndex(p => _findPersonnelInList([p], key));
+      if (idx < 0) {
+        const allProfiles = await _fetchPersonnelFromProfiles().catch(() => []);
+        const match = _findPersonnelInList(allProfiles, key);
+        if (match?._profileId) return _updateProfilePersonnel(match._profileId, changes || {});
+        throw new Error('Personnel record not found');
+      }
       list[idx] = { ...list[idx], ...(changes || {}), id: list[idx].id };
       await _savePersonnelList(list);
       _notifyPersonnelChanged();
@@ -881,10 +1044,25 @@
   };
 
   window.deletePersonnel = async function (id) {
+    const key = String(id ?? '');
+    if (_isProfileUuid(key)) {
+      try {
+        await _updateProfilePersonnel(key, { active: false });
+        return true;
+      } catch (e) {
+        console.error('[Pulse/Supabase] deletePersonnel (profiles):', e);
+        throw e;
+      }
+    }
+
     try {
-      const key = String(id ?? '');
       const list = await _getPersonnelList();
-      const next = list.filter(p => String(p.id) !== key);
+      const match = _findPersonnelInList(list, key);
+      if (match?._profileId && _isProfileUuid(match._profileId)) {
+        await _updateProfilePersonnel(match._profileId, { active: false });
+        return true;
+      }
+      const next = list.filter(p => !_findPersonnelInList([p], key));
       if (next.length === list.length) throw new Error('Personnel record not found');
       await _savePersonnelList(next);
       _notifyPersonnelChanged();
@@ -1733,6 +1911,196 @@
       console.error('[Pulse/Supabase] resetAllProductWorkflowsFromDefaults:', e);
       throw new Error(_formatPulseDbError(e));
     }
+  };
+
+  // ── Organisation bundle (facilities + hardware from SQL) ─────
+
+  async function _fetchOrganisationBundleFromSupabase() {
+    const supa = await _getClient();
+    const { data: orgs, error: oe } = await supa.from('organisations').select('*').limit(1);
+    if (oe) throw oe;
+    const org = orgs?.[0];
+    if (!org) return null;
+
+    const { data: facs, error: fe } = await supa
+      .from('organisation_facilities')
+      .select('*')
+      .eq('organisation_id', org.id)
+      .order('sort_order', { ascending: true });
+    if (fe) throw fe;
+
+    const hardwareByFacilityId = {};
+    for (const f of facs || []) {
+      const { data: hw, error: he } = await supa
+        .from('organisation_hardware')
+        .select('*')
+        .eq('facility_id', f.id)
+        .order('sort_order', { ascending: true });
+      if (he) throw he;
+      hardwareByFacilityId[f.id] = hw || [];
+    }
+
+    return {
+      organisation: {
+        id: org.id,
+        name: org.name,
+        short_description: org.short_description || '',
+        website_url: org.website_url || '',
+        logo_url: org.logo_url || '',
+        saved: true,
+      },
+      facilities: facs || [],
+      hardwareByFacilityId,
+      people: [],
+    };
+  }
+
+  window.fetchOrganisationBundleFromSupabase = async function () {
+    try { return await _fetchOrganisationBundleFromSupabase(); }
+    catch (e) {
+      console.error('[Pulse/Supabase] fetchOrganisationBundleFromSupabase:', e);
+      return null;
+    }
+  };
+
+  // ── Machine issues (Report Issue page) ───────────────────────
+
+  function _machineIssueToLocal(row) {
+    const specs = row.specs && typeof row.specs === 'object' ? row.specs : {};
+    return {
+      id: row.id,
+      machine: row.machine_name,
+      symptom: row.description,
+      severity: specs.severity || 'minor',
+      problemSource: specs.problemSource || 'legacy',
+      problemCategory: specs.problemCategory || null,
+      reporter: row.reported_by_name || specs.reporter || null,
+      downStart: specs.downStart || null,
+      downEnd: specs.downEnd || null,
+      resolution: specs.resolution || null,
+      fixSource: specs.fixSource || null,
+      fixSourceOther: specs.fixSourceOther || null,
+      technician: specs.technician || null,
+      resolvedAt: row.resolved_at || null,
+      resolvedBy: specs.resolvedBy || null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at || row.created_at,
+    };
+  }
+
+  function _machineIssueToRow(issue, profileId) {
+    const specs = {
+      severity: issue.severity || 'minor',
+      problemSource: issue.problemSource || null,
+      problemCategory: issue.problemCategory || null,
+      downStart: issue.downStart || null,
+      downEnd: issue.downEnd || null,
+      resolution: issue.resolution || null,
+      fixSource: issue.fixSource || null,
+      fixSourceOther: issue.fixSourceOther || null,
+      technician: issue.technician || null,
+      resolvedBy: issue.resolvedBy || null,
+    };
+    if (String(issue.id || '').startsWith('ISS-')) specs.legacyId = issue.id;
+    const row = {
+      machine_name: issue.machine,
+      description: issue.symptom,
+      reported_by_name: issue.reporter || null,
+      resolved_at: issue.resolvedAt || null,
+      specs,
+    };
+    if (issue.id && !String(issue.id).startsWith('ISS-')) row.id = issue.id;
+    if (profileId) row.reported_by = profileId;
+    return row;
+  }
+
+  async function _getAllMachineIssues() {
+    const supa = await _getClient();
+    const { data, error } = await supa
+      .from('machine_issues')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(_machineIssueToLocal);
+  }
+
+  async function _insertMachineIssue(issue) {
+    const supa = await _getClient();
+    const profile = await _getCurrentProfile();
+    const row = _machineIssueToRow(issue, profile?.id || null);
+    const { data, error } = await supa.from('machine_issues').insert(row).select('*').single();
+    if (error) throw error;
+    return _machineIssueToLocal(data);
+  }
+
+  async function _updateMachineIssue(issue) {
+    const supa = await _getClient();
+    const profile = await _getCurrentProfile();
+    const row = _machineIssueToRow(issue, profile?.id || null);
+    const id = row.id;
+    delete row.id;
+    delete row.reported_by;
+    const { data, error } = await supa.from('machine_issues').update(row).eq('id', id).select('*').single();
+    if (error) throw error;
+    return _machineIssueToLocal(data);
+  }
+
+  async function _migrateLocalMachineIssuesOnce() {
+    const flag = 'pulse_machine_issues_migrated_v1';
+    try {
+      if (localStorage.getItem(flag)) return;
+      const raw = localStorage.getItem('pulse_machine_issues');
+      if (!raw) { localStorage.setItem(flag, '1'); return; }
+      let localIssues;
+      try { localIssues = JSON.parse(raw); } catch (_) { localIssues = []; }
+      if (!Array.isArray(localIssues) || !localIssues.length) {
+        localStorage.setItem(flag, '1');
+        return;
+      }
+      const existing = await _getAllMachineIssues();
+      if (existing.length) {
+        localStorage.setItem(flag, '1');
+        return;
+      }
+      for (const issue of localIssues) {
+        try { await _insertMachineIssue(issue); } catch (e) {
+          console.warn('[Pulse/Supabase] migrate machine issue:', issue.id, e);
+        }
+      }
+      localStorage.setItem(flag, '1');
+    } catch (e) {
+      console.warn('[Pulse/Supabase] migrateLocalMachineIssuesOnce:', e);
+    }
+  }
+
+  window.getAllMachineIssues = async function () {
+    try {
+      await _migrateLocalMachineIssuesOnce();
+      return await _getAllMachineIssues();
+    } catch (e) {
+      console.error('[Pulse/Supabase] getAllMachineIssues:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
+  };
+
+  window.insertMachineIssue = async function (issue) {
+    try { return await _insertMachineIssue(issue); }
+    catch (e) {
+      console.error('[Pulse/Supabase] insertMachineIssue:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
+  };
+
+  window.updateMachineIssue = async function (issue) {
+    try { return await _updateMachineIssue(issue); }
+    catch (e) {
+      console.error('[Pulse/Supabase] updateMachineIssue:', e);
+      throw new Error(_formatPulseDbError(e));
+    }
+  };
+
+  window.usePulseSupabaseStorage = function () {
+    return true;
   };
 
   console.log('[Pulse] Supabase backend registered — awaiting client init');

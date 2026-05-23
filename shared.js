@@ -4776,20 +4776,58 @@ async function ensurePulseAdminCatalog() {
   return repairPulseAdminCatalog();
 }
 
-/** Facilities from Organisation tab (local JSON / Supabase). Optional CONST fallback for legacy only. */
-async function getPulseOrganisationFacilities(opts = {}) {
-  if (typeof window !== 'undefined' && window.PulseOrgJsonStore) {
-    try {
-      const bundle = PulseOrgJsonStore.loadRaw();
-      if (bundle?.facilities?.length) {
-        return bundle.facilities
-          .filter(f => f.slug && f.name)
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-          .map(f => ({ slug: f.slug, name: f.name }));
+function _useSupabaseOrganisation() {
+  if (typeof window === 'undefined') return false;
+  if (window.PULSE_ORG_STORAGE === 'local-json') return false;
+  if (window.PULSE_ORG_STORAGE === 'supabase') return true;
+  if (window.PULSE_STORAGE_BACKEND !== 'supabase') return false;
+  const url = window.PULSE_SUPABASE_URL || '';
+  const key = window.PULSE_SUPABASE_ANON_KEY || '';
+  if (/YOUR-PROJECT-REF/i.test(url) || /YOUR-ANON-KEY/i.test(key)) return false;
+  return !!(url && key);
+}
+
+let _pulseOrgBundleCache = null;
+let _pulseOrgBundlePromise = null;
+
+/** Load organisation facilities + hardware from Supabase (preferred) or local JSON fallback. */
+async function loadOrganisationBundleForApp(opts = {}) {
+  if (opts.force) _pulseOrgBundleCache = null;
+  if (_pulseOrgBundleCache && !opts.force) return _pulseOrgBundleCache;
+  if (_pulseOrgBundlePromise && !opts.force) return _pulseOrgBundlePromise;
+
+  _pulseOrgBundlePromise = (async () => {
+    if (_useSupabaseOrganisation() && typeof window.fetchOrganisationBundleFromSupabase === 'function') {
+      try {
+        const bundle = await window.fetchOrganisationBundleFromSupabase();
+        if (bundle?.facilities?.length) {
+          _pulseOrgBundleCache = bundle;
+          return bundle;
+        }
+      } catch (e) {
+        console.warn('[Pulse] loadOrganisationBundleForApp Supabase:', e);
       }
-    } catch (_) {}
+    }
+    if (typeof window !== 'undefined' && window.PulseOrgJsonStore) {
+      try {
+        const bundle = PulseOrgJsonStore.loadRaw();
+        _pulseOrgBundleCache = bundle;
+        return bundle;
+      } catch (_) {}
+    }
+    return null;
+  })();
+
+  try {
+    return await _pulseOrgBundlePromise;
+  } finally {
+    _pulseOrgBundlePromise = null;
   }
-  if (typeof getSupabaseClient === 'function') {
+}
+
+/** Facilities from Organisation tab (Supabase preferred; local JSON fallback). Optional CONST fallback for legacy only. */
+async function getPulseOrganisationFacilities(opts = {}) {
+  if (_useSupabaseOrganisation() && typeof getSupabaseClient === 'function') {
     try {
       const client = getSupabaseClient();
       if (client) {
@@ -4800,6 +4838,17 @@ async function getPulseOrganisationFacilities(opts = {}) {
         if (data?.length) {
           return data.filter(f => f.slug && f.name).map(f => ({ slug: f.slug, name: f.name }));
         }
+      }
+    } catch (_) {}
+  }
+  if (typeof window !== 'undefined' && window.PulseOrgJsonStore) {
+    try {
+      const bundle = _pulseOrgBundleCache || PulseOrgJsonStore.loadRaw();
+      if (bundle?.facilities?.length) {
+        return bundle.facilities
+          .filter(f => f.slug && f.name)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map(f => ({ slug: f.slug, name: f.name }));
       }
     } catch (_) {}
   }
@@ -5042,15 +5091,19 @@ function _orgHardwareToCapacity(h) {
 }
 
 /** Sync machine display names, operations, and capacity from Organisation → hardware. */
-function syncPulseMachineryFromOrganisation() {
+function syncPulseMachineryFromOrganisation(bundle) {
   const out = [];
   _pulseOrgCapacityByMachine = {};
-  if (typeof window === 'undefined' || !window.PulseOrgJsonStore) {
+  let b = bundle || _pulseOrgBundleCache;
+  if (!b && typeof window !== 'undefined' && window.PulseOrgJsonStore) {
+    try { b = PulseOrgJsonStore.loadRaw(); } catch (_) {}
+  }
+  if (!b) {
     _pulseOrgMachines = out;
     return out;
   }
   try {
-    const bundle = PulseOrgJsonStore.loadRaw();
+    const bundle = b;
     const facById = new Map((bundle.facilities || []).map(f => [f.id, f]));
     const hwMap = bundle.hardwareByFacilityId || {};
     for (const [facId, rows] of Object.entries(hwMap)) {
@@ -5159,7 +5212,8 @@ async function initPulseAdminData(opts = {}) {
       };
     }
 
-    syncPulseMachineryFromOrganisation();
+    const orgBundle = await loadOrganisationBundleForApp();
+    syncPulseMachineryFromOrganisation(orgBundle);
     await loadPulseMachineCapacityOverrides();
     const facilities = await refreshPulseFacilityCache();
     const settings = await _loadPulseSettingsFromConfig();
@@ -5207,6 +5261,23 @@ function getPulseFacilityLabel(slug) {
   return String(slug);
 }
 
+/** Map Admin Personnel facility dropdown label → DB slug (16th-street | boyd-street). */
+function pulseResolveFacilitySlug(input) {
+  const raw = String(input || '').trim();
+  if (!raw || raw === 'Both Facilities') return null;
+  if (raw === '16th-street' || raw === 'boyd-street') return raw;
+  const fromList = getPulseFacilityList().find(f => f.name === raw);
+  if (fromList?.slug) return fromList.slug;
+  if (typeof FACILITIES !== 'undefined') {
+    for (const [slug, info] of Object.entries(FACILITIES)) {
+      if (info.name === raw) return slug;
+    }
+  }
+  if (/16th|main production/i.test(raw)) return '16th-street';
+  if (/boyd|large format|design/i.test(raw)) return 'boyd-street';
+  return null;
+}
+
 function getPulseCatalogProducts() {
   return _pulseAdminCache?.catalog?.products ? [..._pulseAdminCache.catalog.products] : [];
 }
@@ -5244,11 +5315,14 @@ function getPulseMachineNames() {
 
 /** Machine list for Report Issue — Organisation + Admin Machine Capacity overrides (same merge as admin Machines tab). */
 async function getPulseReportIssueMachines() {
+  if (typeof loadOrganisationBundleForApp === 'function') {
+    await loadOrganisationBundleForApp();
+  }
   if (typeof loadPulseMachineCapacityOverrides === 'function') {
     await loadPulseMachineCapacityOverrides();
   }
   if (typeof syncPulseMachineryFromOrganisation === 'function') {
-    syncPulseMachineryFromOrganisation();
+    syncPulseMachineryFromOrganisation(_pulseOrgBundleCache);
   }
   const orgMachines = typeof getPulseOrgMachines === 'function' ? getPulseOrgMachines() : [];
   const capKeys = Object.keys(_pulseMachineCapOverrides || {});
@@ -5496,6 +5570,7 @@ if (typeof window !== 'undefined') {
   window.pulseCascadeMachineDisplayRename = pulseCascadeMachineDisplayRename;
   window.pulseRenameInCatalogProducts = _renameInCatalogProducts;
   window.pulseDetectSingleItemRename = _detectSingleItemRename;
+  window.loadOrganisationBundleForApp = loadOrganisationBundleForApp;
   window.syncPulseMachineryFromOrganisation = syncPulseMachineryFromOrganisation;
   window.loadPulseMachineCapacityOverrides = loadPulseMachineCapacityOverrides;
   window.getEffectiveMachineCapacity = getEffectiveMachineCapacity;
@@ -5504,6 +5579,7 @@ if (typeof window !== 'undefined') {
   window.getPulseAdminCache = getPulseAdminCache;
   window.getPulseFacilityList = getPulseFacilityList;
   window.getPulseFacilityLabel = getPulseFacilityLabel;
+  window.pulseResolveFacilitySlug = pulseResolveFacilitySlug;
   window.getPulseCatalogProducts = getPulseCatalogProducts;
   window.getPulseCatalogMaterials = getPulseCatalogMaterials;
   window.getPulseCatalogColorModes = getPulseCatalogColorModes;
