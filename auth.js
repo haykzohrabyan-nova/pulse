@@ -571,6 +571,7 @@ async function logoutUser() {
   if (_supaActive()) {
     try { await window.supabaseSignOut(); } catch (_) {}
   }
+  if (typeof clearAllJobTicketEditUnlocks === 'function') clearAllJobTicketEditUnlocks();
   clearSession();
   location.reload();
 }
