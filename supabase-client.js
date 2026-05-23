@@ -103,8 +103,28 @@
     const user = await _getCurrentUser();
     if (!user) return null;
     const supa = await _getClient();
-    const { data } = await supa.from('profiles').select('*').eq('id', user.id).single();
-    return data;
+    const { data, error } = await supa.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (data) return data;
+    if (error && error.code !== 'PGRST116') {
+      console.warn('[Pulse/Supabase] getCurrentProfile:', error);
+    }
+    return _ensurePulseProfileRow();
+  }
+
+  /** Create profiles row from auth.users when trigger never ran (RLS needs this). */
+  async function _ensurePulseProfileRow() {
+    const user = await _getCurrentUser();
+    if (!user) return null;
+    const supa = await _getClient();
+    try {
+      const { data, error } = await supa.rpc('ensure_pulse_profile');
+      if (!error && data) return data;
+      if (error) console.warn('[Pulse/Supabase] ensure_pulse_profile:', error);
+    } catch (e) {
+      console.warn('[Pulse/Supabase] ensure_pulse_profile:', e);
+    }
+    const { data: row } = await supa.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    return row || null;
   }
 
   // ── Data mapping: local order object ↔ Supabase row ─────────
@@ -488,6 +508,13 @@
   async function _addOrder(order) {
     const supa = await _getClient();
     const user = await _getCurrentUser();
+    if (!user) throw new Error('Not signed in to Supabase. Log out and sign in again.');
+    const profile = await _getCurrentProfile();
+    if (!profile) {
+      throw new Error(
+        'No profiles row for your login. Run Supabase migration 039_ensure_pulse_profile.sql, then log out and back in.'
+      );
+    }
 
     const row = _orderToRow(order);
     if (user) row.created_by = user.id;
@@ -550,11 +577,86 @@
         : '';
       return `You do not have permission to ${verb} this order.${roleLine}${orderHint} Apply migrations 034 and 038 on Supabase if you should have access.`;
     }
+    if (/duplicate key|order_workflow_steps_order_id_step_index_key/i.test(msg)) {
+      return 'Workflow step save conflict — refresh the page and try again. If it keeps failing, ask an admin to run Supabase migration 040_order_workflow_steps_delete.sql.';
+    }
+    if (/statement timeout|canceling statement due to statement timeout/i.test(msg)) {
+      return 'Save timed out. Refresh the page and try again; if it persists, ask an admin to check Supabase load or apply migration 040.';
+    }
     return msg;
+  }
+
+  function _workflowStepPayload(step, idx) {
+    return {
+      step_index:    step.stepIndex != null ? step.stepIndex : idx,
+      machine:       step.machine,
+      operation:     step.operation || null,
+      status:        step.status || 'pending',
+      operator_id:   step.operator_id || null,
+      operator_name: step.assignedTo || null,
+      started_at:    step.startedAt || null,
+      completed_at:  step.completedAt || null,
+      notes:         step.notes || null,
+    };
+  }
+
+  async function _syncWorkflowSteps(supa, orderId, workflowSteps) {
+    const { data: existingRows, error: fetchErr } = await supa
+      .from('order_workflow_steps')
+      .select('id, step_index')
+      .eq('order_id', orderId);
+    if (fetchErr) throw fetchErr;
+
+    const existingByIndex = new Map((existingRows || []).map(r => [r.step_index, r.id]));
+    const keptIds = new Set();
+
+    for (let idx = 0; idx < workflowSteps.length; idx++) {
+      const step = workflowSteps[idx];
+      const payload = _workflowStepPayload(step, idx);
+      let rowId = step.id;
+      if (!rowId && existingByIndex.has(payload.step_index)) {
+        rowId = existingByIndex.get(payload.step_index);
+      }
+
+      if (rowId) {
+        const { error } = await supa
+          .from('order_workflow_steps')
+          .update(payload)
+          .eq('id', rowId)
+          .eq('order_id', orderId);
+        if (error) throw error;
+        keptIds.add(rowId);
+      } else {
+        const { data: inserted, error } = await supa
+          .from('order_workflow_steps')
+          .insert({ order_id: orderId, ...payload })
+          .select('id')
+          .single();
+        if (error) throw error;
+        keptIds.add(inserted.id);
+      }
+    }
+
+    for (const row of existingRows || []) {
+      if (keptIds.has(row.id)) continue;
+      const { error } = await supa
+        .from('order_workflow_steps')
+        .delete()
+        .eq('id', row.id);
+      if (error) throw error;
+    }
   }
 
   async function _updateOrder(id, changes) {
     const supa = await _getClient();
+    const user = await _getCurrentUser();
+    if (!user) throw new Error('Not signed in to Supabase. Log out and sign in again.');
+    const profile = await _getCurrentProfile();
+    if (!profile) {
+      throw new Error(
+        'No profiles row for your login. Run Supabase migration 039_ensure_pulse_profile.sql, then log out and back in.'
+      );
+    }
 
     let lookupId = id;
     let { data: currentRow, error: fetchErr } = await supa
@@ -600,23 +702,7 @@
     }
 
     if (Array.isArray(changes.workflowSteps)) {
-      await supa.from('order_workflow_steps').delete().eq('order_id', lookupId);
-      if (changes.workflowSteps.length > 0) {
-        const steps = changes.workflowSteps.map((step, idx) => ({
-          order_id:    lookupId,
-          step_index:  step.stepIndex ?? idx,
-          machine:     step.machine,
-          operation:   step.operation || null,
-          status:      step.status || 'pending',
-          operator_id:   step.operator_id || null,
-          operator_name: step.assignedTo || null,
-          started_at:    step.startedAt || null,
-          completed_at:  step.completedAt || null,
-          notes:         step.notes || null,
-        }));
-        const { error: stepsError } = await supa.from('order_workflow_steps').insert(steps);
-        if (stepsError) throw stepsError;
-      }
+      await _syncWorkflowSteps(supa, lookupId, changes.workflowSteps);
     }
 
     return combined;
@@ -636,12 +722,127 @@
 
   // ── Activity Log ─────────────────────────────────────────────
 
-  async function _addActivity(_log) {
-    return Promise.resolve();
+  async function _resolveOrderUuid(supa, orderIdOrUuid) {
+    if (orderIdOrUuid == null || orderIdOrUuid === '') return null;
+    const s = String(orderIdOrUuid);
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return s;
+    const { data, error } = await supa
+      .from('orders')
+      .select('id')
+      .eq('order_id', s)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.id || null;
   }
 
-  async function _getActivityLog(_orderId) {
-    return [];
+  async function _addActivity(log) {
+    if (!log) return null;
+    try {
+      const supa = await _getClient();
+      const orderUuid = log.orderUuid || log._supaId
+        || await _resolveOrderUuid(supa, log.orderId || log.order_id);
+      if (!orderUuid) return null;
+      const profile = await _getCurrentProfile();
+      const actorName = log.operatorName || log.by || profile?.display_name || 'System';
+      const details = { ...(typeof log.details === 'object' && log.details ? log.details : {}) };
+      if (log.message != null) details.message = log.message;
+      if (log.note != null) details.note = log.note;
+      if (log.machine != null) details.machine = log.machine;
+      if (log.stepIdx != null) details.stepIdx = log.stepIdx;
+      if (log.shortfall != null) details.shortfall = log.shortfall;
+      const { data, error } = await supa
+        .from('activity_log')
+        .insert({
+          order_id:   orderUuid,
+          action:     log.type || log.action || 'activity',
+          actor_id:   profile?.id || null,
+          actor_name: actorName,
+          details:    Object.keys(details).length ? details : null,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.warn('[Pulse/Supabase] addActivity:', e);
+      return null;
+    }
+  }
+
+  async function _getActivityLog(orderIdOrUuid) {
+    try {
+      const supa = await _getClient();
+      const orderUuid = await _resolveOrderUuid(supa, orderIdOrUuid);
+      if (!orderUuid) return [];
+
+      const events = [];
+
+      const { data: acts, error: actErr } = await supa
+        .from('activity_log')
+        .select('action, actor_name, created_at, details')
+        .eq('order_id', orderUuid)
+        .order('created_at', { ascending: true });
+      if (actErr) throw actErr;
+      for (const row of acts || []) {
+        const det = row.details && typeof row.details === 'object' ? row.details : null;
+        const t = new Date(row.created_at).getTime();
+        if (Number.isNaN(t)) continue;
+        events.push({
+          ts: t,
+          iso: row.created_at,
+          title: row.action || 'Activity',
+          who: row.actor_name || '',
+          note: det?.message || det?.note || (typeof row.details === 'string' ? row.details : ''),
+          source: 'activity',
+        });
+      }
+
+      const { data: hist, error: histErr } = await supa
+        .from('order_status_history')
+        .select('from_status, to_status, changed_by_name, reason, created_at')
+        .eq('order_id', orderUuid)
+        .order('created_at', { ascending: true });
+      if (histErr) throw histErr;
+      for (const row of hist || []) {
+        const t = new Date(row.created_at).getTime();
+        if (Number.isNaN(t)) continue;
+        const from = row.from_status ? String(row.from_status).replace(/-/g, ' ') : '—';
+        const to = row.to_status ? String(row.to_status).replace(/-/g, ' ') : '—';
+        events.push({
+          ts: t,
+          iso: row.created_at,
+          title: `Status: ${from} → ${to}`,
+          who: row.changed_by_name || '',
+          note: row.reason || '',
+          source: 'status',
+        });
+      }
+
+      const { data: comments, error: comErr } = await supa
+        .from('order_comments')
+        .select('author_name, body, created_at')
+        .eq('order_id', orderUuid)
+        .order('created_at', { ascending: true });
+      if (comErr) throw comErr;
+      for (const row of comments || []) {
+        const t = new Date(row.created_at).getTime();
+        if (Number.isNaN(t)) continue;
+        events.push({
+          ts: t,
+          iso: row.created_at,
+          title: 'Comment',
+          who: row.author_name || '',
+          note: row.body || '',
+          source: 'comment',
+        });
+      }
+
+      events.sort((a, b) => a.ts - b.ts);
+      return events;
+    } catch (e) {
+      console.warn('[Pulse/Supabase] getActivityLog:', e);
+      return [];
+    }
   }
 
   async function _getAllActivity() {
@@ -734,6 +935,7 @@
   };
 
   window.supabaseGetProfile = _getCurrentProfile;
+  window.supabaseEnsureProfile = _ensurePulseProfileRow;
 
   // ── Override global functions from shared.js ─────────────────
   // Skipped on migrate-to-supabase.html so backup import writes to IndexedDB.
@@ -1214,12 +1416,20 @@
     catch (e) { console.error('[Pulse/Supabase] getSubTickets:', e); return _origGetSubTickets ? _origGetSubTickets(parentOrderId) : []; }
   };
 
-  window.addActivity = async function () {
-    return null;
+  window.addActivity = async function (log) {
+    try { return await _addActivity(log); }
+    catch (e) {
+      console.error('[Pulse/Supabase] addActivity:', e);
+      return null;
+    }
   };
 
-  window.getActivityLog = async function () {
-    return [];
+  window.getActivityLog = async function (orderIdOrUuid) {
+    try { return await _getActivityLog(orderIdOrUuid); }
+    catch (e) {
+      console.error('[Pulse/Supabase] getActivityLog:', e);
+      return [];
+    }
   };
 
   window.getAllActivity = async function () {

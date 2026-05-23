@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="supabase-client.js?v=20260523-OP1"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
@@ -422,6 +422,18 @@
     .coin-box.month .cb-val { color: #16a34a; }
     .coin-box .cb-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
 
+  .job-history-section { flex: 1; min-height: 120px; display: flex; flex-direction: column; }
+  .job-history-scroll {
+    flex: 1; max-height: 280px; overflow-y: auto; margin-top: 4px;
+    border: 1px solid var(--border); border-radius: 8px; background: #f8f9fb; padding: 8px;
+  }
+  .job-history-item { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+  .job-history-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .job-history-time { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+  .job-history-msg { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.35; }
+  .job-history-note { font-size: 11px; color: #475569; margin-top: 3px; line-height: 1.35; }
+  .job-history-empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; text-align: center; }
+
     /* ── BOTTOM BAR: BREAK TRACKER ── */
     .bottom-bar {
       background: #fff; border-top: 2px solid var(--border); flex-shrink: 0;
@@ -732,6 +744,13 @@
           <button class="action-btn btn-complete hidden" id="btn-complete" onclick="stepAction('complete')">✅ Complete Step</button>
           <div class="pause-overdue-warn" id="pause-overdue-warn">⚠️ Paused &gt;10 min — add a note!</div>
         </div>
+      </div>
+
+      <!-- Job ticket history -->
+      <div class="controls-section job-history-section" id="job-history-section">
+        <div class="ctrl-section-title">📜 Job History</div>
+        <div id="no-history-msg" class="job-history-empty">Select a job to see its history</div>
+        <div class="job-history-scroll" id="job-history-scroll" style="display:none;"></div>
       </div>
 
       <!-- Daily Performance -->
@@ -1194,6 +1213,18 @@ async function enterMainScreen() {
     }
   });
 
+  window.addEventListener('pulse:order-change', async () => {
+    if (!currentJob) return;
+    await reloadCurrentJob();
+    if (currentJob) {
+      await renderJobDetail(currentJob);
+      await renderJobHistory(currentJob);
+      setTimerUI();
+      setActionButtonUI();
+    }
+    await refreshQueue();
+  });
+
   updateBreakUI();
 }
 
@@ -1479,7 +1510,7 @@ async function refreshQueue() {
     const overdue   = isOverdue(order.dueDate);
     html += `<div class="queue-item ${isActive ? 'active' : ''}"
       style="border-left-color:${lineColor};"
-      onclick="selectJob(${order.id})">
+      onclick="selectJob('${String(order.id).replace(/'/g, "\\'")}')">
       <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
       <div class="qi-customer">${escHtml(order.customer || '—')}</div>
       <div class="qi-product">${escHtml(order.productType || '—')}</div>
@@ -1500,7 +1531,7 @@ async function refreshQueue() {
       const ws = getQueueStepWorkState(order, step, { comingNext: true });
       html += `<div class="queue-item coming"
         style="border-left-color:${lineColor}; opacity:0.75;"
-        onclick="selectJob(${order.id})">
+        onclick="selectJob('${String(order.id).replace(/'/g, "\\'")}')">
         <div class="qi-order">#${order.orderId || order.id} ${renderRushFlag(order)}</div>
         <div class="qi-customer">${escHtml(order.customer || '—')}</div>
         <div class="qi-product">${escHtml(order.productType || '—')}</div>
@@ -1546,11 +1577,28 @@ async function doQRScan() {
   }
 }
 
+async function reloadCurrentJob() {
+  if (!currentJob?.id) return null;
+  try {
+    currentJob = await getOrder(currentJob.id);
+  } catch (e) {
+    console.warn('[Pulse/Operator] reloadCurrentJob', e);
+  }
+  return currentJob;
+}
+
 // ── SELECT JOB ────────────────────────────────────────────────────────
 async function selectJob(orderId) {
   let order;
-  try { order = await _get('orders', orderId); } catch (e) { return; }
-  if (!order) return;
+  try { order = await getOrder(orderId); } catch (e) {
+    console.error('[Pulse/Operator] selectJob', e);
+    showToast('red', 'Load failed', 'Could not load this job. Refresh and try again.');
+    return;
+  }
+  if (!order) {
+    showToast('red', 'Not found', 'This job could not be found.');
+    return;
+  }
 
   // Block switching to another job while current job is running
   if (currentJob && currentJob.id !== orderId && stepState === 'running') {
@@ -1594,9 +1642,106 @@ async function selectJob(orderId) {
   document.getElementById('job-detail-area').style.display = 'flex';
 
   await renderJobDetail(order);
+  await renderJobHistory(order);
   setTimerUI();
   setActionButtonUI();
   await refreshQueue();
+}
+
+function collectWorkflowStepHistory(order) {
+  const rows = [];
+  const push = (iso, title, who, note) => {
+    if (!iso) return;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return;
+    rows.push({ ts: t, iso, title, who: who || '', note: note ? String(note).slice(0, 800) : '', source: 'workflow' });
+  };
+  (order.workflowSteps || []).forEach((ws, i) => {
+    const label = ws.machine || `Step ${i + 1}`;
+    if (ws.assignedTo) push(ws.startedAt || order.updatedAt, `Step ${i + 1} assigned — ${label}`, ws.assignedTo, '');
+    push(ws.startedAt, `Step ${i + 1} started — ${label}`, ws.startedBy || ws.assignedTo, '');
+    if (ws.pauseNote) push(ws.pausedAt, `Step ${i + 1} paused — ${label}`, ws.startedBy || ws.assignedTo, ws.pauseNote);
+    push(ws.completedAt, `Step ${i + 1} completed — ${label}`, ws.completedBy || ws.assignedTo, ws.notes || '');
+  });
+  push(order.createdAt, 'Job ticket created', order.accountManager || order.rep, '');
+  push(order.prepressApprovedAt, 'Approved to production', order.prepressApprovedBy, '');
+  return rows;
+}
+
+function mergeJobHistoryEvents(localRows, dbRows) {
+  const merged = localRows.map(r => ({ ...r }));
+  for (const row of dbRows || []) {
+    if (!row || row.ts == null) continue;
+    merged.push({ ...row });
+  }
+  merged.sort((a, b) => a.ts - b.ts);
+  const seen = new Set();
+  const out = [];
+  for (const ev of merged) {
+    const key = `${Math.floor(ev.ts / 20000)}-${ev.title}-${(ev.note || '').slice(0, 40)}-${ev.who || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(ev);
+  }
+  return out;
+}
+
+function renderJobHistoryHtml(events) {
+  if (!events.length) {
+    return '<div class="job-history-empty">No history recorded for this job yet.</div>';
+  }
+  return events.map(ev => {
+    const when = typeof formatDateTime === 'function'
+      ? formatDateTime(ev.iso)
+      : (ev.iso ? new Date(ev.iso).toLocaleString() : '—');
+    const who = ev.who ? ` · ${escHtml(ev.who)}` : '';
+    const note = ev.note ? `<div class="job-history-note">${escHtml(ev.note)}</div>` : '';
+    return `<div class="job-history-item">
+      <div class="job-history-time">${escHtml(when)}${who}</div>
+      <div class="job-history-msg">${escHtml(ev.title)}</div>${note}
+    </div>`;
+  }).join('');
+}
+
+async function renderJobHistory(order) {
+  const emptyMsg = document.getElementById('no-history-msg');
+  const scroll = document.getElementById('job-history-scroll');
+  if (!emptyMsg || !scroll) return;
+
+  if (!order) {
+    emptyMsg.style.display = '';
+    emptyMsg.textContent = 'Select a job to see its history';
+    scroll.style.display = 'none';
+    scroll.innerHTML = '';
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+  scroll.style.display = 'block';
+  scroll.innerHTML = '<div class="job-history-empty">Loading history…</div>';
+
+  const local = collectWorkflowStepHistory(order);
+  let dbRows = [];
+  try {
+    dbRows = await getActivityLog(order.id || order.orderId);
+  } catch (e) {
+    console.warn('[Pulse/Operator] getActivityLog', e);
+  }
+  const events = mergeJobHistoryEvents(local, dbRows);
+  scroll.innerHTML = renderJobHistoryHtml(events);
+}
+
+function clearJobHistoryPanel() {
+  const emptyMsg = document.getElementById('no-history-msg');
+  const scroll = document.getElementById('job-history-scroll');
+  if (emptyMsg) {
+    emptyMsg.style.display = '';
+    emptyMsg.textContent = 'Select a job to see its history';
+  }
+  if (scroll) {
+    scroll.style.display = 'none';
+    scroll.innerHTML = '';
+  }
 }
 
 async function autoPauseCurrentJob(newJobOrderId) {
@@ -1920,14 +2065,16 @@ async function stepAction(action) {
       totalPausedMs: 0,
     };
     await updateOrder(currentJob.id, { workflowSteps: steps, status: 'in-production' });
-    currentJob = await _get('orders', currentJob.id);
+    await reloadCurrentJob();
     await addActivity({
       type: 'step-started', orderId: currentJob.orderId,
-      operatorName: currentOperator, machine, stepIdx: currentStepIdx
+      operatorName: currentOperator, machine, stepIdx: currentStepIdx,
+      message: `Started ${machine}`,
     });
 
     setTimerUI();
     setActionButtonUI();
+    await renderJobHistory(currentJob);
     await refreshQueue();
 
   } else if (action === 'pause') {
@@ -1955,7 +2102,12 @@ async function stepAction(action) {
         pauseNote: steps[currentStepIdx]?.pauseNote || '',
       };
       await updateOrder(currentJob.id, { workflowSteps: steps });
-      currentJob = await _get('orders', currentJob.id);
+      await reloadCurrentJob();
+      await addActivity({
+        type: 'step-resumed', orderId: currentJob.orderId,
+        operatorName: currentOperator, machine, stepIdx: currentStepIdx,
+        message: `Resumed ${machine}`,
+      });
     }
     stepPausedAt = null;
     stepState    = 'running';
@@ -1963,6 +2115,7 @@ async function stepAction(action) {
     setTimerUI();
     setActionButtonUI();
     document.getElementById('pause-overdue-warn').classList.remove('visible');
+    await renderJobHistory(currentJob);
     await refreshQueue();
 
   } else if (action === 'complete') {
@@ -2017,6 +2170,7 @@ async function confirmPause() {
 
   stepPausedAt = Date.now();
   stepState    = 'paused';
+  const machine = currentJob.workflowSteps?.[currentStepIdx]?.machine || '';
 
   // Persist
   const steps = [...(currentJob.workflowSteps || [])];
@@ -2027,16 +2181,17 @@ async function confirmPause() {
     pauseNote: note || steps[currentStepIdx]?.pauseNote || '',
   };
   await updateOrder(currentJob.id, { workflowSteps: steps });
-  currentJob = await _get('orders', currentJob.id);
-  if (note) {
-    await addActivity({
-      type: 'step-paused', orderId: currentJob.orderId,
-      operatorName: currentOperator, note, stepIdx: currentStepIdx
-    });
-  }
+  await reloadCurrentJob();
+  await addActivity({
+    type: 'step-paused', orderId: currentJob.orderId,
+    operatorName: currentOperator, note: note || 'Paused', stepIdx: currentStepIdx,
+    message: note ? `Paused: ${note}` : (machine ? `Paused — ${machine}` : 'Paused'),
+    machine,
+  });
 
   setTimerUI();
   setActionButtonUI();
+  await renderJobHistory(currentJob);
   await refreshQueue();
 }
 
@@ -2289,20 +2444,22 @@ async function confirmComplete() {
   closeCompleteModal();
 
   // Reload job
-  currentJob = await _get('orders', currentJob.id);
-  currentStepIdx = currentJob.currentStep || 0;
+  await reloadCurrentJob();
+  currentStepIdx = currentJob?.currentStep || 0;
 
   if (newStatus === 'qc-checkout') {
     showToast('green', '✅ All Steps Complete!', `Order #${currentJob.orderId} sent to QC Checkout.`);
     currentJob = null;
     document.getElementById('no-job-msg').style.display = 'flex';
     document.getElementById('job-detail-area').style.display = 'none';
+    clearJobHistoryPanel();
     document.getElementById('timer-display').textContent = '00:00:00';
     document.getElementById('timer-state-badge').className = 'timer-state ts-idle';
     document.getElementById('timer-state-badge').textContent = 'Not Started';
     setActionButtonUI();
   } else {
     await renderJobDetail(currentJob);
+    await renderJobHistory(currentJob);
     setTimerUI();
     setActionButtonUI();
   }
