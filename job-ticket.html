@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260523-jt-lock"></script>
+  <script src="shared.js?v=20260523-jt-sku"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI239"></script>
+  <script src="supabase-client.js?v=20260523-jt-sku"></script>
   <script src="auth.js?v=20260427-PRI239"></script>
   <style id="page-styles"></style>
 </head>
@@ -1551,6 +1551,39 @@ let editingDbId = null;
 let artworkDataList = []; // { name, type, dataUrl, role }
 let singleFileData = { white: null, uv: null, foil: null };
 let skuList = []; // multi-SKU: { name, quantity, artworkDataUrl, artworkName, ... }
+const _jtPreviewUrls = [];
+
+function jtResetPreviewUrls() {
+  _jtPreviewUrls.length = 0;
+}
+
+function jtPreviewIndex(dataUrl) {
+  if (!dataUrl) return -1;
+  const idx = _jtPreviewUrls.length;
+  _jtPreviewUrls.push(dataUrl);
+  return idx;
+}
+
+function openJtPreview(idx) {
+  const url = _jtPreviewUrls[idx];
+  if (url) openLightbox(url);
+}
+
+function jtNormalizeSkuList(skus) {
+  const norm = typeof normalizeJobTicketSku === 'function' ? normalizeJobTicketSku : (s) => s;
+  return (skus || []).map(s => norm({ ...s }));
+}
+
+function jtRefreshSkuArtworkUi() {
+  if (skuList.length > 0) {
+    showMultiSkuMode();
+    if (_jtEditLockMode) renderSKUsReadOnly();
+    else renderSKUs();
+  } else if (artworkDataList.length) {
+    renderArtworkThumbs();
+  }
+  syncJtTicketReadOnlyDom();
+}
 let rushApproved = false;
 let _parentOrderId = null; // set when creating a sub-ticket
 let _formDirty = false; // tracks unsaved changes for beforeunload guard
@@ -1750,6 +1783,7 @@ function renderJobTicketReadOnlyArtifacts(order) {
 function renderSKUsReadOnly() {
   const container = document.getElementById('skuList');
   if (!container || !skuList.length) return;
+  jtResetPreviewUrls();
 
   const hasWhite = document.getElementById('colorMode')?.value === 'CMYK+White';
   const hasUV = document.getElementById('hasUV')?.checked || false;
@@ -2199,6 +2233,7 @@ async function openOrderInEditor(order) {
   document.getElementById('orderIdDisplay').textContent = `Order ID: ${fresh.orderId}`;
   window.history.replaceState({}, '', `job-ticket.html?order=${encodeURIComponent(fresh.orderId)}`);
   await loadOrderIntoForm(fresh);
+  jtRefreshSkuArtworkUi();
   const subBtn = document.getElementById('addSubTicketBtn');
   if (subBtn) {
     subBtn.href = `job-ticket.html?parent=${fresh.orderId}`;
@@ -2947,12 +2982,12 @@ function removeSKUFile(idx, type) {
 
 function jtSkuThumbViewOnly(dataUrl, name) {
   if (!dataUrl) return '<span style="font-size:11px;color:var(--text-muted);">—</span>';
-  const safe = String(dataUrl).replace(/'/g, "\\'");
-  const label = (name || 'file').replace(/"/g, '&quot;');
+  const idx = jtPreviewIndex(dataUrl);
+  const label = escHtmlJT(name || 'file');
   if (String(dataUrl).startsWith('data:image') || /\.(png|jpe?g|gif|webp|tif?f)$/i.test(name || '')) {
-    return `<div class="sku-file-thumb-wrap"><img src="${dataUrl}" alt="${label}" title="Click to preview" onclick="openLightbox('${safe}')" style="cursor:pointer;"></div>`;
+    return `<div class="sku-file-thumb-wrap"><img src="${dataUrl}" alt="${label}" title="Click to preview" onclick="openJtPreview(${idx})" style="cursor:pointer;"></div>`;
   }
-  return `<div class="sku-file-thumb-wrap"><div class="sku-file-pdf" title="Click to preview" onclick="openLightbox('${safe}')" style="cursor:pointer;">📄</div><span>${label}</span></div>`;
+  return `<div class="sku-file-thumb-wrap"><div class="sku-file-pdf" title="Click to preview" onclick="openJtPreview(${idx})" style="cursor:pointer;">📄</div><span>${label}</span></div>`;
 }
 
 function skuFileThumbHTML(skuIdx, fileType) {
@@ -2964,7 +2999,8 @@ function skuFileThumbHTML(skuIdx, fileType) {
   if (!url) return '';
   const isImage = mime.startsWith('image/') || (!mime && /\.(png|jpe?g|gif|webp|tif|tiff)$/i.test(name));
   const safeName = escHtmlJT(name);
-  const previewClick = isImage ? `onclick="openLightbox('${url.replace(/'/g, '%27')}')"` : '';
+  const previewIdx = isImage ? jtPreviewIndex(url) : -1;
+  const previewClick = previewIdx >= 0 ? `onclick="openJtPreview(${previewIdx})"` : '';
   return `
     <div class="sku-file-thumb-wrap">
       ${isImage
@@ -2979,6 +3015,7 @@ function skuFileThumbHTML(skuIdx, fileType) {
 function renderSKUs() {
   const container = document.getElementById('skuList');
   if (!container || skuList.length === 0) { if (container) container.innerHTML = ''; return; }
+  jtResetPreviewUrls();
 
   const hasWhite = document.getElementById('colorMode')?.value === 'CMYK+White';
   const hasUV = document.getElementById('hasUV')?.checked || false;
@@ -3449,7 +3486,9 @@ function applyEditLock(order) {
   const header = document.querySelector('.jt-header');
   if (container && header) container.insertBefore(banner, header.nextSibling);
 
-  renderJobTicketReadOnlyArtifacts(order);
+  renderJobTicketReadOnlyArtifacts(
+    typeof normalizeJobTicketOrderMedia === 'function' ? normalizeJobTicketOrderMedia(order) : order
+  );
   if (skuList.length > 0) renderSKUsReadOnly();
   applyJtFormReadOnlyState(true);
 }
@@ -4015,15 +4054,17 @@ function handleArtworkUpload(input) {
 
 function renderArtworkThumbs() {
   const container = document.getElementById('artworkThumbnails');
+  jtResetPreviewUrls();
   const mainArt = artworkDataList.filter(a => a.role === 'main');
   container.innerHTML = mainArt.map((art, idx) => {
     const isImage = (art.type && art.type.startsWith('image/'))
       || (!art.type && /\.(png|jpe?g|gif|webp|tif|tiff)$/i.test(art.name || ''));
     const safeName = escHtmlJT(art.name || '');
+    const previewIdx = isImage ? jtPreviewIndex(art.dataUrl) : -1;
     return `
       <div class="artwork-thumb">
         ${isImage
-          ? `<img src="${art.dataUrl}" alt="${safeName}" onclick="openLightbox('${String(art.dataUrl).replace(/'/g, '%27')}')">`
+          ? `<img src="${art.dataUrl}" alt="${safeName}" onclick="openJtPreview(${previewIdx})">`
           : `<div class="artwork-pdf" title="${safeName}">📄</div>`
         }
         <div class="thumb-name" title="${safeName}">${safeName}</div>
@@ -4400,6 +4441,9 @@ async function saveTicket(suppressRedirect = false) {
       if ((!order.skus || !order.skus.length) && previousOrder?.skus?.length) {
         order.skus = previousOrder.skus;
         order.skuCount = previousOrder.skuCount || previousOrder.skus.length;
+      } else if (skuList.length > 0 && previousOrder?.skus?.length && typeof mergeJobTicketSkuMedia === 'function') {
+        order.skus = mergeJobTicketSkuMedia(skuList, previousOrder.skus);
+        order.skuCount = order.skus.length;
       }
       if (previousOrder?.status === 'pending-account-manager') {
         const resubmittedAt = new Date().toISOString();
@@ -4599,6 +4643,9 @@ function clearJobTicketShippingBanner() {
 
 async function loadOrderIntoForm(order) {
   order = applyJobTicketSnapshotFallback(order);
+  if (typeof normalizeJobTicketOrderMedia === 'function') {
+    order = normalizeJobTicketOrderMedia(order);
+  }
   renderAccountManagerIssueBanner(order);
   renderCurrentStepTimerBanner(order);
   renderOvertimeApprovalBanner(order);
@@ -4765,9 +4812,11 @@ async function loadOrderIntoForm(order) {
 
   // Multi-SKU mode
   if (hasSkuVersions) {
-    skuList = order.skus.map(s => ({ ...s }));
+    skuList = jtNormalizeSkuList(order.skus);
     showMultiSkuMode();
-    renderSKUs();
+    jtRefreshSkuArtworkUi();
+  } else {
+    jtResetPreviewUrls();
   }
 
   // Sales & Billing

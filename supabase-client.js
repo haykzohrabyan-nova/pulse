@@ -263,6 +263,10 @@
    */
   function _rowToOrder(row, steps = []) {
     const s = row.specs || {};
+    const skusRaw = s.skus || null;
+    const skusNorm = Array.isArray(skusRaw)
+      ? skusRaw.map(sku => (typeof normalizeJobTicketSku === 'function' ? normalizeJobTicketSku(sku) : sku))
+      : skusRaw;
     return {
       // Supabase identity
       id:        row.id,        // UUID — used as editingDbId
@@ -344,7 +348,7 @@
       extraFrames:              s.extraFrames              ?? 0,
       makeReadyFrames:          s.makeReadyFrames          ?? 0,
       framesWasted:             s.framesWasted             ?? 0,
-      skus:                     s.skus                     || null,
+      skus:                     skusNorm,
       skuCount:                 s.skuCount                 || 0,
       artworkFiles:             s.artworkFiles             || [],
       whiteLayerFile:           s.whiteLayerFile           || null,
@@ -597,7 +601,8 @@
           completed_at:  step.completedAt || null,
           notes:         step.notes || null,
         }));
-        await supa.from('order_workflow_steps').insert(steps);
+        const { error: stepsError } = await supa.from('order_workflow_steps').insert(steps);
+        if (stepsError) throw stepsError;
       }
     }
 
