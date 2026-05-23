@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260520-admin-interconnect"></script>
+  <script src="shared.js?v=20260523-admin-interconnect"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -330,7 +330,7 @@ function renderQueue() {
     return;
   }
   list.innerHTML = orders.map(order => `
-    <div class="queue-item ${order.id === selectedOrderId ? 'active' : ''}" onclick="selectOrder(${order.id})">
+    <div class="queue-item ${order.id === selectedOrderId ? 'active' : ''}" onclick="selectOrder('${String(order.id).replace(/'/g, "\\'")}')">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
         <div class="queue-item-title">#${order.orderId}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${renderRushFlag(order)}${renderStatusBadge(order.status)}</div>
@@ -681,7 +681,7 @@ async function renderPrepressHistoryPanel() {
     const sel = order.id === selectedOrderId;
     const cust = order.customerName || order.customer || '—';
     return `<div class="prepress-history-ticket">
-      <div class="prepress-history-ticket-head ${sel ? 'is-selected' : ''}" onclick="selectOrder(${order.id})" title="Open this ticket">
+      <div class="prepress-history-ticket-head ${sel ? 'is-selected' : ''}" onclick="selectOrder('${String(order.id).replace(/'/g, "\\'")}')" title="Open this ticket">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="font-weight:800;color:#1d4ed8;">#${escHtml_pre(String(order.orderId))}</span>
           <span>${escHtml_pre(cust)}</span>
