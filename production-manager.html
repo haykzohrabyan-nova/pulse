@@ -591,13 +591,23 @@ function renderList() {
     return;
   }
 
-  container.innerHTML = filtered.map(order => renderOrderRow(order)).join('');
+  container.innerHTML = filtered.map(order => {
+    try {
+      return renderOrderRow(order);
+    } catch (e) {
+      console.error('[Pulse] renderOrderRow', order?.orderId, e);
+      return `<div class="order-row" style="border:1px solid var(--red);padding:12px;margin-bottom:8px;border-radius:8px;">
+        <strong>#${order?.orderId || '?'}</strong> — could not display this ticket (${e.message || e}).
+        <a href="job-ticket.html?order=${encodeURIComponent(order?.orderId || '')}" style="margin-left:8px;">Open in Job Ticket</a>
+      </div>`;
+    }
+  }).join('');
 }
 
 function renderOrderRow(order) {
   const dueClass = getDueClass(order.dueDate);
   const isExpanded = order.id === activeOrderId;
-  const orderIdEsc = String(order.id).replace(/'/g, "\\'");
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const line = getProductionLine(order);
   const lineInfo = PRODUCTION_LINES[line];
   const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
@@ -623,6 +633,7 @@ function renderOrderRow(order) {
 }
 
 function renderOrderBody(order) {
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const steps = order.workflowSteps || [];
   const currentStep = order.currentStep || 0;
 
@@ -697,6 +708,7 @@ function di(label, val) {
 }
 
 function getActionButtons(order) {
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const btns = [];
   const editableStatuses = ['prepress', 'on-hold', 'new', 'pending-account-manager', 'prepress-paused'];
   if (editableStatuses.includes(order.status)) {
