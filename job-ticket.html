@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-profile-fix"></script>
+  <script src="supabase-client.js?v=20260526-extrafin"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -280,6 +280,8 @@
           </div>
         </div>
       </div>
+      <!-- Dynamic extra finishing fields rendered by renderExtraFinishingSection() -->
+      <div id="extraFinishingSection" class="jt-finishing-grid" style="margin-top:0;"></div>
       <div class="form-row" id="finishingNotesRow" style="margin-top:8px;display:none;">
         <div class="field">
           <label>Finishing Notes</label>
@@ -2680,7 +2682,6 @@ function onProductTypeChange() {
     const hasUV   = allowedFin.some(f => /uv|spot.?uv|coating/i.test(f));
     const hasFoil = allowedFin.some(f => /foil/i.test(f));
     const hasPerf = allowedFin.some(f => /perforat/i.test(f));
-    const hasScodix = allowedFin.some(f => /scodix|emboss/i.test(f));
     // Lamination field is already handled for isLabelSheet; only restrict if NOT isLabelSheet
     if (!isLabelSheet) {
       const lf = document.getElementById('laminationField');
@@ -2701,6 +2702,9 @@ function onProductTypeChange() {
     if (foilField) foilField.style.display = '';
     if (perfField) perfField.style.display = '';
   }
+
+  // Render extra (non-hardcoded) finishing fields for this product
+  renderExtraFinishingSection(allowedFin);
 
   // ── Print type / roll direction ────────────────────────────
   const printType = catalogProd.rollDirection ? 'Roll' : 'Sheet';
@@ -2787,6 +2791,13 @@ function applyProductFinishingDefaults(catalogProd) {
     const el = document.getElementById('hasPerforation');
     if (el) el.checked = !!defaults[perfKeys[0]];
   }
+
+  // Apply defaults for extra (non-hardcoded) finishing fields
+  const extraDefaults = {};
+  Object.keys(defaults).forEach(k => {
+    if (!_isHardcodedFin(k)) extraDefaults[k] = defaults[k];
+  });
+  if (Object.keys(extraDefaults).length) applyExtraFinishingValues(extraDefaults);
 
   // Re-sync finishing sub-sections after applying defaults
   onFinishingChange();
@@ -3364,8 +3375,9 @@ function onFinishingChange() {
   document.getElementById('foilSection').style.display = hasFoil ? 'block' : 'none';
   document.getElementById('foilFileSlot').style.display = hasFoil ? 'flex' : 'none';
 
-  // Finishing Notes — only show when at least one finishing option is selected
-  const hasAnyFinishing = hasUV || hasFoil || hasLamination;
+  // Finishing Notes — show when at least one finishing option is selected (including extras)
+  const hasExtraFin = !!document.querySelector('#extraFinishingSection input[type="checkbox"]:checked');
+  const hasAnyFinishing = hasUV || hasFoil || hasLamination || hasExtraFin;
   const notesRow = document.getElementById('finishingNotesRow');
   if (notesRow) notesRow.style.display = hasAnyFinishing ? '' : 'none';
 
@@ -3379,6 +3391,91 @@ function onPerforationChange() {
   const hasPerforation = document.getElementById('hasPerforation')?.checked;
   const perforationSection = document.getElementById('perforationSection');
   if (perforationSection) perforationSection.style.display = hasPerforation ? 'block' : 'none';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Dynamic Extra Finishing — catalog types beyond the 4 hardcoded fields
+// ─────────────────────────────────────────────────────────────
+const _HARDCODED_FIN_RE = [/laminat/i, /spot.?uv|^uv$|uv\s*coat|^coating$/i, /^foil/i, /perforat/i];
+function _isHardcodedFin(name) { return _HARDCODED_FIN_RE.some(re => re.test(name)); }
+function _jtExFinId(name)    { return 'jtExFin_'    + name.replace(/[^a-zA-Z0-9]/g, '_'); }
+function _jtExFinSelId(name) { return 'jtExFinSel_' + name.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+/**
+ * Renders dynamic finishing fields for any catalog finishing types
+ * on this product that are NOT covered by the 4 hardcoded toggles.
+ * allowedFin: string[] — from catalogProd.finishing
+ */
+function renderExtraFinishingSection(allowedFin) {
+  const sec = document.getElementById('extraFinishingSection');
+  if (!sec) return;
+  const extras = (allowedFin || []).filter(name => !_isHardcodedFin(name));
+  if (!extras.length) { sec.innerHTML = ''; return; }
+
+  sec.innerHTML = extras.map(name => {
+    const id    = _jtExFinId(name);
+    const selId = _jtExFinSelId(name);
+    const cat   = (_jtCatalogFinishing || []).find(f => f.name === name);
+    const versions = Array.isArray(cat?.versions) ? cat.versions : [];
+    const esc   = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    const selHtml = versions.length
+      ? `<div id="${selId}_wrap" style="display:none;margin-top:6px;">
+           <select id="${selId}" style="width:100%;">
+             ${versions.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('')}
+           </select>
+         </div>`
+      : '';
+    const onChange = versions.length
+      ? `document.getElementById('${selId}_wrap').style.display=this.checked?'block':'none';onFinishingChange();`
+      : 'onFinishingChange();';
+
+    return `<div class="field" data-extra-fin="${esc(name)}">
+      <label class="checkbox-label finishing-check" style="margin-bottom:6px;">
+        <input type="checkbox" id="${id}" onchange="${onChange}">
+        <span>${esc(name)}</span>
+      </label>
+      ${selHtml}
+    </div>`;
+  }).join('');
+}
+
+/** Read extra finishing checkbox/select values → { name: value|true } or null */
+function readExtraFinishingValues() {
+  const sec = document.getElementById('extraFinishingSection');
+  if (!sec) return null;
+  const out = {};
+  sec.querySelectorAll('[data-extra-fin]').forEach(el => {
+    const name = el.dataset.extraFin;
+    const cb   = el.querySelector('input[type="checkbox"]');
+    if (!cb?.checked) return;
+    const sel = el.querySelector('select');
+    out[name] = sel ? (sel.value || true) : true;
+  });
+  return Object.keys(out).length ? out : null;
+}
+
+/** Apply saved finishingOptions to dynamic extra fields */
+function applyExtraFinishingValues(finishingOptions) {
+  const sec = document.getElementById('extraFinishingSection');
+  if (!sec || !finishingOptions) return;
+  sec.querySelectorAll('[data-extra-fin]').forEach(el => {
+    const name = el.dataset.extraFin;
+    const val  = finishingOptions[name];
+    if (val == null) return;
+    const cb  = el.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = !!val;
+    if (val && val !== true) {
+      const selId = _jtExFinSelId(name);
+      const wrap  = document.getElementById(selId + '_wrap');
+      const sel   = document.getElementById(selId);
+      if (wrap) wrap.style.display = 'block';
+      if (sel) {
+        const match = [...sel.options].find(o => o.value === val);
+        if (match) sel.value = val;
+      }
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -4448,6 +4545,7 @@ async function saveTicket(suppressRedirect = false) {
       foilNotes: hasFoil ? document.getElementById('foilNotes').value.trim() : '',
       hasPerforation: document.getElementById('hasPerforation')?.checked || false,
       perforationNotes: document.getElementById('hasPerforation')?.checked ? (document.getElementById('perforationNotes')?.value.trim() || '') : '',
+      finishingOptions: readExtraFinishingValues(),
       finishingNotes: document.getElementById('finishingNotes').value.trim(),
       applicationService: document.getElementById('applicationService')?.checked || false,
       applicationContainerType: (() => {
@@ -4848,6 +4946,10 @@ async function loadOrderIntoForm(order) {
     }
     onPerforationChange();
   }
+
+  // Extra finishing (dynamic fields — must be called after renderExtraFinishingSection via onProductTypeChange)
+  if (order.finishingOptions) applyExtraFinishingValues(order.finishingOptions);
+
   onFinishingChange();
 
   document.getElementById('finishingNotes').value = order.finishingNotes || '';
