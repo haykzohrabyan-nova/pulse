@@ -11,7 +11,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260518-SHIPFIX2"></script>
+  <script src="supabase-client.js?v=20260523-OP1"></script>
   <script src="auth.js?v=20260429-PRI262"></script>
 </head>
 <body>
@@ -2629,17 +2629,10 @@
   // TICKET DETAIL MODAL
   // ══════════════════════════════════════════════════════════════════════
 
-  function openTicketDetail(id) {
-    const o = allOrders.find(ord => String(ord.id) === String(id));
-    if (!o) {
-      showPageToast('Could not find order details. Try refreshing the page.', 'warning');
-      return;
-    }
-
+  function _renderTicketDetailModal(o) {
     document.getElementById('tdOrderId').textContent = '#' + o.orderId;
     document.getElementById('tdCustomer').textContent = o.customerName || '—';
 
-    // Status + Rush badges
     const statusColors = {
       'ready-to-ship': { bg: '#dcfce7', color: '#15803d' },
       'shipped':        { bg: '#dbeafe', color: '#1d4ed8' },
@@ -2655,11 +2648,61 @@
     document.getElementById('tdBadges').innerHTML = badges;
 
     tdCurrentOrder = o;
-    // Reset to Job Details tab
     document.getElementById('tdTabJob').classList.add('active');
     document.getElementById('tdTabDelivery').classList.remove('active');
     document.getElementById('tdBody').innerHTML = _buildTicketDetailHTML(o);
     document.getElementById('ticketDetailModal').classList.remove('hidden');
+  }
+
+  async function _inferPrepressApprovedAt(orderUuid) {
+    // Look in order_status_history for the first transition TO in-production
+    // which is when production manager approves the prepress queue
+    try {
+      const supa = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+      if (!supa) return null;
+      const { data, error } = await supa
+        .from('order_status_history')
+        .select('created_at, changed_by_name')
+        .eq('order_id', orderUuid)
+        .eq('to_status', 'in-production')
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (error || !data?.length) return null;
+      return { at: data[0].created_at, by: data[0].changed_by_name || null };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function openTicketDetail(id) {
+    // Show the modal immediately with cached data so it feels instant
+    let o = allOrders.find(ord => String(ord.id) === String(id));
+    if (!o) {
+      showPageToast('Could not find order details. Try refreshing the page.', 'warning');
+      return;
+    }
+    _renderTicketDetailModal(o);
+
+    // Fetch fresh data from Supabase in the background for accuracy
+    try {
+      const fresh = typeof getOrder === 'function' ? await getOrder(id) : null;
+      if (fresh) o = fresh;
+    } catch (e) { /* keep cached copy */ }
+
+    // If prepressApprovedAt is missing, infer it from status history
+    if (!o.prepressApprovedAt && o.id) {
+      const inferred = await _inferPrepressApprovedAt(o.id);
+      if (inferred) {
+        o = { ...o, prepressApprovedAt: inferred.at, prepressApprovedBy: inferred.by || o.prepressApprovedBy };
+        // Persist so future views show the date without needing another lookup
+        try {
+          await updateOrder(o.id, { prepressApprovedAt: inferred.at, prepressApprovedBy: inferred.by });
+        } catch (e) { /* non-critical — display still works */ }
+      }
+    }
+
+    // Re-render the modal body with the enriched order
+    _renderTicketDetailModal(o);
   }
 
   function switchDetailTab(tab) {

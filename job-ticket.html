@@ -2716,6 +2716,11 @@ function onProductTypeChange() {
   autoDetectWorkflow();
   updateCapacityHint();
 
+  // Apply per-product finishing defaults on new tickets only
+  if (!editingDbId && catalogProd?.finishingDefaults) {
+    applyProductFinishingDefaults(catalogProd);
+  }
+
   // ── Pieces per sheet ───────────────────────────────────────
   const ppsField = document.getElementById('piecesPerSheet');
   const ppsHint  = document.getElementById('ppsHint');
@@ -2730,6 +2735,61 @@ function onProductTypeChange() {
     ppsHint.style.display = 'none';
   }
   syncJtTicketReadOnlyDom();
+}
+
+/**
+ * Apply per-product finishing defaults to the form.
+ * Only called on NEW tickets (not when editing an existing order).
+ * catalogProd.finishingDefaults: { 'Lamination': 'Gloss', 'Spot UV': true, 'Foil': 'Gold Foil', ... }
+ */
+function applyProductFinishingDefaults(catalogProd) {
+  const defaults = catalogProd?.finishingDefaults;
+  if (!defaults || !Object.keys(defaults).length) return;
+
+  // Lamination
+  const lamKeys = Object.keys(defaults).filter(k => /laminat/i.test(k));
+  if (lamKeys.length) {
+    const val = defaults[lamKeys[0]];
+    const toggle = document.getElementById('hasLamination');
+    const sel = document.getElementById('lamination');
+    if (toggle) toggle.checked = !!val;
+    if (sel && val && val !== true) {
+      const match = [...sel.options].find(o => o.value === val);
+      if (match) sel.value = val;
+      else if (sel.options.length) sel.selectedIndex = 0;
+    }
+  }
+
+  // UV / Spot UV
+  const uvKeys = Object.keys(defaults).filter(k => /uv|spot.?uv|coating/i.test(k));
+  if (uvKeys.length) {
+    const el = document.getElementById('hasUV');
+    if (el) el.checked = !!defaults[uvKeys[0]];
+  }
+
+  // Foil
+  const foilKeys = Object.keys(defaults).filter(k => /foil/i.test(k));
+  if (foilKeys.length) {
+    const val = defaults[foilKeys[0]];
+    const toggle = document.getElementById('hasFoil');
+    const sel = document.getElementById('foilType');
+    if (toggle) toggle.checked = !!val;
+    if (sel && val && val !== true) {
+      const match = [...sel.options].find(o => o.value === val);
+      if (match) sel.value = val;
+      else if (sel.options.length) sel.selectedIndex = 0;
+    }
+  }
+
+  // Perforation
+  const perfKeys = Object.keys(defaults).filter(k => /perforat/i.test(k));
+  if (perfKeys.length) {
+    const el = document.getElementById('hasPerforation');
+    if (el) el.checked = !!defaults[perfKeys[0]];
+  }
+
+  // Re-sync finishing sub-sections after applying defaults
+  onFinishingChange();
 }
 
 function onPrintTypeChange() {
