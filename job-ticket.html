@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260526-extrafin"></script>
+  <script src="supabase-client.js?v=20260526-extrafin2"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -279,9 +279,9 @@
             <input type="text" id="perforationNotes" placeholder="Perforation notes (location, type, pattern…)">
           </div>
         </div>
+        <!-- Dynamic extra finishing fields — rendered as direct grid children via display:contents -->
+        <div id="extraFinishingSection" style="display:contents;"></div>
       </div>
-      <!-- Dynamic extra finishing fields rendered by renderExtraFinishingSection() -->
-      <div id="extraFinishingSection" class="jt-finishing-grid" style="margin-top:0;"></div>
       <div class="form-row" id="finishingNotesRow" style="margin-top:8px;display:none;">
         <div class="field">
           <label>Finishing Notes</label>
@@ -1047,7 +1047,7 @@ document.getElementById('page-styles').textContent = `
   .form-row { margin-bottom: 12px; }
   .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .jt-finishing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .jt-finishing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; align-items: start; }
   .field { display: flex; flex-direction: column; min-width: 0; }
   .field.jt-field-inline {
     flex-direction: row;
