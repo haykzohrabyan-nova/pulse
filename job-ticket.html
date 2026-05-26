@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260526-extrafin2"></script>
+  <script src="supabase-client.js?v=20260526-appcon1"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -1851,9 +1851,10 @@ let _jtProductCatalog  = null;
 let _jtWorkflowConfig = null;
 let _jtResolvedMachineNames = [];
 let _jtWorkflowSource = 'none';
-let _jtColorModes      = null; // from catalogColorModes
+let _jtColorModes       = null; // from catalogColorModes
 let _jtCatalogFinishing = null; // from catalogFinishing
 let _jtCatalogMaterials = null; // from catalogMaterials
+let _jtAppContainers    = null; // from catalogAppContainers (admin-configurable)
 
 async function loadJtProductCatalog() {
   try {
@@ -1883,24 +1884,34 @@ async function loadJtProductCatalog() {
         _jtCatalogFinishing = (finCfg && (finCfg.value || finCfg)) || [];
         _jtCatalogMaterials = (matCfg && (matCfg.value || matCfg)) || [];
       }
-      return;
+    } else {
+      const [prodCfg, cmCfg, finCfg, matCfg] = await Promise.all([
+        getConfig('productCatalog'),
+        getConfig('catalogColorModes'),
+        getConfig('catalogFinishing'),
+        getConfig('catalogMaterials'),
+      ]);
+      _jtProductCatalog = prodCfg?.value || [];
+      _jtColorModes = cmCfg?.value || [];
+      _jtCatalogFinishing = finCfg?.value || [];
+      _jtCatalogMaterials = matCfg?.value || [];
     }
-    const [prodCfg, cmCfg, finCfg, matCfg] = await Promise.all([
-      getConfig('productCatalog'),
-      getConfig('catalogColorModes'),
-      getConfig('catalogFinishing'),
-      getConfig('catalogMaterials'),
-    ]);
-    _jtProductCatalog = prodCfg?.value || [];
-    _jtColorModes = cmCfg?.value || [];
-    _jtCatalogFinishing = finCfg?.value || [];
-    _jtCatalogMaterials = matCfg?.value || [];
+    // Load admin-configurable container types (independent of main catalog pipeline)
+    const conCfg = await getConfig('catalogAppContainers');
+    const loaded = Array.isArray(conCfg?.value) ? conCfg.value : (Array.isArray(conCfg) ? conCfg : []);
+    _jtAppContainers = loaded.length ? loaded : null; // null → fall back to PACKAGING_CONTAINERS
   } catch (_) {
     _jtProductCatalog = [];
     _jtColorModes = [];
     _jtCatalogFinishing = [];
     _jtCatalogMaterials = [];
+    _jtAppContainers = null;
   }
+}
+
+/** Returns the active container list: admin-configured if available, else built-in fallback */
+function _getAppContainers() {
+  return _jtAppContainers?.length ? _jtAppContainers : (typeof PACKAGING_CONTAINERS !== 'undefined' ? PACKAGING_CONTAINERS : []);
 }
 
 async function waitForJtSupabaseSession(maxMs = 10000) {
@@ -3484,10 +3495,12 @@ function applyExtraFinishingValues(finishingOptions) {
 function populateApplicationContainerDropdown() {
   const sel = document.getElementById('applicationContainerType');
   if (!sel) return;
-  PACKAGING_CONTAINERS.forEach(c => {
+  // Clear existing options except the placeholder
+  sel.innerHTML = '<option value="">— Select container —</option>';
+  _getAppContainers().forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = `${c.label} — $${c.rate.toFixed(2)}/unit`;
+    opt.textContent = `${c.label} — $${Number(c.rate).toFixed(2)}/unit`;
     sel.appendChild(opt);
   });
 }
@@ -3506,11 +3519,11 @@ function toggleApplicationServicePanel() {
 
 function calcApplicationFee() {
   const containerId = document.getElementById('applicationContainerType')?.value;
-  const container = PACKAGING_CONTAINERS.find(c => c.id === containerId);
+  const container = _getAppContainers().find(c => c.id === containerId);
   const el = document.getElementById('applicationFeeDisplay');
   if (!el) return;
   if (container) {
-    el.textContent = `$${container.rate.toFixed(2)}/piece — ${container.label}`;
+    el.textContent = `$${Number(container.rate).toFixed(2)}/piece — ${container.label}`;
   } else {
     el.textContent = '—';
   }
@@ -4555,7 +4568,7 @@ async function saveTicket(suppressRedirect = false) {
       applicationFeePerPiece: (() => {
         if (!document.getElementById('applicationService')?.checked) return null;
         const cId = document.getElementById('applicationContainerType')?.value;
-        const c = PACKAGING_CONTAINERS.find(x => x.id === cId);
+        const c = _getAppContainers().find(x => x.id === cId);
         return c ? c.rate : null;
       })(),
       cutMethod: document.getElementById('cutMethod').value,
