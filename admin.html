@@ -322,6 +322,7 @@
         <button class="cat-sub-btn" data-cat="materials" onclick="switchCatTab('materials')">Materials</button>
         <button class="cat-sub-btn" data-cat="finishing" onclick="switchCatTab('finishing')">Special Finishing</button>
         <button class="cat-sub-btn" data-cat="color-modes" onclick="switchCatTab('color-modes')">Color Modes</button>
+        <button class="cat-sub-btn" data-cat="app-service" onclick="switchCatTab('app-service')">📦 Application Service</button>
       </div>
 
       <!-- ── Products ── -->
@@ -398,6 +399,24 @@
           <table class="data-table">
             <thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
             <tbody id="catColorModesBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Application Service ── -->
+      <div class="cat-section" id="cat-app-service">
+        <div class="pane-header" style="margin-top:16px;">
+          <h3 style="font-size:16px;font-weight:700;">📦 Application Service — Container Types</h3>
+          <button class="btn btn-primary" onclick="openCatContainerModal()">+ Add Container Type</button>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px;">
+          These container types appear in the <strong>Application Service</strong> dropdown on job tickets.
+          Each type has a label and a fee-per-piece rate billed to the customer.
+        </p>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Container Type</th><th>Rate (per piece)</th><th style="width:140px;">Actions</th></tr></thead>
+            <tbody id="catContainersBody"></tbody>
           </table>
         </div>
       </div>
@@ -667,6 +686,28 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('catColorModeModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveCatColorMode()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Application Service Container Modal -->
+<div class="modal-overlay" id="catContainerModal">
+  <div class="modal" style="max-width:420px;">
+    <h2 id="catContainerTitle">Add Container Type</h2>
+    <div class="modal-form">
+      <div class="field">
+        <label>Container Name *</label>
+        <input type="text" id="catContainerLabel" placeholder="e.g. Jar, Tube, Exit Bag">
+      </div>
+      <div class="field">
+        <label>Fee per Piece ($) *</label>
+        <input type="number" id="catContainerRate" placeholder="e.g. 0.10" min="0" step="0.01" style="width:140px;">
+        <span style="font-size:12px;color:var(--text-muted);margin-top:4px;">Charged per unit applied</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('catContainerModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatContainer()">Save</button>
     </div>
   </div>
 </div>
@@ -3138,17 +3179,19 @@ async function doSaveSettings() {
 
 // ── Product Catalogue ──────────────────────────────────────
 const CAT_KEYS = {
-  colorModes: 'catalogColorModes',
-  materials:  'catalogMaterials',
-  finishing:  'catalogFinishing',
-  products:   'productCatalog',
+  colorModes:  'catalogColorModes',
+  materials:   'catalogMaterials',
+  finishing:   'catalogFinishing',
+  products:    'productCatalog',
+  containers:  'catalogAppContainers',
 };
 
-let catColorModes = [];
-let catMaterials  = [];
-let catFinishing  = [];
-let catProducts   = [];
-let catEditingId  = { colorModes: null, materials: null, finishing: null, products: null };
+let catColorModes  = [];
+let catMaterials   = [];
+let catFinishing   = [];
+let catProducts    = [];
+let catContainers  = [];
+let catEditingId   = { colorModes: null, materials: null, finishing: null, products: null, containers: null };
 let catMatItems   = [];
 let catFinVersions = [];
 
@@ -3504,10 +3547,19 @@ async function loadProductsTab() {
   }
   catFinishing = normalizeCatFinishingList(catFinishing);
 
+  // Load application service containers (independent of the repair pipeline)
+  const conCfg = await getConfig(CAT_KEYS.containers);
+  catContainers = Array.isArray(conCfg?.value) ? conCfg.value : (Array.isArray(conCfg) ? conCfg : []);
+  if (!catContainers.length) {
+    catContainers = buildDefaultContainers();
+    await setConfig(CAT_KEYS.containers, catContainers);
+  }
+
   renderCatProducts();
   renderCatMaterials();
   renderCatFinishing();
   renderCatColorModes();
+  renderCatContainers();
   switchCatTab('products');
 }
 
@@ -3592,6 +3644,74 @@ async function deleteCatColorMode(id) {
   catColorModes = catColorModes.filter(x => x.id !== id);
   await setConfig(CAT_KEYS.colorModes, catColorModes);
   renderCatColorModes();
+}
+
+// ── Application Service Containers ─────────────────────────
+function buildDefaultContainers() {
+  return [
+    { id: 'jar',      label: 'Jar',             rate: 0.10 },
+    { id: 'tube',     label: 'Tube',            rate: 0.10 },
+    { id: 'bag_7g',   label: '7g–1lb Bag',      rate: 0.15 },
+    { id: 'bag_exit', label: 'Exit Bag',         rate: 0.25 },
+    { id: 'bag_lb',   label: 'Large Bag (1lb+)', rate: 0.50 },
+  ];
+}
+
+function renderCatContainers() {
+  const tbody = document.getElementById('catContainersBody');
+  if (!tbody) return;
+  if (!catContainers.length) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">
+      No container types configured yet.
+      <div style="margin-top:10px;"><button type="button" class="btn btn-primary btn-sm" onclick="openCatContainerModal()">+ Add First Container</button></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = catContainers.map(c => `
+    <tr>
+      <td style="font-weight:600;">${escHtml(c.label)}</td>
+      <td>$${Number(c.rate).toFixed(2)}/unit</td>
+      <td>
+        <button class="btn btn-sm" onclick="openCatContainerModal('${c.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCatContainer('${c.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openCatContainerModal(id) {
+  const c = id ? catContainers.find(x => x.id === id) : null;
+  catEditingId.containers = id || null;
+  document.getElementById('catContainerTitle').textContent = c ? 'Edit Container Type' : 'Add Container Type';
+  document.getElementById('catContainerLabel').value = c?.label || '';
+  document.getElementById('catContainerRate').value  = c != null ? c.rate : '';
+  document.getElementById('catContainerModal').classList.add('active');
+}
+
+async function saveCatContainer() {
+  const label = document.getElementById('catContainerLabel').value.trim();
+  const rate  = parseFloat(document.getElementById('catContainerRate').value);
+  if (!label)      { alert('Container name is required.'); return; }
+  if (isNaN(rate) || rate < 0) { alert('Please enter a valid rate (0 or more).'); return; }
+
+  if (catEditingId.containers) {
+    const idx = catContainers.findIndex(x => x.id === catEditingId.containers);
+    if (idx >= 0) catContainers[idx] = { ...catContainers[idx], label, rate };
+  } else {
+    catContainers.push({ id: catalogUID(), label, rate });
+  }
+  await setConfig(CAT_KEYS.containers, catContainers);
+  if (typeof refreshPulseAdminData === 'function') await refreshPulseAdminData();
+  closeModal('catContainerModal');
+  renderCatContainers();
+  if (typeof showPageToast === 'function') showPageToast('Container type saved.', 'success');
+}
+
+async function deleteCatContainer(id) {
+  const c = catContainers.find(x => x.id === id);
+  if (!confirm(`Delete "${c?.label || 'this container'}"?`)) return;
+  catContainers = catContainers.filter(x => x.id !== id);
+  await setConfig(CAT_KEYS.containers, catContainers);
+  renderCatContainers();
 }
 
 // ── Materials ──────────────────────────────────────────────
