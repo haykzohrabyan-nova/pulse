@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-OP1"></script>
+  <script src="supabase-client.js?v=20260526-currentstep"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style>
     /* ── OPERATOR TERMINAL STYLES ────────────────────────────────── */
@@ -2055,7 +2055,7 @@ async function stepAction(action) {
     stepStartedAt = Date.now();
     stepPausedAt  = null;
 
-    // Persist to DB
+    // Persist to DB — also update currentStep so the dashboard places the job in the correct column
     const steps = [...(currentJob.workflowSteps || [])];
     steps[currentStepIdx] = {
       ...steps[currentStepIdx],
@@ -2064,7 +2064,7 @@ async function stepAction(action) {
       startedBy: currentOperator,
       totalPausedMs: 0,
     };
-    await updateOrder(currentJob.id, { workflowSteps: steps, status: 'in-production' });
+    await updateOrder(currentJob.id, { workflowSteps: steps, currentStep: currentStepIdx, status: 'in-production' });
     await reloadCurrentJob();
     await addActivity({
       type: 'step-started', orderId: currentJob.orderId,
@@ -2101,7 +2101,7 @@ async function stepAction(action) {
         totalPausedMs: prev + pauseDuration,
         pauseNote: steps[currentStepIdx]?.pauseNote || '',
       };
-      await updateOrder(currentJob.id, { workflowSteps: steps });
+      await updateOrder(currentJob.id, { workflowSteps: steps, currentStep: currentStepIdx });
       await reloadCurrentJob();
       await addActivity({
         type: 'step-resumed', orderId: currentJob.orderId,
