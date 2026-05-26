@@ -739,8 +739,8 @@
       </div>
 
       <div class="field">
-        <label>Special Finishing</label>
-        <div id="catProdFinishing" class="cat-check-grid"></div>
+        <label>Special Finishing <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— check to allow, then pick a default value for new job tickets</span></label>
+        <div id="catProdFinishing" class="cat-fin-grid"></div>
       </div>
 
       <div class="field">
@@ -998,6 +998,13 @@ document.getElementById('page-styles').textContent = `
   .cat-check-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; color:var(--text); text-transform:none; letter-spacing:0; cursor:pointer; padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg); }
   .cat-check-label:hover { background:var(--card-hover); }
   .cat-check-label input[type="checkbox"] { width:14px; height:14px; cursor:pointer; }
+  .cat-fin-grid { display:flex; flex-direction:column; gap:8px; }
+  .cat-fin-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .cat-fin-row .cat-check-label { flex-shrink:0; }
+  .cat-fin-default-wrap { display:flex; align-items:center; gap:6px; }
+  .cat-fin-default-lbl { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+  .cat-fin-default-sel { font-size:12px; padding:3px 7px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); min-width:140px; cursor:pointer; }
+  .cat-fin-default-sel:focus { outline:2px solid var(--accent); outline-offset:1px; }
   /* Products table — single-line rows */
   .cat-products-table td, .cat-products-table th { white-space: nowrap; }
   .cat-products-table td:nth-child(2),
@@ -3896,13 +3903,37 @@ function openCatProductModal(id) {
       </div>
     </div>`).join('');
 
-  // Finishing
+  // Finishing — with per-effect default value selector
   const finDiv = document.getElementById('catProdFinishing');
-  finDiv.innerHTML = catFinishing.map(f => `
-    <label class="cat-check-label">
-      <input type="checkbox" name="catProdFin" value="${escHtml(f.name)}" ${(prod?.finishing || []).includes(f.name) ? 'checked' : ''}>
-      ${escHtml(f.name)}
-    </label>`).join('');
+  const existingDefaults = prod?.finishingDefaults || {};
+  finDiv.innerHTML = catFinishing.map(f => {
+    const isChecked = (prod?.finishing || []).includes(f.name);
+    const versions = catFinishingVersions(f);
+    const currentDefault = existingDefaults[f.name] ?? null;
+
+    // Build default options: either versioned choices or a simple "on/off"
+    let defaultOptions = '';
+    if (versions.length) {
+      defaultOptions = `<option value="">Not default (unchecked)</option>`
+        + versions.map(v => `<option value="${escHtml(v)}" ${currentDefault === v ? 'selected' : ''}>Default: ${escHtml(v)}</option>`).join('');
+    } else {
+      defaultOptions = `<option value="">Not default (unchecked)</option>`
+        + `<option value="__on__" ${currentDefault === '__on__' ? 'selected' : ''}>Default ON (checked)</option>`;
+    }
+
+    return `<div class="cat-fin-row">
+      <label class="cat-check-label">
+        <input type="checkbox" name="catProdFin" value="${escHtml(f.name)}"
+          ${isChecked ? 'checked' : ''}
+          onchange="document.getElementById('catFinDef_${escHtml(f.id || f.name).replace(/[^a-zA-Z0-9]/g,'_')}').style.display=this.checked?'':'none';">
+        ${escHtml(f.name)}
+      </label>
+      <div class="cat-fin-default-wrap" id="catFinDef_${escHtml(f.id || f.name).replace(/[^a-zA-Z0-9]/g,'_')}" style="${isChecked ? '' : 'display:none;'}">
+        <span class="cat-fin-default-lbl">Default:</span>
+        <select class="cat-fin-default-sel" data-fin="${escHtml(f.name)}">${defaultOptions}</select>
+      </div>
+    </div>`;
+  }).join('');
 
   // Sides
   ['1-sided', '2-sided'].forEach(side => {
@@ -3921,15 +3952,28 @@ async function saveCatProduct() {
   const oldName = prev?.name;
   const catalogId = prev?.id || catEditingId.products;
 
+  // Collect finishingDefaults: only for checked effects that have a non-empty default selected
+  const finishingDefaults = {};
+  document.querySelectorAll('.cat-fin-default-sel').forEach(sel => {
+    const finName = sel.dataset.fin;
+    const val = sel.value;
+    // Only record if the parent finishing is checked and a default value was chosen
+    const checkbox = sel.closest('.cat-fin-row')?.querySelector('input[name="catProdFin"]');
+    if (checkbox?.checked && val) {
+      finishingDefaults[finName] = val === '__on__' ? true : val;
+    }
+  });
+
   const data = {
     name,
-    facilities:   [...document.querySelectorAll('input[name="catProdFac"]:checked')].map(el => el.value),
-    colorModes:   [...document.querySelectorAll('input[name="catProdCM"]:checked')].map(el => el.value),
-    materials:    [...document.querySelectorAll('input[name="catProdMat"]:checked')].map(el => el.value),
-    finishing:    [...document.querySelectorAll('input[name="catProdFin"]:checked')].map(el => el.value),
-    sides:        [...document.querySelectorAll('input[name="catProdSide"]:checked')].map(el => el.value),
-    rollDirection: document.getElementById('catProdRollDir').checked,
-    notes:        document.getElementById('catProdNotes').value.trim(),
+    facilities:       [...document.querySelectorAll('input[name="catProdFac"]:checked')].map(el => el.value),
+    colorModes:       [...document.querySelectorAll('input[name="catProdCM"]:checked')].map(el => el.value),
+    materials:        [...document.querySelectorAll('input[name="catProdMat"]:checked')].map(el => el.value),
+    finishing:        [...document.querySelectorAll('input[name="catProdFin"]:checked')].map(el => el.value),
+    finishingDefaults: Object.keys(finishingDefaults).length ? finishingDefaults : null,
+    sides:            [...document.querySelectorAll('input[name="catProdSide"]:checked')].map(el => el.value),
+    rollDirection:    document.getElementById('catProdRollDir').checked,
+    notes:            document.getElementById('catProdNotes').value.trim(),
   };
 
   let savedId = catalogId;
