@@ -3831,7 +3831,19 @@ function addOrder(order) {
 function getOrder(id) { return _get('orders', id); }
 function getAllOrders() { return _getAll('orders'); }
 function updateOrder(id, changes) {
-  return _update('orders', id, { ...(changes || {}), notesLog: [], conversationHistory: [] });
+  const c = { ...(changes || {}), notesLog: [], conversationHistory: [] };
+  // Never lose graphics: if this update would leave the order with no artwork
+  // but the stored order has some, keep the stored graphics.
+  return _get('orders', id).then(existing => {
+    if (existing) {
+      const merged = { ...existing, ...c };
+      if (typeof pulseOrderHasGraphics === 'function'
+          && pulseOrderHasGraphics(existing) && !pulseOrderHasGraphics(merged)) {
+        pulsePreserveGraphics(c, existing);
+      }
+    }
+    return _update('orders', id, c);
+  });
 }
 
 // ── Sub-ticket helpers ────────────────────────────────────
@@ -6996,6 +7008,44 @@ function normalizeJobTicketOrderMedia(order) {
   return hydrateJobTicketOrderMedia(order);
 }
 
+/**
+ * True if an order (or its specs object) carries any artwork / graphics.
+ * Checks order-level files and SKU-level inline media. Used by the data layer
+ * to guarantee graphics are never dropped on update at any production step.
+ */
+function pulseOrderHasGraphics(o) {
+  if (!o || typeof o !== 'object') return false;
+  const fileHas = (f) => !!(f && (f.dataUrl || f.r2Key || f.url));
+  if (Array.isArray(o.artworkFiles) && o.artworkFiles.some(fileHas)) return true;
+  if (fileHas(o.whiteLayerFile) || fileHas(o.uvFile) || fileHas(o.foilFile)) return true;
+  if (Array.isArray(o.skus) && o.skus.some(sk => {
+    if (!sk || typeof sk !== 'object') return false;
+    if (sk.artworkDataUrl || sk.whiteDataUrl || sk.uvDataUrl || sk.foilDataUrl) return true;
+    if (sk.dataUrl || sk.artworkUrl || sk.artwork_url) return true;
+    if (Array.isArray(sk.artworkFiles) && sk.artworkFiles.some(fileHas)) return true;
+    if (Array.isArray(sk.versions) && sk.versions.length) return true;
+    return false;
+  })) return true;
+  return false;
+}
+
+/**
+ * Copy stored graphics from a previous order/specs onto an update payload when
+ * the incoming update carries no graphics at all. Mutates and returns `target`.
+ */
+function pulsePreserveGraphics(target, previous) {
+  if (!target || !previous) return target;
+  if (!pulseOrderHasGraphics(previous)) return target;
+  if (pulseOrderHasGraphics(target)) return target;
+  if (previous.artworkFiles != null) target.artworkFiles = previous.artworkFiles;
+  if (previous.whiteLayerFile != null) target.whiteLayerFile = previous.whiteLayerFile;
+  if (previous.uvFile != null) target.uvFile = previous.uvFile;
+  if (previous.foilFile != null) target.foilFile = previous.foilFile;
+  if (previous.skus != null) target.skus = previous.skus;
+  if (previous.skuCount != null) target.skuCount = previous.skuCount;
+  return target;
+}
+
 function mergeJobTicketSkuMedia(nextSkus, previousSkus) {
   if (!Array.isArray(nextSkus) || !nextSkus.length) {
     return Array.isArray(previousSkus) && previousSkus.length
@@ -7028,6 +7078,8 @@ if (typeof window !== 'undefined') {
   window.hydrateJobTicketOrderMedia = hydrateJobTicketOrderMedia;
   window.normalizeJobTicketOrderMedia = normalizeJobTicketOrderMedia;
   window.mergeJobTicketSkuMedia = mergeJobTicketSkuMedia;
+  window.pulseOrderHasGraphics = pulseOrderHasGraphics;
+  window.pulsePreserveGraphics = pulsePreserveGraphics;
 }
 
 function getOrderSkuArtFiles(sku) {

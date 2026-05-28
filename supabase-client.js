@@ -700,6 +700,16 @@
       row.specs = { ...currentRow.specs, ...row.specs };
     }
 
+    // Never lose graphics: if the incoming update carries no artwork at all but
+    // the stored order has some, keep the stored graphics so artwork survives
+    // every production step (prepress, production, shipping, etc.).
+    const _hasGraphics = (typeof window !== 'undefined' && window.pulseOrderHasGraphics) || null;
+    const _preserveGraphics = (typeof window !== 'undefined' && window.pulsePreserveGraphics) || null;
+    if (_hasGraphics && _preserveGraphics && currentRow?.specs
+        && _hasGraphics(currentRow.specs) && !_hasGraphics(row.specs)) {
+      _preserveGraphics(row.specs, currentRow.specs);
+    }
+
     const { data: updatedRow, error: updateErr } = await supa
       .from('orders')
       .update(row)
