@@ -147,6 +147,7 @@
     .job-card.card-active { background: #f0fdf4; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.20); }
     .job-card.card-hold { background: #fff5f5; border-color: var(--red); }
     .job-card.card-pending { background: #fffbeb; border-color: #f59e0b; opacity: 0.90; }
+    .job-card.card-shipped { background: #ecfeff; border-color: #0891b2; opacity: 0.85; }
     .card-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
     .job-card.line-boyd { border-left: 3px solid #d97706; }
     .job-card.overdue { border-left-color: var(--red) !important; background: #fff5f5; }
@@ -375,6 +376,9 @@
       statusDot = '<span class="card-status-dot" style="background:#8b5cf6;"></span>';
     } else if (order.status === 'ready-to-ship') {
       statusDot = '<span class="card-status-dot" style="background:var(--green);"></span>';
+    } else if (['shipped', 'waiting-pickup', 'delivery-ready'].includes(order.status)) {
+      queueClass = 'card-shipped';
+      statusDot = '<span class="card-status-dot" style="background:#0891b2;"></span>';
     }
 
     const currentTimer = getOrderCurrentTimer(order);
@@ -435,6 +439,8 @@
       ${order.status === 'prepress' ? `<button onclick="event.stopPropagation();startPrepressOrder(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Start Prepress</button>` : ''}
       ${order.status === 'prepress-active' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();pausePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">⏸ Pause</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
       ${order.status === 'prepress-paused' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();resumePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Resume</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
+      ${order.status === 'ready-to-ship' ? `<button onclick="event.stopPropagation();markAsShipped(${order.id},'${order.orderId}')" style="margin-top:8px;width:100%;padding:6px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">🚚 Mark as Shipped</button>` : ''}
+      ${['shipped','waiting-pickup','delivery-ready'].includes(order.status) ? `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : ''}</div>` : ''}
     </div>`;
   }
 
@@ -481,7 +487,7 @@
     });
 
     // Split: active (in production pipeline) vs upcoming (new/waiting)
-    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship'];
+    const pipelineStatuses = ['prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review', 'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'shipped', 'waiting-pickup', 'delivery-ready'];
     const activeOrders = filtered.filter(o => pipelineStatuses.includes(o.status));
     const upcomingOrders = filtered.filter(o => ['new', 'pending', 'waiting-approval', 'pending-confirmation'].includes(o.status))  // 'prepress' now goes to pipeline, not upcoming
       .sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
@@ -567,6 +573,9 @@
           // Prepress queue stays in the Prepress column until prepress completes it
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
+        } else if (['shipped', 'waiting-pickup', 'delivery-ready'].includes(order.status)) {
+          stageBuckets['Shipped'] = stageBuckets['Shipped'] || [];
+          stageBuckets['Shipped'].push(order);
         } else if (order.status === 'ready-to-ship') {
           stageBuckets['Ready to Ship'] = stageBuckets['Ready to Ship'] || [];
           stageBuckets['Ready to Ship'].push(order);
@@ -1026,6 +1035,14 @@
     const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Prepress';
     await updateOrder(dbId, { ...order, status: 'pending-review', prepressCompletedAt: new Date().toISOString(), prepressCompletedBy: by });
     await addActivity({ orderId, type: 'prepress-completed', message: 'Prepress completed — queued for production', by });
+    await refresh();
+  }
+
+  async function markAsShipped(dbId, orderId) {
+    if (!confirm(`Mark job #${orderId} as Shipped?`)) return;
+    const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Dashboard';
+    await updateOrder(dbId, { status: 'shipped', shippedAt: new Date().toISOString(), shippedBy: by });
+    await addActivity({ orderId, type: 'status-change', message: `Marked as Shipped by ${by}` });
     await refresh();
   }
 
