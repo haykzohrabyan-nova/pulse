@@ -1250,6 +1250,30 @@ document.getElementById('page-styles').textContent = `
     gap: 8px 12px;
     font-size: 13px;
   }
+  /* Locked job ticket: visible but fully non-interactive for the account manager
+     until a supervisor unlocks editing. */
+  .jt-form-locked input,
+  .jt-form-locked select,
+  .jt-form-locked textarea,
+  .jt-form-locked button {
+    cursor: not-allowed;
+  }
+  .jt-form-locked input:disabled,
+  .jt-form-locked select:disabled,
+  .jt-form-locked textarea:disabled {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569;
+    opacity: 1;
+    border-color: #e2e8f0 !important;
+  }
+  /* Block clicks on custom (non-form) widgets inside the locked form
+     (artwork dropzones, toggles, etc.). The supervisor unlock banner and
+     read-only artwork panel live outside the form, so they stay clickable. */
+  .jt-form-locked .form-section,
+  .jt-form-locked .save-bar {
+    pointer-events: none;
+  }
   .jt-die-info-grid dt {
     margin: 0;
     font-size: 11px;
@@ -1677,19 +1701,10 @@ function applyJtFormReadOnlyState(locked) {
 
   form.querySelectorAll('input, select, textarea').forEach(el => {
     if (_jtReadOnlyDomSkip(el)) return;
-    if (locked) {
-      if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'file') {
-        el.disabled = true;
-      } else if (el.tagName === 'SELECT') {
-        el.disabled = true;
-      } else {
-        el.readOnly = true;
-        el.disabled = false;
-      }
-    } else {
-      el.readOnly = false;
-      el.disabled = false;
-    }
+    // Fully disable every control when locked so values are visible but not
+    // editable. A supervisor unlock re-enables the form.
+    el.readOnly = false;
+    el.disabled = !!locked;
   });
 
   form.querySelectorAll('button').forEach(el => {
