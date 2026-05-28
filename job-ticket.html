@@ -5417,20 +5417,16 @@ function onQueueRepChange() {
   renderQueuePane();
 }
 
-// Load account managers that exist in Supabase (profiles) for the owner filter.
-// Only real profiles rows are used — legacy config-only entries and free-text
-// order values are excluded so junk names never appear in the dropdown.
-function _jtIsProfileUuid(id) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id || ''));
-}
+// Owner filter list mirrors Admin → Personnel: all active account managers.
 async function _loadJtOwnerPersonnel() {
   if (_jtOwnerPersonnel !== null) return _jtOwnerPersonnel;
   try {
     const allPeople = (typeof getAllPersonnel === 'function') ? await getAllPersonnel() : [];
+    // Match Admin → Personnel exactly: every active account manager, regardless
+    // of whether they have a Supabase profiles row yet (config-based personnel
+    // such as Bob Werner / Tiko have non-UUID ids but are still real reps).
     _jtOwnerPersonnel = allPeople.filter(p => {
       if (!p || p.active === false || !p.name) return false;
-      // Must be backed by a Supabase profiles row (UUID id), not config/order data.
-      if (!_jtIsProfileUuid(p._profileId || p.id)) return false;
       const role = String(p.role || '').replace(/_/g, '-');
       return role === 'account-manager';
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
