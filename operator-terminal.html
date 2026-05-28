@@ -1044,7 +1044,8 @@ async function onOperatorSelect(name) {
   if (profile) {
     document.getElementById('prev-name').textContent = name;
     document.getElementById('prev-role').textContent = profile.role;
-    const facLabel = profile.facility === '16th-street' ? '16th Street' :
+    const facLabel = profile.facility === 'both' ? 'Both Facilities' :
+                     profile.facility === '16th-street' ? '16th Street' :
                      profile.facility === 'boyd-street' ? 'Boyd Street' : profile.facility;
     document.getElementById('prev-facility').textContent = facLabel;
     document.getElementById('prev-shift').textContent = profile.shift || '—';
@@ -1234,6 +1235,7 @@ function detectOperatorLine(profile) {
   if (m.includes('6K')) return '6k';
   if (m.includes('15K')) return '15k';
   if (profile.facility === 'boyd-street') return 'boyd';
+  if (profile.facility === 'both') return null; // both-facility operators use machine assignment only
   return null;
 }
 
