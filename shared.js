@@ -606,21 +606,21 @@ const PRODUCTION_LINES = {
     bgColor: 'rgba(37,99,235,0.08)',
     borderColor: 'rgba(37,99,235,0.3)',
     // Typical process stages in order
-    stages: ['Prepress', 'Press 6K', 'GM Die/Laser Cut', 'Lamination', 'Pouching', 'Application', 'QC', 'Ready to Ship']
+    stages: ['Prepress', 'Press 6K', 'GM Die/Laser Cut', 'Lamination', 'Pouching', 'Application', 'QC', 'Ready to Ship', 'Shipped']
   },
   '15k': {
     name: 'HP Indigo 15K Line',
     color: '#7c3aed',    // purple
     bgColor: 'rgba(124,58,237,0.08)',
     borderColor: 'rgba(124,58,237,0.3)',
-    stages: ['Prepress', 'Press 15K', 'Lamination', 'Scodix', 'Die Cut (Moll)', 'Flatbed Cut (Duplo)', 'Flatbed Cut (Boyd)', 'Guillotine', 'Fold & Glue', 'Hand Glue', 'UV Coat', 'Application', 'QC', 'Ready to Ship']
+    stages: ['Prepress', 'Press 15K', 'Lamination', 'Scodix', 'Die Cut (Moll)', 'Flatbed Cut (Duplo)', 'Flatbed Cut (Boyd)', 'Guillotine', 'Fold & Glue', 'Hand Glue', 'UV Coat', 'Application', 'QC', 'Ready to Ship', 'Shipped']
   },
   'boyd': {
     name: 'Boyd Street',
     color: '#d97706',    // amber/orange
     bgColor: 'rgba(217,119,6,0.08)',
     borderColor: 'rgba(217,119,6,0.3)',
-    stages: ['Prepress', 'Printing', 'Lamination', 'Cutting', 'Application', 'QC', 'Ready to Ship']
+    stages: ['Prepress', 'Printing', 'Lamination', 'Cutting', 'Application', 'QC', 'Ready to Ship', 'Shipped']
   }
 };
 
