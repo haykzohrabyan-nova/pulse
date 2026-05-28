@@ -616,45 +616,36 @@
       .eq('order_id', orderId);
     if (fetchErr) throw fetchErr;
 
-    const existingByIndex = new Map((existingRows || []).map(r => [r.step_index, r.id]));
-    const keptIds = new Set();
-
-    for (let idx = 0; idx < workflowSteps.length; idx++) {
-      const step = workflowSteps[idx];
+    // Canonical step_index is the array position (0..n-1). This guarantees
+    // unique indices and avoids any (order_id, step_index) duplicate-key
+    // conflicts no matter what stepIndex values the UI sends.
+    const steps = Array.isArray(workflowSteps) ? workflowSteps : [];
+    const desired = steps.map((step, idx) => {
       const payload = _workflowStepPayload(step, idx);
-      // UI uses generateStepId() (step_123_abc); DB id column is UUID only.
-      let rowId = _isUuid(step.id) ? step.id : null;
-      if (!rowId && existingByIndex.has(payload.step_index)) {
-        rowId = existingByIndex.get(payload.step_index);
-      }
+      payload.step_index = idx;
+      return { order_id: orderId, ...payload };
+    });
 
-      if (rowId) {
-        const { error } = await supa
-          .from('order_workflow_steps')
-          .update(payload)
-          .eq('id', rowId)
-          .eq('order_id', orderId);
-        if (error) throw error;
-        keptIds.add(rowId);
-      } else {
-        const { data: inserted, error } = await supa
-          .from('order_workflow_steps')
-          .insert({ order_id: orderId, ...payload })
-          .select('id')
-          .single();
-        if (error) throw error;
-        keptIds.add(inserted.id);
-      }
-    }
-
+    // Delete rows that are no longer part of the workflow first, so their
+    // indices are free before we upsert.
+    const keepIndices = new Set(desired.map(d => d.step_index));
     for (const row of existingRows || []) {
-      if (keptIds.has(row.id)) continue;
+      if (keepIndices.has(row.step_index)) continue;
       const { error } = await supa
         .from('order_workflow_steps')
         .delete()
         .eq('id', row.id);
       if (error) throw error;
     }
+
+    if (!desired.length) return;
+
+    // Upsert on the unique (order_id, step_index) key: existing indices are
+    // updated in place, new ones inserted — in a single conflict-safe call.
+    const { error: upsertErr } = await supa
+      .from('order_workflow_steps')
+      .upsert(desired, { onConflict: 'order_id,step_index' });
+    if (upsertErr) throw upsertErr;
   }
 
   async function _updateOrder(id, changes) {
