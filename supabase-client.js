@@ -2088,17 +2088,22 @@
   }
 
   // Fallback: look up by product name when the catalog ID has drifted
-  // (happens when the catalog was reset and new random IDs were generated)
+  // (happens when the catalog was reset and new random IDs were generated).
+  // Returns a list (not .maybeSingle) so duplicate product_name rows don't throw
+  // and silently turn into a bogus "no workflow configured" message — we just
+  // pick the most complete matching row instead.
   async function _getProductWorkflowByName(productName) {
     if (!productName) return null;
     const supa = await _getClient();
     const { data, error } = await supa
       .from('product_workflows')
       .select('*')
-      .ilike('product_name', productName)
-      .maybeSingle();
+      .ilike('product_name', productName);
     if (error) throw error;
-    return data ? _mapProductWorkflowRow(data) : null;
+    if (!Array.isArray(data) || !data.length) return null;
+    // Prefer a row that actually has workflow steps configured.
+    const withSteps = data.find(r => Array.isArray(r.steps) && r.steps.length);
+    return _mapProductWorkflowRow(withSteps || data[0]);
   }
 
   async function _upsertProductWorkflow(wf) {
