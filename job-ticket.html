@@ -4583,8 +4583,15 @@ async function saveTicket(suppressRedirect = false) {
       }));
     }
     if (!wfSteps.length) {
-      alert('No production workflow is configured for this product type. Set it up in Admin → Product Workflows, then try again.');
-      return;
+      // No workflow configured — warn but allow saving so AM can still submit the ticket.
+      // Admin / Production Manager can assign the production route later.
+      const proceed = confirm(
+        'No production workflow is configured for this product type yet.\n\n' +
+        'The ticket will be saved without a production route. ' +
+        'An admin or production manager can set it up in Admin → Product Workflows.\n\n' +
+        'Save anyway?'
+      );
+      if (!proceed) return;
     }
   }
 
