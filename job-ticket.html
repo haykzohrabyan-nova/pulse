@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-cfg2"></script>
+  <script src="supabase-client.js?v=20260528-cfg3"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -2657,32 +2657,54 @@ function autoExpandNotes(el) {
 }
 
 // P2-D: Update specialNotes textarea border/bg to reflect note type
+// Fallback static meta for the 3 built-in types (used when no DB config loaded yet)
 const _NOTE_TYPE_META = {
-  'INFO':         { icon: 'ℹ️',  cssClass: 'jt-note-info',         border: '#bfdbfe', bg: '#f0f7ff', placeholder: 'Notes for production and prepress…' },
-  'CRITICAL':     { icon: '🚨', cssClass: 'jt-note-critical',     border: '#fca5a5', bg: '#fff5f5', placeholder: 'Critical notes for production and prepress…' },
-  'INSTRUCTIONS': { icon: '📋', cssClass: 'jt-note-instructions', border: '#fcd34d', bg: '#fffbeb', placeholder: 'Instructions for production and prepress…' },
+  'INFO':         { icon: 'ℹ️',  color: '#1d4ed8', placeholder: 'Notes for production and prepress…' },
+  'CRITICAL':     { icon: '🚨', color: '#b91c1c', placeholder: 'Critical notes for production and prepress…' },
+  'INSTRUCTIONS': { icon: '📋', color: '#92600a', placeholder: 'Instructions for production and prepress…' },
 };
-const _NOTE_TYPE_DEFAULT_META = { icon: '📝', cssClass: 'jt-note-custom', border: '#d1d5db', bg: '#f9fafb', placeholder: 'Notes for production and prepress…' };
 
-function _noteTypeMeta(type) {
-  return _NOTE_TYPE_META[type?.toUpperCase()] || { ..._NOTE_TYPE_DEFAULT_META };
+function _hexToRgba(hex, alpha) {
+  try {
+    const h = hex.replace('#','');
+    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  } catch(_) { return `rgba(0,0,0,${alpha})`; }
 }
 
-// Render note type radio buttons from a list of type strings (e.g. ['INFO','CRITICAL','INSTRUCTIONS'])
+// Look up a type's color — prefers DB-configured, falls back to built-in meta
+function _noteTypeColor(typeVal) {
+  const upper = (typeVal || '').toUpperCase();
+  if (Array.isArray(_jtNoteTypes)) {
+    const found = _jtNoteTypes.find(n =>
+      (typeof n === 'object' ? n.value : n)?.toUpperCase() === upper
+    );
+    if (found?.color) return found.color;
+  }
+  return _NOTE_TYPE_META[upper]?.color || '#374151';
+}
+
+function _noteTypeIcon(typeVal) {
+  return _NOTE_TYPE_META[(typeVal||'').toUpperCase()]?.icon || '📝';
+}
+
+// Render note type radio buttons — accepts string[] (legacy) or {value,color}[] (new)
 function renderNoteTypeOptions(types) {
   const row = document.querySelector('.jt-note-type-row');
-  if (!row) return;
-  if (!Array.isArray(types) || types.length === 0) return;
+  if (!row || !Array.isArray(types) || types.length === 0) return;
 
-  const currentVal = document.querySelector('input[name="noteType"]:checked')?.value || types[0];
+  const currentVal = document.querySelector('input[name="noteType"]:checked')?.value;
   row.innerHTML = types.map((t, i) => {
-    const meta = _noteTypeMeta(t);
-    const label = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
-    const checked = (t === currentVal || (i === 0 && !types.includes(currentVal))) ? 'checked' : '';
+    const val   = typeof t === 'object' ? (t.value || '') : t;
+    const color = typeof t === 'object' && t.color ? t.color : (_NOTE_TYPE_META[val?.toUpperCase()]?.color || '#374151');
+    const icon  = _noteTypeIcon(val);
+    const label = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+    const bg    = _hexToRgba(color, 0.12);
+    const checked = (val === currentVal || (i === 0 && !types.some(x => (typeof x==='object'?x.value:x) === currentVal))) ? 'checked' : '';
     return `
       <label class="jt-note-type-option">
-        <input type="radio" name="noteType" value="${t}" ${checked} onchange="updateNoteTypeStyle()">
-        <span class="jt-note-type-pill ${meta.cssClass}">${meta.icon} ${label}</span>
+        <input type="radio" name="noteType" value="${val}" ${checked} onchange="updateNoteTypeStyle()">
+        <span class="jt-note-type-pill" style="background:${bg};color:${color};">${icon} ${label}</span>
       </label>`;
   }).join('');
 
@@ -2691,12 +2713,15 @@ function renderNoteTypeOptions(types) {
 
 function updateNoteTypeStyle() {
   const val = document.querySelector('input[name="noteType"]:checked')?.value || 'INFO';
-  const ta = document.getElementById('specialNotes');
+  const ta  = document.getElementById('specialNotes');
   if (!ta) return;
-  const meta = _noteTypeMeta(val);
-  ta.style.borderColor = meta.border;
-  ta.style.background  = meta.bg;
-  ta.placeholder = meta.placeholder;
+  const color  = _noteTypeColor(val);
+  const border = _hexToRgba(color, 0.45);
+  const bg     = _hexToRgba(color, 0.05);
+  const meta   = _NOTE_TYPE_META[(val||'').toUpperCase()];
+  ta.style.borderColor = border;
+  ta.style.background  = bg;
+  ta.placeholder = meta?.placeholder || 'Notes for production and prepress…';
 }
 
 function updateFrameSheetLabels() {
