@@ -274,7 +274,12 @@
           <input type="number" id="cfgRushThreshold" min="1" max="30" value="2" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
           <p style="margin:4px 0 0;font-size:11px;color:#9ca3af;">Orders due within this many business days of the standard lead time require approval.</p>
         </div>
-        <h4 style="font-size:13px;margin:0 0 8px;">Approvers</h4>
+        <h4 style="font-size:13px;margin:0 0 6px;">Approvers</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:4px;padding:0 2px;">
+          <span style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Name</span>
+          <span style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Secret Code</span>
+          <span></span>
+        </div>
         <div id="cfgApproversList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="addCfgApprover()">+ Add Approver</button>
         <div id="cfgRushSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
@@ -1093,8 +1098,8 @@ document.getElementById('page-styles').textContent = `
   .cfg-sub-btn:hover { color:var(--text); background:var(--card-hover); }
   .cfg-sub-btn.active { color:var(--accent); font-weight:700; border-color:var(--accent); background:#eff6ff; }
   .cfg-section { display:none; }
-  .cfg-approver-row { display:flex; gap:8px; align-items:center; }
-  .cfg-approver-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .cfg-approver-row { display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; align-items:center; }
+  .cfg-approver-row input { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; box-sizing:border-box; }
   .cfg-list-row { display:flex; gap:8px; align-items:center; }
   .cfg-list-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
   .cfg-list-row button { padding:5px 10px; font-size:12px; cursor:pointer; border:1px solid var(--border); border-radius:5px; background:#fff; color:#ef4444; }
