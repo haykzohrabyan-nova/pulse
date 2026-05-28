@@ -2371,6 +2371,9 @@ function updateSaveButtonForOrder(order) {
 
 // ─── Order Navigator (collapsible) ─────────────────────────────────
 async function renderOrderNavigator(parentId, currentOrderId) {
+  // Order Navigator removed per request — no longer rendered.
+  document.getElementById('orderNavigator')?.remove();
+  return;
   const parent = await getOrderByOrderId(parentId);
   const subs   = await getSubTickets(parentId);
   const customer = parent?.customerName || parent?.customer || '';
