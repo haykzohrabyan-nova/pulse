@@ -1011,6 +1011,14 @@
     return null;
   }
 
+  // profiles.facility is the Postgres `facility` enum (only '16th-street' /
+  // 'boyd-street'). "Both / all facilities" has no enum value, so it is stored
+  // as NULL — which RLS already treats as "all facilities".
+  function _facilityForProfileColumn(facilityInput) {
+    const slug = _resolveFacilitySlugForDb(facilityInput);
+    return (slug === '16th-street' || slug === 'boyd-street') ? slug : null;
+  }
+
   function _profileRowToPersonnel(row, userIdOverride) {
     const userId = userIdOverride != null
       ? String(userIdOverride)
@@ -1020,7 +1028,8 @@
       _profileId: row.id,
       name: row.display_name,
       role: _personnelRoleFromDb(row.role),
-      facility: row.facility || '',
+      // NULL facility means "all facilities" → show as 'both' in the editor.
+      facility: row.facility || 'both',
       phone: row.phone || '',
       userId,
       active: row.active !== false,
@@ -1149,7 +1158,7 @@
     const patch = {};
     if (changes.name != null) patch.display_name = String(changes.name).trim();
     if (changes.role != null) patch.role = _personnelRoleToDb(changes.role);
-    if (changes.facility != null) patch.facility = _resolveFacilitySlugForDb(changes.facility);
+    if (changes.facility != null) patch.facility = _facilityForProfileColumn(changes.facility);
     if (changes.phone != null) patch.phone = String(changes.phone).trim() || null;
     if (changes.active != null) patch.active = !!changes.active;
     if (changes.userId != null) patch.pulse_user_id = String(changes.userId).trim() || null;
