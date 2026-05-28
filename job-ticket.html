@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260526-appcon1"></script>
+  <script src="supabase-client.js?v=20260528-cfg1"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -1588,6 +1588,7 @@ function jtRefreshSkuArtworkUi() {
   syncJtTicketReadOnlyDom();
 }
 let rushApproved = false;
+let rushApprovedByName = null;
 let _parentOrderId = null; // set when creating a sub-ticket
 let _formDirty = false; // tracks unsaved changes for beforeunload guard
 
@@ -1855,6 +1856,20 @@ let _jtColorModes       = null; // from catalogColorModes
 let _jtCatalogFinishing = null; // from catalogFinishing
 let _jtCatalogMaterials = null; // from catalogMaterials
 let _jtAppContainers    = null; // from catalogAppContainers (admin-configurable)
+let _jtRushConfig       = null; // from pulseRushConfig (admin-configurable)
+let _jtLeadTimes        = null; // from pulseLeadTimes (admin-configurable)
+
+function _getRushConfig() {
+  if (_jtRushConfig) return _jtRushConfig;
+  return {
+    thresholdDays: 2,
+    approvers: [{ name: 'Tigran', code: '' }],
+  };
+}
+
+function _getLeadTimes() {
+  return _jtLeadTimes || (typeof LEAD_TIMES !== 'undefined' ? LEAD_TIMES : {});
+}
 
 async function loadJtProductCatalog() {
   try {
@@ -1899,7 +1914,22 @@ async function loadJtProductCatalog() {
     // Load admin-configurable container types (independent of main catalog pipeline)
     const conCfg = await getConfig('catalogAppContainers');
     const loaded = Array.isArray(conCfg?.value) ? conCfg.value : (Array.isArray(conCfg) ? conCfg : []);
-    _jtAppContainers = loaded.length ? loaded : null; // null → fall back to PACKAGING_CONTAINERS
+    _jtAppContainers = loaded.length ? loaded : null;
+
+    // Load rush config and lead times from DB (non-critical — fall back to defaults)
+    try {
+      const [rushCfg, ltCfg] = await Promise.all([
+        getConfig('pulseRushConfig'),
+        getConfig('pulseLeadTimes'),
+      ]);
+      const rc = rushCfg?.value || rushCfg;
+      if (rc && typeof rc === 'object') _jtRushConfig = rc;
+      const lt = ltCfg?.value || ltCfg;
+      if (lt && typeof lt === 'object' && !Array.isArray(lt)) {
+        _jtLeadTimes = lt;
+        if (typeof setPulseLeadTimes === 'function') setPulseLeadTimes(lt);
+      }
+    } catch (_) {}
   } catch (_) {
     _jtProductCatalog = [];
     _jtColorModes = [];
@@ -1911,7 +1941,10 @@ async function loadJtProductCatalog() {
 
 /** Returns the active container list: admin-configured if available, else built-in fallback */
 function _getAppContainers() {
-  return _jtAppContainers?.length ? _jtAppContainers : (typeof PACKAGING_CONTAINERS !== 'undefined' ? PACKAGING_CONTAINERS : []);
+  // Prefer the page-level loaded containers, then global cache, then built-in fallback
+  if (_jtAppContainers?.length) return _jtAppContainers;
+  if (typeof getPulseCatalogContainers === 'function') return getPulseCatalogContainers();
+  return typeof PACKAGING_CONTAINERS !== 'undefined' ? PACKAGING_CONTAINERS : [];
 }
 
 async function waitForJtSupabaseSession(maxMs = 10000) {
@@ -2716,6 +2749,23 @@ function onProductTypeChange() {
 
   // Render extra (non-hardcoded) finishing fields for this product
   renderExtraFinishingSection(allowedFin);
+
+  // ── Sides dropdown — filter from catalog's sides array ────
+  const sidesSel = document.getElementById('sides');
+  if (sidesSel && Array.isArray(catalogProd.sides) && catalogProd.sides.length > 0) {
+    const currentVal = sidesSel.value;
+    const SIDE_LABELS = { '1': '1-sided', '2': '2-sided' };
+    sidesSel.innerHTML = catalogProd.sides.map(s => {
+      const val = String(s).replace(/[^0-9]/g, '') || s;
+      const label = SIDE_LABELS[val] || s;
+      return `<option value="${val}">${label}</option>`;
+    }).join('');
+    // Restore previous selection if still valid
+    if ([...sidesSel.options].some(o => o.value === currentVal)) sidesSel.value = currentVal;
+  } else if (sidesSel) {
+    // Default: show both 1-sided and 2-sided
+    sidesSel.innerHTML = '<option value="1">1-sided</option><option value="2">2-sided</option>';
+  }
 
   // ── Print type / roll direction ────────────────────────────
   const printType = catalogProd.rollDirection ? 'Roll' : 'Sheet';
@@ -3627,16 +3677,32 @@ async function updateFinishEta() {
 }
 
 function verifyRushCode() {
-  const code = document.getElementById('rushApprovalCode').value.trim();
+  const code = document.getElementById('rushApprovalCode').value.trim().toUpperCase();
   const result = document.getElementById('rushCodeResult');
-  if (code.length >= 4) {
+  const cfg = _getRushConfig();
+  const approvers = Array.isArray(cfg.approvers) ? cfg.approvers : [];
+
+  // If no codes are configured, fall back to any 4+ char code (backward compat)
+  const hasConfiguredCodes = approvers.some(a => a.code && a.code.trim().length > 0);
+
+  let matchedApprover = null;
+  if (hasConfiguredCodes) {
+    matchedApprover = approvers.find(a => a.code && a.code.trim().toUpperCase() === code);
+  } else if (code.length >= 4) {
+    matchedApprover = { name: 'Supervisor' };
+  }
+
+  if (matchedApprover) {
     rushApproved = true;
-    result.innerHTML = '<span style="color:var(--green);font-weight:600;">✅ Rush approved. Job will be marked as RUSH.</span>';
+    rushApprovedByName = matchedApprover.name || 'Supervisor';
+    result.innerHTML = `<span style="color:var(--green);font-weight:600;">✅ Rush approved by ${rushApprovedByName}. Job will be marked as RUSH.</span>`;
     document.getElementById('rushApprovalSection').style.background = '#d4edda';
     document.getElementById('rushApprovalSection').style.borderColor = 'var(--green)';
   } else {
-    result.innerHTML = '<span style="color:var(--red);">Invalid code. Contact Tigran.</span>';
+    const approverNames = approvers.filter(a => a.name).map(a => a.name).join(' or ') || 'Supervisor';
+    result.innerHTML = `<span style="color:var(--red);">Invalid code. Contact ${approverNames} for approval.</span>`;
     rushApproved = false;
+    rushApprovedByName = null;
   }
 }
 
@@ -4593,7 +4659,7 @@ async function saveTicket(suppressRedirect = false) {
         : dueDateCheck.isRush ? 'on-hold'
         : 'prepress',  // new tickets queue for prepress review
       isRush: dueDateCheck.isRush || false,
-      rushApprovedBy: rushApproved ? ((typeof getCurrentName === 'function' && getCurrentName()) || 'Supervisor') : null,
+      rushApprovedBy: rushApproved ? (rushApprovedByName || (typeof getCurrentName === 'function' && getCurrentName()) || 'Supervisor') : null,
       rushApprovedAt: rushApproved ? new Date().toISOString() : null,
       capacityOverride: capOrder?._capacityOverride || false,
       capacityDetails: capOrder?._capacityDetails || null,

@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="supabase-client.js?v=20260528-cfg1"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -1277,6 +1277,19 @@
     if (typeof initPulseAdminData === 'function') {
       try { await initPulseAdminData(); } catch (e) { console.warn('[Pulse] dashboard admin bootstrap', e); }
     }
+    // Load production line column config from DB and apply to PRODUCTION_LINES stages
+    try {
+      const plCfg = await getConfig('pulseProductionLines');
+      const pl = plCfg?.value || plCfg;
+      if (pl && typeof pl === 'object' && typeof PRODUCTION_LINES !== 'undefined') {
+        Object.entries(pl).forEach(([key, cfg]) => {
+          if (PRODUCTION_LINES[key] && Array.isArray(cfg.stages) && cfg.stages.length > 0) {
+            PRODUCTION_LINES[key].stages = cfg.stages;
+          }
+          if (PRODUCTION_LINES[key] && cfg.name) PRODUCTION_LINES[key].name = cfg.name;
+        });
+      }
+    } catch (_) {}
     if (typeof registerPulseAdminConfigRefresh === 'function') {
       registerPulseAdminConfigRefresh(() => refresh());
     }

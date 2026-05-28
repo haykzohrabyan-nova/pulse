@@ -12,12 +12,12 @@
     #tab-payment.active,
     #tab-crm-quote.active { padding: 0 !important; }
   </style>
-  <script src="shared.js?v=20260523-profiles-personnel"></script>
+  <script src="shared.js?v=20260528-cfg1"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-personnel-sync"></script>
-  <script src="auth.js?v=20260522-TABS1"></script>
+  <script src="supabase-client.js?v=20260528-cfg1"></script>
+  <script src="auth.js?v=20260528-rolesync"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -37,6 +37,7 @@
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+    <button class="tab-btn" data-tab="configuration" onclick="switchTab('configuration')">⚙️ Configuration</button>
     <button class="tab-btn" data-tab="backup" onclick="switchTab('backup')">💾 Export / Import</button>
   </div>
 
@@ -225,6 +226,102 @@
     <div id="roleUserList"></div>
   </div>
 </div>
+
+    <!-- ═══ CONFIGURATION ═══ -->
+    <div class="tab-pane" id="tab-configuration">
+      <div class="pane-header">
+        <div>
+          <h2 class="pane-title">⚙️ Configuration</h2>
+          <p class="pane-subtitle">Operational rules stored in Supabase — applied across all devices and users.</p>
+        </div>
+      </div>
+
+      <!-- Sub-nav -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+        <button class="cfg-sub-btn active" data-cfg="lead-times"  onclick="switchCfgSection('lead-times')">⏱ Lead Times</button>
+        <button class="cfg-sub-btn"        data-cfg="rush"        onclick="switchCfgSection('rush')">🚀 Rush Settings</button>
+        <button class="cfg-sub-btn"        data-cfg="note-types"  onclick="switchCfgSection('note-types')">📝 Note Types</button>
+        <button class="cfg-sub-btn"        data-cfg="reprint"     onclick="switchCfgSection('reprint')">🔁 Reprint Reasons</button>
+        <button class="cfg-sub-btn"        data-cfg="prod-lines"  onclick="switchCfgSection('prod-lines')">🏭 Production Lines</button>
+      </div>
+
+      <!-- ── Lead Times ── -->
+      <div class="cfg-section" id="cfg-lead-times">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Lead Times by Product Type</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Business days required for each product. Used to flag rush orders on job tickets.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCfgLeadTimes()">💾 Save Lead Times</button>
+        </div>
+        <table class="data-table" style="font-size:13px;">
+          <thead><tr><th>Product Type</th><th>Min Days</th><th>Max Days</th><th>Max Qty (standard)</th></tr></thead>
+          <tbody id="cfgLeadTimesBody"></tbody>
+        </table>
+        <div id="cfgLeadTimesSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
+      </div>
+
+      <!-- ── Rush Settings ── -->
+      <div class="cfg-section" id="cfg-rush" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Rush Order Settings</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Configure who can approve rush orders and their secret codes.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCfgRush()">💾 Save Rush Settings</button>
+        </div>
+        <div style="max-width:400px;margin-bottom:20px;">
+          <label style="font-size:12px;font-weight:600;color:#374151;">Rush Threshold (business days)</label>
+          <input type="number" id="cfgRushThreshold" min="1" max="30" value="2" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          <p style="margin:4px 0 0;font-size:11px;color:#9ca3af;">Orders due within this many business days of the standard lead time require approval.</p>
+        </div>
+        <h4 style="font-size:13px;margin:0 0 8px;">Approvers</h4>
+        <div id="cfgApproversList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+        <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="addCfgApprover()">+ Add Approver</button>
+        <div id="cfgRushSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
+      </div>
+
+      <!-- ── Note Types ── -->
+      <div class="cfg-section" id="cfg-note-types" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Job Ticket Note Types</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Labels shown on the job ticket note type selector.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCfgNoteTypes()">💾 Save Note Types</button>
+        </div>
+        <div id="cfgNoteTypesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-width:400px;"></div>
+        <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="addCfgNoteType()">+ Add Note Type</button>
+        <div id="cfgNoteTypesSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
+      </div>
+
+      <!-- ── Reprint Reasons ── -->
+      <div class="cfg-section" id="cfg-reprint" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Reprint Reasons</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Dropdown options shown in the reprint dialog (Production Manager).</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCfgReprintReasons()">💾 Save Reprint Reasons</button>
+        </div>
+        <div id="cfgReprintList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-width:500px;"></div>
+        <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="addCfgReprintReason()">+ Add Reason</button>
+        <div id="cfgReprintSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
+      </div>
+
+      <!-- ── Production Lines ── -->
+      <div class="cfg-section" id="cfg-prod-lines" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Production Line Columns</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Stage columns displayed on each production dashboard. Changes apply on next dashboard load.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCfgProdLines()">💾 Save Production Lines</button>
+        </div>
+        <div id="cfgProdLinesList" style="display:flex;flex-direction:column;gap:20px;"></div>
+        <div id="cfgProdLinesSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
+      </div>
+    </div>
 
     <!-- ═══ EXPORT / IMPORT (all Admin tabs except Quote & Payment) ═══ -->
     <div class="tab-pane" id="tab-backup">
@@ -1030,6 +1127,15 @@ document.getElementById('page-styles').textContent = `
   .cat-sub-btn.active { color:var(--accent); font-weight:700; border-bottom-color:var(--accent); }
   .cat-section { display:none; }
   .cat-section.active { display:block; }
+  .cfg-sub-btn { padding:7px 14px; border:1px solid var(--border); background:#fff; color:var(--text-muted); font-size:12px; font-weight:500; cursor:pointer; border-radius:6px; transition:all 0.15s; }
+  .cfg-sub-btn:hover { color:var(--text); background:var(--card-hover); }
+  .cfg-sub-btn.active { color:var(--accent); font-weight:700; border-color:var(--accent); background:#eff6ff; }
+  .cfg-section { display:none; }
+  .cfg-approver-row { display:flex; gap:8px; align-items:center; }
+  .cfg-approver-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .cfg-list-row { display:flex; gap:8px; align-items:center; }
+  .cfg-list-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .cfg-list-row button { padding:5px 10px; font-size:12px; cursor:pointer; border:1px solid var(--border); border-radius:5px; background:#fff; color:#ef4444; }
   /* Tags */
   .cat-tag { display:inline-block; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); font-size:11px; color:var(--text-muted); font-weight:500; }
   .cat-tag-removable { display:inline-flex; align-items:center; gap:4px; padding:3px 6px 3px 10px; border-radius:20px; background:#e0e7ff; color:#3730a3; font-size:12px; font-weight:500; }
@@ -1358,9 +1464,10 @@ async function loadTab(tab) {
   }
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'settings') await loadSettings();
-  else if (tab === 'qa-rules') renderQARules();
+  else if (tab === 'qa-rules') renderQARules().catch(console.error);
   else if (tab === 'roles') await renderRoles();
   else if (tab === 'backup') await loadBackupTab();
+  else if (tab === 'configuration') await loadConfigurationTab();
   else if (tab === 'products') await loadProductsTab();
   else if (tab === 'product-workflows') await loadProductWorkflowsTab();
 }
@@ -1407,12 +1514,37 @@ const QA_STAGES = [
   { value: 'ready-to-ship',       label: 'Ready-to-ship approval' },
 ];
 
-function loadQARules() {
+// QA Rules are stored in Supabase config (key: pulseQARules)
+// localStorage is kept as a fast-load cache and fallback.
+let _qaRulesCache = null;
+
+async function loadQARulesAsync() {
+  try {
+    const cfg = await getConfig('pulseQARules');
+    const rules = cfg?.value || cfg;
+    if (Array.isArray(rules)) {
+      _qaRulesCache = rules;
+      localStorage.setItem('pulse_qa_rules', JSON.stringify(rules));
+      return rules;
+    }
+  } catch (_) {}
+  // Fallback: localStorage
   try { return JSON.parse(localStorage.getItem('pulse_qa_rules') || '[]'); } catch(e) { return []; }
 }
-function saveQARules(rules) { localStorage.setItem('pulse_qa_rules', JSON.stringify(rules)); }
 
-function renderQARules() {
+function loadQARules() {
+  if (_qaRulesCache !== null) return _qaRulesCache;
+  try { return JSON.parse(localStorage.getItem('pulse_qa_rules') || '[]'); } catch(e) { return []; }
+}
+
+async function saveQARules(rules) {
+  _qaRulesCache = rules;
+  localStorage.setItem('pulse_qa_rules', JSON.stringify(rules));
+  try { await setConfig('pulseQARules', rules); } catch (_) {}
+}
+
+async function renderQARules() {
+  if (_qaRulesCache === null) await loadQARulesAsync();
   const rules = loadQARules();
   const el = document.getElementById('qaRulesList');
   if (!el) return;
@@ -1536,23 +1668,23 @@ function saveQARule() {
   } else {
     rules.unshift(rule);
   }
-  saveQARules(rules);
+  saveQARules(rules).then(() => renderQARules());
   document.getElementById('qaRuleOverlay').remove();
-  renderQARules();
 }
 
 function toggleQARule(id) {
   const rules = loadQARules();
   const idx = rules.findIndex(r => r.id === id);
-  if (idx >= 0) { rules[idx].active = !rules[idx].active; saveQARules(rules); }
-  renderQARules();
+  if (idx >= 0) {
+    rules[idx].active = !rules[idx].active;
+    saveQARules(rules).then(() => renderQARules());
+  }
 }
 
 function deleteQARule(id) {
   if (!confirm('Delete this QA rule?')) return;
   const rules = loadQARules().filter(r => r.id !== id);
-  saveQARules(rules);
-  renderQARules();
+  saveQARules(rules).then(() => renderQARules());
 }
 
 // Evaluate rules against a ticket — returns matching rule(s)
@@ -3010,6 +3142,291 @@ async function loadSettings() {
   if (defQC?.value) document.getElementById('defaultQCInspector').value = defQC.value;
   updateAppDeptTotal();
 }
+
+// ══════════════════════════════════════════════════════════════════
+// ⚙️ CONFIGURATION TAB
+// ══════════════════════════════════════════════════════════════════
+
+const CFG_LEAD_TIMES_DEFAULTS = {
+  'Labels (Roll)':           { minDays: 3, maxDays: 5, maxQtyStandard: 1000000 },
+  'Labels (Sheet)':          { minDays: 3, maxDays: 5, maxQtyStandard: 1000000 },
+  'Diecut Stickers':         { minDays: 3, maxDays: 5, maxQtyStandard: 1000000 },
+  'Folding Cartons / Boxes': { minDays: 5, maxDays: 7, maxQtyStandard: 50000 },
+  'Business Cards':          { minDays: 5, maxDays: 7, maxQtyStandard: 50000 },
+  'Flyers / Postcards':      { minDays: 5, maxDays: 7, maxQtyStandard: 50000 },
+  'Booklets':                { minDays: 5, maxDays: 7, maxQtyStandard: 50000 },
+  'Pouches':                 { minDays: 7, maxDays: 7, maxQtyStandard: 100000 },
+  'Vinyl Signage':           { minDays: 3, maxDays: 5, maxQtyStandard: null },
+  'Banners / Large Format':  { minDays: 3, maxDays: 5, maxQtyStandard: null },
+  'Window Decals':           { minDays: 3, maxDays: 5, maxQtyStandard: null },
+  'Wallpaper':               { minDays: 3, maxDays: 5, maxQtyStandard: null },
+  'Sheet Products (Boyd)':   { minDays: 3, maxDays: 5, maxQtyStandard: null },
+};
+
+const CFG_RUSH_DEFAULTS = {
+  thresholdDays: 2,
+  approvers: [{ name: 'Tigran', code: '' }],
+};
+
+const CFG_NOTE_TYPES_DEFAULTS = ['INFO', 'CRITICAL', 'INSTRUCTIONS'];
+const CFG_REPRINT_REASONS_DEFAULTS = [
+  { value: 'shortage',         label: 'Shortage (not enough units)' },
+  { value: 'quality',          label: 'Quality Issue' },
+  { value: 'damaged',          label: 'Damaged in Production' },
+  { value: 'customer-request', label: 'Customer Request' },
+  { value: 'other',            label: 'Other' },
+];
+
+const CFG_PROD_LINES_DEFAULTS = {
+  '6k':   { name: 'HP Indigo 6K Line',   stages: ['Prepress','Press 6K','Finishing','QC','Ready to Ship','Shipped'] },
+  '15k':  { name: 'HP Indigo 15K Line',  stages: ['Prepress','Press 15K','Finishing','QC','Ready to Ship','Shipped'] },
+  'boyd': { name: 'Boyd St Line',         stages: ['Prepress','Printing','Finishing','QC','Ready to Ship','Shipped'] },
+};
+
+let _cfgLeadTimes   = null;
+let _cfgRush        = null;
+let _cfgNoteTypes   = null;
+let _cfgReprint     = null;
+let _cfgProdLines   = null;
+
+async function loadConfigurationTab() {
+  // Load all config values in parallel
+  const [ltCfg, rushCfg, ntCfg, rrCfg, plCfg] = await Promise.all([
+    getConfig('pulseLeadTimes'),
+    getConfig('pulseRushConfig'),
+    getConfig('pulseNoteTypes'),
+    getConfig('pulseReprintReasons'),
+    getConfig('pulseProductionLines'),
+  ]);
+
+  _cfgLeadTimes = (ltCfg?.value || ltCfg) || { ...CFG_LEAD_TIMES_DEFAULTS };
+  _cfgRush      = (rushCfg?.value || rushCfg) || { ...CFG_RUSH_DEFAULTS };
+  _cfgNoteTypes = (ntCfg?.value || ntCfg) || [...CFG_NOTE_TYPES_DEFAULTS];
+  _cfgReprint   = (rrCfg?.value || rrCfg) || [...CFG_REPRINT_REASONS_DEFAULTS];
+  _cfgProdLines = (plCfg?.value || plCfg) || JSON.parse(JSON.stringify(CFG_PROD_LINES_DEFAULTS));
+
+  renderCfgLeadTimes();
+  renderCfgRush();
+  renderCfgNoteTypes();
+  renderCfgReprint();
+  renderCfgProdLines();
+  switchCfgSection('lead-times');
+}
+
+function switchCfgSection(key) {
+  document.querySelectorAll('.cfg-sub-btn').forEach(b => b.classList.toggle('active', b.dataset.cfg === key));
+  document.querySelectorAll('.cfg-section').forEach(s => s.style.display = 'none');
+  const el = document.getElementById(`cfg-${key}`);
+  if (el) el.style.display = 'block';
+}
+
+// ── Lead Times ──────────────────────────────────────────────────
+function renderCfgLeadTimes() {
+  const tbody = document.getElementById('cfgLeadTimesBody');
+  if (!tbody) return;
+  const lt = _cfgLeadTimes || CFG_LEAD_TIMES_DEFAULTS;
+  tbody.innerHTML = Object.entries(lt).map(([pt, v]) => `
+    <tr>
+      <td>${pt}</td>
+      <td><input type="number" min="1" max="60" value="${v.minDays||3}" onchange="cfgLtChange('${pt}','minDays',this.value)" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;"></td>
+      <td><input type="number" min="1" max="60" value="${v.maxDays||5}" onchange="cfgLtChange('${pt}','maxDays',this.value)" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;"></td>
+      <td><input type="number" min="0"          value="${v.maxQtyStandard||''}" placeholder="unlimited" onchange="cfgLtChange('${pt}','maxQtyStandard',this.value)" style="width:130px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;"></td>
+    </tr>
+  `).join('');
+}
+
+function cfgLtChange(pt, field, val) {
+  if (!_cfgLeadTimes) _cfgLeadTimes = { ...CFG_LEAD_TIMES_DEFAULTS };
+  if (!_cfgLeadTimes[pt]) _cfgLeadTimes[pt] = {};
+  _cfgLeadTimes[pt][field] = val === '' || val === null ? null : Number(val);
+}
+
+async function saveCfgLeadTimes() {
+  // Sync days[] format expected by shared.js
+  const toSave = {};
+  for (const [pt, v] of Object.entries(_cfgLeadTimes)) {
+    toSave[pt] = { days: [v.minDays, v.maxDays], maxQtyStandard: v.maxQtyStandard, minDays: v.minDays, maxDays: v.maxDays };
+  }
+  await setConfig('pulseLeadTimes', toSave);
+  const el = document.getElementById('cfgLeadTimesSaved');
+  if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+}
+
+// ── Rush Settings ────────────────────────────────────────────────
+function renderCfgRush() {
+  const cfg = _cfgRush || CFG_RUSH_DEFAULTS;
+  const threshEl = document.getElementById('cfgRushThreshold');
+  if (threshEl) threshEl.value = cfg.thresholdDays ?? 2;
+
+  const listEl = document.getElementById('cfgApproversList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  (cfg.approvers || []).forEach((a, i) => {
+    const row = document.createElement('div');
+    row.className = 'cfg-approver-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Approver name (e.g. Tigran)" value="${a.name||''}" oninput="cfgApproverChange(${i},'name',this.value)">
+      <input type="text" placeholder="Secret code (e.g. TIGR2024)" value="${a.code||''}" oninput="cfgApproverChange(${i},'code',this.value)" style="font-family:monospace;">
+      <button onclick="removeCfgApprover(${i})" style="color:#ef4444;border-color:#fca5a5;padding:5px 10px;border-radius:5px;border:1px solid;background:#fff;cursor:pointer;">✕</button>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function cfgApproverChange(idx, field, val) {
+  if (!_cfgRush) _cfgRush = { ...CFG_RUSH_DEFAULTS };
+  if (!_cfgRush.approvers[idx]) _cfgRush.approvers[idx] = {};
+  _cfgRush.approvers[idx][field] = val;
+}
+
+function addCfgApprover() {
+  if (!_cfgRush) _cfgRush = { ...CFG_RUSH_DEFAULTS, approvers: [] };
+  if (!_cfgRush.approvers) _cfgRush.approvers = [];
+  _cfgRush.approvers.push({ name: '', code: '' });
+  renderCfgRush();
+}
+
+function removeCfgApprover(idx) {
+  if (!_cfgRush?.approvers) return;
+  _cfgRush.approvers.splice(idx, 1);
+  renderCfgRush();
+}
+
+async function saveCfgRush() {
+  if (!_cfgRush) return;
+  const threshEl = document.getElementById('cfgRushThreshold');
+  _cfgRush.thresholdDays = parseInt(threshEl?.value || 2);
+  // Sync approver codes to uppercase for case-insensitive matching
+  (_cfgRush.approvers || []).forEach(a => { if (a.code) a.code = a.code.trim().toUpperCase(); });
+  await setConfig('pulseRushConfig', _cfgRush);
+  const el = document.getElementById('cfgRushSaved');
+  if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+}
+
+// ── Note Types ───────────────────────────────────────────────────
+function renderCfgNoteTypes() {
+  const listEl = document.getElementById('cfgNoteTypesList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  (_cfgNoteTypes || []).forEach((nt, i) => {
+    const row = document.createElement('div');
+    row.className = 'cfg-list-row';
+    row.innerHTML = `
+      <input type="text" value="${nt}" placeholder="e.g. CRITICAL" oninput="cfgNoteTypeChange(${i},this.value)">
+      <button onclick="removeCfgNoteType(${i})">✕ Remove</button>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function cfgNoteTypeChange(idx, val) {
+  if (!_cfgNoteTypes) _cfgNoteTypes = [...CFG_NOTE_TYPES_DEFAULTS];
+  _cfgNoteTypes[idx] = val.trim().toUpperCase();
+}
+
+function addCfgNoteType() {
+  if (!_cfgNoteTypes) _cfgNoteTypes = [];
+  _cfgNoteTypes.push('');
+  renderCfgNoteTypes();
+}
+
+function removeCfgNoteType(idx) {
+  if (!_cfgNoteTypes) return;
+  _cfgNoteTypes.splice(idx, 1);
+  renderCfgNoteTypes();
+}
+
+async function saveCfgNoteTypes() {
+  const clean = (_cfgNoteTypes || []).filter(n => n.trim());
+  await setConfig('pulseNoteTypes', clean);
+  const el = document.getElementById('cfgNoteTypesSaved');
+  if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+}
+
+// ── Reprint Reasons ──────────────────────────────────────────────
+function renderCfgReprint() {
+  const listEl = document.getElementById('cfgReprintList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  (_cfgReprint || []).forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'cfg-list-row';
+    row.innerHTML = `
+      <input type="text" value="${r.value||''}" placeholder="value (no spaces)" oninput="cfgReprintChange(${i},'value',this.value)" style="max-width:160px;">
+      <input type="text" value="${r.label||''}" placeholder="Display label" oninput="cfgReprintChange(${i},'label',this.value)">
+      <button onclick="removeCfgReprint(${i})">✕</button>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function cfgReprintChange(idx, field, val) {
+  if (!_cfgReprint) _cfgReprint = [];
+  if (!_cfgReprint[idx]) _cfgReprint[idx] = { value: '', label: '' };
+  _cfgReprint[idx][field] = val;
+}
+
+function addCfgReprintReason() {
+  if (!_cfgReprint) _cfgReprint = [];
+  _cfgReprint.push({ value: '', label: '' });
+  renderCfgReprint();
+}
+
+function removeCfgReprint(idx) {
+  if (!_cfgReprint) return;
+  _cfgReprint.splice(idx, 1);
+  renderCfgReprint();
+}
+
+async function saveCfgReprintReasons() {
+  const clean = (_cfgReprint || []).filter(r => r.value.trim());
+  await setConfig('pulseReprintReasons', clean);
+  const el = document.getElementById('cfgReprintSaved');
+  if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+}
+
+// ── Production Lines ─────────────────────────────────────────────
+function renderCfgProdLines() {
+  const listEl = document.getElementById('cfgProdLinesList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  const pl = _cfgProdLines || CFG_PROD_LINES_DEFAULTS;
+  Object.entries(pl).forEach(([key, line]) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:16px;background:#fafafa;';
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <strong style="font-size:13px;min-width:60px;">${key.toUpperCase()}</strong>
+        <input type="text" value="${line.name||''}" placeholder="Line name" oninput="cfgProdLineChange('${key}','name',this.value)"
+          style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+      </div>
+      <label style="font-size:12px;color:#6b7280;font-weight:600;">Stages (one per line):</label>
+      <textarea rows="6" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical;"
+        onchange="cfgProdLineChange('${key}','stages',this.value)"
+        oninput="cfgProdLineChange('${key}','stages',this.value)"
+      >${(line.stages||[]).join('\n')}</textarea>
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+function cfgProdLineChange(key, field, val) {
+  if (!_cfgProdLines) _cfgProdLines = JSON.parse(JSON.stringify(CFG_PROD_LINES_DEFAULTS));
+  if (!_cfgProdLines[key]) _cfgProdLines[key] = {};
+  if (field === 'stages') {
+    _cfgProdLines[key].stages = val.split('\n').map(s => s.trim()).filter(Boolean);
+  } else {
+    _cfgProdLines[key][field] = val;
+  }
+}
+
+async function saveCfgProdLines() {
+  await setConfig('pulseProductionLines', _cfgProdLines);
+  const el = document.getElementById('cfgProdLinesSaved');
+  if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+}
+
+// ══════════════════════════════════════════════════════════════════
 
 async function loadBackupTab() {
   renderBackupIncludedTabsList();

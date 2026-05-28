@@ -686,13 +686,13 @@ function applyTicketEditLock(ticket) {
 // ── Init — called on every page load ─────────────────────
 // Apply any saved role-permission overrides to ROLE_CONFIG so access checks use the latest settings.
 // Reads from localStorage (written by admin "Save Changes") for instant, sync access.
-function _applyRoleOverrides() {
+function _applyRoleOverrides(overrides) {
   try {
-    const raw = localStorage.getItem('pulse_role_overrides');
-    if (!raw) return;
-    const overrides = JSON.parse(raw);
-    const allPageKeys = ['dashboard','job-ticket','pricing-calculator','prepress','production-manager',
-      'operator-terminal','qc-checkout','machine-issues','shipping','organisation','admin'];
+    if (!overrides) {
+      const raw = localStorage.getItem('pulse_role_overrides');
+      if (!raw) return;
+      overrides = JSON.parse(raw);
+    }
     Object.entries(overrides).forEach(([role, ov]) => {
       if (!ROLE_CONFIG[role]) return;
       if (role === 'admin') return; // admin always retains pages:['all'] — never override
@@ -712,7 +712,22 @@ function _applyRoleOverrides() {
     });
   } catch (_) {}
 }
+// Apply localStorage overrides immediately (sync, for instant access)
 _applyRoleOverrides();
+
+// Load role permissions from Supabase DB and keep localStorage in sync
+async function _syncRolePermissionsFromDB() {
+  try {
+    if (typeof getConfig !== 'function') return;
+    const cfg = await getConfig('rolePermissions');
+    const overrides = cfg?.value || cfg;
+    if (!overrides || typeof overrides !== 'object') return;
+    // Write to localStorage so future page loads are instant
+    localStorage.setItem('pulse_role_overrides', JSON.stringify(overrides));
+    // Apply to live ROLE_CONFIG
+    _applyRoleOverrides(overrides);
+  } catch (_) {}
+}
 
 async function initAuth(pageId) {
   document.body.dataset.page = pageId;
@@ -731,6 +746,8 @@ async function initAuth(pageId) {
           // DB role uses underscores; ROLE_CONFIG uses hyphens
           const role = String(profile.role || 'operator').replace(/_/g, '-');
           setSession(profile.display_name, role);
+          // Sync role permissions from DB (non-blocking — updates ROLE_CONFIG + localStorage)
+          _syncRolePermissionsFromDB().catch(() => {});
         }
       }
     } catch (e) {
