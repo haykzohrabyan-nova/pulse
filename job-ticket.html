@@ -130,7 +130,7 @@
         <div class="form-row">
           <div class="field jt-field-label-left">
             <label>Product Type *</label>
-            <select id="productType" onchange="onProductTypeChange()" required>
+            <select id="productType" onchange="onProductTypeChange({ resetMaterial: true })" required>
               <option value="">— Select Product Type —</option>
             </select>
           </div>
@@ -1974,6 +1974,7 @@ async function waitForJtSupabaseSession(maxMs = 10000) {
 }
 
 async function refreshJtCatalogUi() {
+  const savedMaterial = (document.getElementById('material')?.value || '').trim();
   await loadJtProductCatalog();
   await populateFacilities(document.getElementById('facility')?.value);
   populateProductTypes();
@@ -1981,7 +1982,7 @@ async function refreshJtCatalogUi() {
   populateLaminationOptions([]);
   populateFoilOptions([]);
   const pt = document.getElementById('productType')?.value;
-  if (pt) onProductTypeChange();
+  if (pt) onProductTypeChange(savedMaterial ? { material: savedMaterial } : {});
 }
 
 function jtApplyAdminCatalogFromCache() {
@@ -2757,9 +2758,12 @@ function updateFrameSheetLabels() {
 // ─────────────────────────────────────────────────────────────
 // Product type change
 // ─────────────────────────────────────────────────────────────
-function onProductTypeChange() {
+function onProductTypeChange(options = {}) {
   const productType = document.getElementById('productType').value;
   const facility = document.getElementById('facility').value;
+  const priorMaterial = options.resetMaterial
+    ? ''
+    : (options.material || document.getElementById('material')?.value || '').trim();
   document.getElementById('otherProductRow').style.display = productType === 'Other' ? 'block' : 'none';
 
   // Show/hide pouch gusset field
@@ -2789,6 +2793,7 @@ function onProductTypeChange() {
   const matSel = document.getElementById('material');
   matSel.innerHTML = '<option value="">— Select Material —</option>' +
     buildMaterialOptions(productType, facility, catalogProd);
+  if (priorMaterial) restoreJtMaterialSelect(priorMaterial);
 
   // ── Color modes ────────────────────────────────────────────
   populateColorModes(catalogProd?.colorModes || []);
@@ -4524,6 +4529,13 @@ async function saveTicket(suppressRedirect = false) {
   if (!productType) { alert('Please select a Product Type.'); return; }
   if (!quantity) { alert('Please enter Quantity.'); return; }
 
+  const materialVal = (document.getElementById('material').value || '').trim()
+    || (existingOrderForEdit?.material || '').trim();
+  if (productType && productType !== 'Other' && !materialVal) {
+    alert('Please select a Material.');
+    return;
+  }
+
   // Artwork check
   if (skuList.length > 0) {
     for (let i = 0; i < skuList.length; i++) {
@@ -4685,7 +4697,7 @@ async function saveTicket(suppressRedirect = false) {
       productType,
       otherProductDesc: productType === 'Other' ? document.getElementById('otherProductDesc').value.trim() : '',
       facility,
-      material: document.getElementById('material').value,
+      material: materialVal,
       quantity,
       piecesPerSheet: parseInt(document.getElementById('piecesPerSheet').value) || 1,
       sheetCount: parseInt(document.getElementById('sheetCount').value) || 0,
@@ -5129,8 +5141,7 @@ async function loadOrderIntoForm(order) {
 
   // Cutting
   await new Promise(r => setTimeout(r, 10));
-  onProductTypeChange();
-  restoreJtMaterialSelect(order.material);
+  onProductTypeChange({ material: order.material || '' });
   // Restore saved piecesPerSheet after onProductTypeChange (which may auto-populate a default)
   if (order.piecesPerSheet) {
     document.getElementById('piecesPerSheet').value = order.piecesPerSheet;
