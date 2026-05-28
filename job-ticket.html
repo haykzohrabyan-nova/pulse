@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-wfname1"></script>
+  <script src="supabase-client.js?v=20260528-wfname2"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -4376,6 +4376,14 @@ function autoDetectWorkflow() {
 }
 
 async function buildWorkflowStepsForSave() {
+  // If the workflow config wasn't resolved yet (autoDetectWorkflow runs async and
+  // may not have finished when Save is clicked), load it now so we don't wrongly
+  // report "no production workflow configured" for a product that actually has one.
+  if ((!_jtWorkflowConfig?.steps?.length || _jtWorkflowSource === 'missing')
+      && typeof applyProductWorkflowFromConfig === 'function') {
+    try { await applyProductWorkflowFromConfig(); } catch (_) {}
+  }
+
   if (_jtWorkflowConfig?.steps?.length && _jtWorkflowSource !== 'legacy' && typeof resolveProductWorkflowSteps === 'function') {
     const resolved = resolveProductWorkflowSteps(_jtWorkflowConfig.steps, getJobOptionsForProductWorkflow());
     if (typeof workflowStepsFromResolvedConfig === 'function') {
@@ -4692,7 +4700,7 @@ async function saveTicket(suppressRedirect = false) {
     if (singleFileData.uv) allArtwork.push(singleFileData.uv);
     if (singleFileData.foil) allArtwork.push(singleFileData.foil);
 
-    const order = {
+    let order = {
       orderId: document.getElementById('jobTicketNumber').value.trim() || null, // will auto-generate if null
       parentOrderId: _parentOrderId || null,
       customer: customerName,
@@ -4842,7 +4850,10 @@ async function saveTicket(suppressRedirect = false) {
           console.warn('Rush SMS failed:', e);
         }
       }
-      // Reload ticket in-place so SKU/artwork panels render from saved Supabase data.
+      // The order is already saved at this point. Reload the ticket in-place so
+      // the SKU/artwork panels render from saved Supabase data. If the in-place
+      // reload fails for any reason, fall back to a full navigation — the save
+      // itself already succeeded, so we must never surface a "save error" here.
       const savedOrderId = editingOrderId;
       btn.disabled = false;
       updateSaveButtonForOrder(order);
@@ -4851,8 +4862,13 @@ async function saveTicket(suppressRedirect = false) {
         reloaded = await getOrderByOrderId(savedOrderId);
       } catch (_) {}
       if (reloaded) {
-        await openOrderInEditor(reloaded);
-        showJobTicketSavedToast(savedOrderId);
+        try {
+          await openOrderInEditor(reloaded);
+          showJobTicketSavedToast(savedOrderId);
+        } catch (reloadErr) {
+          console.error('Post-save in-place reload failed; doing full reload instead:', reloadErr);
+          window.location.href = `job-ticket.html?order=${encodeURIComponent(savedOrderId)}&saved=1`;
+        }
       } else {
         window.location.href = `job-ticket.html?order=${encodeURIComponent(savedOrderId)}&saved=1`;
       }
