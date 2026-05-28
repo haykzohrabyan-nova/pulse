@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-cfg1"></script>
+  <script src="supabase-client.js?v=20260528-cfg2"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -1044,6 +1044,7 @@ document.getElementById('page-styles').textContent = `
   .jt-note-info { background:#e0edff; color:#1d4ed8; }
   .jt-note-critical { background:#fde8e8; color:#b91c1c; }
   .jt-note-instructions { background:#fef3cd; color:#92600a; }
+  .jt-note-custom { background:#f0fdf4; color:#166534; }
   .form-row { margin-bottom: 12px; }
   .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -1858,6 +1859,7 @@ let _jtCatalogMaterials = null; // from catalogMaterials
 let _jtAppContainers    = null; // from catalogAppContainers (admin-configurable)
 let _jtRushConfig       = null; // from pulseRushConfig (admin-configurable)
 let _jtLeadTimes        = null; // from pulseLeadTimes (admin-configurable)
+let _jtNoteTypes        = null; // from pulseNoteTypes (admin-configurable)
 
 function _getRushConfig() {
   if (_jtRushConfig) return _jtRushConfig;
@@ -1916,18 +1918,27 @@ async function loadJtProductCatalog() {
     const loaded = Array.isArray(conCfg?.value) ? conCfg.value : (Array.isArray(conCfg) ? conCfg : []);
     _jtAppContainers = loaded.length ? loaded : null;
 
-    // Load rush config and lead times from DB (non-critical — fall back to defaults)
+    // Load rush config, lead times and note types from DB (non-critical — fall back to defaults)
     try {
-      const [rushCfg, ltCfg] = await Promise.all([
+      const [rushCfg, ltCfg, ntCfg] = await Promise.all([
         getConfig('pulseRushConfig'),
         getConfig('pulseLeadTimes'),
+        getConfig('pulseNoteTypes'),
       ]);
       const rc = rushCfg?.value || rushCfg;
-      if (rc && typeof rc === 'object') _jtRushConfig = rc;
+      if (rc && typeof rc === 'object') {
+        _jtRushConfig = rc;
+        if (typeof setPulseRushConfig === 'function') setPulseRushConfig(rc);
+      }
       const lt = ltCfg?.value || ltCfg;
       if (lt && typeof lt === 'object' && !Array.isArray(lt)) {
         _jtLeadTimes = lt;
         if (typeof setPulseLeadTimes === 'function') setPulseLeadTimes(lt);
+      }
+      const nt = ntCfg?.value || ntCfg;
+      if (Array.isArray(nt) && nt.length > 0) {
+        _jtNoteTypes = nt;
+        renderNoteTypeOptions(_jtNoteTypes);
       }
     } catch (_) {}
   } catch (_) {
@@ -2646,19 +2657,46 @@ function autoExpandNotes(el) {
 }
 
 // P2-D: Update specialNotes textarea border/bg to reflect note type
+const _NOTE_TYPE_META = {
+  'INFO':         { icon: 'ℹ️',  cssClass: 'jt-note-info',         border: '#bfdbfe', bg: '#f0f7ff', placeholder: 'Notes for production and prepress…' },
+  'CRITICAL':     { icon: '🚨', cssClass: 'jt-note-critical',     border: '#fca5a5', bg: '#fff5f5', placeholder: 'Critical notes for production and prepress…' },
+  'INSTRUCTIONS': { icon: '📋', cssClass: 'jt-note-instructions', border: '#fcd34d', bg: '#fffbeb', placeholder: 'Instructions for production and prepress…' },
+};
+const _NOTE_TYPE_DEFAULT_META = { icon: '📝', cssClass: 'jt-note-custom', border: '#d1d5db', bg: '#f9fafb', placeholder: 'Notes for production and prepress…' };
+
+function _noteTypeMeta(type) {
+  return _NOTE_TYPE_META[type?.toUpperCase()] || { ..._NOTE_TYPE_DEFAULT_META };
+}
+
+// Render note type radio buttons from a list of type strings (e.g. ['INFO','CRITICAL','INSTRUCTIONS'])
+function renderNoteTypeOptions(types) {
+  const row = document.querySelector('.jt-note-type-row');
+  if (!row) return;
+  if (!Array.isArray(types) || types.length === 0) return;
+
+  const currentVal = document.querySelector('input[name="noteType"]:checked')?.value || types[0];
+  row.innerHTML = types.map((t, i) => {
+    const meta = _noteTypeMeta(t);
+    const label = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+    const checked = (t === currentVal || (i === 0 && !types.includes(currentVal))) ? 'checked' : '';
+    return `
+      <label class="jt-note-type-option">
+        <input type="radio" name="noteType" value="${t}" ${checked} onchange="updateNoteTypeStyle()">
+        <span class="jt-note-type-pill ${meta.cssClass}">${meta.icon} ${label}</span>
+      </label>`;
+  }).join('');
+
+  updateNoteTypeStyle();
+}
+
 function updateNoteTypeStyle() {
   const val = document.querySelector('input[name="noteType"]:checked')?.value || 'INFO';
   const ta = document.getElementById('specialNotes');
   if (!ta) return;
-  const styles = {
-    INFO:         { border: '#bfdbfe', bg: '#f0f7ff', placeholder: 'Notes for production and prepress…' },
-    CRITICAL:     { border: '#fca5a5', bg: '#fff5f5', placeholder: 'Critical notes for production and prepress…' },
-    INSTRUCTIONS: { border: '#fcd34d', bg: '#fffbeb', placeholder: 'Instructions for production and prepress…' },
-  };
-  const s = styles[val] || styles.INFO;
-  ta.style.borderColor = s.border;
-  ta.style.background = s.bg;
-  ta.placeholder = s.placeholder;
+  const meta = _noteTypeMeta(val);
+  ta.style.borderColor = meta.border;
+  ta.style.background  = meta.bg;
+  ta.placeholder = meta.placeholder;
 }
 
 function updateFrameSheetLabels() {

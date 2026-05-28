@@ -918,6 +918,16 @@ let _pulseLeadTimesOverride = null;
 function setPulseLeadTimes(lt) { _pulseLeadTimesOverride = lt; }
 function getPulseLeadTimes() { return _pulseLeadTimesOverride || LEAD_TIMES; }
 
+// ── Rush Config Override ─────────────────────────────────────
+let _pulseRushConfigOverride = null;
+function setPulseRushConfig(cfg) { _pulseRushConfigOverride = cfg; }
+function getPulseRushConfig() { return _pulseRushConfigOverride; }
+function _rushApproverLabel() {
+  const approvers = _pulseRushConfigOverride?.approvers;
+  if (!Array.isArray(approvers) || approvers.length === 0) return 'Supervisor';
+  return approvers.map(a => a.name).filter(Boolean).join(' or ');
+}
+
 const LEAD_TIMES = {
   'Labels (Roll)':        { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
   'Labels (Sheet)':       { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
@@ -973,16 +983,31 @@ function checkDueDateRush(productType, quantity, dueDate) {
     return { isRush: true, isPast: true, message: 'Due date cannot be in the past.' };
   }
 
+  const businessDaysBetween = countBusinessDays(today, dueDateObj);
+  const approverLabel = _rushApproverLabel();
+
+  // Global threshold check — any order due within N business days is rush
+  const rushCfg = _pulseRushConfigOverride;
+  const thresholdDays = rushCfg?.thresholdDays ?? 0;
+  if (thresholdDays > 0 && businessDaysBetween < thresholdDays) {
+    return {
+      isRush: true,
+      isPast: false,
+      message: `Rush order: due in ${businessDaysBetween} business day(s), under the ${thresholdDays}-day rush threshold. Requires approval from ${approverLabel}.`,
+      standardLeadTime: `${thresholdDays} business days (rush threshold)`
+    };
+  }
+
+  // Product-specific lead time check
   const minDate = getMinDueDate(productType, quantity);
   minDate.setHours(0,0,0,0);
   const lt = getPulseLeadTimes()[productType];
 
   if (dueDateObj < minDate) {
-    const businessDaysBetween = countBusinessDays(today, dueDateObj);
     return {
       isRush: true,
       isPast: false,
-      message: `Rush order: ${businessDaysBetween} business days. Standard is ${lt ? lt.label : '3-5 business days'}. Requires supervisor approval (Tigran).`,
+      message: `Rush order: ${businessDaysBetween} business day(s). Standard lead time is ${lt ? (lt.label || `${lt.days?.[0] ?? lt.minDays ?? '3'}–${lt.days?.[1] ?? lt.maxDays ?? '5'} days`) : '3–5 business days'}. Requires approval from ${approverLabel}.`,
       minDate: minDate.toISOString().split('T')[0],
       standardLeadTime: lt?.label || '3-5 business days'
     };
