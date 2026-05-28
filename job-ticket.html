@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-owner1"></script>
+  <script src="supabase-client.js?v=20260528-owner2"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -2115,6 +2115,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('pulse:auth-ready', async () => {
     await refreshJtCatalogUi();
     await renderQueuePane();
+    // Re-run after auth so role/name are known — lock or unlock the AM field
+    await populateAccountManagers();
   });
 
   const params = new URLSearchParams(window.location.search);
@@ -2534,9 +2536,12 @@ async function populateAccountManagers() {
   const sel = document.getElementById('accountManager');
   if (!sel) return;
   const currentVal = sel.value;
-  sel.innerHTML = '<option value="">— Select Rep —</option>';
 
-  // Prefer admin IndexedDB personnel with account-manager role
+  const currentRole = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
+  const currentName = typeof getCurrentName === 'function' ? getCurrentName() : null;
+  const isPrivileged = currentRole && ['admin', 'supervisor', 'production-manager', 'production_manager'].includes(currentRole);
+
+  // Build the list of account managers from Admin Personnel DB
   let names = [];
   try {
     const all = await getAllPersonnel();
@@ -2546,17 +2551,40 @@ async function populateAccountManagers() {
       .sort((a, b) => a.localeCompare(b));
   } catch (_) {}
 
-  if (names.length) {
-    const grp = document.createElement('optgroup');
-    grp.label = 'Account Managers';
-    names.forEach(name => {
-      const o = document.createElement('option');
-      o.value = name; o.textContent = name;
-      grp.appendChild(o);
-    });
-    sel.appendChild(grp);
+  if (isPrivileged) {
+    // Admins / Supervisors: full dropdown, can pick any account manager
+    sel.innerHTML = '<option value="">— Select Rep —</option>';
+    if (names.length) {
+      const grp = document.createElement('optgroup');
+      grp.label = 'Account Managers';
+      names.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        grp.appendChild(o);
+      });
+      sel.appendChild(grp);
+    }
+    sel.disabled = false;
+    sel.style.pointerEvents = '';
+    sel.style.background = '';
+    sel.style.color = '';
+    sel.closest('.field')?.querySelector('label')?.removeAttribute('title');
+    if (currentVal) sel.value = currentVal;
+  } else {
+    // Account managers: auto-set to their own name, field is read-only
+    const autoName = currentName || currentVal || '';
+    sel.innerHTML = '';
+    const o = document.createElement('option');
+    o.value = autoName; o.textContent = autoName || '— Not set —';
+    sel.appendChild(o);
+    sel.value = autoName;
+    sel.disabled = true;
+    sel.style.pointerEvents = 'none';
+    sel.style.background = 'var(--surface, #f8fafc)';
+    sel.style.color = 'var(--text-secondary, #64748b)';
+    const lbl = sel.closest('.field')?.querySelector('label');
+    if (lbl) lbl.title = 'Auto-set to your name. Only supervisors and admins can change this.';
   }
-  if (currentVal) sel.value = currentVal;
 }
 
 // ─────────────────────────────────────────────────────────────
