@@ -36,7 +36,6 @@
     <button class="tab-btn" data-tab="product-workflows" onclick="switchTab('product-workflows')">🔀 Product Workflow Configuration</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
     <button class="tab-btn" data-tab="qa-rules" onclick="switchTab('qa-rules')">✅ QA Rules</button>
-    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="tab-btn" data-tab="configuration" onclick="switchTab('configuration')">⚙️ Configuration</button>
     <button class="tab-btn" data-tab="backup" onclick="switchTab('backup')">💾 Export / Import</button>
   </div>
@@ -359,43 +358,6 @@
       </div>
     </div>
 
-<div class="tab-pane" id="tab-settings">
-      <div class="pane-header">
-        <h2>System Settings</h2>
-      </div>
-      <div class="settings-grid">
-        <div class="card settings-card">
-          <h3 class="settings-section-title">Application Department Capacity</h3>
-          <div class="field-row field-row-3">
-            <div class="field">
-              <label>People per Shift</label>
-              <input type="number" id="appDeptPeople" min="1" value="3" onchange="saveSettingDebounced()">
-            </div>
-            <div class="field">
-              <label>Units per Person per Day</label>
-              <input type="number" id="appDeptUnitsPerPerson" min="1" value="2000" onchange="saveSettingDebounced()">
-            </div>
-            <div class="field">
-              <label>Total Capacity</label>
-              <input type="number" id="appDeptTotal" readonly style="background:#f5f6fa;">
-            </div>
-          </div>
-        </div>
-        <div class="card settings-card">
-          <h3 class="settings-section-title">Production Defaults</h3>
-          <div class="field" style="margin-bottom:12px;">
-            <label>Default Facility</label>
-            <select id="defaultFacility" onchange="saveSettingDebounced()">
-              <option value="">— Configure Organisation facilities —</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Default QC Inspector</label>
-            <input type="text" id="defaultQCInspector" placeholder="Name" onchange="saveSettingDebounced()">
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- ══════════════════════════════════════ PRODUCTS CATALOGUE ══ -->
     <div class="tab-pane" id="tab-products">
@@ -1463,7 +1425,6 @@ async function loadTab(tab) {
     refreshQuoteAdminFrame();
   }
   else if (tab === 'knowledge') await loadKnowledge();
-  else if (tab === 'settings') await loadSettings();
   else if (tab === 'qa-rules') renderQARules().catch(console.error);
   else if (tab === 'roles') await renderRoles();
   else if (tab === 'backup') await loadBackupTab();
