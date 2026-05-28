@@ -528,7 +528,8 @@
         </select>
       </div>
       <div class="field"><label>Facility *</label>
-        <select id="pFacility"></select>
+        <div id="pFacilityCheckboxes" style="display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;min-height:38px;"></div>
+        <input type="hidden" id="pFacility">
       </div>
       <div class="field">
         <label>User ID *</label>
@@ -2080,14 +2081,24 @@ function _findPersonnelRecord(all, id) {
 
 function _personnelFacilityLabel(facility) {
   if (!facility) return '—';
+  if (facility === 'Both Facilities' || facility === 'All Facilities') return 'Both Facilities';
+  // comma-separated multi: shorten each part if possible
+  if (facility.includes(',')) {
+    return facility.split(',').map(s => {
+      const t = s.trim();
+      if (typeof getPulseFacilityLabel === 'function') { const l = getPulseFacilityLabel(t); if (l && l !== t) return l; }
+      // Short names: strip " — " suffix for compactness
+      return t.split('—')[0].trim() || t;
+    }).join(' + ');
+  }
   if (typeof getPulseFacilityLabel === 'function') return getPulseFacilityLabel(facility);
   if (typeof FACILITIES !== 'undefined' && FACILITIES[facility]?.name) return FACILITIES[facility].name;
   return facility;
 }
 
 function _personnelFacilityForModal(person) {
-  if (!person?.facility) return '';
-  return _personnelFacilityLabel(person.facility);
+  // Return the raw stored value — populateFacilityDropdown will parse it
+  return person?.facility || '';
 }
 function personnelRoleLabel(role) {
   if (!role) return '—';
@@ -2161,9 +2172,24 @@ async function _waitForSupabaseClient(maxMs = 8000) {
   return typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 }
 
+// Parse stored facility string into an array of selected facility names
+function _parseFacilityValue(raw) {
+  if (!raw) return [];
+  if (raw === 'Both Facilities' || raw === 'All Facilities') return ['__all__'];
+  // comma-separated multi-value (new format)
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// Convert selected names array back to stored string
+function _joinFacilityValue(names, allEntries) {
+  if (!names.length) return '';
+  if (names.length === allEntries.length || names.includes('__all__')) return 'Both Facilities';
+  return names.join(', ');
+}
+
 function populateFacilityDropdown(selectedSlug) {
-  const sel = document.getElementById('pFacility');
-  if (!sel) return;
+  const container = document.getElementById('pFacilityCheckboxes');
+  if (!container) return;
   let entries = [];
 
   // 1. Org local store — synchronous, instant
@@ -2184,18 +2210,17 @@ function populateFacilityDropdown(selectedSlug) {
     entries = Object.entries(FACILITIES).map(([slug, info]) => ({ slug, name: info.name }));
   }
 
-  sel.innerHTML = '<option value="">— Select Facility —</option>';
-  entries.forEach(({ name }) => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    sel.appendChild(opt);
-  });
-  const bothOpt = document.createElement('option');
-  bothOpt.value = 'Both Facilities';
-  bothOpt.textContent = 'Both Facilities';
-  sel.appendChild(bothOpt);
-  sel.value = selectedSlug || '';
+  const selected = _parseFacilityValue(selectedSlug);
+  const allSelected = selected.includes('__all__');
+
+  container.innerHTML = entries.map(({ name }, idx) => {
+    const checked = allSelected || selected.some(s => s === name || s.includes(name) || name.includes(s));
+    return `<label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;font-size:13px;">
+      <input type="checkbox" data-facility="${name}" ${checked ? 'checked' : ''}
+        style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;">
+      ${name}
+    </label>`;
+  }).join('');
 }
 
 async function openPersonnelModal(person) {
@@ -2228,11 +2253,14 @@ async function savePersonnel() {
   if (!name) { alert('Name is required.'); return; }
   const role = document.getElementById('pRole').value;
   if (!role) { alert('Role is required.'); return; }
-  const facilityInput = document.getElementById('pFacility').value;
-  const facilitySlug = typeof pulseResolveFacilitySlug === 'function'
-    ? pulseResolveFacilitySlug(facilityInput)
-    : facilityInput;
-  if (!facilitySlug) { alert('Facility is required.'); return; }
+  // Read multi-select checkboxes
+  const checkedBoxes = [...document.querySelectorAll('#pFacilityCheckboxes input[type=checkbox]:checked')];
+  const allBoxes     = [...document.querySelectorAll('#pFacilityCheckboxes input[type=checkbox]')];
+  if (checkedBoxes.length === 0) { alert('Please select at least one facility.'); return; }
+  const selectedNames = checkedBoxes.map(cb => cb.dataset.facility);
+  const facilitySlug  = checkedBoxes.length === allBoxes.length
+    ? 'Both Facilities'
+    : selectedNames.join(', ');
   const userId = document.getElementById('pUserId').value.trim();
   if (!userId) { alert('User ID is required.'); return; }
   const idRaw = document.getElementById('personnelId').value.trim();
