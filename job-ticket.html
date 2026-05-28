@@ -5385,40 +5385,23 @@ function onQueueRepChange() {
   renderQueuePane();
 }
 
-// Load personnel who have access to the job-ticket page (based on role permissions)
+// Load account managers that exist in Supabase (profiles) for the owner filter.
+// Only real profiles rows are used — legacy config-only entries and free-text
+// order values are excluded so junk names never appear in the dropdown.
+function _jtIsProfileUuid(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id || ''));
+}
 async function _loadJtOwnerPersonnel() {
   if (_jtOwnerPersonnel !== null) return _jtOwnerPersonnel;
   try {
     const allPeople = (typeof getAllPersonnel === 'function') ? await getAllPersonnel() : [];
-
-    // Determine which roles have access to 'job-ticket' page
-    // Check live ROLE_CONFIG first, then DB rolePermissions
-    const rolesWithAccess = new Set();
-    if (typeof ROLE_CONFIG !== 'undefined') {
-      Object.entries(ROLE_CONFIG).forEach(([role, cfg]) => {
-        const pages = cfg.pages || [];
-        if (pages === 'all' || pages.includes('all') || pages.includes('job-ticket')) {
-          rolesWithAccess.add(role);
-        }
-      });
-    }
-    // Also check DB-saved overrides
-    try {
-      const cfg = await getConfig('rolePermissions');
-      const overrides = cfg?.value || cfg;
-      if (overrides && typeof overrides === 'object') {
-        Object.entries(overrides).forEach(([role, ov]) => {
-          const pages = ov.pages || [];
-          if (Array.isArray(pages) && pages.includes('job-ticket')) rolesWithAccess.add(role);
-        });
-      }
-    } catch (_) {}
-
-    // Filter active personnel whose role has job-ticket access
-    _jtOwnerPersonnel = allPeople.filter(p =>
-      p.active !== false &&
-      (rolesWithAccess.has(p.role) || rolesWithAccess.has((p.role || '').replace(/_/g, '-')))
-    ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    _jtOwnerPersonnel = allPeople.filter(p => {
+      if (!p || p.active === false || !p.name) return false;
+      // Must be backed by a Supabase profiles row (UUID id), not config/order data.
+      if (!_jtIsProfileUuid(p._profileId || p.id)) return false;
+      const role = String(p.role || '').replace(/_/g, '-');
+      return role === 'account-manager';
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   } catch (_) {
     _jtOwnerPersonnel = [];
   }
@@ -5519,11 +5502,9 @@ async function renderQueuePane() {
 
       // Build owner list from Admin Personnel (roles with job-ticket access) + order data as fallback
       _loadJtOwnerPersonnel().then(dbPeople => {
-        const fromDb = dbPeople.map(p => p.name).filter(Boolean);
-        const fromOrders = allOrders.map(o => o.accountManager).filter(Boolean);
-        // Exclude the current user — "My Orders Only" already covers them, so
-        // listing their own name again is a confusing duplicate.
-        const combined = [...new Set([...fromDb, ...fromOrders])]
+        // Only account managers from Supabase profiles. Exclude the current
+        // user — "My Orders Only" already covers them.
+        const combined = [...new Set(dbPeople.map(p => p.name).filter(Boolean))]
           .filter(name => name && name !== currentName)
           .sort((a, b) => a.localeCompare(b));
 
