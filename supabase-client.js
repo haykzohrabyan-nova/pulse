@@ -579,6 +579,9 @@
         : '';
       return `You do not have permission to ${verb} this order.${roleLine}${orderHint} Apply migrations 034 and 038 on Supabase if you should have access.`;
     }
+    if (/invalid input syntax for type uuid/i.test(msg)) {
+      return 'Workflow step save failed due to an invalid step id. Refresh the page and save again.';
+    }
     if (/duplicate key|order_workflow_steps_order_id_step_index_key/i.test(msg)) {
       return 'Workflow step save conflict — refresh the page and try again. If it keeps failing, ask an admin to run Supabase migration 040_order_workflow_steps_delete.sql.';
     }
@@ -588,13 +591,17 @@
     return msg;
   }
 
+  function _isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
   function _workflowStepPayload(step, idx) {
     return {
       step_index:    step.stepIndex != null ? step.stepIndex : idx,
       machine:       step.machine,
       operation:     step.operation || null,
       status:        step.status || 'pending',
-      operator_id:   step.operator_id || null,
+      operator_id:   _isUuid(step.operator_id) ? step.operator_id : null,
       operator_name: step.assignedTo || null,
       started_at:    step.startedAt || null,
       completed_at:  step.completedAt || null,
@@ -615,7 +622,8 @@
     for (let idx = 0; idx < workflowSteps.length; idx++) {
       const step = workflowSteps[idx];
       const payload = _workflowStepPayload(step, idx);
-      let rowId = step.id;
+      // UI uses generateStepId() (step_123_abc); DB id column is UUID only.
+      let rowId = _isUuid(step.id) ? step.id : null;
       if (!rowId && existingByIndex.has(payload.step_index)) {
         rowId = existingByIndex.get(payload.step_index);
       }
@@ -988,6 +996,7 @@
       return pulseResolveFacilitySlug(facilityInput);
     }
     const raw = String(facilityInput || '').trim();
+    if (raw === 'both' || raw === 'Both Facilities' || raw === 'All Facilities') return 'both';
     if (raw === '16th-street' || raw === 'boyd-street') return raw;
     return null;
   }

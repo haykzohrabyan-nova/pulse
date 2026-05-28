@@ -5295,9 +5295,18 @@ function getPulseFacilityLabel(slug) {
 /** Map Admin Personnel facility dropdown label → DB slug (16th-street | boyd-street). */
 function pulseResolveFacilitySlug(input) {
   const raw = String(input || '').trim();
-  if (!raw || raw === 'Both Facilities') return null;
+  if (!raw) return null;
+  // Multi / both
+  if (raw === 'both' || raw === 'Both Facilities' || raw === 'All Facilities') return 'both';
+  // Already a valid slug
   if (raw === '16th-street' || raw === 'boyd-street') return raw;
-  const fromList = getPulseFacilityList().find(f => f.name === raw);
+  // Comma-separated multi → 'both' if multiple slugs
+  if (raw.includes(',')) {
+    const slugs = raw.split(',').map(s => pulseResolveFacilitySlug(s.trim())).filter(Boolean);
+    if (slugs.length > 1) return 'both';
+    return slugs[0] || null;
+  }
+  const fromList = getPulseFacilityList().find(f => f.name === raw || f.slug === raw);
   if (fromList?.slug) return fromList.slug;
   if (typeof FACILITIES !== 'undefined') {
     for (const [slug, info] of Object.entries(FACILITIES)) {
