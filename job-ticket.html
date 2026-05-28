@@ -567,7 +567,7 @@
     </select>
   </div>
   <div id="queueRepFilterRow" class="jt-queue-filters-extra" style="display:none;">
-    <select id="queueRepFilter" onchange="renderQueuePane()" title="Filter by ticket owner / account manager">
+    <select id="queueRepFilter" onchange="onQueueRepChange()" title="Filter by ticket owner / account manager">
       <option value="all">👥 All Owners</option>
       <option value="mine">👤 My Orders Only</option>
     </select>
@@ -5355,6 +5355,18 @@ let _queueStatusInitialized = false;
 let _queueRepInitialized = false;
 let _jtOwnerPersonnel = null; // cached list of personnel who have job-ticket page access
 
+const _QUEUE_REP_KEY = 'pulse_jt_queue_rep';
+function _getSavedQueueRep() {
+  try { return sessionStorage.getItem(_QUEUE_REP_KEY) || 'all'; } catch (_) { return 'all'; }
+}
+// Persist the owner filter so it survives navigation between tickets (each
+// click reloads the page, which otherwise reset the filter back to "All Owners").
+function onQueueRepChange() {
+  const sel = document.getElementById('queueRepFilter');
+  try { sessionStorage.setItem(_QUEUE_REP_KEY, sel?.value || 'all'); } catch (_) {}
+  renderQueuePane();
+}
+
 // Load personnel who have access to the job-ticket page (based on role permissions)
 async function _loadJtOwnerPersonnel() {
   if (_jtOwnerPersonnel !== null) return _jtOwnerPersonnel;
@@ -5475,35 +5487,42 @@ async function renderQueuePane() {
     repFilterRow.style.display = 'block';
 
     if (!_queueRepInitialized) {
+      // Selection persists across ticket navigations (each click is a full reload).
+      const savedRep = _getSavedQueueRep();
+
+      // Render base options immediately so 'all'/'mine' restore without waiting.
+      if (!repFilterSelect.options.length) {
+        repFilterSelect.innerHTML = `
+          <option value="all">👥 All Owners</option>
+          <option value="mine">👤 My Orders Only</option>
+        `;
+        if (savedRep === 'mine' || savedRep === 'all') repFilterSelect.value = savedRep;
+      }
+
       // Build owner list from Admin Personnel (roles with job-ticket access) + order data as fallback
       _loadJtOwnerPersonnel().then(dbPeople => {
         const fromDb = dbPeople.map(p => p.name).filter(Boolean);
         const fromOrders = allOrders.map(o => o.accountManager).filter(Boolean);
-        const combined = [...new Set([...fromDb, ...fromOrders])].sort((a, b) => a.localeCompare(b));
+        // Exclude the current user — "My Orders Only" already covers them, so
+        // listing their own name again is a confusing duplicate.
+        const combined = [...new Set([...fromDb, ...fromOrders])]
+          .filter(name => name && name !== currentName)
+          .sort((a, b) => a.localeCompare(b));
 
-        const prevVal = repFilterSelect.value;
         repFilterSelect.innerHTML = `
           <option value="all">👥 All Owners</option>
           <option value="mine">👤 My Orders Only</option>
           ${combined.map(name => `<option value="${name.replace(/"/g, '&quot;')}">${name}</option>`).join('')}
         `;
-        // Restore previous selection if valid, otherwise default to 'all'
-        if (prevVal && (prevVal === 'all' || prevVal === 'mine' || combined.includes(prevVal))) {
-          repFilterSelect.value = prevVal;
+        // Restore saved selection if still valid, otherwise default to 'all'
+        if (savedRep === 'all' || savedRep === 'mine' || combined.includes(savedRep)) {
+          repFilterSelect.value = savedRep;
         } else {
           repFilterSelect.value = 'all';
         }
         _queueRepInitialized = true;
         renderQueuePane(); // re-render with filter applied
       }).catch(() => { _queueRepInitialized = true; });
-
-      // Render immediately with 'all' while loading
-      if (!repFilterSelect.options.length) {
-        repFilterSelect.innerHTML = `
-          <option value="all">👥 All Owners</option>
-          <option value="mine">👤 My Orders Only</option>
-        `;
-      }
     }
   }
 
