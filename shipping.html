@@ -2923,11 +2923,17 @@
 
   function _buildShippingSkuSection(o) {
     const skus = _getOrderSkus(o);
-    if (!skus.length) return '';
+    // Single-artwork jobs (no SKU versions) still carry order-level artwork
+    // (artworkFiles + white/UV/foil layers) — show those too instead of bailing.
+    const globalFiles = typeof collectOrderArtworkFiles === 'function' ? collectOrderArtworkFiles(o) : [];
+    if (!skus.length && !globalFiles.length) return '';
 
-    const title = skus.length === 1 ? 'SKU' : `SKU Versions (${skus.length})`;
+    const title = skus.length > 1 ? `SKU Versions (${skus.length})`
+                : skus.length === 1 ? 'SKU'
+                : 'Artwork';
     let inner = typeof renderOrderSkuSection === 'function' ? (renderOrderSkuSection(o) || '') : '';
-    if (!inner) inner = _buildShippingSkuTable(skus);
+    if (!inner) inner = skus.length ? _buildShippingSkuTable(skus) : '';
+    if (!inner) return '';
 
     return `<div class="td-section td-section-skus">
       <div class="td-section-hdr">${title}</div>
