@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260427-PRI240"></script>
+  <script src="supabase-client.js?v=20260527-ppowner"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -347,6 +347,7 @@ function renderQueue() {
       <div class="queue-item-meta">${order.customerName || order.customer || '—'}</div>
       <div class="queue-item-meta">${order.productType || '—'} · ${(order.quantity || 0).toLocaleString()} pcs</div>
       <div class="queue-item-meta">Rep: ${order.accountManager || '—'}${order.isReprint ? ` · 🔁 from #${order.reprintOfOrderId}` : ''}</div>
+      <div class="queue-item-meta" style="color:var(--text-muted);font-size:11px;">🕐 ${order.createdAt ? (typeof formatDateTime === 'function' ? formatDateTime(order.createdAt) : new Date(order.createdAt).toLocaleString()) : '—'}</div>
       ${order.prepressIssueComment ? `<div class="queue-item-issue">⚠ ${order.prepressIssueAt ? `[${formatDateTime(order.prepressIssueAt)}] ` : ''}${order.prepressIssueComment}</div>` : ''}
     </div>
   `).join('');
@@ -743,7 +744,19 @@ function renderDetail() {
     : '';
   // (Open Job Ticket link removed per David's request)
 
+  const _createdStr = order.createdAt
+    ? (typeof formatDateTime === 'function' ? formatDateTime(order.createdAt) : new Date(order.createdAt).toLocaleString())
+    : '—';
   document.getElementById('detailInfo').innerHTML = [
+    `<div class="detail-line detail-line-owner">
+       <span class="detail-label">🧑 Created By</span>
+       <span style="font-weight:600;">${order.accountManager || '—'}</span>
+     </div>`,
+    `<div class="detail-line detail-line-created">
+       <span class="detail-label">📅 Created</span>
+       <span>${_createdStr}</span>
+     </div>`,
+    `<div style="border-top:1px solid var(--border);margin:8px 0;"></div>`,
     detailLine('Quantity', `${(order.quantity || 0).toLocaleString()} pcs`),
     detailLine(order.printType === 'Roll' ? 'Frames' : 'Sheets', order.sheetCount ? order.sheetCount.toLocaleString() : '—'),
     detailLine('Material', order.material),
