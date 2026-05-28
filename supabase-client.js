@@ -2087,6 +2087,20 @@
     return data ? _mapProductWorkflowRow(data) : null;
   }
 
+  // Fallback: look up by product name when the catalog ID has drifted
+  // (happens when the catalog was reset and new random IDs were generated)
+  async function _getProductWorkflowByName(productName) {
+    if (!productName) return null;
+    const supa = await _getClient();
+    const { data, error } = await supa
+      .from('product_workflows')
+      .select('*')
+      .ilike('product_name', productName)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? _mapProductWorkflowRow(data) : null;
+  }
+
   async function _upsertProductWorkflow(wf) {
     const supa = await _getClient();
     const row = _productWorkflowToRow(wf);
@@ -2170,6 +2184,11 @@
   window.getProductWorkflowByCatalogId = async function (catalogId) {
     try { return await _getProductWorkflowByCatalogId(catalogId); }
     catch (e) { console.error('[Pulse/Supabase] getProductWorkflowByCatalogId:', e); return null; }
+  };
+
+  window.getProductWorkflowByName = async function (productName) {
+    try { return await _getProductWorkflowByName(productName); }
+    catch (e) { console.error('[Pulse/Supabase] getProductWorkflowByName:', e); return null; }
   };
 
   window.upsertProductWorkflow = async function (wf) {

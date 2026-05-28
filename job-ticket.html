@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-wfsync"></script>
+  <script src="supabase-client.js?v=20260528-wfname1"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -4246,10 +4246,21 @@ function getResolvedWorkflowMachineNames() {
 
 async function loadProductWorkflowConfig(catalogProd) {
   const productName = catalogProd?.name || document.getElementById('productType')?.value || '';
+
+  // 1. Primary: look up by catalog product ID (exact match)
   if (catalogProd?.id && typeof getProductWorkflowByCatalogId === 'function') {
     const row = await getProductWorkflowByCatalogId(catalogProd.id);
     if (row?.steps?.length) return row;
   }
+
+  // 2. Fallback: look up by product name — handles the case where the catalog
+  //    was reset and new random IDs were generated, breaking the ID-based link.
+  if (productName && typeof getProductWorkflowByName === 'function') {
+    const rowByName = await getProductWorkflowByName(productName);
+    if (rowByName?.steps?.length) return rowByName;
+  }
+
+  // 3. Last resort: built-in default template
   if (typeof getDefaultProductWorkflowForCatalogName === 'function') {
     const def = getDefaultProductWorkflowForCatalogName(productName);
     return { steps: def.steps || [], primaryFacility: def.primaryFacility || '16th' };
