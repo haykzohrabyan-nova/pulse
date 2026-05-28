@@ -4251,7 +4251,7 @@ const PULSE_MIGRATION_ADMIN_TABS = [
 ];
 const PULSE_ADMIN_BACKUP_TABS = [...PULSE_MIGRATION_ADMIN_TABS];
 const PULSE_ADMIN_BACKUP_EXCLUDED_TABS = [
-  'payment', 'crm-quote', 'purchase-orders', 'knowledge', 'qa-rules', 'settings',
+  'purchase-orders', 'knowledge', 'qa-rules', 'settings',
 ];
 
 /** Production IndexedDB stores in backup (no purchase_orders). */
@@ -4273,7 +4273,7 @@ const PULSE_BACKUP_SKIP_LS_KEYS = new Set([
   'pulse_qa_rules',
 ]);
 
-/** Quote & Payment admin tabs — excluded from full backup per product policy. */
+/** Legacy quote/payment localStorage keys — skip on backup (module removed). */
 function pulseBackupLocalStorageExcluded(key) {
   if (!key || !key.startsWith('pulse_')) return true;
   if (PULSE_BACKUP_SKIP_LS_KEYS.has(key)) return true;
