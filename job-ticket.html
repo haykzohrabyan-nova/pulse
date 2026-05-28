@@ -5515,34 +5515,41 @@ async function renderQueuePane() {
     // Show owner filter for any role that can access the job-ticket page
     repFilterRow.style.display = 'block';
 
+    // "My Orders Only" only makes sense for account managers (they own tickets).
+    // Admin / supervisor / production / prepress etc. always default to seeing
+    // every owner's tickets, so a stale saved 'mine' must never hide their queue.
+    const ownsOrders = currentRole === 'account-manager';
+    const mineOpt = ownsOrders ? `<option value="mine">👤 My Orders Only</option>` : '';
+
     if (!_queueRepInitialized) {
       // Selection persists across ticket navigations (each click is a full reload).
-      const savedRep = _getSavedQueueRep();
+      let savedRep = _getSavedQueueRep();
+      if (!ownsOrders && savedRep === 'mine') savedRep = 'all';
 
       // Render base options immediately so 'all'/'mine' restore without waiting.
       if (!repFilterSelect.options.length) {
         repFilterSelect.innerHTML = `
           <option value="all">👥 All Owners</option>
-          <option value="mine">👤 My Orders Only</option>
+          ${mineOpt}
         `;
         if (savedRep === 'mine' || savedRep === 'all') repFilterSelect.value = savedRep;
       }
 
       // Build owner list from Admin Personnel (roles with job-ticket access) + order data as fallback
       _loadJtOwnerPersonnel().then(dbPeople => {
-        // Only account managers from Supabase profiles. Exclude the current
-        // user — "My Orders Only" already covers them.
+        // Account managers from Admin → Personnel. Exclude the current user —
+        // for AMs "My Orders Only" already covers them.
         const combined = [...new Set(dbPeople.map(p => p.name).filter(Boolean))]
           .filter(name => name && name !== currentName)
           .sort((a, b) => a.localeCompare(b));
 
         repFilterSelect.innerHTML = `
           <option value="all">👥 All Owners</option>
-          <option value="mine">👤 My Orders Only</option>
+          ${mineOpt}
           ${combined.map(name => `<option value="${name.replace(/"/g, '&quot;')}">${name}</option>`).join('')}
         `;
         // Restore saved selection if still valid, otherwise default to 'all'
-        if (savedRep === 'all' || savedRep === 'mine' || combined.includes(savedRep)) {
+        if (savedRep === 'all' || (savedRep === 'mine' && ownsOrders) || combined.includes(savedRep)) {
           repFilterSelect.value = savedRep;
         } else {
           repFilterSelect.value = 'all';
@@ -5554,10 +5561,11 @@ async function renderQueuePane() {
   }
 
   const repFilter = repFilterSelect?.value || 'all';
-  // Apply owner filter for all roles
-  if (repFilter === 'mine' && currentName) {
+  // Apply owner filter. "mine" only narrows the queue for account managers;
+  // for any other role it is a no-op so they keep seeing all tickets.
+  if (repFilter === 'mine' && currentName && currentRole === 'account-manager') {
     allOrders = allOrders.filter(o => !o.accountManager || o.accountManager === currentName);
-  } else if (repFilter !== 'all') {
+  } else if (repFilter !== 'all' && repFilter !== 'mine') {
     allOrders = allOrders.filter(o => o.accountManager === repFilter);
   }
 
