@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prepress — Bazaar Print</title>
-  <script src="shared.js?v=20260523-jt-lock"></script>
+  <script src="shared.js?v=20260528-jt-art"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
@@ -705,7 +705,10 @@ async function renderPrepressHistoryPanel() {
 }
 
 function renderDetail() {
-  const order = allOrders.find(o => o.id === selectedOrderId);
+  let order = allOrders.find(o => o.id === selectedOrderId);
+  if (order && typeof hydrateJobTicketOrderMedia === 'function') {
+    order = hydrateJobTicketOrderMedia(order);
+  }
   const empty = document.getElementById('emptyState');
   const wrap = document.getElementById('detailWrap');
   const side = document.getElementById('prepressSide');

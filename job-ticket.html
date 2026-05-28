@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Ticket — Bazaar Print</title>
-  <script src="shared.js?v=20260523-jt-am-lock"></script>
+  <script src="shared.js?v=20260528-jt-art"></script>
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260528-wfstep"></script>
+  <script src="supabase-client.js?v=20260528-jt-art"></script>
   <script src="auth.js?v=20260523-profile-fix"></script>
   <style id="page-styles"></style>
 </head>
@@ -3811,9 +3811,13 @@ function applyEditLock(order) {
   const header = document.querySelector('.jt-header');
   if (container && header) container.insertBefore(banner, header.nextSibling);
 
-  renderJobTicketReadOnlyArtifacts(
-    typeof normalizeJobTicketOrderMedia === 'function' ? normalizeJobTicketOrderMedia(order) : order
-  );
+  const displayOrder = typeof hydrateJobTicketOrderMedia === 'function'
+    ? hydrateJobTicketOrderMedia({ ...order, skus: skuList.length ? skuList : order.skus })
+    : (typeof normalizeJobTicketOrderMedia === 'function' ? normalizeJobTicketOrderMedia(order) : order);
+  if (skuList.length && Array.isArray(displayOrder.skus)) {
+    skuList = jtNormalizeSkuList(displayOrder.skus);
+  }
+  renderJobTicketReadOnlyArtifacts(displayOrder);
   if (skuList.length > 0) renderSKUsReadOnly();
   applyJtFormReadOnlyState(true);
   updateJtHeaderActions(order);

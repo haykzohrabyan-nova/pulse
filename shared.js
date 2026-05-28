@@ -6951,11 +6951,49 @@ function normalizeJobTicketSku(sku) {
   return s;
 }
 
-function normalizeJobTicketOrderMedia(order) {
+/** Copy order-level artwork/layer files onto SKU rows when SKUs lack inline media (Supabase specs). */
+function hydrateJobTicketOrderMedia(order) {
   if (!order || typeof order !== 'object') return order;
   const o = { ...order };
-  if (Array.isArray(o.skus)) o.skus = o.skus.map(normalizeJobTicketSku);
+  const skus = Array.isArray(o.skus) ? o.skus.map(normalizeJobTicketSku) : [];
+  if (!skus.length) {
+    if (Array.isArray(o.artworkFiles)) {
+      o.artworkFiles = o.artworkFiles.map(f => ({ ...f, role: f.role || 'main' }));
+    }
+    return o;
+  }
+
+  const mainFiles = (o.artworkFiles || []).filter(f => f?.dataUrl);
+  const pickMain = (i) => mainFiles[i] || (mainFiles.length === 1 ? mainFiles[0] : null);
+
+  o.skus = skus.map((sku, i) => {
+    const s = { ...sku };
+    const file = pickMain(i);
+    if (!s.artworkDataUrl && file?.dataUrl) {
+      s.artworkDataUrl = file.dataUrl;
+      s.artworkName = s.artworkName || file.name || 'Main artwork';
+      s.artworkType = s.artworkType || file.type || '';
+    }
+    if (!s.whiteDataUrl && o.whiteLayerFile?.dataUrl) {
+      s.whiteDataUrl = o.whiteLayerFile.dataUrl;
+      s.whiteName = s.whiteName || o.whiteLayerFile.name || 'White layer';
+    }
+    if (!s.uvDataUrl && o.uvFile?.dataUrl) {
+      s.uvDataUrl = o.uvFile.dataUrl;
+      s.uvName = s.uvName || o.uvFile.name || 'UV layer';
+    }
+    if (!s.foilDataUrl && o.foilFile?.dataUrl) {
+      s.foilDataUrl = o.foilFile.dataUrl;
+      s.foilName = s.foilName || o.foilFile.name || 'Foil layer';
+    }
+    return s;
+  });
   return o;
+}
+
+function normalizeJobTicketOrderMedia(order) {
+  if (!order || typeof order !== 'object') return order;
+  return hydrateJobTicketOrderMedia(order);
 }
 
 function mergeJobTicketSkuMedia(nextSkus, previousSkus) {
@@ -6987,6 +7025,7 @@ function mergeJobTicketSkuMedia(nextSkus, previousSkus) {
 
 if (typeof window !== 'undefined') {
   window.normalizeJobTicketSku = normalizeJobTicketSku;
+  window.hydrateJobTicketOrderMedia = hydrateJobTicketOrderMedia;
   window.normalizeJobTicketOrderMedia = normalizeJobTicketOrderMedia;
   window.mergeJobTicketSkuMedia = mergeJobTicketSkuMedia;
 }
