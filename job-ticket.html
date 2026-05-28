@@ -2119,6 +2119,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     await populateAccountManagers();
   });
 
+  // Keep the orders queue live (auto-refresh every 10 seconds).
+  startJtQueueAutoRefresh(10000);
+
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
   const parentId = params.get('parent');
@@ -5415,6 +5418,24 @@ function onQueueRepChange() {
   const sel = document.getElementById('queueRepFilter');
   try { sessionStorage.setItem(_QUEUE_REP_KEY, sel?.value || 'all'); } catch (_) {}
   renderQueuePane();
+}
+
+// Live queue: re-pull orders every 10s so new tickets / status changes appear
+// without a manual reload. Skips while the tab is hidden, the queue is
+// collapsed, a refresh is already running, or the user is interacting with a
+// filter/search control (so we never yank the list out from under them).
+let _jtQueuePollTimer = null;
+let _jtQueuePollBusy = false;
+function startJtQueueAutoRefresh(intervalMs = 10000) {
+  if (_jtQueuePollTimer) return;
+  _jtQueuePollTimer = setInterval(async () => {
+    if (document.hidden || _jtQueuePollBusy) return;
+    if (typeof _queuePaneVisible !== 'undefined' && !_queuePaneVisible) return;
+    const ae = document.activeElement;
+    if (ae && ['queueStatusFilter', 'queueRepFilter', 'queueDateFilter', 'queueSearch', 'queueCustomDate'].includes(ae.id)) return;
+    _jtQueuePollBusy = true;
+    try { await renderQueuePane(); } catch (_) {} finally { _jtQueuePollBusy = false; }
+  }, intervalMs);
 }
 
 // Owner filter list mirrors Admin → Personnel: all active account managers.
