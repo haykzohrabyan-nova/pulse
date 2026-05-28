@@ -30,7 +30,7 @@ const ROLE_CONFIG_DEFAULTS = {
     canViewAdmin: true,
     canViewProduction: true,
     canViewOperator: true,
-    adminTabs: ['personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote', 'products', 'product-workflows', 'roles', 'qa-rules', 'settings', 'backup'],
+    adminTabs: ['personnel', 'machines', 'dies', 'organisation', 'products', 'product-workflows', 'roles', 'qa-rules', 'configuration', 'backup'],
   },
   supervisor: {
     label: 'Supervisor',
@@ -54,7 +54,7 @@ const ROLE_CONFIG_DEFAULTS = {
   'account-manager': {
     label: 'Account Manager',
     color: '#ea580c',
-    pages: ['dashboard', 'job-ticket', 'pricing-calculator', 'crm-quote'],
+    pages: ['dashboard', 'job-ticket', 'pricing-calculator'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -63,7 +63,7 @@ const ROLE_CONFIG_DEFAULTS = {
   sales: {
     label: 'Sales',
     color: '#c2410c',
-    pages: ['dashboard', 'job-ticket', 'pricing-calculator', 'crm-quote'],
+    pages: ['dashboard', 'job-ticket', 'pricing-calculator'],
     canEditAllTickets: false,
     canViewAdmin: false,
     canViewProduction: false,
@@ -207,7 +207,7 @@ const payload = {
     ],
     pageKeys: PAGE_KEYS,
     adminTabKeys: [
-      'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
+      'personnel', 'machines', 'dies', 'organisation',
       'products', 'product-workflows', 'roles', 'qa-rules', 'settings', 'backup',
     ],
     remoteHad: {
