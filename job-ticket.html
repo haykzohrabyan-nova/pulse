@@ -2125,6 +2125,21 @@ function buildMaterialOptions(productType, facility, catalogProd) {
   return html || '<option value="">— Select material —</option>';
 }
 
+/** Re-apply saved material after dropdown rebuild (e.g. onProductTypeChange). */
+function restoreJtMaterialSelect(savedMaterial) {
+  const matSel = document.getElementById('material');
+  if (!matSel) return;
+  const val = String(savedMaterial || '').trim();
+  if (!val) return;
+  if (![...matSel.options].some(o => o.value === val)) {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val;
+    matSel.appendChild(opt);
+  }
+  matSel.value = val;
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   await waitForJtSupabaseSession();
   await refreshJtCatalogUi();
@@ -4764,6 +4779,7 @@ async function saveTicket(suppressRedirect = false) {
       }
       // Preserve dueDate if form field was cleared or unchanged
       if (!order.dueDate && previousOrder?.dueDate) order.dueDate = previousOrder.dueDate;
+      if (!order.material && previousOrder?.material) order.material = previousOrder.material;
       // Preserve artwork files if none were newly uploaded
       if (!skuList.length) {
         if ((!order.artworkFiles || !order.artworkFiles.length) && previousOrder?.artworkFiles?.length) {
@@ -5024,14 +5040,6 @@ async function loadOrderIntoForm(order) {
     document.getElementById('otherProductDesc').value = order.otherProductDesc || '';
   }
 
-  // Material — use catalog materials when available
-  if (order.productType) {
-    const catalogProdForOrder = _jtProductCatalog?.find(p => p.name === order.productType);
-    document.getElementById('material').innerHTML = '<option value="">— Select Material —</option>' +
-      buildMaterialOptions(order.productType, order.facility || '', catalogProdForOrder);
-  }
-  document.getElementById('material').value = order.material || '';
-
   // Quantity & frames
   document.getElementById('quantity').value = order.quantity || '';
   document.getElementById('sheetCount').value = order.sheetCount || '';
@@ -5122,6 +5130,7 @@ async function loadOrderIntoForm(order) {
   // Cutting
   await new Promise(r => setTimeout(r, 10));
   onProductTypeChange();
+  restoreJtMaterialSelect(order.material);
   // Restore saved piecesPerSheet after onProductTypeChange (which may auto-populate a default)
   if (order.piecesPerSheet) {
     document.getElementById('piecesPerSheet').value = order.piecesPerSheet;
