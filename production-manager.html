@@ -8,7 +8,7 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260523-PM3"></script>
+  <script src="supabase-client.js?v=20260528-cfg1"></script>
   <script src="auth.js?v=20260427-PRI240"></script>
   <style id="page-styles"></style>
 </head>
@@ -935,8 +935,30 @@ async function returnToProductionFromQCFail(dbId) {
 }
 
 // ── Reprint Modal ─────────────────────────────────────────
+async function _populateReprintReasons() {
+  const sel = document.getElementById('reprintReason');
+  if (!sel) return;
+  const DEFAULTS = [
+    { value: 'shortage',         label: 'Shortage (not enough units)' },
+    { value: 'quality',          label: 'Quality Issue' },
+    { value: 'damaged',          label: 'Damaged in Production' },
+    { value: 'customer-request', label: 'Customer Request' },
+    { value: 'other',            label: 'Other' },
+  ];
+  try {
+    const cfg = await getConfig('pulseReprintReasons');
+    const reasons = cfg?.value || cfg;
+    if (Array.isArray(reasons) && reasons.length > 0) {
+      sel.innerHTML = reasons.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+      return;
+    }
+  } catch (_) {}
+  sel.innerHTML = DEFAULTS.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+}
+
 function openReprintModal(dbId) {
   reprintTargetOrderId = dbId;
+  _populateReprintReasons().catch(() => {});
   const order = allOrders.find(o => o.id === dbId);
   const maxQty = order?.quantity || 0;
   const maxSheetQty = order?.sheetCount || Math.max(1, Math.ceil(maxQty / Math.max(1, parseFloat(order?.piecesPerSheet) || 1)));

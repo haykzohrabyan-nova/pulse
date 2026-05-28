@@ -913,7 +913,11 @@ function calculateRecommendedOvers(order) {
 }
 
 // ── Standard Lead Times (Business Days) ────────────────────
-// These are operational rules, not suggestions.
+// These are operational defaults. Override at runtime via setPulseLeadTimes().
+let _pulseLeadTimesOverride = null;
+function setPulseLeadTimes(lt) { _pulseLeadTimesOverride = lt; }
+function getPulseLeadTimes() { return _pulseLeadTimesOverride || LEAD_TIMES; }
+
 const LEAD_TIMES = {
   'Labels (Roll)':        { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
   'Labels (Sheet)':       { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
@@ -944,7 +948,7 @@ function addBusinessDays(date, days) {
 
 // Calculate the minimum allowed due date for a product type
 function getMinDueDate(productType, quantity) {
-  const lt = LEAD_TIMES[productType];
+  const lt = getPulseLeadTimes()[productType];
   if (!lt) return addBusinessDays(new Date(), 3); // default 3 business days
   // Use the minimum lead time (first value)
   let minDays = lt.days[0];
@@ -971,7 +975,7 @@ function checkDueDateRush(productType, quantity, dueDate) {
 
   const minDate = getMinDueDate(productType, quantity);
   minDate.setHours(0,0,0,0);
-  const lt = LEAD_TIMES[productType];
+  const lt = getPulseLeadTimes()[productType];
 
   if (dueDateObj < minDate) {
     const businessDaysBetween = countBusinessDays(today, dueDateObj);
@@ -4642,6 +4646,7 @@ const PULSE_CATALOG_KEYS = {
   materials: 'catalogMaterials',
   finishing: 'catalogFinishing',
   products: 'productCatalog',
+  containers: 'catalogAppContainers',
 };
 
 function pulseCatalogUID() {
@@ -5208,6 +5213,7 @@ async function initPulseAdminData(opts = {}) {
         materials: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.materials)) || [],
         finishing: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.finishing)) || [],
         products: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.products)) || [],
+        containers: _configStoredValue(await getConfig(PULSE_CATALOG_KEYS.containers)) || [],
         repaired: {},
       };
     }
@@ -5292,6 +5298,23 @@ function getPulseCatalogColorModes() {
 
 function getPulseCatalogFinishing() {
   return _pulseAdminCache?.catalog?.finishing ? [..._pulseAdminCache.catalog.finishing] : [];
+}
+
+const PACKAGING_CONTAINERS_DEFAULT = [
+  { id: 'none',         label: 'None',        rate: 0 },
+  { id: 'bag',          label: 'Bag',          rate: 0.02 },
+  { id: 'shrink-wrap',  label: 'Shrink Wrap',  rate: 0.015 },
+  { id: 'box',          label: 'Box',          rate: 0.05 },
+  { id: 'jar',          label: 'Jar',          rate: 0.10 },
+  { id: 'tube',         label: 'Tube',         rate: 0.08 },
+  { id: 'exit-bag',     label: 'Exit Bag',     rate: 0.03 },
+  { id: 'tray',         label: 'Tray',         rate: 0.04 },
+];
+
+function getPulseCatalogContainers() {
+  const cached = _pulseAdminCache?.catalog?.containers;
+  if (Array.isArray(cached) && cached.length > 0) return [...cached];
+  return [...PACKAGING_CONTAINERS_DEFAULT];
 }
 
 function getPulseSettings() {
