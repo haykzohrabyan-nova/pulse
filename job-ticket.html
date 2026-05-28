@@ -2965,7 +2965,23 @@ function updateLabelSizeSection() {
   calcLabelFit();
 }
 
+// Re-entrancy guard: calcLabelFit() sets piecesPerSheet and calls calcFrames(),
+// and calcFrames() calls calcLabelFit() back to refresh the fit display. Without
+// this guard the two recurse forever ("Maximum call stack size exceeded"),
+// which is exactly what happens when loading a label ticket with dimensions
+// already filled in — it crashes loadOrderIntoForm before the artwork renders.
+let _jtInCalcLabelFit = false;
 function calcLabelFit() {
+  if (_jtInCalcLabelFit) return;
+  _jtInCalcLabelFit = true;
+  try {
+    _calcLabelFitImpl();
+  } finally {
+    _jtInCalcLabelFit = false;
+  }
+}
+
+function _calcLabelFitImpl() {
   // Always compute in inches regardless of display unit
   const w = parseFloat(document.getElementById('labelWidth').value) || 0;
   const h = parseFloat(document.getElementById('labelHeight').value) || 0;
