@@ -8,9 +8,7 @@
     /* Must load even if page script fails — only one admin tab visible at a time */
     .admin-content > .tab-pane { display: none !important; }
     .admin-content > .tab-pane.active { display: block !important; }
-    #tab-organisation.active,
-    #tab-payment.active,
-    #tab-crm-quote.active { padding: 0 !important; }
+    #tab-organisation.active { padding: 0 !important; }
   </style>
   <script src="shared.js?v=20260528-cfg1"></script>
   <script src="organisation-local-store.js"></script>
@@ -30,8 +28,6 @@
     <button class="tab-btn" data-tab="machines" onclick="switchTab('machines')">⚙️ Machines</button>
     <button class="tab-btn" data-tab="dies" onclick="switchTab('dies')">🔧 Dies</button>
     <button class="tab-btn" data-tab="organisation" onclick="switchTab('organisation')">Organisation</button>
-    <button class="tab-btn" data-tab="payment" onclick="switchTab('payment')">💳 Payment</button>
-    <button class="tab-btn" data-tab="crm-quote" onclick="switchTab('crm-quote')">💬 Quote</button>
     <button class="tab-btn" data-tab="products" onclick="switchTab('products')">🗂 Products</button>
     <button class="tab-btn" data-tab="product-workflows" onclick="switchTab('product-workflows')">🔀 Product Workflow Configuration</button>
     <button class="tab-btn" data-tab="roles" onclick="switchTab('roles')">🔐 Roles</button>
@@ -119,26 +115,6 @@
         class="admin-org-frame"
         title="Organisation"
         src="organisation.html?embedded=admin"
-      ></iframe>
-    </div>
-
-    <!-- ═══════════════════════════════════════════ PAYMENT ══ -->
-    <div class="tab-pane" id="tab-payment">
-      <iframe
-        id="paymentAdminFrame"
-        class="admin-org-frame"
-        title="Payment"
-        src="payment.html?embedded=admin&amp;v=20260520-QP4"
-      ></iframe>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════ QUOTE ══ -->
-    <div class="tab-pane" id="tab-crm-quote">
-      <iframe
-        id="crmQuoteAdminFrame"
-        class="admin-org-frame"
-        title="Quote"
-        src="crm-quote.html?embedded=admin&amp;v=20260520-QP4"
       ></iframe>
     </div>
 
@@ -286,11 +262,17 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div>
             <h3 style="margin:0;font-size:15px;">Job Ticket Note Types</h3>
-            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Labels shown on the job ticket note type selector.</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">Labels shown on the job ticket note type selector. Pick a color — pill and textarea styling update automatically.</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="saveCfgNoteTypes()">💾 Save Note Types</button>
         </div>
-        <div id="cfgNoteTypesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-width:400px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 44px 110px 80px;gap:8px;margin-bottom:4px;padding:0 2px;max-width:620px;">
+          <span style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Label</span>
+          <span style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Color</span>
+          <span style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Preview</span>
+          <span></span>
+        </div>
+        <div id="cfgNoteTypesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-width:620px;"></div>
         <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="addCfgNoteType()">+ Add Note Type</button>
         <div id="cfgNoteTypesSaved" style="display:none;color:var(--green);font-size:12px;margin-top:8px;font-weight:600;">✅ Saved to database</div>
       </div>
@@ -323,12 +305,12 @@
       </div>
     </div>
 
-    <!-- ═══ EXPORT / IMPORT (all Admin tabs except Quote & Payment) ═══ -->
+    <!-- ═══ EXPORT / IMPORT ═══ -->
     <div class="tab-pane" id="tab-backup">
       <div class="pane-header">
         <div>
           <h2>💾 Export / Import JSON</h2>
-          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Exports an <code>admin</code> JSON block (Personnel, Machines, Dies, Organisation, Products, Workflows, Roles) plus production data. Use for migration to Supabase. Quote &amp; Payment excluded.</p>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Exports an <code>admin</code> JSON block (Personnel, Machines, Dies, Organisation, Products, Workflows, Roles) plus production data. Use for migration to Supabase.</p>
         </div>
       </div>
       <div class="backup-page-layout">
@@ -979,7 +961,7 @@ document.getElementById('page-styles').textContent = `
   .admin-content { flex: 1; overflow-y: visible; overflow-x: hidden; }
   .tab-pane { display: none; padding: 20px 24px; }
   .tab-pane.active { display: block; }
-  #tab-organisation, #tab-payment, #tab-crm-quote { padding: 0; }
+  #tab-organisation { padding: 0; }
   .admin-org-frame {
     width: 100%;
     height: calc(100vh - 112px);
@@ -1383,8 +1365,8 @@ if (kbOpEl && typeof OPERATIONS !== 'undefined') {
 
 // ── Active Tab ────────────────────────────────────────────
 const ADMIN_TAB_IDS = [
-  'personnel', 'machines', 'dies', 'organisation', 'payment', 'crm-quote',
-  'products', 'product-workflows', 'roles', 'qa-rules', 'settings', 'backup',
+  'personnel', 'machines', 'dies', 'organisation',
+  'products', 'product-workflows', 'roles', 'qa-rules', 'configuration', 'backup',
 ];
 
 function getAdminTabFromUrl() {
@@ -1417,13 +1399,6 @@ async function loadTab(tab) {
   else if (tab === 'organisation') {
     const frame = document.getElementById('organisationAdminFrame');
     if (frame && !frame.src) frame.src = 'organisation.html?embedded=admin';
-  }
-  else if (tab === 'payment') {
-    const frame = document.getElementById('paymentAdminFrame');
-    if (frame && !frame.src) frame.src = 'payment.html?embedded=admin&v=20260520-QP4';
-  }
-  else if (tab === 'crm-quote') {
-    refreshQuoteAdminFrame();
   }
   else if (tab === 'knowledge') await loadKnowledge();
   else if (tab === 'qa-rules') renderQARules().catch(console.error);
@@ -1983,38 +1958,6 @@ async function saveRolePermissions() {
   const status = document.getElementById('rolesSaveStatus');
   if (status) { status.textContent = '✓ Saved'; status.style.color = '#16a34a'; setTimeout(() => { status.textContent = ''; }, 3000); }
 }
-
-// ── Payment / Quote iframe sync ─────────────────────────────
-function refreshQuoteAdminFrame() {
-  const frame = document.getElementById('crmQuoteAdminFrame');
-  if (!frame) return;
-  if (!frame.src) {
-    frame.src = 'crm-quote.html?embedded=admin&v=20260520-QP4';
-    frame.addEventListener('load', () => refreshQuoteAdminFrame(), { once: true });
-    return;
-  }
-  const win = frame.contentWindow;
-  if (win?.renderQuote && win.PulseQuotePayment) {
-    try {
-      const cfg = win.PulseQuotePayment.loadPaymentConfig();
-      const token = win.PulseQuotePayment.getPreviewQuoteToken(cfg);
-      win.renderQuote(token);
-      return;
-    } catch (_) {}
-  }
-  try { win.location.reload(); } catch (_) {}
-}
-
-// ── Init ──────────────────────────────────────────────────
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'pulse-payment-saved') refreshQuoteAdminFrame();
-});
-
-window.addEventListener('storage', (e) => {
-  if (e.key === 'pulse_payment_admin_config_v1' || e.key === 'pulse_quote_checkout_v1') {
-    refreshQuoteAdminFrame();
-  }
-});
 
 async function recoverCatalogIfNeeded() {
   try {
@@ -3130,7 +3073,17 @@ const CFG_RUSH_DEFAULTS = {
   approvers: [{ name: 'Tigran', code: '' }],
 };
 
-const CFG_NOTE_TYPES_DEFAULTS = ['INFO', 'CRITICAL', 'INSTRUCTIONS'];
+const CFG_NOTE_TYPES_DEFAULTS = [
+  { value: 'INFO',         color: '#1d4ed8' },
+  { value: 'CRITICAL',     color: '#b91c1c' },
+  { value: 'INSTRUCTIONS', color: '#92600a' },
+];
+
+// Normalize legacy string[] format to object[]
+function _normNoteTypes(raw) {
+  if (!Array.isArray(raw)) return [...CFG_NOTE_TYPES_DEFAULTS];
+  return raw.map(n => typeof n === 'string' ? { value: n, color: '#1d4ed8' } : n);
+}
 const CFG_REPRINT_REASONS_DEFAULTS = [
   { value: 'shortage',         label: 'Shortage (not enough units)' },
   { value: 'quality',          label: 'Quality Issue' },
@@ -3163,7 +3116,7 @@ async function loadConfigurationTab() {
 
   _cfgLeadTimes = (ltCfg?.value || ltCfg) || { ...CFG_LEAD_TIMES_DEFAULTS };
   _cfgRush      = (rushCfg?.value || rushCfg) || { ...CFG_RUSH_DEFAULTS };
-  _cfgNoteTypes = (ntCfg?.value || ntCfg) || [...CFG_NOTE_TYPES_DEFAULTS];
+  _cfgNoteTypes = _normNoteTypes(ntCfg?.value || ntCfg);
   _cfgReprint   = (rrCfg?.value || rrCfg) || [...CFG_REPRINT_REASONS_DEFAULTS];
   _cfgProdLines = (plCfg?.value || plCfg) || JSON.parse(JSON.stringify(CFG_PROD_LINES_DEFAULTS));
 
@@ -3281,29 +3234,51 @@ async function saveCfgRush() {
 }
 
 // ── Note Types ───────────────────────────────────────────────────
+function _ntPillHtml(label, color) {
+  const r = parseInt(color.slice(1,3)||'1d',16), g = parseInt(color.slice(3,5)||'4e',16), b = parseInt(color.slice(5,7)||'d8',16);
+  const bg = `rgba(${r},${g},${b},0.12)`;
+  const cap = label ? label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() : '—';
+  return `<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700;background:${bg};color:${color};white-space:nowrap;">📝 ${cap}</span>`;
+}
+
 function renderCfgNoteTypes() {
   const listEl = document.getElementById('cfgNoteTypesList');
   if (!listEl) return;
   listEl.innerHTML = '';
   (_cfgNoteTypes || []).forEach((nt, i) => {
+    const val = nt.value || '';
+    const color = nt.color || '#1d4ed8';
     const row = document.createElement('div');
-    row.className = 'cfg-list-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 44px 110px 80px;gap:8px;align-items:center;';
     row.innerHTML = `
-      <input type="text" value="${nt}" placeholder="e.g. CRITICAL" oninput="cfgNoteTypeChange(${i},this.value)">
-      <button onclick="removeCfgNoteType(${i})">✕ Remove</button>
+      <input type="text" value="${val}" placeholder="e.g. CRITICAL"
+        oninput="cfgNoteTypeChange(${i},'value',this.value)"
+        style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+      <input type="color" value="${color}"
+        oninput="cfgNoteTypeChange(${i},'color',this.value)"
+        title="Pick text color"
+        style="width:44px;height:35px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;">
+      <div id="cfgNtPreview_${i}">${_ntPillHtml(val, color)}</div>
+      <button onclick="removeCfgNoteType(${i})"
+        style="padding:6px 10px;font-size:12px;cursor:pointer;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#ef4444;">✕ Remove</button>
     `;
     listEl.appendChild(row);
   });
 }
 
-function cfgNoteTypeChange(idx, val) {
-  if (!_cfgNoteTypes) _cfgNoteTypes = [...CFG_NOTE_TYPES_DEFAULTS];
-  _cfgNoteTypes[idx] = val.trim().toUpperCase();
+function cfgNoteTypeChange(idx, field, val) {
+  if (!_cfgNoteTypes) _cfgNoteTypes = _normNoteTypes(null);
+  if (!_cfgNoteTypes[idx]) _cfgNoteTypes[idx] = { value: '', color: '#1d4ed8' };
+  if (field === 'value') _cfgNoteTypes[idx].value = val.trim().toUpperCase();
+  else _cfgNoteTypes[idx][field] = val;
+  // Live-update the preview pill
+  const preview = document.getElementById(`cfgNtPreview_${idx}`);
+  if (preview) preview.innerHTML = _ntPillHtml(_cfgNoteTypes[idx].value, _cfgNoteTypes[idx].color);
 }
 
 function addCfgNoteType() {
   if (!_cfgNoteTypes) _cfgNoteTypes = [];
-  _cfgNoteTypes.push('');
+  _cfgNoteTypes.push({ value: '', color: '#1d4ed8' });
   renderCfgNoteTypes();
 }
 
@@ -3314,7 +3289,7 @@ function removeCfgNoteType(idx) {
 }
 
 async function saveCfgNoteTypes() {
-  const clean = (_cfgNoteTypes || []).filter(n => n.trim());
+  const clean = (_cfgNoteTypes || []).filter(n => n.value?.trim());
   await setConfig('pulseNoteTypes', clean);
   const el = document.getElementById('cfgNoteTypesSaved');
   if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
@@ -3437,7 +3412,7 @@ function renderBackupIncludedTabsList() {
   if (exclEl) {
     const excluded = typeof PULSE_ADMIN_BACKUP_EXCLUDED_TABS !== 'undefined'
       ? PULSE_ADMIN_BACKUP_EXCLUDED_TABS
-      : ['payment', 'crm-quote', 'purchase-orders', 'knowledge', 'qa-rules', 'settings'];
+      : ['purchase-orders', 'knowledge', 'qa-rules', 'settings'];
     exclEl.innerHTML = excluded.map(k => `<li>${BACKUP_ADMIN_TAB_LABELS[k] || k}</li>`).join('');
   }
 }
