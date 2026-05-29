@@ -6676,13 +6676,25 @@ const THEME_CSS = `
     letter-spacing: 0.02em;
   }
   .top-nav .user-badge-logout {
-    border: none;
-    background: transparent;
-    color: #94a3b8;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
     line-height: 1;
-    padding: 0 0 0 2px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    margin-left: 2px;
+  }
+  .top-nav .user-badge-logout:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
   }
   @media (max-width: 1100px) {
     .top-nav .nav-links { width: 100%; justify-content: flex-start; }
