@@ -561,31 +561,75 @@ async function submitLogin() {
 function injectUserBadge() {
   const session = getSession();
 
-  // Always show the Sign Out button when there is a session
+  // If a page provides its own Sign Out button, wire it up.
   const signOutBtn = document.getElementById('topNavSignOutBtn');
   if (signOutBtn) {
     signOutBtn.style.display = session ? 'inline-flex' : 'none';
+    if (session && !signOutBtn.dataset.pulseBound) {
+      signOutBtn.dataset.pulseBound = '1';
+      signOutBtn.addEventListener('click', logoutUser);
+    }
   }
 
-  if (!session) return;
-  const existing = document.getElementById('userBadge');
-  if (existing) existing.remove();
-  const cfg = ROLE_CONFIG[session.role] || { label: session.role, color: '#6b7280' };
-  const badge = document.createElement('div');
-  badge.id = 'userBadge';
-  badge.className = 'user-badge';
-  badge.innerHTML = `
-    <span class="user-badge-dot" style="background:${cfg.color};"></span>
-    <span class="user-badge-name">${session.name.split(' ')[0]}</span>
-    <span class="user-badge-role" style="color:${cfg.color};">${cfg.label.toUpperCase()}</span>
-  `;
-  const userSlot = document.getElementById('topNavUserSlot');
-  if (userSlot) userSlot.appendChild(badge);
-  else {
-    const navLinks = document.querySelector('.top-nav .nav-links');
-    if (navLinks) navLinks.appendChild(badge);
-    else document.body.appendChild(badge);
+  if (!session) {
+    document.getElementById('pulseFloatingUser')?.remove();
+    return;
   }
+
+  const cfg = ROLE_CONFIG[session.role] || { label: session.role, color: '#6b7280' };
+  const firstName = String(session.name || '').split(' ')[0] || 'User';
+
+  // Page with a dedicated nav slot: render badge there (+ a sign-out button).
+  const userSlot = document.getElementById('topNavUserSlot');
+  if (userSlot) {
+    document.getElementById('userBadge')?.remove();
+    const badge = document.createElement('div');
+    badge.id = 'userBadge';
+    badge.className = 'user-badge';
+    badge.innerHTML = `
+      <span class="user-badge-dot" style="background:${cfg.color};"></span>
+      <span class="user-badge-name">${firstName}</span>
+      <span class="user-badge-role" style="color:${cfg.color};">${cfg.label.toUpperCase()}</span>
+    `;
+    userSlot.appendChild(badge);
+    if (!signOutBtn && !document.getElementById('pulseSlotSignOut')) {
+      const b = document.createElement('button');
+      b.id = 'pulseSlotSignOut';
+      b.type = 'button';
+      b.textContent = '⎋ Sign Out';
+      b.style.cssText = 'margin-left:8px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;';
+      b.addEventListener('click', logoutUser);
+      userSlot.appendChild(b);
+    }
+    return;
+  }
+
+  // No nav slot / no placeholder: build a self-contained floating control so
+  // every page has a visible Log Out button regardless of its layout.
+  if (signOutBtn) return; // page already shows its own button somewhere
+  let pill = document.getElementById('pulseFloatingUser');
+  if (!pill) {
+    pill = document.createElement('div');
+    pill.id = 'pulseFloatingUser';
+    pill.style.cssText = [
+      'position:fixed', 'bottom:16px', 'right:16px', 'z-index:9000',
+      'display:flex', 'align-items:center', 'gap:10px',
+      'background:#ffffff', 'border:1px solid #e2e8f0', 'border-radius:999px',
+      'padding:6px 8px 6px 14px', 'box-shadow:0 4px 14px rgba(0,0,0,0.12)',
+      'font-family:Inter,system-ui,-apple-system,sans-serif',
+    ].join(';');
+    document.body.appendChild(pill);
+  }
+  pill.innerHTML = `
+    <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#111827;white-space:nowrap;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${cfg.color};"></span>
+      ${firstName}
+      <span style="color:${cfg.color};font-weight:700;font-size:11px;letter-spacing:0.04em;">${cfg.label.toUpperCase()}</span>
+    </span>
+    <button id="pulseFloatingSignOut" type="button"
+      style="border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;">⎋ Sign Out</button>
+  `;
+  document.getElementById('pulseFloatingSignOut')?.addEventListener('click', logoutUser);
 }
 
 async function logoutUser() {
@@ -742,8 +786,8 @@ async function initAuth(pageId) {
     // ── Supabase mode: check for an existing valid session ──
     const loader = _injectAuthLoader();
     try {
-      const session = await window.supabaseGetSession();
-      if (session) {
+      const supaSession = await window.supabaseGetSession();
+      if (supaSession) {
         let profile = await window.supabaseGetProfile();
         if (!profile && typeof window.supabaseEnsureProfile === 'function') {
           profile = await window.supabaseEnsureProfile();
@@ -755,9 +799,15 @@ async function initAuth(pageId) {
           // Sync role permissions from DB (non-blocking — updates ROLE_CONFIG + localStorage)
           _syncRolePermissionsFromDB().catch(() => {});
         }
+      } else {
+        // No valid Supabase session — clear any stale sessionStorage so login is required.
+        // Without this, auth.uid() stays null and all Supabase RLS queries return empty.
+        clearSession();
       }
     } catch (e) {
       console.error('[Pulse/Auth] Session check error:', e);
+      // On error also clear stale session to avoid ghost-login state
+      clearSession();
     } finally {
       loader.remove();
     }
