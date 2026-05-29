@@ -2204,6 +2204,23 @@
     }
   };
 
+  // ── Personnel provisioning via DB function ────────────────────────────────
+  // Creates/updates the Supabase auth account AND profiles row in one call.
+  // The User ID becomes the login password, keeping Admin → Personnel as the
+  // single source of truth. Requires admin or supervisor session.
+  window.upsertPulsePersonnel = async function (person) {
+    const supa = await _getClient();
+    const { data, error } = await supa.rpc('upsert_pulse_personnel', {
+      p_display_name: String(person.name || '').trim(),
+      p_role:         String(person.role || 'operator'),
+      p_user_id:      String(person.userId ?? '').trim(),
+      p_facility:     person.facility || null,
+      p_active:       person.active !== false,
+    });
+    if (error) throw new Error(_formatPulseDbError(error));
+    return data;
+  };
+
   async function _logWorkflowOverride(entry) {
     const supa = await _getClient();
     const row = {
