@@ -14,8 +14,8 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260529-auth1"></script>
-  <script src="auth.js?v=20260529-signout"></script>
+  <script src="supabase-client.js?v=20260529-egress1"></script>
+  <script src="auth.js?v=20260529-egress1"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -2029,17 +2029,30 @@ async function onPulseReferenceDataChanged() {
   else if (activeTab === 'settings') await loadSettings();
 }
 
+async function _adminHasSupabaseSession() {
+  if (window.PULSE_STORAGE_BACKEND !== 'supabase') return true;
+  if (typeof window.supabaseGetSession !== 'function') return true;
+  try { return !!(await window.supabaseGetSession()); } catch (_) { return false; }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   if (typeof initPulseAdminData === 'function') await initPulseAdminData();
   await waitForSupabaseSession();
-  await recoverCatalogIfNeeded();
-  await loadCustomRoles();
-  await seedKnowledge();
+  // These perform admin-only DB writes (config, product_workflows, roles).
+  // Skip them while unauthenticated so the login screen doesn't spam anon
+  // permission errors; they re-run on pulse:auth-ready once signed in.
+  if (await _adminHasSupabaseSession()) {
+    await recoverCatalogIfNeeded();
+    await loadCustomRoles();
+    await seedKnowledge();
+  }
   const urlTab = getAdminTabFromUrl();
   switchTab(urlTab || activeTab);
   onDBUpdate(async (data) => { await loadTab(activeTab); });
   window.addEventListener('pulse:auth-ready', async () => {
     await recoverCatalogIfNeeded();
+    await loadCustomRoles();
+    await seedKnowledge();
     switchTab(activeTab);
   });
   window.addEventListener('pulse:reference-data-changed', () => { onPulseReferenceDataChanged(); });

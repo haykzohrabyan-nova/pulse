@@ -8,8 +8,8 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260529-auth1"></script>
-  <script src="auth.js?v=20260529-signout"></script>
+  <script src="supabase-client.js?v=20260529-egress1"></script>
+  <script src="auth.js?v=20260529-egress1"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -2119,8 +2119,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     await populateAccountManagers();
   });
 
-  // Keep the orders queue live (auto-refresh every 10 seconds).
-  startJtQueueAutoRefresh(10000);
+  // Keep the orders queue live via realtime events.
+  // Polling is a 60-second fallback only (realtime handles instant updates).
+  window.addEventListener('pulse:orders-changed', () => {
+    if (!document.hidden) renderQueuePane();
+  });
+  startJtQueueAutoRefresh(60000);
 
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order');
@@ -5508,7 +5512,10 @@ function jtCutShort(cm) {
 async function renderQueuePane() {
   const list = document.getElementById('queueList');
   if (!list) return;
-  let allOrders = await getAllOrders();
+  // Use the lean summary query for list views — avoids fetching specs JSONB and
+  // workflow steps (those are only needed when opening a specific ticket).
+  const _fetchFn = typeof getAllOrdersSummary === 'function' ? getAllOrdersSummary : getAllOrders;
+  let allOrders = await _fetchFn();
   const today = new Date(); today.setHours(0,0,0,0);
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
   const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - 7);

@@ -436,6 +436,14 @@
 
   // ── Order CRUD ───────────────────────────────────────────────
 
+  // Columns needed for queue/list views — no specs JSONB, no workflow steps.
+  // Keeps egress tiny (~1-2 KB/row vs 10-50 KB for SELECT *).
+  const _QUEUE_COLS = [
+    'id','order_id','customer_name','product_type','facility','quantity',
+    'status','due_date','is_rush','account_manager','rep',
+    'is_reprint','parent_order_id','created_at','updated_at','current_step',
+  ].join(',');
+
   async function _getAllOrders() {
     const supa = await _getClient();
     const { data, error } = await supa
@@ -446,6 +454,17 @@
     return (data || []).map(row =>
       _rowToOrder(row, row.order_workflow_steps || [])
     );
+  }
+
+  // Lightweight version: only queue-display columns, no specs, no workflow steps.
+  async function _getAllOrdersSummary() {
+    const supa = await _getClient();
+    const { data, error } = await supa
+      .from('orders')
+      .select(_QUEUE_COLS)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(row => _rowToOrder(row, []));
   }
 
   async function _getOrder(id) {
@@ -1324,6 +1343,15 @@
     }
   };
 
+  // Lightweight queue summary — use this for polling/list views to minimize egress.
+  window.getAllOrdersSummary = async function () {
+    try { return await _getAllOrdersSummary(); }
+    catch (e) {
+      console.warn('[Pulse/Supabase] getAllOrdersSummary fallback to full:', e);
+      return window.getAllOrders();
+    }
+  };
+
   window.getOrder = async function (id) {
     try { return await _getOrder(id); }
     catch (e) { console.error('[Pulse/Supabase] getOrder:', e); return _origGetOrder ? _origGetOrder(id) : null; }
@@ -2128,7 +2156,7 @@
     try { return await _upsertProductWorkflow(wf); }
     catch (e) {
       console.error('[Pulse/Supabase] upsertProductWorkflow:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 
@@ -2145,7 +2173,7 @@
       p_facility:     person.facility || null,
       p_active:       person.active !== false,
     });
-    if (error) throw new Error(_formatPulseDbError(error));
+    if (error) throw new Error(await _formatPulseDbError(error));
     return data;
   };
 
@@ -2176,7 +2204,7 @@
     try { return await _deleteProductWorkflow(id); }
     catch (e) {
       console.error('[Pulse/Supabase] deleteProductWorkflow:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 
@@ -2192,7 +2220,7 @@
     try { return await _resetAllProductWorkflowsFromDefaults(catProducts); }
     catch (e) {
       console.error('[Pulse/Supabase] resetAllProductWorkflowsFromDefaults:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 
@@ -2362,7 +2390,7 @@
       return await _getAllMachineIssues();
     } catch (e) {
       console.error('[Pulse/Supabase] getAllMachineIssues:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 
@@ -2370,7 +2398,7 @@
     try { return await _insertMachineIssue(issue); }
     catch (e) {
       console.error('[Pulse/Supabase] insertMachineIssue:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 
@@ -2378,7 +2406,7 @@
     try { return await _updateMachineIssue(issue); }
     catch (e) {
       console.error('[Pulse/Supabase] updateMachineIssue:', e);
-      throw new Error(_formatPulseDbError(e));
+      throw new Error(await _formatPulseDbError(e));
     }
   };
 

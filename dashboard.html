@@ -8,8 +8,8 @@
   <script src="organisation-local-store.js"></script>
   <script src="pulse-config.js"></script>
   <script src="pulse-config.local.js"></script>
-  <script src="supabase-client.js?v=20260529-auth1"></script>
-  <script src="auth.js?v=20260529-signout"></script>
+  <script src="supabase-client.js?v=20260529-egress1"></script>
+  <script src="auth.js?v=20260529-egress1"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -446,7 +446,10 @@
   let _subProgressMap = {};
 
   async function refresh() {
-    const allOrders = await getAllOrders();
+    if (document.hidden) return; // don't fetch when tab is in background
+    // Use the lean summary query — no specs JSONB, no workflow steps, ~95% less data
+    const _fetchFn = typeof getAllOrdersSummary === 'function' ? getAllOrdersSummary : getAllOrders;
+    const allOrders = await _fetchFn();
 
     // Build sub-ticket progress map + batch hints
     _subProgressMap = {};
@@ -1300,7 +1303,12 @@
       });
     }
     refresh();
-    setInterval(refresh, 5000);
+    // Realtime subscription handles instant updates (pulse:orders-changed).
+    // 60-second fallback poll keeps the board fresh if realtime misses an event.
+    window.addEventListener('pulse:orders-changed', () => {
+      if (!document.hidden) refresh();
+    });
+    setInterval(refresh, 60000);
   }
   init();
   window.addEventListener('pulse:auth-ready', () => refresh());
