@@ -2333,22 +2333,15 @@ async function savePersonnel() {
     active: document.getElementById('pActive').checked
   };
   try {
-    if (id) await updatePersonnel(id, data);
-    else await addPersonnel(data);
-
-    // Sync auth account + profiles row via DB function so the User ID
-    // becomes the login password immediately — no manual Supabase setup needed.
+    // Single write path: upsertPulsePersonnel creates/updates both the
+    // Supabase auth account (User ID becomes the password) and the profiles row.
+    // All personnel data lives in Supabase profiles — no JSON config.
     if (typeof upsertPulsePersonnel === 'function') {
-      try {
-        await upsertPulsePersonnel(data);
-      } catch (syncErr) {
-        // Non-fatal: local record already saved. Show a warning but don't block.
-        console.warn('[Pulse] Auth sync warning:', syncErr.message);
-        if (syncErr.message && !syncErr.message.includes('Permission denied')) {
-          alert('Personnel saved, but login sync had an issue:\n' + syncErr.message +
-                '\nThe person can still log in using Pulse2026! as their password.');
-        }
-      }
+      await upsertPulsePersonnel(data);
+    } else {
+      // Fallback if RPC not available (should not happen in production)
+      if (id) await updatePersonnel(id, data);
+      else await addPersonnel(data);
     }
 
     closeModal('personnelModal');
@@ -2357,7 +2350,7 @@ async function savePersonnel() {
     if (typeof pulseNotifyReferenceDataChanged === 'function') {
       pulseNotifyReferenceDataChanged({ scope: 'personnel' });
     }
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e) { alert('Error saving personnel: ' + e.message); }
 }
 
 async function deletePersonnelConfirm(id, name) {

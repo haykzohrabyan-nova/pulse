@@ -1238,88 +1238,39 @@
     };
   }
 
+  // ── Personnel CRUD — Supabase profiles table is the single source of truth ──
+  // No JSON config blob. All reads/writes go directly to the profiles table.
+  // The upsert_pulse_personnel() DB function handles auth account sync too.
+
   window.getAllPersonnel = async function () {
-    const byName = new Map();
-    const addPerson = (p) => {
-      if (!p?.name) return;
-      const key = String(p.name).trim().toLowerCase();
-      const prev = byName.get(key);
-      byName.set(key, prev ? _mergePersonnelRows(p, prev) : { ...p });
-    };
-
-    let fromConfig = [];
-    let fromProfiles = [];
     try {
-      fromConfig = await _getPersonnelList();
+      return await _fetchPersonnelFromProfiles();
     } catch (e) {
-      console.error('[Pulse/Supabase] getAllPersonnel (config):', e);
+      console.error('[Pulse/Supabase] getAllPersonnel:', e);
+      return [];
     }
-    try {
-      fromProfiles = await _fetchPersonnelFromProfiles();
-    } catch (e) {
-      console.error('[Pulse/Supabase] getAllPersonnel (profiles):', e);
-    }
-
-    // config.personnel (legacy JSON) first, then profiles table overwrites — single merged list
-    fromConfig.forEach(addPerson);
-    fromProfiles.forEach(addPerson);
-
-    if (byName.size) {
-      return Array.from(byName.values()).sort((a, b) =>
-        String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })
-      );
-    }
-
-    try {
-      const list = await _getPersonnelList();
-      if (list.length) return list;
-    } catch (_) {}
-
-    return _origGetAllPersonnel ? _origGetAllPersonnel() : [];
   };
 
+  // addPersonnel: called from admin only — uses the DB function that provisions
+  // the Supabase auth account + profiles row in one atomic call.
   window.addPersonnel = async function (person) {
     const name = String(person?.name || '').trim();
     if (!name) throw new Error('Name is required');
-
     try {
-      const supa = await _getClient();
-      const { data: existing } = await supa
-        .from('profiles')
-        .select('id')
-        .eq('display_name', name)
-        .maybeSingle();
-      if (existing?.id) {
-        await _updateProfilePersonnel(existing.id, person);
-        return existing.id;
-      }
-    } catch (e) {
-      console.warn('[Pulse/Supabase] addPersonnel profiles lookup:', e);
-    }
-
-    try {
-      const list = await _getPersonnelList();
-      const row = {
-        ...(person || {}),
-        id: person?.id || _stablePersonnelId(person || {}, list.length),
-        createdAt: person?.createdAt || new Date().toISOString(),
-        active: person?.active !== false,
-      };
-      list.push(row);
-      await _savePersonnelList(list);
+      const result = await window.upsertPulsePersonnel(person);
       _notifyPersonnelChanged();
-      return row.id;
+      return result?.id || result;
     } catch (e) {
       console.error('[Pulse/Supabase] addPersonnel:', e);
-      if (_origAddPersonnel) return _origAddPersonnel(person);
-      throw new Error(
-        'Could not add personnel. Create the user in Supabase Auth first (Authentication → Users), then set their User ID here.'
-      );
+      throw new Error(e.message || 'Could not add personnel. Make sure you are signed in as admin.');
     }
   };
 
+  // updatePersonnel: routes to profiles table (UUID id) or by name lookup.
+  // When called from login auto-save (no admin session), only pulse_user_id is updated.
   window.updatePersonnel = async function (id, changes) {
     const key = String(id ?? '');
+    // Direct profile UUID update (most common from admin)
     if (_isProfileUuid(key)) {
       try {
         return await _updateProfilePersonnel(key, changes || {});
@@ -1328,56 +1279,33 @@
         throw e;
       }
     }
-
+    // Find profile by non-UUID id (e.g. legacy id stored in personnel record)
     try {
-      const list = await _getPersonnelList();
-      const idx = list.findIndex(p => _findPersonnelInList([p], key));
-      if (idx < 0) {
-        const allProfiles = await _fetchPersonnelFromProfiles().catch(() => []);
-        const match = _findPersonnelInList(allProfiles, key);
-        if (match?._profileId) return _updateProfilePersonnel(match._profileId, changes || {});
-        throw new Error('Personnel record not found');
-      }
-      list[idx] = { ...list[idx], ...(changes || {}), id: list[idx].id };
-      await _savePersonnelList(list);
-      _notifyPersonnelChanged();
-      return list[idx];
+      const allProfiles = await _fetchPersonnelFromProfiles().catch(() => []);
+      const match = _findPersonnelInList(allProfiles, key);
+      if (match?._profileId) return _updateProfilePersonnel(match._profileId, changes || {});
     } catch (e) {
-      console.error('[Pulse/Supabase] updatePersonnel:', e);
-      if (_origUpdatePersonnel) return _origUpdatePersonnel(id, changes);
-      throw e;
+      console.error('[Pulse/Supabase] updatePersonnel (lookup):', e);
     }
+    throw new Error('Personnel record not found in Supabase profiles');
   };
 
+  // deletePersonnel: marks profile as inactive — never hard-deletes.
   window.deletePersonnel = async function (id) {
     const key = String(id ?? '');
     if (_isProfileUuid(key)) {
-      try {
-        await _updateProfilePersonnel(key, { active: false });
-        return true;
-      } catch (e) {
-        console.error('[Pulse/Supabase] deletePersonnel (profiles):', e);
-        throw e;
-      }
-    }
-
-    try {
-      const list = await _getPersonnelList();
-      const match = _findPersonnelInList(list, key);
-      if (match?._profileId && _isProfileUuid(match._profileId)) {
-        await _updateProfilePersonnel(match._profileId, { active: false });
-        return true;
-      }
-      const next = list.filter(p => !_findPersonnelInList([p], key));
-      if (next.length === list.length) throw new Error('Personnel record not found');
-      await _savePersonnelList(next);
+      await _updateProfilePersonnel(key, { active: false });
       _notifyPersonnelChanged();
       return true;
-    } catch (e) {
-      console.error('[Pulse/Supabase] deletePersonnel:', e);
-      if (_origDeletePersonnel) return _origDeletePersonnel(id);
-      throw e;
     }
+    const allProfiles = await _fetchPersonnelFromProfiles().catch(() => []);
+    const match = _findPersonnelInList(allProfiles, key);
+    if (match?._profileId) {
+      await _updateProfilePersonnel(match._profileId, { active: false });
+      _notifyPersonnelChanged();
+      return true;
+    }
+    throw new Error('Personnel record not found in Supabase profiles');
   };
 
   window.getAllOrders = async function () {
