@@ -48,6 +48,16 @@
           <button class="btn btn-primary" onclick="openPersonnelModal()">+ Add Personnel</button>
         </div>
       </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;">
+        <input type="text" id="personnelSearch" oninput="renderPersonnelTable()" autocomplete="off"
+          placeholder="🔍 Search name, User ID, phone…"
+          style="flex:1;min-width:220px;padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;">
+        <select id="personnelRoleFilter" onchange="renderPersonnelTable()"
+          style="padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;min-width:170px;">
+          <option value="">All roles</option>
+        </select>
+        <span id="personnelCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
+      </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
@@ -2132,9 +2142,52 @@ async function loadPersonnel() {
     }
   }
   _personnelCache = people;
+  _populatePersonnelRoleFilter(people);
+  renderPersonnelTable();
+}
+
+// Build the role filter options from the roles actually present in personnel,
+// preserving the current selection.
+function _populatePersonnelRoleFilter(people) {
+  const sel = document.getElementById('personnelRoleFilter');
+  if (!sel) return;
+  const current = sel.value;
+  const roles = [...new Set((people || []).map(p => String(p.role || '')).filter(Boolean))]
+    .sort((a, b) => personnelRoleLabel(a).localeCompare(personnelRoleLabel(b)));
+  sel.innerHTML = '<option value="">All roles</option>'
+    + roles.map(r => `<option value="${String(r).replace(/"/g, '&quot;')}">${personnelRoleLabel(r)}</option>`).join('');
+  if (current && roles.includes(current)) sel.value = current;
+}
+
+// Render the personnel table from cache, applying the search box + role filter.
+function renderPersonnelTable() {
   const tbody = document.getElementById('personnelTableBody');
-  if (people.length === 0) {
+  if (!tbody) return;
+  const term = (document.getElementById('personnelSearch')?.value || '').toLowerCase().trim();
+  const roleFilter = document.getElementById('personnelRoleFilter')?.value || '';
+  const countEl = document.getElementById('personnelCount');
+
+  let people = _personnelCache || [];
+  if (roleFilter) people = people.filter(p => String(p.role || '') === roleFilter);
+  if (term) {
+    people = people.filter(p => {
+      const hay = [p.name, p.userId, p.phone, personnelRoleLabel(p.role), _personnelFacilityLabel(p.facility)]
+        .map(x => String(x || '').toLowerCase()).join(' ');
+      return hay.includes(term);
+    });
+  }
+
+  if (countEl) {
+    const total = (_personnelCache || []).length;
+    countEl.textContent = people.length === total ? `${total} people` : `${people.length} of ${total}`;
+  }
+
+  if (!_personnelCache || _personnelCache.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
+    return;
+  }
+  if (people.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel match your search / filter.</td></tr>';
     return;
   }
   tbody.innerHTML = people.map(p => {
