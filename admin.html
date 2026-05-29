@@ -48,16 +48,16 @@
           <button class="btn btn-primary" onclick="openPersonnelModal()">+ Add Personnel</button>
         </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;">
-        <input type="text" id="personnelSearch" oninput="renderPersonnelTable()" autocomplete="off"
-          placeholder="🔍 Search name, User ID, phone…"
-          style="flex:1;min-width:220px;padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
         <select id="personnelRoleFilter" onchange="renderPersonnelTable()"
-          style="padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;min-width:170px;">
+          style="width:100%;padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;">
           <option value="">All roles</option>
         </select>
-        <span id="personnelCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
+        <input type="text" id="personnelSearch" oninput="renderPersonnelTable()" autocomplete="off"
+          placeholder="🔍 Search name, User ID, phone…"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;">
       </div>
+      <div style="margin-bottom:12px;"><span id="personnelCount" style="font-size:13px;color:var(--text-muted);"></span></div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
