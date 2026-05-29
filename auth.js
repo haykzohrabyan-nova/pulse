@@ -571,7 +571,9 @@ function injectUserBadge() {
     <span class="user-badge-dot" style="background:${cfg.color};"></span>
     <span class="user-badge-name">${session.name.split(' ')[0]}</span>
     <span class="user-badge-role" style="color:${cfg.color};">${cfg.label.toUpperCase()}</span>
-    <button class="user-badge-logout" onclick="logoutUser()" title="Log out">✕</button>
+    <button class="user-badge-logout" onclick="logoutUser()" title="Sign out">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:2px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out
+    </button>
   `;
   const userSlot = document.getElementById('topNavUserSlot');
   if (userSlot) userSlot.appendChild(badge);
