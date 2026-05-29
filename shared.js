@@ -6648,6 +6648,28 @@ const THEME_CSS = `
     flex: 0 0 auto;
   }
   .top-nav-user-slot:empty { display: none; }
+  .top-nav-signout-btn {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 5px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .top-nav-signout-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+  }
   .top-nav .user-badge {
     display: inline-flex;
     align-items: center;
@@ -6675,27 +6697,7 @@ const THEME_CSS = `
     font-weight: 700;
     letter-spacing: 0.02em;
   }
-  .top-nav .user-badge-logout {
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    padding: 4px 9px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    margin-left: 2px;
-  }
-  .top-nav .user-badge-logout:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
-  }
+  .top-nav .user-badge-logout { display: none; }
   @media (max-width: 1100px) {
     .top-nav .nav-links { width: 100%; justify-content: flex-start; }
   }
@@ -6907,6 +6909,15 @@ function renderNav(activePage) {
         </div>
       </div>
       <div class="top-nav-user-slot" id="topNavUserSlot"></div>
+      <button
+        id="topNavSignOutBtn"
+        onclick="typeof logoutUser==='function'?logoutUser():location.reload()"
+        title="Sign out"
+        style="display:none;"
+        class="top-nav-signout-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button>
     </nav>
   `;
 }
