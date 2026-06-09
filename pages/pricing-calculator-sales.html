@@ -193,37 +193,7 @@
 </div>
 
 <script>
-const MATERIALS = [
-  { category: 'BOPP', items: ['Clear BOPP', 'White BOPP', 'Silver BOPP', 'Holo BOPP'] },
-  { category: 'Cosmetic Web', items: ['Clear Cosmetic Web', 'White Cosmetic Web', 'Silver Cosmetic Web'] },
-  { category: 'Label Sheets', items: ['Gloss Label Sheet', 'Matte Label Sheet', 'Semi Gloss'] },
-  { category: 'Cardstock', items: ['14pt C1S', '14pt C2S', '16pt C1S', '16pt C2S', '18pt C1S', '18pt C2S', '18pt Silver', '24pt C1S', '24pt C2S'] },
-  { category: 'Cover/Text Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover', '80lb Text', '100lb Text'] },
-  { category: 'Cover Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover'] }
-];
-
-const PRODUCT_TYPES = {
-  'Labels (Roll)': { materials: ['BOPP', 'Label Sheets'], facilities: ['16th-street', 'boyd-street'] },
-  'Labels (Sheet)': { materials: ['Label Sheets'], facilities: ['16th-street', 'boyd-street'] },
-  'Pouches': { materials: ['Cosmetic Web'], facilities: ['16th-street'] },
-  'Folding Cartons / Boxes': { materials: ['Cardstock'], facilities: ['16th-street', 'boyd-street'] },
-  'Business Cards': { materials: ['Cardstock', 'Cover Stock'], facilities: ['16th-street'] },
-  'Flyers / Postcards': { materials: ['Cover/Text Stock', 'Cardstock'], facilities: ['16th-street'] },
-  'Booklets': { materials: ['Cover/Text Stock'], facilities: ['16th-street'] },
-  'Diecut Stickers': { materials: ['BOPP', 'Label Sheets'], facilities: ['16th-street', 'boyd-street'] }
-};
-
-function getMaterialsForProduct(productType) {
-  const pt = PRODUCT_TYPES[productType];
-  if (!pt) return MATERIALS;
-  const allowedCategories = pt.materials;
-  return MATERIALS.filter(group => allowedCategories.includes(group.category));
-}
-
-function renderFilteredMaterialOptions(productType) {
-  const filtered = getMaterialsForProduct(productType);
-  return filtered.map(group => `<optgroup label="${group.category}">${group.items.map(item => `<option value="${item}">${item}</option>`).join('')}</optgroup>`).join('');
-}
+// MATERIALS, PRODUCT_TYPES, getMaterialsForProduct, renderFilteredMaterialOptions — from shared.js
 
 document.getElementById('page-styles').textContent = `
 :root {
@@ -511,7 +481,7 @@ function populateMaterialDropdown() {
   const productType = $('productType').value;
   const materialSel = $('material');
   if (typeof renderFilteredMaterialOptions === 'function') {
-    materialSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType);
+    materialSel.innerHTML = '<option value="">— Select Material —</option>' + renderFilteredMaterialOptions(productType, $('facility')?.value || '');
   } else {
     materialSel.innerHTML = '<option value="">— Select Material —</option>';
   }
