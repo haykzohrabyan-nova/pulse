@@ -1,0 +1,24 @@
+# Cloudflare Pages — backward-compatible redirects (old flat URLs → new structure)
+/dashboard.html /pages/dashboard.html 302
+/job-ticket.html /pages/job-ticket.html 302
+/admin.html /pages/admin.html 302
+/prepress.html /pages/prepress.html 302
+/production-manager.html /pages/production-manager.html 302
+/operator-terminal.html /pages/operator-terminal.html 302
+/qc-checkout.html /pages/qc-checkout.html 302
+/shipping.html /pages/shipping.html 302
+/machine-issues.html /pages/machine-issues.html 302
+/organisation.html /pages/organisation.html 302
+/pricing-calculator.html /pages/pricing-calculator.html 302
+/pricing-calculator-sales.html /pages/pricing-calculator-sales.html 302
+/migrate-to-supabase.html /pages/migrate-to-supabase.html 302
+/reset-pulse-local-data.html /pages/reset-pulse-local-data.html 302
+/migrate.html /pages/migrate.html 302
+/shared.js /js/shared.js 302
+/auth.js /js/auth.js 302
+/supabase-client.js /js/supabase-client.js 302
+/pulse-config.js /js/pulse-config.js 302
+/pulse-config.local.js /js/pulse-config.local.js 302
+/organisation-local-store.js /js/organisation-local-store.js 302
+/seed-data.js /js/seed-data.js 302
+/notification-config.js /js/notification-config.js 302
