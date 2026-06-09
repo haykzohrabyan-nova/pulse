@@ -23,7 +23,7 @@ python3 -m http.server 8081
 # Open http://127.0.0.1:8081/pages/dashboard.html
 ```
 
-Production config is in **`js/pulse-config.js`** (`PULSE_STORAGE_BACKEND = 'supabase'`). Leave **`js/pulse-config.local.js`** empty unless you need IndexedDB-only dev mode.
+Production config is in **`js/pulse-config.js`**. On **Vercel**, `deploy/build.sh` also writes **`js/pulse-config.local.js`** from `VITE_SUPABASE_URL` + **`VITE_SUPABASE_ANON_KEY`** (use **anon public** key only — see [`deploy/README.md`](deploy/README.md)).
 
 ## Documentation
 
