@@ -193,7 +193,8 @@
 </div>
 
 <script>
-// MATERIALS, PRODUCT_TYPES, getMaterialsForProduct, renderFilteredMaterialOptions — from shared.js
+// MATERIALS, PRODUCT_TYPES, getMaterialsForProduct, renderFilteredMaterialOptions,
+// APPLICATION_FEE_RATES, PACKAGING_CONTAINERS — from shared.js
 
 document.getElementById('page-styles').textContent = `
 :root {
@@ -382,22 +383,6 @@ const BOX_BOYD_TIERS = [
   { maxFrames: 62.5, framePrice: 25.00 },
   { maxFrames: 125, framePrice: 23.00 },
   { maxFrames: 250, framePrice: 22.00 }
-];
-
-const APPLICATION_FEE_RATES = {
-  jar:        0.10,
-  tube:       0.10,
-  bag_7g:     0.15,
-  bag_exit:   0.25,
-  bag_lb:     0.50
-};
-
-const PACKAGING_CONTAINERS = [
-  { id: 'jar',      label: 'Jar',             rate: 0.10 },
-  { id: 'tube',     label: 'Tube',            rate: 0.10 },
-  { id: 'bag_7g',   label: '7g–1lb Bag',      rate: 0.15 },
-  { id: 'bag_exit', label: 'Exit Bag',         rate: 0.25 },
-  { id: 'bag_lb',   label: 'Large Bag (1lb+)', rate: 0.50 }
 ];
 
 window.addEventListener('DOMContentLoaded', async () => {
