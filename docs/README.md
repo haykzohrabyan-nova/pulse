@@ -33,6 +33,7 @@ Application code (not in docs/):
 ├── js/                       shared.js, auth.js, supabase-client.js, pulse-config.js
 ├── index.html                Redirects to /pages/dashboard.html
 ├── deploy/*.sh               Build & smoke-test scripts
+├── vercel.json               Vercel build command (runs deploy/build.sh)
 └── supabase/migrations/      SQL migrations
 ```
 
@@ -43,6 +44,8 @@ Application code (not in docs/):
 ### Multi-user / production
 
 - [Production status — Realtime sync](supabase/production-status.md#multi-user-realtime-sync)
+- [Production status — Vercel deploy](supabase/production-status.md#vercel-deploy)
+- [Deploy scripts — Vercel env vars (anon key)](../../deploy/README.md)
 - [Release checklist — post-deploy Realtime test](deploy/release-checklist.md)
 - [Connection spec §7 — Realtime](supabase/connection-spec.html#realtime)
 
