@@ -3,7 +3,13 @@
 # Docs: https://developers.cloudflare.com/pages/configuration/headers/
 
 # ── HTML pages: always revalidate ──────────────────────────
-/*.html
+/pages/*.html
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/index.html
   Cache-Control: no-cache, must-revalidate
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
@@ -16,19 +22,15 @@
   Referrer-Policy: strict-origin-when-cross-origin
 
 # ── JS files: short-cache (unhashed filenames) ───────────────────
-# All JS files in this deployment use plain (unhashed) filenames.
-# Use a 5-min TTL so deploys are visible within minutes from CF edge.
-# The HTML build script injects ?v=<git-sha> query strings to bust
-# browser caches on deploy — but immutable would defeat staging
-# verification via plain curl. Short TTL here is the safe default.
-#
-# NOTE: If content-hashed assets are ever added (e.g. app-<hash>.js),
-# add an explicit long-cache rule ABOVE this wildcard for those patterns.
+/js/*.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+# Legacy root JS redirects may still hit old paths — keep rule for transition
 /*.js
   Cache-Control: public, max-age=300, must-revalidate
 
 # ── Generated configs (no-store: must always reflect latest deploy) ──
-/pulse-config.local.js
+/js/pulse-config.local.js
   Cache-Control: no-store
 
 # ── Static assets: long-term cache ──────────────────────────
@@ -44,4 +46,4 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), unload=(self)

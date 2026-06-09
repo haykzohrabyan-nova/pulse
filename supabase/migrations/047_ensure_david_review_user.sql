@@ -1,0 +1,4 @@
+-- DEPRECATED as a single file — use three steps in Supabase SQL Editor (separate Run each):
+--   1. 047a_user_role_david_review.sql
+--   2. 047b_ensure_david_review_user.sql
+--   3. 047c_fix_david_auth_tokens.sql   ← run if login says "Database error querying schema"

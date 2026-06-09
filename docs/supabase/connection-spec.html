@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse — Supabase Full Connection Specification</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --warn: #92400e;
+      --warn-bg: #fef9c3;
+      --bad: #991b1b;
+      --bad-bg: #fee2e2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      padding: 48px 32px 40px;
+    }
+    header h1 { margin: 0 0 12px; font-size: 28px; letter-spacing: -0.02em; color: #ffffff; }
+    header .lead {
+      margin: 0;
+      max-width: 820px;
+      font-size: 16px;
+      line-height: 1.65;
+      color: #f1f5f9;
+    }
+    header .stack-note {
+      margin: 14px 0 0;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    header .stack-files {
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    header .stack-files li {
+      margin: 0;
+      background: #ffffff;
+      color: #1e3a8a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+    header code {
+      background: #ffffff;
+      color: #1e3a8a;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+    }
+    .meta {
+      margin-top: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .meta span {
+      background: rgba(15, 23, 42, 0.35);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    nav.toc h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    nav.toc ol { margin: 0; padding-left: 20px; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 28px;
+      margin-bottom: 24px;
+    }
+    section h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent-soft);
+    }
+    section h3 { margin: 24px 0 10px; font-size: 16px; color: #1e40af; }
+    section h4 { margin: 16px 0 8px; font-size: 14px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 12px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 12px 0 16px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1f5f9; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    code, kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 12px 0;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-done { background: var(--ok-bg); color: var(--ok); }
+    .badge-partial { background: var(--warn-bg); color: var(--warn); }
+    .badge-gap { background: var(--bad-bg); color: var(--bad); }
+    .badge-rt { background: #ede9fe; color: #5b21b6; }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .callout-warn {
+      border-left-color: #d97706;
+      background: var(--warn-bg);
+    }
+    .diagram {
+      background: #f8fafc;
+      border: 1px dashed var(--border);
+      padding: 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      white-space: pre;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+    .sprint-banner {
+      background: linear-gradient(90deg, #ecfdf5 0%, #eff6ff 100%);
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .sprint-banner strong { color: #166534; }
+    .step-block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin: 16px 0;
+      background: #fafbfc;
+    }
+    .step-block h4 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #1e40af;
+    }
+    .step-block .step-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .step-block ol { margin: 0; }
+    .verify-box {
+      background: var(--ok-bg);
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .verify-box strong { color: var(--ok); }
+    .gate-stop {
+      background: var(--warn-bg);
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .prompt-box {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+      margin: 12px 0 0;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      user-select: all;
+    }
+    .prompt-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-top: 14px;
+    }
+    .hours-table td:last-child { font-weight: 600; }
+    @media print {
+      header { background: #1e3a8a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      section { break-inside: avoid; }
+      nav.toc { page-break-after: always; }
+      .prompt-box { white-space: pre-wrap; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Pulse — Full Supabase Connection Specification</h1>
+  <p class="lead">
+    Technical plan to connect all production data to Supabase for multi-user operation,
+    manage users and roles in the cloud, and replace REST polling with targeted Realtime push —
+    without changing UI layout, user-facing functionality, or the existing tech stack.
+  </p>
+  <p class="stack-note">Existing stack (unchanged):</p>
+  <ul class="stack-files">
+    <li>static HTML</li>
+    <li>shared.js</li>
+    <li>supabase-client.js</li>
+    <li>auth.js</li>
+  </ul>
+  <div class="meta">
+    <span>Document version 1.2</span>
+    <span>Project: pulseDavit / Bazaar Pulse</span>
+    <span>Stack unchanged</span>
+    <span>June 2026 — Supabase production cutover</span>
+    <span><a href="production-status.md" style="color:#fff">Production status (MD)</a></span>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#production-status">Production status (June 2026)</a></li>
+    <li><a href="#summary">Executive summary — start here</a></li>
+    <li><a href="#constraints">Constraints (what we will not change)</a></li>
+    <li><a href="#target">Target architecture</a></li>
+    <li><a href="#current">Current state summary</a></li>
+    <li><a href="#auth-roles">Users &amp; roles (multi-user)</a></li>
+    <li><a href="#data-wiring">Data layer — browser to Postgres</a></li>
+    <li><a href="#migration">One-time data migration</a></li>
+    <li><a href="#realtime">Realtime push (no polling)</a></li>
+    <li><a href="#implementation">Implementation work packages</a></li>
+    <li><a href="#timeline">Timeline &amp; effort</a></li>
+    <li><a href="#testing">Acceptance testing</a></li>
+    <li><a href="#risks">Risks &amp; decisions</a></li>
+    <li><a href="#runbook">Agent &amp; developer runbook (step-by-step)</a></li>
+    <li><a href="#sprint-2day">2-day sprint (8 h/day, developer + AI)</a></li>
+  </ol>
+</nav>
+
+<section id="production-status">
+  <h2>Production status (June 2026)</h2>
+  <div class="callout" style="border-left-color:#059669;background:#ecfdf5;">
+    <strong>Cutover complete (June 2026).</strong> Production uses <code>PULSE_STORAGE_BACKEND = 'supabase'</code> in committed
+    <code>js/pulse-config.js</code>. HTML lives in <code>pages/</code>, JS in <code>js/</code>. Business data is read/written via
+    <code>js/supabase-client.js</code> overrides — not IndexedDB. Realtime multi-user sync is <strong>implemented</strong> (no order polling).
+    See also <a href="production-status.md">production-status.md</a> and <a href="../app/overview.md">app/overview.md</a>.
+  </div>
+  <h3>Config &amp; local overrides</h3>
+  <ul>
+    <li><strong>Production:</strong> <code>js/pulse-config.js</code> — Supabase URL, anon key, <code>supabase</code> backend.</li>
+    <li><strong><code>js/pulse-config.local.js</code> (gitignored):</strong> leave <strong>empty</strong> so production config wins. Template: <code>js/pulse-config.local.js.example</code>.</li>
+    <li><strong>Dev server:</strong> <code>python3 -m http.server 8081</code> → <code>http://127.0.0.1:8081/pages/dashboard.html</code> (not <code>file://</code>).</li>
+  </ul>
+  <h3>Personnel &amp; login</h3>
+  <ul>
+    <li><strong>Login UI:</strong> email + password form (<code>js/auth.js</code> → <code>supabaseSignIn</code>). No Name dropdown in Supabase mode.</li>
+    <li>Admin → Personnel saves via RPC <strong>046</strong> (<code>upsert_pulse_personnel</code>): email = <code>firstname@bazaar-admin.com</code>, password = User ID field.</li>
+    <li>Personnel source of truth: <code>profiles</code> table only (no merge with <code>OPERATOR_PROFILES</code> / <code>EXTRA_AUTH_USERS</code>).</li>
+    <li>David Zargaryan (<code>david_review</code>): migrations <strong>047a</strong> → <strong>047b</strong> → <strong>047c</strong> (047a must run alone first).</li>
+    <li>Realtime reference tables: migration <strong>048</strong>.</li>
+  </ul>
+  <h3>npm scripts</h3>
+  <table>
+    <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>npm run import:supabase</code></td><td>Import backup JSON → cloud (dies, knowledge, config, …)</td></tr>
+      <tr><td><code>npm run migrate:supabase</code></td><td>Apply migration 046 (personnel RPC)</td></tr>
+      <tr><td><code>npm run migrate:david-a/b/c</code></td><td>Apply David review user migrations</td></tr>
+      <tr><td><code>npm run audit:staff</code></td><td>Compare <code>profiles</code> vs legacy <code>config.personnel</code></td></tr>
+      <tr><td><code>npm run check:david</code></td><td>Verify David auth + profile rows</td></tr>
+    </tbody>
+  </table>
+  <h3>Verify in browser console</h3>
+  <pre style="background:#f1f5f9;padding:12px;border-radius:8px;font-size:13px;">pulseUsesSupabaseStorage()           // true
+(await getAllPersonnel()).length   // matches Supabase profiles count</pre>
+  <p>After login, IndexedDB <code>BazaarPrintDB</code> should <strong>not</strong> reappear on refresh. If it does, clear cache and confirm <code>js/pulse-config.local.js</code> is empty.</p>
+</section>
+
+<section id="summary">
+  <h2>Executive summary — start here</h2>
+  <p>
+    This document is a <strong>technical specification</strong> and a <strong>step-by-step runbook</strong> for developers using an AI coding agent (e.g. Cursor + Sonnet).
+    Detailed architecture and tables are in sections 1–12; <strong>implementation steps, copy-paste prompts, and the 2-day plan are in <a href="#runbook">section 13</a></strong>.
+  </p>
+
+  <h3>Can an AI agent guide implementation step by step?</h3>
+  <table>
+    <thead><tr><th>Who</th><th>Will this doc + AI work?</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Developer + AI in Cursor</strong></td>
+        <td><strong>Yes.</strong> Use section 13 phases A→D (one phase per agent task). Agent writes code; you run Verify checklists between phases.</td>
+      </tr>
+      <tr>
+        <td><strong>Owner / tester only</strong></td>
+        <td><strong>Partial.</strong> Use <a href="#testing">section 10</a> for UAT; ask the agent to explain each phase in plain language after the developer implements it.</td>
+      </tr>
+      <tr>
+        <td><strong>Owner implementing without AI</strong></td>
+        <td><strong>No.</strong> Requires a developer for Supabase, JS, and migration tooling.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Important:</strong> Do not ask the agent to “implement everything” in one chat. Use <strong>one phase per session</strong> (A, B, C, D) and pass the <a href="#agent-rules">agent rules</a> block once at the start.
+  </div>
+
+  <h3 id="sprint-2day">2 days × 8 hours — realistic for a developer + AI?</h3>
+  <div class="sprint-banner">
+    <strong>Yes — for a focused MVP</strong> (multi-user orders, migration, dies + operator on Supabase, order Realtime fixed, cutover tests).<br>
+    <strong>No — for the full specification (WP-1 through WP-9)</strong> (POs, knowledge, Realtime on config/dies/org, cloud backup export, full polish). Plan <strong>4–5 working days</strong> at 8 h/day.
+  </div>
+
+  <table class="hours-table">
+    <thead>
+      <tr><th>Scope</th><th>Estimated hours (dev + AI)</th><th>Fits in 16 hours (2 × 8 h)?</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>MVP sprint</strong> — WP-1, WP-2, WP-3, WP-4, smoke test, cutover</td>
+        <td>14–18 h</td>
+        <td>✅ Tight but achievable</td>
+      </tr>
+      <tr>
+        <td>+ WP-5 (knowledge + purchase orders)</td>
+        <td>+6–10 h</td>
+        <td>⚠️ Needs day 3 or defer POs</td>
+      </tr>
+      <tr>
+        <td>+ WP-6, WP-7 (full Realtime on reference tables)</td>
+        <td>+8–12 h</td>
+        <td>❌ Not in 2 days</td>
+      </tr>
+      <tr>
+        <td><strong>Full spec WP-1–WP-9</strong></td>
+        <td>28–40 h</td>
+        <td>❌ Plan 4–5 days at 8 h/day</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Assumptions for the 2-day MVP:</strong> experienced developer (JavaScript, git), Supabase project with migrations applied, AI agent for implementation, one canonical PC for export + migrate, production URL shared by all users (not <code>file://</code>).</p>
+
+  <h3>What fits in 2 days (16 hours total)</h3>
+  <table>
+    <thead><tr><th>Block</th><th>Hours</th><th>Goal</th><th>See</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Day 1 AM</strong></td><td>4 h</td><td>Live multi-user orders (Realtime + job ticket)</td><td><a href="#phase-a">Phase A</a> · WP-1</td></tr>
+      <tr><td><strong>Day 1 PM</strong></td><td>4 h</td><td>All legacy data in Supabase</td><td><a href="#phase-b">Phase B</a> · WP-2 + migrate</td></tr>
+      <tr><td><strong>Day 2 AM</strong></td><td>4 h</td><td>Dies + operator clock on cloud</td><td><a href="#phase-c">Phase C</a> · <a href="#phase-d">Phase D</a></td></tr>
+      <tr><td><strong>Day 2 PM</strong></td><td>4 h</td><td>Test, fix RLS, team cutover</td><td><a href="#testing">Section 10</a> · <a href="#phase-cutover">Cutover</a> · defer WP-5–WP-9</td></tr>
+    </tbody>
+  </table>
+
+  <h3>How to start with the AI agent (4 steps)</h3>
+  <ol>
+    <li>Open <a href="#runbook">section 13</a> in this document (or give the agent the file path <code>docs/supabase/connection-spec.html</code>).</li>
+    <li>Copy the <a href="#agent-rules">Rules for the agent</a> block into a <strong>new</strong> Cursor chat and send it once.</li>
+    <li>Run <strong>Phase A only</strong> — copy the Phase A prompt → let the agent code → run the Phase A <strong>Verify</strong> box on two browsers.</li>
+    <li>If Verify passes, continue <strong>Phase B</strong>, then C, then D. If Verify fails, fix before the next phase (<strong>STOP</strong> gates in section 13).</li>
+  </ol>
+
+  <h3>Example: first message to the agent (Phase A)</h3>
+  <div class="prompt-box">Read docs/supabase/connection-spec.html. Follow the Rules for the agent in section 13.
+Implement Phase A / WP-1 only. Stop when done and give me the Verify checklist from Phase A.</div>
+
+  <h3>Bottom line</h3>
+  <ul>
+    <li>A <strong>developer with AI</strong> can deliver a <strong>usable multi-user Supabase MVP in 2 full days</strong> (orders, migration, dies, operator, roles/auth as today).</li>
+    <li><strong>Full</strong> connection (all modules + Realtime everywhere + backup from cloud) is realistically <strong>4–5 days</strong> at 8 h/day — see <a href="#timeline">section 9</a> and optional <a href="#phase-e">Phase E</a>.</li>
+    <li>The owner can <strong>test daily workflows</strong> during and after the sprint using <a href="#testing">section 10</a>; that is separate from “build the remaining WP items.”</li>
+  </ul>
+  <p style="margin:0;font-size:14px;color:var(--muted);">→ Continue to <a href="#runbook">section 13</a> for full prompts, verify boxes, and cutover steps.</p>
+</section>
+
+<section id="constraints">
+  <h2>1. Constraints — what we will not change</h2>
+  <table>
+    <thead>
+      <tr><th>Area</th><th>Stays the same</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>UI</strong></td>
+        <td>All HTML pages, layouts, CSS, modals, nav structure, Admin tabs, job ticket form fields.</td>
+      </tr>
+      <tr>
+        <td><strong>Functionality</strong></td>
+        <td>Same workflows: create/edit tickets, dashboard columns, prepress, operator clock-in, shipping, machine issues, organisation editor, pricing calculator behavior.</td>
+      </tr>
+      <tr>
+        <td><strong>Tech stack</strong></td>
+        <td>Vanilla JS, no framework migration. Load order: <code>/js/pulse-config.js</code> → <code>/js/shared.js</code> → Supabase CDN → <code>/js/supabase-client.js</code> → <code>/js/auth.js</code>. Pages in <code>pages/</code>. Postgres + RLS.</td>
+      </tr>
+      <tr>
+        <td><strong>Login UX</strong></td>
+        <td><strong>Email + password</strong> (Supabase Auth). Personnel provisioned in Admin → Personnel (email derived from first name, password = User ID).</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>What does change (under the hood only):</strong> where data is read/written (IndexedDB/localStorage → Supabase tables),
+    how list pages refresh (polling → Realtime + single-row fetch), and completeness of migration tooling.
+  </div>
+</section>
+
+<section id="target">
+  <h2>2. Target architecture</h2>
+  <div class="diagram">
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Browser (many users, same deployed URL e.g. pulse.bazaar-admin.com)   │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────────┐  │
+│  │ js/auth.js  │  │ js/shared.js │  │ js/supabase│  │ pages/*.html │  │
+│  │ session     │  │ onDBUpdate   │  │ -client.js │  │              │  │
+│  └──────┬──────┘  └──────┬───────┘  └─────┬──────┘  └──────────────┘  │
+│         │                │                 │                            │
+│         │    pulse:order-change / pulse:reference-data-changed        │
+│         │                │                 │                            │
+└─────────┼────────────────┼─────────────────┼────────────────────────────┘
+          │                │                 │
+          ▼                ▼                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Supabase                                                                │
+│  • Auth (JWT per user)                                                   │
+│  • profiles.role → RLS (data security)                                   │
+│  • config.rolePermissions → UI page matrix (optional overrides)          │
+│  • Realtime WebSocket → postgres_changes on selected tables only       │
+│  • REST only for: login, initial page load, single-row patch on event    │
+└─────────────────────────────────────────────────────────────────────────┘
+  </div>
+  <h3>Success criteria</h3>
+  <ul>
+    <li>Any authorized user on any PC sees the same orders, dies, config, etc. (no per-browser IndexedDB truth).</li>
+    <li>New/edited rows appear on other users’ screens within seconds <strong>without</strong> <code>setInterval</code> polling Supabase.</li>
+    <li>Users and roles are provisioned in Supabase Auth + <code>profiles</code>; Admin Personnel/Roles stay the management UI.</li>
+    <li>IndexedDB (<code>BazaarPrintDB</code>) is not used for production reads/writes in production config.</li>
+  </ul>
+</section>
+
+<section id="current">
+  <h2>3. Current state summary</h2>
+  <p>
+    Production config (<code>js/pulse-config.js</code>) sets <code>PULSE_STORAGE_BACKEND = 'supabase'</code>.
+    As of <strong>June 2026</strong>, the MVP cutover is <strong>complete</strong>: all primary business data paths use
+    <code>js/supabase-client.js</code> overrides. IndexedDB is blocked when Supabase mode is active.
+    See <a href="#production-status">Production status</a> and
+    <a href="production-status.md">production-status.md</a>.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Area</th><th>Status</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Orders, activity, comments, workflow steps</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>getOrder</code>, <code>addOrder</code>, <code>updateOrder</code>, etc. overridden.</td>
+      </tr>
+      <tr>
+        <td>Config, machines, product workflows</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>getConfig</code> / <code>setConfig</code>; role matrix in <code>config.rolePermissions</code>.</td>
+      </tr>
+      <tr>
+        <td>Personnel / login</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>profiles</code> table only in Supabase mode — no hardcoded staff merge at login.</td>
+      </tr>
+      <tr>
+        <td>Dies, knowledge base, purchase orders, invoices, packaging</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td>Overrides in <code>supabase-client.js</code>; import via <code>npm run import:supabase</code>.</td>
+      </tr>
+      <tr>
+        <td>Operator sessions / points</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>operator_sessions</code>, <code>operator_points</code> tables.</td>
+      </tr>
+      <tr>
+        <td>Organisation</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>PULSE_ORG_STORAGE = 'supabase'</code> in production config.</td>
+      </tr>
+      <tr>
+        <td>Machine issues</td>
+        <td><span class="badge badge-done">Supabase runtime</span></td>
+        <td><code>machine_issues</code> table; Realtime via migration 048.</td>
+      </tr>
+      <tr>
+        <td>IndexedDB (<code>BazaarPrintDB</code>)</td>
+        <td><span class="badge badge-done">Decommissioned (prod)</span></td>
+        <td><code>openDB()</code> blocked in Supabase mode; legacy fallback for <code>indexeddb</code> dev only.</td>
+      </tr>
+      <tr>
+        <td>Realtime multi-user sync</td>
+        <td><span class="badge badge-done">Implemented</span></td>
+        <td><code>_registerRealtimeSubscriptions</code> in <code>js/supabase-client.js</code>; <code>onDBUpdate</code> in <code>js/shared.js</code>; dashboard/job-ticket polling removed; migration <strong>048</strong> for reference tables.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="auth-roles">
+  <h2>4. Users &amp; roles (multi-user)</h2>
+  <p>Two layers must stay aligned. No UI change — same login form and Admin screens.</p>
+
+  <h3>4.1 Layer A — UI access (<code>js/auth.js</code>)</h3>
+  <ul>
+    <li><strong>Defaults:</strong> <code>ROLE_CONFIG</code> (pages, admin tabs, canEditAllTickets, …).</li>
+    <li><strong>Overrides:</strong> Admin → Roles → Save writes <code>config.rolePermissions</code> in Supabase (localStorage cache in IndexedDB dev mode only).</li>
+    <li><strong>Session:</strong> <code>sessionStorage.pulse_session</code> with <code>{ name, role }</code> after login.</li>
+    <li><strong>Login (Supabase mode):</strong> email + password form → <code>supabaseSignIn</code> → load <code>profiles</code> row. No Name dropdown.</li>
+    <li><strong>Checks:</strong> <code>canAccessPage()</code>, <code>applyRoleAccess()</code>, <code>canEditTicket()</code>.</li>
+  </ul>
+
+  <h3>4.2 Layer B — database access (Supabase RLS)</h3>
+  <ul>
+    <li><strong>Identity:</strong> Supabase Auth JWT → <code>auth.uid()</code>.</li>
+    <li><strong>Role:</strong> <code>profiles.role</code> (enum: <code>admin</code>, <code>supervisor</code>, <code>operator</code>, <code>account_manager</code>, …).</li>
+    <li><strong>Policies:</strong> <code>current_user_role()</code> in <code>002_rls_policies.sql</code> and follow-on migrations.</li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <strong>Critical rule:</strong> Admin Personnel sets auth email/password via RPC. <strong>Postgres <code>profiles.role</code> controls what data RLS allows.</strong>
+    Adding a user requires: Auth account + <code>profiles</code> row with correct <code>role</code> and <code>display_name</code>.
+  </div>
+
+  <h3>4.3 User provisioning (no new UI — use existing + ops)</h3>
+  <table>
+    <thead>
+      <tr><th>Step</th><th>Where</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Supabase Dashboard → Authentication</td>
+        <td>Create user email <code>firstname@bazaar-admin.com</code>, password = User ID (or temporary <code>Pulse2026!</code>).</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Table Editor → <code>profiles</code></td>
+        <td>Ensure row exists: <code>id</code> = auth user UUID, <code>display_name</code>, <code>role</code> (underscores), <code>facility</code> if needed. Or run RPC <code>ensure_pulse_profile</code> on first login (migration 039).</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Admin → Personnel</td>
+        <td>Add/edit people — writes <code>profiles</code> via <code>upsert_pulse_personnel</code> RPC (migration <strong>046</strong>). Legacy <code>config.personnel</code> JSON may still exist; prefer <code>profiles.pulse_user_id</code>.</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Admin → Roles</td>
+        <td>Customize page matrix → <code>config.rolePermissions</code> (UI only).</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Optional: <code>scripts/push-pulse-roles.mjs</code></td>
+        <td>Bulk sync from <code>data/pulse-roles-export.json</code> including <code>profilesLogin</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.4 Role key mapping (JS ↔ Postgres)</h3>
+  <table>
+    <thead><tr><th>UI / ROLE_CONFIG (hyphens)</th><th>profiles.role (underscores)</th></tr></thead>
+    <tbody>
+      <tr><td><code>account-manager</code></td><td><code>account_manager</code></td></tr>
+      <tr><td><code>production-manager</code></td><td><code>production_manager</code></td></tr>
+      <tr><td><code>david-review</code></td><td><code>david_review</code></td></tr>
+      <tr><td><code>admin</code>, <code>operator</code>, <code>prepress</code>, <code>qc</code>, <code>shipping</code></td><td>same spelling in enum</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="data-wiring">
+  <h2>5. Data layer — wire every module to Supabase (no UI change)</h2>
+  <p>
+    Pattern: mirror existing <code>supabase-client.js</code> overrides for orders — save original <code>window.getX</code> from <code>shared.js</code>,
+    replace with async Supabase implementation, same return shape so HTML pages unchanged.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Feature / API</th>
+        <th>Used by (pages)</th>
+        <th>Postgres table(s)</th>
+        <th>Work required</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>getAllOrders</code>, <code>getOrder</code>, …</td>
+        <td>Dashboard, job-ticket, production, prepress, QC, shipping</td>
+        <td><code>orders</code>, <code>order_workflow_steps</code>, …</td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td><code>getConfig</code> / <code>setConfig</code></td>
+        <td>Admin, all pages via catalog/settings</td>
+        <td><code>config</code></td>
+        <td><span class="badge badge-done">Done</span> — extend migrator for all keys</td>
+      </tr>
+      <tr>
+        <td><code>getAllPersonnel</code>, …</td>
+        <td>Admin, auth login list</td>
+        <td><code>profiles</code>, <code>config.personnel</code></td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td><code>getAllDies</code>, add/update die</td>
+        <td>Admin, job-ticket die picker</td>
+        <td><code>dies</code></td>
+        <td><span class="badge badge-gap">Add overrides</span> in <code>supabase-client.js</code></td>
+      </tr>
+      <tr>
+        <td><code>clockIn</code>, <code>clockOut</code>, break helpers</td>
+        <td>operator-terminal.html</td>
+        <td><code>operator_sessions</code>, <code>operator_breaks</code></td>
+        <td><span class="badge badge-gap">Add overrides</span></td>
+      </tr>
+      <tr>
+        <td>Operator points</td>
+        <td>operator-terminal, admin</td>
+        <td><code>operator_points</code></td>
+        <td><span class="badge badge-gap">Add overrides</span></td>
+      </tr>
+      <tr>
+        <td><code>getAllKnowledge</code>, …</td>
+        <td>Admin knowledge tab</td>
+        <td><code>knowledge_base</code></td>
+        <td><span class="badge badge-gap">Add overrides</span></td>
+      </tr>
+      <tr>
+        <td><code>getAllPurchaseOrders</code>, …</td>
+        <td>Admin PO tab</td>
+        <td><code>purchase_orders</code>, <code>purchase_order_items</code></td>
+        <td><span class="badge badge-gap">Add overrides + migrator</span></td>
+      </tr>
+      <tr>
+        <td>Invoices CRUD</td>
+        <td>shared helpers (billing on orders)</td>
+        <td><code>invoices</code></td>
+        <td><span class="badge badge-gap">Add overrides</span> if invoice store still used</td>
+      </tr>
+      <tr>
+        <td>Reprints / devices stores</td>
+        <td>Backup, legacy</td>
+        <td><code>config</code> keys <code>pulse_reprints</code>, <code>pulse_devices</code></td>
+        <td><span class="badge badge-partial">Migrate only</span> — read via <code>getConfig</code> if needed</td>
+      </tr>
+      <tr>
+        <td>Organisation bundle</td>
+        <td>organisation.html, shared facilities</td>
+        <td><code>organisations</code>, <code>organisation_facilities</code>, <code>organisation_hardware</code></td>
+        <td><span class="badge badge-done">Done</span> — set <code>PULSE_ORG_STORAGE = 'supabase'</code></td>
+      </tr>
+      <tr>
+        <td>Machine issues</td>
+        <td>machine-issues.html</td>
+        <td><code>machine_issues</code></td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td>Design tasks (direct <code>.from('design_tasks')</code>)</td>
+        <td>job-ticket.html</td>
+        <td><code>design_tasks</code></td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td>Production / proof queue</td>
+        <td>prepress.html</td>
+        <td><code>production_tasks</code>, <code>proofs</code>, …</td>
+        <td><span class="badge badge-done">Direct queries</span> — add Realtime (below)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.1 Pages — load <code>supabase-client.js</code></h3>
+  <p>Every authenticated app page must use the same script bundle so auth and storage are consistent:</p>
+  <table>
+    <thead><tr><th>Page</th><th>Today</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td>dashboard, job-ticket, admin, prepress, production-manager, operator-terminal, qc-checkout, shipping, organisation, machine-issues</td><td>Has supabase-client</td><td>Keep</td></tr>
+      <tr><td>pricing-calculator.html</td><td>auth only, no supabase-client</td><td>Add pulse-config + supabase-client if shared login required</td></tr>
+      <tr><td>pricing-calculator-sales.html</td><td>Standalone</td><td>Out of scope unless merged</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Decommission IndexedDB in production</h3>
+  <ul>
+    <li>Keep <code>shared.js</code> IDB code as dev fallback when <code>PULSE_STORAGE_BACKEND = 'indexeddb'</code>.</li>
+    <li>Production: overrides always active; IDB never authoritative.</li>
+    <li>After cutover: <code>reset-pulse-local-data.html</code> on each workstation once cloud verified.</li>
+  </ul>
+</section>
+
+<section id="migration">
+  <h2>6. One-time data migration</h2>
+  <p>Tool: <code>pages/migrate-to-supabase.html</code> → <code>migratePulseDataToSupabase()</code> in <code>js/supabase-client.js</code>.</p>
+
+  <h3>6.1 Already migrated by tool</h3>
+  <ul>
+    <li>Catalog keys, machineCapacity, customRoles, personnel, devices → config, reprints → config</li>
+    <li>machines, product_workflows, organisation bundle, dies, knowledge_base</li>
+    <li>operator_sessions, operator_points, orders, invoices, activity_log</li>
+  </ul>
+
+  <h3>6.2 Gaps to add to migrator (code only)</h3>
+  <ul>
+    <li><strong>All <code>config</code> keys</strong> from IndexedDB (rolePermissions, pulseQARules, pulseLeadTimes, appDeptCapacity, defaultFacility, …).</li>
+    <li><strong>purchase_orders</strong> (+ line items if present in IDB).</li>
+    <li><strong>machine_issues</strong> from localStorage in full run (today: lazy on first page visit only).</li>
+    <li>Upsert/idempotency for knowledge_base and operator_sessions (avoid duplicates on re-run).</li>
+  </ul>
+
+  <h3>6.3 Operational procedure (unchanged UI)</h3>
+  <ol>
+    <li>On canonical PC: Admin → Export JSON.</li>
+    <li>Open <code>pages/migrate-to-supabase.html</code> on <strong>same URL/origin</strong> as production.</li>
+    <li>Import backup → Inspect counts → Sign in admin → Run full migration.</li>
+    <li>Verify row counts in Supabase Table Editor.</li>
+    <li>All clients: hard refresh, Supabase login, optional local wipe.</li>
+  </ol>
+</section>
+
+<section id="realtime">
+  <h2>7. Realtime push — replace Supabase polling</h2>
+
+  <h3>7.1 Principle (implemented June 2026)</h3>
+  <ul>
+    <li><strong>Do not</strong> poll <code>getAllOrders</code> / <code>getAllOrdersSummary</code> on a timer for multi-user sync.</li>
+    <li><strong>Do</strong> subscribe via Supabase Realtime (<code>postgres_changes</code>) per table in <code>js/supabase-client.js</code>.</li>
+    <li>On event: fetch affected row(s) and patch in-memory list / re-render queue; dispatch <code>pulse:order-change</code>, <code>pulse:reference-data-changed</code>, <code>pulse:task-change</code>.</li>
+    <li>Pages register refresh via <code>onDBUpdate()</code> in <code>js/shared.js</code>.</li>
+    <li><strong>No fallback poll</strong> if WebSocket disconnects (known limit — user may need manual refresh).</li>
+    <li>UI timers only: operator clock 1s, job-ticket step banner 30s — not Supabase polls.</li>
+  </ul>
+
+  <h3>7.2 Implementation status (done)</h3>
+  <table>
+    <thead><tr><th>Item</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>pulse:order-change</code> + legacy <code>pulse:orders-changed</code></td>
+        <td><span class="badge badge-done">Done</span> — both dispatched from <code>_registerRealtimeSubscriptions</code></td>
+      </tr>
+      <tr>
+        <td><code>pages/job-ticket.html</code> <code>onDBUpdate</code></td>
+        <td><span class="badge badge-done">Done</span> — queue refresh + open ticket reload when same order</td>
+      </tr>
+      <tr>
+        <td><code>pages/dashboard.html</code> 60s poll</td>
+        <td><span class="badge badge-done">Removed</span></td>
+      </tr>
+      <tr>
+        <td><code>startJtQueueAutoRefresh(60000)</code></td>
+        <td><span class="badge badge-done">Removed</span></td>
+      </tr>
+      <tr>
+        <td>Reference tables publication</td>
+        <td><span class="badge badge-done">Done</span> — migration <strong>048</strong> (<code>config</code>, <code>dies</code>, org, <code>profiles</code>, …)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.3 Realtime publication — already enabled in DB</h3>
+  <p>These tables are already in <code>supabase_realtime</code> publication (migrations):</p>
+  <table>
+    <thead><tr><th>Table</th><th>Migration ref</th><th>Typical events</th></tr></thead>
+    <tbody>
+      <tr><td><code>orders</code></td><td>002</td><td>INSERT, UPDATE, DELETE</td></tr>
+      <tr><td><code>order_workflow_steps</code></td><td>002</td><td>UPDATE (operator steps)</td></tr>
+      <tr><td><code>order_comments</code></td><td>002</td><td>INSERT</td></tr>
+      <tr><td><code>activity_log</code></td><td>002</td><td>INSERT</td></tr>
+      <tr><td><code>operator_sessions</code></td><td>002</td><td>INSERT, UPDATE (clock-in board if built)</td></tr>
+      <tr><td><code>production_tasks</code></td><td>012, 014</td><td>INSERT, UPDATE — prepress queue</td></tr>
+      <tr><td><code>qc_tasks</code></td><td>012 (dropped 030)</td><td>Not in current schema — migration 048 skips if missing</td></tr>
+      <tr><td><code>proofs</code>, <code>proof_versions</code></td><td>010</td><td>Prepress proof lock (verify still subscribed after CRM drops)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>7.4 Reference tables — migration 048 (applied in code)</h3>
+  <p>Migration <code>048_realtime_reference_tables.sql</code> adds these to <code>supabase_realtime</code> publication (idempotent). Client subscriptions live in <code>_registerRealtimeSubscriptions</code>:</p>
+  <table>
+    <thead>
+      <tr><th>Table</th><th>Why Realtime</th><th>Pages to subscribe</th><th>On event action</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>config</code></td>
+        <td>Admin changes catalog, roles, machine capacity</td>
+        <td>dashboard, job-ticket, admin (active tab), production-manager</td>
+        <td><code>getConfig(key)</code> for changed key OR <code>pulse:reference-data-changed</code> with scope</td>
+      </tr>
+      <tr>
+        <td><code>dies</code></td>
+        <td>Die registry edits</td>
+        <td>admin (dies tab), job-ticket (invalidate die cache)</td>
+        <td>Refetch dies list or single die</td>
+      </tr>
+      <tr>
+        <td><code>machine_issues</code></td>
+        <td>Floor reports issues</td>
+        <td>pages/machine-issues.html, dashboard if linked</td>
+        <td>Refetch issues list / patch row</td>
+      </tr>
+      <tr>
+        <td><code>profiles</code></td>
+        <td>Personnel role/facility change</td>
+        <td>admin personnel (optional)</td>
+        <td>Refetch personnel; rarely need live on all pages</td>
+      </tr>
+      <tr>
+        <td><code>machines</code></td>
+        <td>Machine list / capacity</td>
+        <td>admin, organisation</td>
+        <td><code>getAllMachines()</code> or reference-data event</td>
+      </tr>
+      <tr>
+        <td><code>product_workflows</code></td>
+        <td>Workflow editor</td>
+        <td>admin product-workflows</td>
+        <td>Reload workflow map</td>
+      </tr>
+      <tr>
+        <td><code>organisation_facilities</code>, <code>organisation_hardware</code></td>
+        <td>Org structure</td>
+        <td>pages/organisation.html, pages using facility list</td>
+        <td><code>loadOrganisationBundleForApp({ force: true })</code></td>
+      </tr>
+      <tr>
+        <td><code>knowledge_base</code></td>
+        <td>KB articles</td>
+        <td>admin knowledge tab</td>
+        <td>Refetch KB list</td>
+      </tr>
+      <tr>
+        <td><code>purchase_orders</code></td>
+        <td>PO tab</td>
+        <td>admin PO tab</td>
+        <td>Refetch PO list</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.5 Central Realtime registry (implemented)</h3>
+  <p>See <code>js/supabase-client.js</code> → <code>_registerRealtimeSubscriptions</code>. Events bridge to pages via <code>onDBUpdate()</code> in <code>js/shared.js</code>.</p>
+  <pre>
+// Pattern (simplified) — one channel, postgres_changes per table
+// Dispatches: pulse:order-change, pulse:orders-changed (legacy),
+//             pulse:reference-data-changed, pulse:task-change
+async function onOrderRealtime(payload) {
+  const id = payload.new?.id || payload.old?.id;
+  // Pages patch list or reload open ticket — no getAllOrders() timer poll
+}
+  </pre>
+
+  <h3>7.6 Page → Realtime matrix (current)</h3>
+  <table>
+    <thead>
+      <tr><th>Page</th><th>Subscribe (Realtime)</th><th>Remove / reduce polling</th><th>Refresh strategy</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>pages/dashboard.html</td>
+        <td>orders, activity_log, config, …</td>
+        <td><span class="badge badge-done">Polling removed</span></td>
+        <td><code>onDBUpdate</code> → refresh board</td>
+      </tr>
+      <tr>
+        <td>pages/job-ticket.html</td>
+        <td>orders, order_workflow_steps, comments</td>
+        <td><span class="badge badge-done">Polling removed</span></td>
+        <td><code>onDBUpdate</code> + patch queue; reload open ticket if match</td>
+      </tr>
+      <tr>
+        <td>pages/production-manager.html</td>
+        <td>orders, activity_log, production_tasks</td>
+        <td>None (never had timer poll)</td>
+        <td>onDBUpdate → reload board slice</td>
+      </tr>
+      <tr>
+        <td>prepress.html</td>
+        <td>orders, production_tasks, proofs</td>
+        <td>None</td>
+        <td>onDBUpdate + reload V3 queue on production_tasks</td>
+      </tr>
+      <tr>
+        <td>operator-terminal.html</td>
+        <td>orders, order_workflow_steps</td>
+        <td>None for orders</td>
+        <td>Existing onDBUpdate; keep 1s UI clock</td>
+      </tr>
+      <tr>
+        <td>qc-checkout.html, shipping.html</td>
+        <td>orders</td>
+        <td>None</td>
+        <td>onDBUpdate → reload list</td>
+      </tr>
+      <tr>
+        <td>admin.html</td>
+        <td>config, dies, machines, product_workflows, profiles (optional)</td>
+        <td>None</td>
+        <td>Reload active tab only on matching event</td>
+      </tr>
+      <tr>
+        <td>machine-issues.html</td>
+        <td>machine_issues</td>
+        <td>None</td>
+        <td>onDBUpdate (exists) + new publication</td>
+      </tr>
+      <tr>
+        <td>organisation.html</td>
+        <td>organisation_* tables</td>
+        <td>None</td>
+        <td>Force reload bundle on change</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.7 Cost / load control (why this won’t “blow up” Supabase)</h3>
+  <ul>
+    <li>Realtime messages are small (change metadata); heavy work is avoided by <strong>not</strong> refetching all orders per event.</li>
+    <li>Client already sets <code>realtime: { params: { eventsPerSecond: 10 } }</code>.</li>
+    <li>Debounce: multiple workflow step updates in 2s → one patch.</li>
+    <li>Skip processing when <code>document.hidden</code>.</li>
+    <li>Do not subscribe on pages that don’t need live data (e.g. pricing-calculator).</li>
+  </ul>
+</section>
+
+<section id="implementation">
+  <h2>8. Implementation work packages</h2>
+  <p>Each package is backend/JS only — no HTML/CSS redesign.</p>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Package</th><th>Files</th><th>Deliverable</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WP-1</td>
+        <td><strong>Realtime fix + incremental orders</strong></td>
+        <td><code>js/supabase-client.js</code>, <code>js/shared.js</code>, <code>pages/dashboard.html</code>, <code>pages/job-ticket.html</code></td>
+        <td>Unified events; job ticket live queue; patch-not-full-refresh for dashboard</td>
+      </tr>
+      <tr>
+        <td>WP-2</td>
+        <td><strong>Migration tool completeness</strong></td>
+        <td><code>supabase-client.js</code> (<code>migratePulseDataToSupabase</code>)</td>
+        <td>All config keys, POs, machine_issues in full migrate; idempotent KB/sessions</td>
+      </tr>
+      <tr>
+        <td>WP-3</td>
+        <td><strong>Dies → Supabase runtime</strong></td>
+        <td><code>supabase-client.js</code></td>
+        <td><code>getAllDies</code>, add/update/delete → <code>dies</code> table</td>
+      </tr>
+      <tr>
+        <td>WP-4</td>
+        <td><strong>Operator sessions/points → Supabase</strong></td>
+        <td><code>supabase-client.js</code></td>
+        <td><code>clockIn</code>, etc. → Postgres; multi-device clock state</td>
+      </tr>
+      <tr>
+        <td>WP-5</td>
+        <td><strong>Knowledge + purchase orders → Supabase</strong></td>
+        <td><code>supabase-client.js</code></td>
+        <td>Admin tabs read/write cloud</td>
+      </tr>
+      <tr>
+        <td>WP-6</td>
+        <td><strong>Realtime publication migration</strong></td>
+        <td><code>supabase/migrations/047_realtime_reference_tables.sql</code> (new)</td>
+        <td>config, dies, machine_issues, machines, product_workflows, org tables, …</td>
+      </tr>
+      <tr>
+        <td>WP-7</td>
+        <td><strong>Central Realtime registry</strong></td>
+        <td><code>supabase-client.js</code></td>
+        <td>Table-specific channels + custom events per section 7.5</td>
+      </tr>
+      <tr>
+        <td>WP-8</td>
+        <td><strong>Admin backup from cloud</strong></td>
+        <td><code>shared.js</code>, <code>admin.html</code> (logic only)</td>
+        <td>Export reads Supabase when backend=supabase</td>
+      </tr>
+      <tr>
+        <td>WP-9</td>
+        <td><strong>User/role ops doc + push script</strong></td>
+        <td><code>scripts/push-pulse-roles.mjs</code>, optional SQL</td>
+        <td>Repeatable user onboarding checklist (section 4.3)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="timeline">
+  <h2>9. Timeline &amp; effort (AI-assisted development)</h2>
+  <p>Estimates assume implementation via AI (e.g. Sonnet 4.6) with human review and browser/Supabase testing. UI unchanged throughout. For the <strong>2-day MVP schedule</strong>, see <a href="#summary">Executive summary</a> and <a href="#runbook">section 13</a>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Track</th><th>Work packages</th><th>Hours (dev + AI)</th><th>Calendar at 8 h/day</th></tr>
+    </thead>
+    <tbody>
+      <tr style="background:#ecfdf5;">
+        <td><strong>2-day MVP sprint</strong> (recommended first)</td>
+        <td>WP-1 → WP-2 → WP-3 → WP-4 + cutover</td>
+        <td>14–18 h</td>
+        <td><strong>2 days</strong> (Phases A–D in section 13)</td>
+      </tr>
+      <tr>
+        <td><strong>+ Day 3</strong></td>
+        <td>WP-5 (knowledge + POs)</td>
+        <td>6–10 h</td>
+        <td>+1 day</td>
+      </tr>
+      <tr>
+        <td><strong>+ Days 4–5</strong></td>
+        <td>WP-6, WP-7 (full Realtime), WP-8, WP-9</td>
+        <td>12–18 h</td>
+        <td>+2 days</td>
+      </tr>
+      <tr>
+        <td><strong>Full spec WP-1–WP-9</strong></td>
+        <td>All work packages</td>
+        <td>28–40 h</td>
+        <td><strong>4–5 days</strong> focused; 2–4 weeks if part-time</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Original phased rollout (part-time / no hard deadline)</h3>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Work packages</th><th>AI sessions (~2–4 h each)</th><th>Human test / ops</th><th>Calendar (relaxed)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Phase 1</strong> — Live orders</td>
+        <td>WP-1</td>
+        <td>1–2</td>
+        <td>4–8 h (2 browsers)</td>
+        <td>2–4 days</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong> — Data complete</td>
+        <td>WP-2, run migrate</td>
+        <td>1</td>
+        <td>1 day ops</td>
+        <td>3–5 days</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong> — IDB modules wired</td>
+        <td>WP-3, WP-4, WP-5</td>
+        <td>4–6</td>
+        <td>2–3 days test</td>
+        <td>1–2 weeks</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4</strong> — Full Realtime</td>
+        <td>WP-6, WP-7, page hooks</td>
+        <td>2–3</td>
+        <td>1–2 days test</td>
+        <td>1 week</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 5</strong> — Cutover</td>
+        <td>WP-8, WP-9, wipe local</td>
+        <td>1</td>
+        <td>2–4 days team rollout</td>
+        <td>1 week</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="testing">
+  <h2>10. Acceptance testing (owner-friendly)</h2>
+  <p>Same UI — validate behavior on two browsers (or PC + incognito), same production URL.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Test</th><th>Pass criteria</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Console on dashboard</td><td><code>Storage backend: Supabase</code></td></tr>
+      <tr><td>2</td><td>User A changes order status; User B on dashboard</td><td>Updates within ~5 s <strong>without</strong> manual refresh; network tab shows no 60s order list poll</td></tr>
+      <tr><td>3</td><td>User A saves job ticket; User B queue</td><td>Queue updates without refresh (after WP-1)</td></tr>
+      <tr><td>4</td><td>Operator clocks in; supervisor view (if applicable)</td><td>Session in Supabase <code>operator_sessions</code>; visible after WP-4</td></tr>
+      <tr><td>5</td><td>Admin adds die; job ticket die list</td><td>Visible on B after WP-3 (+ Realtime optional)</td></tr>
+      <tr><td>6</td><td>Operator login</td><td>Cannot open admin URL (UI block); RLS blocks data</td></tr>
+      <tr><td>7</td><td>Fresh incognito login</td><td>Same order count as Supabase Table Editor</td></tr>
+      <tr><td>8</td><td>Admin → Roles save</td><td>Other user nav updates after refresh or config Realtime</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="risks">
+  <h2>11. Risks &amp; decisions</h2>
+  <table>
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Personnel role ≠ <code>profiles.role</code></td>
+        <td>Document mapping; use Table Editor or push script; login already warns in console</td>
+      </tr>
+      <tr>
+        <td>Data only on one old PC’s IndexedDB</td>
+        <td>Must run migrate on canonical machine before team cutover</td>
+      </tr>
+      <tr>
+        <td>Realtime publication missing for new tables</td>
+        <td>WP-6 migration before WP-7 subscriptions</td>
+      </tr>
+      <tr>
+        <td>Full refresh on every event causes egress spike</td>
+        <td>WP-1 incremental patch policy mandatory</td>
+      </tr>
+      <tr>
+        <td><code>rolePermissions</code> not migrated</td>
+        <td>WP-2 + Admin → Roles → Save once in production</td>
+      </tr>
+      <tr>
+        <td>Artwork <code>dataUrl</code> in orders.specs</td>
+        <td>Out of scope for this doc; optional R2 phase later — does not block multi-user status/workflow</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Decision log (current defaults)</h3>
+  <ul>
+    <li><strong>Polling:</strong> No order-list polling on dashboard/job-ticket. No WebSocket fallback poll (known limit).</li>
+    <li><strong>IndexedDB:</strong> Dev fallback only; production authoritative = Supabase.</li>
+    <li><strong>Realtime:</strong> Subscriptions in <code>js/supabase-client.js</code>; migration 048 for reference tables.</li>
+    <li><strong>Users:</strong> Supabase Auth email + password; Admin Personnel via RPC 046.</li>
+    <li><strong>Layout:</strong> <code>pages/*.html</code>, <code>js/*.js</code>, path helpers <code>pulsePage()</code> / <code>pulseJs()</code>.</li>
+  </ul>
+</section>
+
+<section id="runbook">
+  <h2>13. Agent &amp; developer runbook (step-by-step)</h2>
+  <p>
+    Use this section with Cursor (or any coding agent). <strong>One phase per agent task</strong> — do not ask for all work packages in a single run.
+    After each phase, the developer runs the <strong>Verify</strong> box before continuing.
+    Read the <a href="#summary">Executive summary</a> first for the 2-day plan and agent workflow.
+  </p>
+
+  <div class="callout" style="border-left-color:#059669;background:#ecfdf5;">
+    <strong>Phases A–D (WP-1 through Realtime reference tables) are complete as of June 2026.</strong>
+    Use this runbook for migration troubleshooting or future work packages only. Current behavior: <a href="production-status.md">production-status.md</a>.
+  </div>
+
+  <div class="callout">
+    <strong>How to use:</strong> (1) Paste <a href="#agent-rules">agent rules</a> once. (2) Copy one phase prompt below. (3) Agent implements code. (4) You run <strong>Verify</strong>. (5) Only then next phase. If Verify fails, fix before continuing (<strong>STOP</strong> gate).
+  </div>
+
+  <p style="font-size:14px;">Timeline tables and MVP vs full-spec hours: <a href="#summary">Executive summary</a> · Relaxed multi-week plan: <a href="#timeline">section 9</a>.</p>
+
+  <h3>Phase map (2-day MVP)</h3>
+  <table>
+    <thead><tr><th>Phase</th><th>WP</th><th>~Hours</th><th>When (8 h/day)</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#phase-a">A</a></td><td>WP-1</td><td>3–4</td><td>Day 1 AM</td></tr>
+      <tr><td><a href="#phase-b">B</a></td><td>WP-2</td><td>3–4</td><td>Day 1 PM</td></tr>
+      <tr><td><a href="#phase-c">C</a></td><td>WP-3</td><td>3–4</td><td>Day 2 AM</td></tr>
+      <tr><td><a href="#phase-d">D</a></td><td>WP-4</td><td>3–5</td><td>Day 2 AM/PM</td></tr>
+      <tr><td><a href="#phase-cutover">Cutover</a></td><td>—</td><td>2</td><td>Day 2 PM</td></tr>
+      <tr><td><a href="#phase-e">E (optional)</a></td><td>WP-5–WP-9</td><td>14–22</td><td>Day 3+</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Phase A -->
+  <div class="step-block" id="phase-a">
+    <h4>Phase A — Live orders (WP-1) · <span class="badge badge-done">COMPLETE</span></h4>
+    <p class="step-meta">Agent codes · Developer tests on 2 browsers · Gate before Phase B</p>
+    <ol>
+      <li>Pull latest <code>pulseDavit</code>; confirm <code>js/pulse-config.js</code> has <code>PULSE_STORAGE_BACKEND = 'supabase'</code>.</li>
+      <li>Hard-refresh <code>pages/dashboard.html</code> and <code>pages/job-ticket.html</code> on production URL (not <code>file://</code>).</li>
+    </ol>
+    <p class="prompt-label">Copy into AI agent (Phase A)</p>
+    <div class="prompt-box">Historical — Phase A / WP-1 is COMPLETE (June 2026).
+
+Implemented:
+- pulse:order-change + pulse:orders-changed both dispatched
+- pages/job-ticket.html: onDBUpdate for queue + open ticket
+- pages/dashboard.html: 60s poll removed (Realtime only)
+
+Do not re-implement unless regression found. Verify with production-status.md two-user smoke test.</div>
+    <div class="verify-box">
+      <strong>Verify (developer) — must pass before Phase B</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;">
+        <li>Console: <code>Storage backend: Supabase</code></li>
+        <li>Browser A: change order status · Browser B on dashboard: sees change in ~5 s without F5</li>
+        <li>Browser B on job-ticket queue: sees change without F5 (or within fallback, document if only realtime)</li>
+        <li>Network tab: no <code>getAllOrders</code> every 10–30 s on idle tab</li>
+      </ul>
+    </div>
+    <div class="gate-stop"><strong>STOP</strong> if Verify fails — fix WP-1 before migration or IDB wiring.</div>
+  </div>
+
+  <!-- Phase B -->
+  <div class="step-block" id="phase-b">
+    <h4>Phase B — Migration tool + data in cloud (WP-2) · ~3–4 hours</h4>
+    <p class="step-meta">Agent extends migrator · Developer runs migrate on canonical PC</p>
+    <ol>
+      <li>On the PC with the most complete data: Admin → Export JSON.</li>
+      <li>Agent implements WP-2 (all config keys, purchase_orders migrator, machine_issues in full migrate, idempotent KB/sessions).</li>
+      <li>Open <code>pages/migrate-to-supabase.html</code> on the <strong>same origin</strong> as production.</li>
+      <li>Import backup → Sign in as admin → Run full migration (uncheck dry run).</li>
+      <li>Supabase Table Editor: spot-check counts for <code>orders</code>, <code>dies</code>, <code>config</code>.</li>
+      <li>Admin → Roles → Save Changes once (sync <code>rolePermissions</code>).</li>
+    </ol>
+    <p class="prompt-label">Copy into AI agent (Phase B)</p>
+    <div class="prompt-box">Read docs/supabase/connection-spec.html section 6 and WP-2.
+
+Implement Phase B / WP-2 only in supabase-client.js (migratePulseDataToSupabase):
+- Migrate ALL IndexedDB config keys to config table (not only catalog + machineCapacity).
+- Add _migratePurchaseOrders to purchase_orders (+ items if in IDB).
+- Add machine_issues from localStorage in full migration (not only lazy on page load).
+- Make knowledge_base and operator_sessions migration idempotent (skip or upsert duplicates).
+
+Do not change UI. Stop after WP-2 and document how the developer should run pages/migrate-to-supabase.html step by step.</div>
+    <div class="verify-box">
+      <strong>Verify (developer)</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;">
+        <li>Migration report: no critical errors on orders, config, dies</li>
+        <li>Incognito login: dashboard order count ≈ Supabase <code>orders</code> count</li>
+        <li><code>config</code> row exists for <code>rolePermissions</code> if you use Admin roles</li>
+      </ul>
+    </div>
+    <div class="gate-stop"><strong>STOP</strong> if incognito shows empty orders — fix migration or RLS before Phase C.</div>
+  </div>
+
+  <!-- Phase C -->
+  <div class="step-block" id="phase-c">
+    <h4>Phase C — Dies on Supabase (WP-3) · ~3–4 hours</h4>
+    <p class="step-meta">Day 2 AM · Agent adds supabase-client overrides</p>
+    <p class="prompt-label">Copy into AI agent (Phase C)</p>
+    <div class="prompt-box">Read docs/supabase/connection-spec.html WP-3.
+
+Implement Phase C only: Supabase runtime overrides in supabase-client.js for dies —
+getAllDies, add/update/delete die helpers used by admin.html and job-ticket.html.
+Mirror existing order override pattern; same return shapes as shared.js IndexedDB.
+Use dies table + RLS. No UI/HTML changes.
+
+List manual test: Admin add die → second browser job-ticket die picker shows it (refresh once OK for MVP).</div>
+    <div class="verify-box">
+      <strong>Verify</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;">
+        <li>Admin: die saved · Supabase <code>dies</code> has row</li>
+        <li>Second browser/incognito: job-ticket sees die (may need F5 on MVP without WP-6/7)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Phase D -->
+  <div class="step-block" id="phase-d">
+    <h4>Phase D — Operator sessions on Supabase (WP-4) · ~3–5 hours</h4>
+    <p class="step-meta">Day 2 AM/PM · operator-terminal.html unchanged UI</p>
+    <p class="prompt-label">Copy into AI agent (Phase D)</p>
+    <div class="prompt-box">Read docs/supabase/connection-spec.html WP-4.
+
+Implement Phase D only: override clockIn, clockOut, break helpers, getTodaySessions (and related) in supabase-client.js
+to use operator_sessions / operator_breaks tables. Match shared.js behavior. No UI changes.
+
+Test plan: operator clocks in on PC A → row in Supabase operator_sessions → visible after refresh on admin/reporting if applicable.</div>
+    <div class="verify-box">
+      <strong>Verify</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;">
+        <li>Operator terminal: clock in/out works</li>
+        <li>Table Editor: <code>operator_sessions</code> new row</li>
+        <li>No errors in console on operator-terminal.html</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Phase E optional -->
+  <div class="step-block" id="phase-e">
+    <h4>Phase E — Optional day 3+ (WP-5, WP-6, WP-7, WP-8, WP-9)</h4>
+    <p>Not required for 2-day MVP. Run one WP per agent session:</p>
+    <table>
+      <thead><tr><th>Phase</th><th>WP</th><th>Prompt starter</th></tr></thead>
+      <tbody>
+        <tr><td>E1</td><td>WP-5</td><td>“Implement knowledge_base + purchase_orders Supabase overrides only; spec section 5.”</td></tr>
+        <tr><td>E2</td><td>WP-6</td><td>“Add migration 047_realtime_reference_tables.sql per spec section 7.4; apply with supabase db push.”</td></tr>
+        <tr><td>E3</td><td>WP-7</td><td>“Central Realtime registry in supabase-client.js per section 7.5; wire admin + organisation pages.”</td></tr>
+        <tr><td>E4</td><td>WP-8–9</td><td>“Export backup from Supabase when backend=supabase; document user onboarding section 4.3.”</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cutover -->
+  <div class="step-block" id="phase-cutover">
+    <h4>Cutover — End of day 2 (~2 hours)</h4>
+    <ol>
+      <li>Run all tests in <a href="#testing">section 10</a> with admin + operator logins.</li>
+      <li>Document each user: email, <code>profiles.role</code>, User ID password.</li>
+      <li>On each shop PC (after cloud verified): open <code>reset-pulse-local-data.html</code> once → users re-login.</li>
+      <li>Tell team: always use same deployed URL; never <code>file://</code> for production.</li>
+    </ol>
+    <div class="gate-stop"><strong>Go-live gate:</strong> Tests #1, #2, #6, #7 pass → OK for wider team. Tests #5 (dies cross-browser without refresh) can wait until Phase E2/E3.</div>
+  </div>
+
+  <h3 id="agent-rules">Rules for the agent (paste once at start of any session)</h3>
+  <div class="prompt-box">You are implementing the Pulse Bazaar app Supabase connection per docs/supabase/connection-spec.html.
+
+Rules:
+1. Do not change UI layout, CSS, or HTML structure unless a one-line script include is required.
+2. One work package (WP) or one Phase (A–D) per task — finish and stop.
+3. Follow existing patterns in supabase-client.js (order overrides).
+4. After coding, give the developer a short Verify checklist and STOP gate before next phase.
+5. If RLS blocks writes, cite profiles.role and suggest fix — do not disable RLS.</div>
+</section>
+
+<section>
+  <h2>12. File reference (this repository)</h2>
+  <table>
+    <thead><tr><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>index.html</code></td><td>Redirects to <code>/pages/dashboard.html</code></td></tr>
+      <tr><td><code>pages/*.html</code></td><td>15 application screens + utilities (see <a href="../app/overview.md">overview.md</a> §6)</td></tr>
+      <tr><td><code>js/pulse-config.js</code></td><td>Production Supabase URL, anon key, <code>PULSE_STORAGE_BACKEND = 'supabase'</code></td></tr>
+      <tr><td><code>js/pulse-config.local.js</code></td><td>Gitignored overrides — <strong>leave empty</strong> (see <code>js/pulse-config.local.js.example</code>)</td></tr>
+      <tr><td><code>js/shared.js</code></td><td>Nav, theme, helpers, <code>onDBUpdate</code>, <code>pulsePage()</code>; IndexedDB legacy dev only</td></tr>
+      <tr><td><code>js/supabase-client.js</code></td><td>Supabase CRUD overrides, Realtime, migration, <code>upsertPulsePersonnel</code></td></tr>
+      <tr><td><code>js/auth.js</code></td><td>ROLE_CONFIG, email/password login, page access, session</td></tr>
+      <tr><td><code>docs/supabase/production-status.md</code></td><td>June 2026 cutover status, verification, npm scripts</td></tr>
+      <tr><td><code>docs/app/overview.md</code></td><td>App architecture for AI assistants</td></tr>
+      <tr><td><code>scripts/import-pulse-backup-to-supabase.mjs</code></td><td><code>npm run import:supabase</code></td></tr>
+      <tr><td><code>pages/migrate-to-supabase.html</code></td><td>One-time IDB → Postgres tool (legacy)</td></tr>
+      <tr><td><code>pages/reset-pulse-local-data.html</code></td><td>Wipe browser IndexedDB/localStorage</td></tr>
+      <tr><td><code>supabase/migrations/046_*.sql</code></td><td>Personnel RPC</td></tr>
+      <tr><td><code>supabase/migrations/047a/b/c_*.sql</code></td><td>David review user</td></tr>
+      <tr><td><code>supabase/migrations/048_*.sql</code></td><td>Realtime reference tables publication</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:24px;font-size:13px;color:var(--muted);">
+    Historical runbook phases (section 13) documented WP-1–WP-9; core items are implemented. See <a href="production-status.md">production-status.md</a> for what to verify today.
+  </p>
+</section>
+
+</main>
+</body>
+</html>

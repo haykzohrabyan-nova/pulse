@@ -1,0 +1,3079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipping — Bazaar Print</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/organisation-local-store.js"></script>
+  <script src="/js/pulse-config.js"></script>
+  <script src="/js/pulse-config.local.js"></script>
+  <script src="/js/supabase-client.js?v=20260609-realtime"></script>
+  <script src="/js/auth.js?v=20260609-email-login"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Stats + date filter -->
+<div class="ship-top-bar">
+  <div id="statsBar" class="ship-stats-bar"></div>
+  <div class="ship-filter-section">
+    <span class="ship-filter-label">Filter</span>
+    <select id="shipDateFilter" class="ship-filter-select" onchange="onShipDateFilterChange()">
+      <option value="all">All dates</option>
+      <option value="today">Today</option>
+      <option value="yesterday">Yesterday</option>
+      <option value="last-week">Last week</option>
+      <option value="last-month">Last month</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <input type="date" id="shipCustomDate" class="ship-filter-date" style="display:none;" onchange="applyShipDateFilters()">
+  </div>
+</div>
+
+<!-- Main layout: 4 columns -->
+<div class="ship-layout">
+
+  <!-- Column 1: In Shipping Station -->
+  <div class="ship-panel ship-panel-ready">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">In Shipping Station</div>
+      <div class="panel-hdr-sub" id="leftCount">—</div>
+    </div>
+    <div id="selectionBar" class="selection-bar" style="display:none;">
+      <span id="selCount" class="sel-count"></span>
+      <button class="btn-xs" onclick="clearSelection()">Clear</button>
+      <div class="action-menu-wrap" id="actionMenuWrap">
+        <button class="btn-xs btn-xs-accent" onclick="toggleActionMenu(event)">⚡ Actions ▾</button>
+        <div class="action-menu" id="actionMenu">
+          <button class="action-menu-item" onclick="closeActionMenu();openPackingSlipModal()">📦 Create Packing Slip</button>
+        </div>
+      </div>
+    </div>
+    <input type="text" id="leftSearch" class="panel-search" placeholder="Search order # or customer…" oninput="renderLeft()">
+    <div id="leftList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+
+  <!-- Column 2: Label Created -->
+  <div class="ship-panel">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">Label Created</div>
+      <div class="panel-hdr-sub" id="pickupCount">—</div>
+    </div>
+    <input type="text" id="pickupSearch" class="panel-search" placeholder="Search order #, customer, or tracking…" oninput="renderPickup()">
+    <div id="pickupList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+
+  <!-- Column 3: Delivery Ready -->
+  <div class="ship-panel">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">Delivery Ready</div>
+      <div class="panel-hdr-sub" id="deliveryReadyCount">—</div>
+    </div>
+    <input type="text" id="deliveryReadySearch" class="panel-search" placeholder="Search order #, customer, or tracking…" oninput="renderDeliveryReady()">
+    <div id="deliveryReadyList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+
+  <!-- Column 4: Shipped -->
+  <div class="ship-panel">
+    <div class="panel-hdr">
+      <div class="panel-hdr-title">Shipped</div>
+      <div class="panel-hdr-sub" id="shippedCount">—</div>
+    </div>
+    <input type="text" id="shippedSearch" class="panel-search" placeholder="Search order #, customer, or tracking…" oninput="renderShipped()">
+    <div id="shippedList" class="panel-list"><div class="panel-empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- Print target: hidden on screen, revealed only for window.print() -->
+<div id="printTarget"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PACKING SLIP WIZARD MODAL
+═══════════════════════════════════════════════════════════════════ -->
+<div id="packingSlipModal" class="modal-overlay hidden">
+  <div class="ps-modal">
+
+    <!-- Header -->
+    <div class="ps-header">
+      <span class="ps-title">Create Packing Slip</span>
+      <button class="btn btn-sm ps-close-btn" onclick="closePackingSlipModal()">✕</button>
+    </div>
+
+    <!-- Progress strip -->
+    <div class="ps-progress">
+      <div class="ps-prog-item">
+        <div class="ps-progress-dot" id="dot1">1</div>
+        <div class="ps-prog-label">Review</div>
+      </div>
+      <div class="ps-prog-connector" id="conn1-2"></div>
+      <div class="ps-prog-item">
+        <div class="ps-progress-dot" id="dot2">2</div>
+        <div class="ps-prog-label">Boxes</div>
+      </div>
+      <div class="ps-prog-connector" id="conn2-3"></div>
+      <div class="ps-prog-item">
+        <div class="ps-progress-dot" id="dot3">3</div>
+        <div class="ps-prog-label">Pack</div>
+      </div>
+
+    </div>
+
+    <!-- Step body -->
+    <div class="ps-body">
+
+      <!-- Step 1: Review tickets -->
+      <div class="ps-step" id="psStep1">
+        <p class="ps-step-desc">Confirm the tickets included in this combined shipment.</p>
+        <div id="step1Table"></div>
+        <div class="ps-step-nav">
+          <span></span>
+          <button class="btn btn-primary" onclick="goToStep(2)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Define boxes -->
+      <div class="ps-step" id="psStep2" style="display:none;">
+        <p class="ps-step-title">Declare Boxes</p>
+        <p class="ps-skip-hint">Add each box and its size/description. Box numbers (1, 2, 3…) are used to assign items in the Pack step.</p>
+        <table class="ps-table">
+          <thead><tr>
+            <th style="width:60px;text-align:center;">Box #</th>
+            <th>Size / Description</th>
+            <th style="width:80px;text-align:center;">Actions</th>
+          </tr></thead>
+          <tbody id="boxTableBody"></tbody>
+        </table>
+        <div style="margin-top:10px;">
+          <button class="btn-xs ps-add-row-btn" onclick="addBox()">+ Add Box</button>
+        </div>
+        <div class="ps-step-nav">
+          <button class="btn" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" id="step2Next" onclick="goToStep(3)" disabled>Next: Pack →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Assign items to boxes -->
+      <div class="ps-step" id="psStep3" style="display:none;">
+        <p class="ps-step-desc">Assign quantities to each box. Every declared box must have items, each row needs a quantity &gt; 0, and each ticket may only appear once per box. All tickets must show <strong>Balanced</strong>.</p>
+        <p id="step3Hint" class="ps-step-hint" style="display:none;"></p>
+        <div class="step3-grid">
+
+          <!-- Left: Remainder tracker -->
+          <div class="step3-panel">
+            <div class="step3-panel-hdr">Remainder Tracker</div>
+            <div style="overflow-x:auto;">
+              <table class="ps-table">
+                <thead><tr>
+                  <th>Product</th>
+                  <th>Ticket</th>
+                  <th class="col-r">Ordered</th>
+                  <th class="col-r">Packed</th>
+                  <th>Status</th>
+                </tr></thead>
+                <tbody id="remainderBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Box assignments -->
+          <div class="step3-panel">
+            <div class="step3-panel-hdr">Box Assignments</div>
+            <div style="overflow-x:auto;">
+              <table class="ps-table" style="min-width:340px;">
+                <thead><tr>
+                  <th>Box</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Notes</th>
+                  <th style="width:24px;"></th>
+                </tr></thead>
+                <tbody id="assignmentRows"></tbody>
+              </table>
+            </div>
+            <div style="padding:8px 10px;border-top:1px solid var(--border);">
+              <button class="btn-xs" onclick="addAssignment()">+ Add Item</button>
+            </div>
+          </div>
+
+        </div>
+        <div class="ps-step-nav">
+          <button class="btn" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-primary" id="step3Generate" onclick="finishPackingAndPrint()" disabled>Generate &amp; Print</button>
+        </div>
+      </div>
+
+    </div><!-- /ps-body -->
+  </div><!-- /ps-modal -->
+</div><!-- /packingSlipModal -->
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ADD SHIPPING INFORMATION MODAL
+═══════════════════════════════════════════════════════════════════ -->
+<div id="shippingInfoModal" class="modal-overlay hidden">
+  <div class="ps-modal" style="max-width:720px;">
+    <div class="ps-header">
+      <span class="ps-title">Add Shipping Information</span>
+      <button class="btn btn-sm ps-close-btn" onclick="closeShippingInfoModal()">✕</button>
+    </div>
+    <div class="ps-body" style="padding:20px;">
+      <div id="shippingInfoOrderInfo" style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
+      <p class="ps-step-desc" style="margin-bottom:16px;">Select delivery method. Carrier tracking is required now; pickup and courier proof is collected when marking shipped.</p>
+      <div class="step4-grid">
+        <div>
+          <div class="field-group">
+            <label>Shipping Method</label>
+            <select id="siMethod" onchange="onSiMethodChange()" style="width:100%;">
+              <option value="">— Select Method —</option>
+              <option value="local-pickup">🏪 Local Pickup</option>
+              <option value="courier">🛵 Courier / Rideshare</option>
+              <option value="traditional-carrier">📦 Traditional Carrier (FedEx / UPS / USPS…)</option>
+              <option value="freight">🚚 Pallet / Freight</option>
+            </select>
+          </div>
+          <div id="siMethodHint" style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.5;display:none;"></div>
+        </div>
+        <div>
+          <div id="siPickupHint" class="method-section" style="display:none;">
+            <div class="method-section-title">Local Pickup</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0;">SMS verification will be collected when you mark this order as shipped.</p>
+          </div>
+          <div id="siCourierHint" class="method-section" style="display:none;">
+            <div class="method-section-title">Courier / Rideshare</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0;">Vehicle plate and handoff details are collected when marking shipped.</p>
+          </div>
+          <div id="siCarrierFields" class="method-section" style="display:none;">
+            <div class="method-section-title">Carrier &amp; Tracking Details</div>
+            <div class="method-row" style="flex-wrap:wrap;gap:10px;">
+              <div class="field-group" style="flex:1;min-width:150px;">
+                <label>Carrier — Required</label>
+                <select id="siCarrierSelect" onchange="updateSiSaveBtn()">
+                  <option value="">— Select Carrier —</option>
+                  <option value="FedEx">FedEx</option>
+                  <option value="UPS">UPS</option>
+                  <option value="USPS">USPS</option>
+                  <option value="DHL">DHL</option>
+                  <option value="OnTrac">OnTrac</option>
+                  <option value="LSO">LSO</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field-group" style="flex:2;min-width:200px;">
+                <label>Tracking Number — Required</label>
+                <input type="text" id="siTracking" placeholder="e.g. 1Z999AA10123456784" autocomplete="off" oninput="updateSiSaveBtn()">
+              </div>
+            </div>
+          </div>
+          <div id="siFreightFields" class="method-section" style="display:none;">
+            <div class="method-section-title">Pallet / Freight Details</div>
+            <div class="method-row" style="flex-wrap:wrap;gap:10px;">
+              <div class="field-group" style="flex:2;min-width:180px;">
+                <label>Bill of Lading (BOL) # — Required</label>
+                <input type="text" id="siBol" placeholder="BOL number" autocomplete="off" oninput="updateSiSaveBtn()">
+              </div>
+              <div class="field-group" style="flex:1;min-width:100px;">
+                <label>Pallet Count — Required</label>
+                <input type="number" id="siPallets" placeholder="0" min="1" oninput="updateSiSaveBtn()">
+              </div>
+            </div>
+          </div>
+          <div id="siNoMethodPlaceholder" style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;border:1px dashed var(--border);border-radius:8px;">
+            Select a shipping method to continue.
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:24px;justify-content:flex-end;">
+        <button class="btn" onclick="closeShippingInfoModal()">Cancel</button>
+        <button class="btn btn-primary" id="siSaveBtn" onclick="submitShippingInfo()" disabled>Save &amp; Move to Delivery Ready</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     COURIER SHIP CONFIRM MODAL
+═══════════════════════════════════════════════════════════════════ -->
+<div id="courierShipModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Confirm Courier Delivery</h3>
+      <button class="btn btn-sm" onclick="closeCourierShipModal()">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+      <div id="courierShipOrderInfo" style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;"></div>
+      <div class="field-group">
+        <label>Vehicle Plate Number — Required</label>
+        <input type="text" id="courierShipPlate" placeholder="e.g. ABC-1234" oninput="updateCourierShipBtn()">
+      </div>
+      <div class="field-group">
+        <label>Handed Off By (Staff)</label>
+        <input type="text" id="courierShipHandoff" placeholder="Staff name">
+      </div>
+      <div class="field-group">
+        <label>Notes</label>
+        <textarea id="courierShipNotes" rows="2" placeholder="Optional notes…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" style="flex:1;" id="courierShipSubmitBtn" onclick="submitCourierShip()" disabled>Mark as Shipped</button>
+        <button class="btn" onclick="closeCourierShipModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     RECEIVE MODAL (preserved)
+═══════════════════════════════════════════════════════════════════ -->
+<div id="receiveModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Mark as Received</h3>
+      <button class="btn btn-sm" onclick="closeReceiveModal()">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+      <div id="receiveOrderInfo" style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;"></div>
+      <div class="field-group">
+        <label>Received Date</label>
+        <input type="date" id="receivedDate">
+      </div>
+      <div class="field-group">
+        <label>Received / Confirmed By</label>
+        <input type="text" id="receivedBy" placeholder="Customer name or staff">
+      </div>
+      <div class="field-group">
+        <label>Post-Sale Notes</label>
+        <textarea id="receivedNotes" rows="3" placeholder="Any follow-up needed? Customer feedback, reorder info…"></textarea>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="createFollowUpTask" style="width:16px;height:16px;">
+        Create follow-up task for Account Manager
+      </label>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="submitReceive()">Confirm Received</button>
+        <button class="btn" onclick="closeReceiveModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PICKUP COMPLETE MODAL (preserved)
+═══════════════════════════════════════════════════════════════════ -->
+<div id="pickupCompleteModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Confirm Pickup</h3>
+      <button class="btn btn-sm" onclick="closePickupCompleteModal()">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+      <div id="pickupCompleteOrderInfo" style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;"></div>
+      <div class="field-group">
+        <label>Pickup Date/Time</label>
+        <input type="date" id="pickupCompletedDate">
+      </div>
+      <div class="field-group">
+        <label>Picked Up By (Customer)</label>
+        <input type="text" id="pickupCompletedBy" placeholder="Customer name">
+      </div>
+      <div class="field-group">
+        <label>Staff Who Handed Off</label>
+        <input type="text" id="pickupHandoffBy" placeholder="Staff name">
+      </div>
+
+      <div id="pickupOtpSection" style="display:none;">
+        <div class="method-section-title">SMS Verification — Required</div>
+        <div class="method-row" style="margin-bottom:0;">
+          <div class="field-group" style="flex:1;">
+            <label>Phone — Required for SMS Confirmation</label>
+            <input type="tel" id="pickupShipPhone" placeholder="+1 (555) 000-0000" autocomplete="tel" oninput="updatePickupShipBtn()">
+          </div>
+          <button class="btn" id="pickupSendOtpBtn" onclick="sendPickupShipOtp()" style="flex-shrink:0;align-self:flex-end;">Send Code</button>
+        </div>
+        <div id="pickupOtpEntrySection" style="display:none;margin-top:14px;">
+          <div class="field-group" style="max-width:200px;">
+            <label>Enter 4-Digit Verification Code</label>
+            <input type="text" id="pickupOtpEntry" maxlength="4" placeholder="0000" autocomplete="off" oninput="checkPickupShipOtp()" class="otp-input">
+          </div>
+          <div id="pickupOtpStatus" class="otp-status"></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Notes</label>
+        <textarea id="pickupCompleteNotes" rows="2" placeholder="Any notes…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="submitPickupComplete()">Confirm Pickup Complete</button>
+        <button class="btn" onclick="closePickupCompleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TICKET DETAIL MODAL (read-only)
+═══════════════════════════════════════════════════════════════════ -->
+<div id="ticketDetailModal" class="modal-overlay hidden" onclick="if(event.target===this)closeTicketDetail()">
+  <div class="modal td-modal">
+    <div class="td-modal-header">
+      <div style="min-width:0;">
+        <div class="td-order-id" id="tdOrderId"></div>
+        <div class="td-customer" id="tdCustomer"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <span id="tdBadges" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+        <button class="btn btn-sm" onclick="closeTicketDetail()">✕</button>
+      </div>
+    </div>
+    <div class="td-tabs">
+      <button class="td-tab active" id="tdTabJob" onclick="switchDetailTab('job')">Job Details</button>
+      <button class="td-tab" id="tdTabDelivery" onclick="switchDetailTab('delivery')">Delivery Info</button>
+    </div>
+    <div id="tdBody" class="td-body"></div>
+  </div>
+</div>
+
+
+<script>
+  injectThemeCSS();
+  document.getElementById('nav').innerHTML = renderNav('shipping');
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Shipping' }]);
+  initAuth('shipping');
+
+  // Inject page-specific CSS AFTER shared theme CSS so this file's rules win
+  // (shared theme has `.modal-overlay { display: none }` which would otherwise
+  // override this file's `.modal-overlay { display: flex }` and keep modals hidden).
+  const _pageStyles = document.createElement('style');
+  _pageStyles.id = 'page-styles';
+  document.head.appendChild(_pageStyles);
+  _pageStyles.textContent = `
+    /* ── Base ── */
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    /* ── Stats bar + filter ── */
+    .ship-top-bar {
+      display: flex; align-items: stretch;
+      border-bottom: 1px solid var(--border); background: var(--card);
+      flex-wrap: wrap;
+    }
+    .ship-stats-bar {
+      display: flex; gap: 2px; padding: 8px 16px;
+      flex: 1; flex-wrap: wrap; align-items: stretch;
+    }
+    .ship-filter-section {
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      padding: 8px 16px; border-left: 1px solid var(--border);
+    }
+    .ship-filter-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); white-space: nowrap;
+    }
+    .ship-filter-select, .ship-filter-date {
+      padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 12px; font-weight: 600; background: var(--bg); color: var(--text);
+      font-family: inherit; outline: none;
+    }
+    .ship-filter-select:focus, .ship-filter-date:focus { border-color: var(--accent); }
+    .ship-stat {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 7px 18px; border-radius: var(--radius);
+    }
+    .ship-stat-val { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .ship-stat-units { font-size: 10px; color: var(--text-muted); margin-top: 1px; font-weight: 500; }
+    .ship-stat-lbl {
+      font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 700; margin-top: 2px;
+    }
+    .ship-stat-divider { width: 1px; background: var(--border); align-self: stretch; margin: 4px 6px; }
+
+    /* ── 4-column layout ── */
+    .ship-layout {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      height: calc(100vh - 130px); overflow: hidden;
+    }
+    .ship-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+    .ship-panel:last-child { border-right: none; }
+    .ship-panel-ready { overflow: visible; }
+    .ship-panel-ready .panel-list { min-height: 0; }
+
+    /* ── Panel headers ── */
+    .panel-hdr {
+      padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+      background: var(--card); flex-shrink: 0;
+    }
+    .panel-hdr-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text);
+    }
+    .panel-hdr-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .panel-search {
+      margin: 8px 10px; padding: 7px 11px; flex-shrink: 0;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; outline: none; background: var(--bg); color: var(--text);
+      width: calc(100% - 20px); box-sizing: border-box; font-family: inherit;
+    }
+    .panel-search:focus { border-color: var(--accent); }
+    .panel-list { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
+    .panel-empty { padding: 32px 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+    /* ── Ready cards (checkbox labels) ── */
+    .ready-card {
+      display: block; padding: 11px 12px; border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 6px; cursor: pointer;
+      background: var(--card); transition: border-color .12s, background .12s, box-shadow .12s;
+      user-select: none; position: relative;
+    }
+    .ready-card:hover { border-color: var(--accent); background: var(--card-hover); }
+    .ready-card.selected {
+      border-color: var(--accent); background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+    }
+    .ready-card-top {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+    }
+    .ready-card-order { font-size: 13px; font-weight: 700; color: var(--text); }
+    .ready-card-meta { font-size: 11px; color: var(--text-muted); }
+    .ready-card-customer { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .ready-card-product { font-size: 11px; color: var(--text-muted); }
+    .ticket-dates {
+      margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);
+      font-size: 10px; color: var(--text-muted); line-height: 1.45;
+    }
+    .ticket-dates-row { display: flex; justify-content: space-between; gap: 8px; }
+    .ticket-dates-row span:last-child { color: var(--text); font-weight: 500; text-align: right; }
+    .ready-card-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+    .chip {
+      font-size: 10px; padding: 2px 6px; border-radius: 10px;
+      font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+    }
+    .chip-rush { background: #fee2e2; color: #dc2626; }
+    .chip-overdue { background: #fef2f2; color: #b91c1c; }
+
+    /* ── Selection bar (inside Ready to Ship column) ── */
+    .selection-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 12px; margin: 0 10px 6px;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .sel-count {
+      flex: 1; min-width: 100px; font-size: 12px; font-weight: 600; color: var(--accent);
+    }
+
+    /* ── Right panel tabs ── */
+    .right-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .rtab {
+      flex: 1; padding: 9px 4px; border: none; border-bottom: 3px solid transparent;
+      background: none; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px; color: var(--text-muted); cursor: pointer;
+      transition: all .12s; font-family: inherit;
+    }
+    .rtab.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+    /* ── Ship cards ── */
+    .ship-card {
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 6px; background: var(--card);
+    }
+    .ship-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .ship-card-order { font-size: 13px; font-weight: 700; }
+    .ship-card-date { font-size: 10px; color: var(--text-muted); }
+    .ship-card-customer { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .ship-card-meta { font-size: 11px; color: var(--text-muted); }
+    .ship-card-notes {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #78350f;
+    }
+    .ship-card-notes-label { font-weight: 700; margin-right: 4px; }
+    .ship-card-tracking {
+      display: flex; align-items: center; gap: 6px; margin-top: 6px;
+      padding: 5px 8px; background: var(--bg); border-radius: 5px;
+      font-size: 11px; font-weight: 600;
+    }
+    .tracking-link { color: var(--accent); text-decoration: none; }
+    .tracking-link:hover { text-decoration: underline; }
+    .ship-card-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+    .ship-card-combined { border-color: #bfdbfe; }
+    .ship-card-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      padding: 2px 7px; border-radius: 999px; background: #eff6ff; color: var(--accent);
+    }
+    .ship-card-tabs {
+      display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0 6px;
+      border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    }
+    .ship-card-tab {
+      padding: 4px 10px; font-size: 11px; font-weight: 700; border: 1px solid var(--border);
+      border-radius: 6px 6px 0 0; background: var(--bg); color: var(--text-muted);
+      cursor: pointer; font-family: inherit; border-bottom: none;
+    }
+    .ship-card-tab:hover { color: var(--text); background: var(--card-hover); }
+    .ship-card-combined-tickets {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 6px 0 4px;
+      padding: 6px 8px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+    .ship-card-ticket-pill { color: var(--text-muted); }
+    .ship-card-tab.active {
+      background: var(--card); color: var(--accent); border-color: var(--accent);
+      border-bottom: 1px solid var(--card); margin-bottom: -1px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--card); color: var(--text); cursor: pointer; font-size: 13px;
+      font-weight: 600; transition: background .12s, border-color .12s; font-family: inherit;
+    }
+    .btn:hover { background: var(--card-hover); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-primary:disabled { background: #93c5fd; border-color: #93c5fd; cursor: not-allowed; }
+    .btn-xs {
+      padding: 4px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: 5px;
+      background: var(--bg); color: var(--text); cursor: pointer; font-weight: 700;
+      transition: background .12s; font-family: inherit;
+    }
+    .btn-xs:hover { background: var(--card-hover); }
+    .btn-xs-accent { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .btn-xs-accent:hover { background: #dbeafe; }
+    .btn-xs-primary { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .btn-xs-primary:hover { background: #dbeafe; }
+
+    /* ── Action dropdown menu ── */
+    .action-menu-wrap { position: relative; }
+    .action-menu {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0;
+      background: #fff; border: 1px solid #bfdbfe; border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 200px; z-index: 9999;
+      overflow: hidden;
+    }
+    .action-menu.open { display: block; }
+    .action-menu-item {
+      display: block; width: 100%; padding: 10px 16px; border: none; background: none;
+      text-align: left; font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; font-family: inherit; transition: background .1s;
+    }
+    .action-menu-item:hover { background: #eff6ff; }
+    .action-menu-item--green { color: #16a34a; }
+    .action-menu-item--green:hover { background: #f0fdf4; }
+
+    /* ── Modal base ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--card); border-radius: 12px; padding: 0;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25); width: 100%;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 { margin: 0; font-size: 15px; font-weight: 700; }
+
+    /* ── Packing slip modal ── */
+    .ps-modal {
+      background: var(--card); border-radius: 12px;
+      max-height: 88vh; overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25); width: 100%; max-width: 720px;
+      min-height: 480px;
+    }
+    .ps-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .ps-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .ps-body { padding: 20px 28px 24px; overflow-y: auto; flex: 1; }
+    .ps-step-title { font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+    .ps-skip-hint { font-size: 11px; color: var(--text-muted); margin: 0 0 14px; font-style: italic; }
+
+    /* ── Step 4 two-column layout ── */
+    .step4-grid { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 580px) { .step4-grid { grid-template-columns: 1fr; } }
+    .ps-step-desc { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Progress strip ── */
+    .ps-progress {
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 14px 24px 6px; flex-shrink: 0; border-bottom: 1px solid var(--border);
+    }
+    .ps-prog-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .ps-progress-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      background: var(--bg); border: 2px solid var(--border); color: var(--text-muted);
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .ps-progress-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .ps-progress-dot.done { background: #dcfce7; border-color: var(--green); color: var(--green); }
+    .ps-prog-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px; color: var(--text-muted); white-space: nowrap;
+    }
+    .ps-prog-connector {
+      width: 64px; height: 2px; background: var(--border);
+      margin: 13px 4px 0; flex-shrink: 0; transition: background .2s;
+    }
+    .ps-prog-connector.done { background: var(--green); }
+
+    /* ── Step navigation ── */
+    .ps-step-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);
+    }
+
+    /* ── Field groups ── */
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+    .field-group label {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .field-group input, .field-group select, .field-group textarea {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; background: var(--bg); color: var(--text);
+      outline: none; font-family: inherit;
+    }
+    .field-group input:focus, .field-group select:focus, .field-group textarea:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Tables inside modal ── */
+    .ps-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ps-table th {
+      text-align: left; padding: 8px 10px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted);
+      border-bottom: 2px solid var(--border); white-space: nowrap;
+    }
+    .ps-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .ps-table tbody tr:last-child td { border-bottom: none; }
+    .col-r { text-align: right !important; }
+
+    /* ── Step 3 two-panel ── */
+    .step3-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .step3-panel { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-width: 0; }
+    .step3-panel-hdr {
+      padding: 9px 14px; background: var(--card-hover); border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted);
+    }
+
+    /* ── Assignment table inputs ── */
+    .ps-sel {
+      padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: 12px; background: var(--bg); color: var(--text);
+      font-family: inherit; width: 100%;
+    }
+    .ps-step-hint {
+      margin: 0 0 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; line-height: 1.45;
+      background: #fef3cd; border: 1px solid #f59e0b; color: #92400e;
+    }
+    .ps-table tr.ps-row-invalid td { background: #fef2f2; }
+    .ps-table tr.ps-row-invalid .ps-num { border-color: var(--red); }
+    .ps-num {
+      padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: 12px; background: var(--bg); color: var(--text);
+      font-family: inherit; width: 72px; text-align: right;
+    }
+    .ps-input-sm {
+      padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: 12px; background: var(--bg); color: var(--text);
+      font-family: inherit; width: 100%; box-sizing: border-box;
+    }
+
+    /* ── Step 4 method sections ── */
+    .method-section {
+      margin-top: 14px; padding: 14px 16px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .method-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .method-row { display: flex; gap: 10px; align-items: flex-end; }
+
+    /* ── OTP inputs ── */
+    .otp-input {
+      font-size: 22px !important; letter-spacing: 10px !important;
+      font-weight: 700 !important; text-align: center !important;
+    }
+    .otp-status { margin-top: 6px; font-size: 13px; font-weight: 600; min-height: 20px; }
+
+    /* ── Card footer buttons ── */
+    .ready-card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 7px; gap: 5px;
+    }
+    .btn-view-ticket {
+      padding: 4px 9px; font-size: 10px; font-weight: 700; letter-spacing: .3px;
+      text-transform: uppercase; border: 1px solid var(--border); border-radius: 4px;
+      background: var(--bg); color: var(--text-muted); cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s; font-family: inherit;
+    }
+    .btn-view-ticket:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .btn-ship-now {
+      padding: 4px 9px; font-size: 10px; font-weight: 700; letter-spacing: .3px;
+      text-transform: uppercase; border: 1px solid var(--accent); border-radius: 4px;
+      background: #eff6ff; color: var(--accent); cursor: pointer;
+      transition: background .12s; font-family: inherit; flex-shrink: 0;
+    }
+    .btn-ship-now:hover { background: #dbeafe; }
+
+    /* ── Ticket Detail Modal ── */
+    .td-modal {
+      max-width: 720px; display: flex; flex-direction: column;
+      max-height: 90vh; overflow: hidden;
+    }
+    .td-modal-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border); gap: 12px;
+      flex-shrink: 0;
+    }
+    /* ── Ticket detail tabs ── */
+    .td-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--card); }
+    .td-tab {
+      flex: 1; padding: 9px 8px; border: none; border-bottom: 3px solid transparent;
+      background: none; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px; color: var(--text-muted); cursor: pointer; font-family: inherit;
+      transition: all .12s;
+    }
+    .td-tab:hover { color: var(--text); }
+    .td-tab.active { border-bottom-color: var(--accent); color: var(--accent); }
+    /* ── Delivery tab content ── */
+    .delivery-manifest-table {
+      width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px;
+    }
+    .delivery-manifest-table th {
+      text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+    .delivery-manifest-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .delivery-manifest-table tbody tr:last-child td { border-bottom: none; }
+    .delivery-box-hdr {
+      padding: 6px 8px; background: var(--card-hover);
+      font-size: 11px; font-weight: 700; color: var(--text);
+      border-bottom: 1px solid var(--border); border-top: 2px solid var(--border);
+    }
+    .delivery-box-hdr:first-child { border-top: none; }
+    .delivery-no-slip {
+      padding: 20px; text-align: center; font-size: 12px; color: var(--text-muted);
+      font-style: italic;
+    }
+    .delivery-status-ok   { color: var(--green); font-weight: 700; font-size: 11px; }
+    .delivery-status-warn { color: var(--yellow); font-weight: 700; font-size: 11px; }
+    .delivery-status-err  { color: var(--red);    font-weight: 700; font-size: 11px; }
+    .td-order-id {
+      font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.2px;
+    }
+    .td-customer {
+      font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 2px;
+    }
+    .td-body { overflow-y: auto; padding: 20px; }
+    .td-section {
+      margin-bottom: 20px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    .td-section:last-child { margin-bottom: 0; }
+    .td-section-hdr {
+      padding: 8px 14px; background: var(--card-hover); border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--text-muted);
+    }
+    .td-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    }
+    .td-field {
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+    }
+    .td-field:nth-last-child(-n+2) { border-bottom: none; }
+    .td-field:nth-last-child(1):nth-child(odd) {
+      grid-column: span 2; border-bottom: none;
+    }
+    .td-field-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--text-muted); margin-bottom: 2px;
+    }
+    .td-field-value {
+      font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4;
+    }
+    .td-field-value.td-empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+    .td-badge {
+      display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px;
+      font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+    }
+    .td-full { grid-column: span 2; }
+    .td-sku-body { padding: 12px 14px 14px; }
+    .td-sku-body .pulse-sku-section {
+      margin-top: 0; padding-top: 0; border-top: none;
+    }
+    .td-sku-body .pulse-sku-section-title { display: none; }
+    .td-sku-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .td-sku-table th {
+      text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+    .td-sku-table td {
+      padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top;
+    }
+    .td-sku-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Print target (screen hidden) ── */
+    #printTarget { display: none; }
+
+    /* ── Print styles ── */
+    @media print {
+      body > *:not(#printTarget) { display: none !important; }
+      #printTarget {
+        display: block !important;
+        font-family: 'Inter', -apple-system, sans-serif;
+      }
+      .print-slip { padding: 24px 32px; page-break-after: always; page-break-inside: avoid; }
+      .print-slip:last-of-type { page-break-after: auto; }
+      .print-slip h2 { font-size: 18px; font-weight: 800; margin: 0 0 4px; }
+      .box-label {
+        page-break-after: always; page-break-inside: avoid;
+        border: 2px solid #000; padding: 24px 28px;
+        font-family: 'Inter', sans-serif;
+      }
+      .box-label:last-child { page-break-after: auto; }
+    }
+  `;
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatTicketDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function formatTicketDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${date} · ${time}`;
+  }
+
+  function getReadyToDeliverDate(o) {
+    if (o.qcPassedAt) return o.qcPassedAt;
+    const steps = o.workflowSteps || [];
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const s = steps[i];
+      const label = ((s.machine || '') + ' ' + (s.operation || '')).toLowerCase();
+      if ((label.includes('qc') || label.includes('ready to ship')) && s.completedAt) {
+        return s.completedAt;
+      }
+    }
+    return null;
+  }
+
+  function ticketDatesHtml(o) {
+    const rows = [
+      ['Created', o.createdAt],
+      ['Pre-press approved', o.prepressApprovedAt],
+      ['Ready to deliver', getReadyToDeliverDate(o)],
+    ];
+    if (o.waitingPickupAt) rows.push(['Label created', o.waitingPickupAt]);
+    if (o.deliveryReadyAt) rows.push(['Delivery ready', o.deliveryReadyAt]);
+    if (o.pickupCompletedAt || (o.pickupCompletedBy && o.shippedAt)) {
+      rows.push(['Picked up', o.pickupCompletedAt || o.shippedAt]);
+    } else if (o.shippedAt) {
+      rows.push(['Shipped', o.shippedAt]);
+    }
+    const body = rows.map(([label, iso]) =>
+      `<div class="ticket-dates-row"><span>${label}</span><span>${formatTicketDateTime(iso)}</span></div>`
+    ).join('');
+    return `<div class="ticket-dates">${body}</div>`;
+  }
+
+  function getPackingSlipTicketIds(ps) {
+    if (!ps) return [];
+    if (Array.isArray(ps.ticketIds) && ps.ticketIds.length) {
+      return [...ps.ticketIds].map(String);
+    }
+    const fromAssign = (ps.assignments || []).map(a => a.ticketId).filter(Boolean).map(String);
+    return [...new Set(fromAssign)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }
+
+  function shipmentGroupIdList(orders) {
+    return orders.map(o => String(o.orderId)).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })).join('|');
+  }
+
+  function getShipmentGroupKey(order) {
+    const ps = order?.packingSlip;
+    if (ps?.shipmentGroupId) return `gid:${ps.shipmentGroupId}`;
+
+    if (ps?.generatedAt) {
+      const genPeers = allOrders.filter(o => o.packingSlip?.generatedAt === ps.generatedAt);
+      if (genPeers.length > 1) return `fp:${ps.generatedAt}|${shipmentGroupIdList(genPeers)}`;
+    }
+
+    if (order.deliveryReadyAt) {
+      const drPeers = allOrders.filter(o => o.deliveryReadyAt === order.deliveryReadyAt);
+      if (drPeers.length > 1) return `dr:${order.deliveryReadyAt}|${shipmentGroupIdList(drPeers)}`;
+    }
+
+    if (order.waitingPickupAt) {
+      const minute = order.waitingPickupAt.slice(0, 16);
+      const labelPeers = allOrders.filter(o =>
+        o.waitingPickupAt && o.waitingPickupAt.slice(0, 16) === minute && o.packingSlip
+      );
+      if (labelPeers.length > 1) return `lbl:${minute}|${shipmentGroupIdList(labelPeers)}`;
+    }
+
+    const tickets = getPackingSlipTicketIds(ps);
+    if (tickets.length > 1 && ps?.generatedAt) {
+      return `fp:${ps.generatedAt}|${tickets.join('|')}`;
+    }
+    return `solo:${order.id}`;
+  }
+
+  function findOrderByDbRef(dbRef) {
+    if (dbRef == null || dbRef === '') return null;
+    const s = String(dbRef);
+    return allOrders.find(o =>
+      String(o.id) === s ||
+      String(o.orderId) === s ||
+      (o._supaId && String(o._supaId) === s)
+    ) || null;
+  }
+
+  function getShipmentGroupOrders(dbId) {
+    const order = findOrderByDbRef(dbId);
+    if (!order) return [];
+    const key = getShipmentGroupKey(order);
+    if (key.startsWith('solo:')) return [order];
+    const group = allOrders.filter(o => getShipmentGroupKey(o) === key);
+    return group.sort((a, b) =>
+      String(a.orderId).localeCompare(String(b.orderId), undefined, { numeric: true }));
+  }
+
+  function getShipmentGroupLeadStatus(group) {
+    const priority = ['delivery-ready', 'waiting-pickup', 'shipped', 'received', 'completed'];
+    for (const st of priority) {
+      if (group.some(o => o.status === st)) return st;
+    }
+    return group[0]?.status || '';
+  }
+
+  function shipmentGroupBelongsInColumn(group, columnKind) {
+    const lead = getShipmentGroupLeadStatus(group);
+    if (columnKind === 'label-created') return lead === 'waiting-pickup';
+    if (columnKind === 'delivery-ready') return lead === 'delivery-ready';
+    if (columnKind === 'shipped') return ['shipped', 'received', 'completed'].includes(lead);
+    return true;
+  }
+
+  /** One card per combined label — all tickets on the card; card lives in the leftmost active column only */
+  function groupShipColumnOrders(orders, columnKind) {
+    const keys = new Set();
+    for (const o of orders) keys.add(getShipmentGroupKey(o));
+    return [...keys]
+      .map(key =>
+        allOrders
+          .filter(o => getShipmentGroupKey(o) === key)
+          .sort((a, b) =>
+            String(a.orderId).localeCompare(String(b.orderId), undefined, { numeric: true }))
+      )
+      .filter(group => !columnKind || shipmentGroupBelongsInColumn(group, columnKind));
+  }
+
+  const shipGroupActiveTab = {};
+
+  function setShipGroupTab(encodedKey, idx) {
+    shipGroupActiveTab[decodeURIComponent(encodedKey)] = idx;
+    renderPickup();
+    renderDeliveryReady();
+    renderShipped();
+  }
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let allOrders = [];
+  const selectedIds = new Set();
+
+  // Packing slip wizard
+  let psSelectedOrders = [];
+  let boxes = [];
+  let nextBoxId = 1;
+  let assignments = [];
+  let psStep = 1;
+  let psSkipped = false;
+  let otpCode = null;
+  let otpVerified = false;
+
+  const CARRIER_METHODS = ['traditional-carrier'];
+
+  // Ticket detail modal state
+  let tdCurrentOrder = null;
+
+  // Receive / pickup complete modal state
+  let receiveTargetDbId = null;
+  let receiveTargetOrder = null;
+  let pickupCompleteDbId = null;
+  let pickupCompleteOrder = null;
+  let shippingInfoOrderId = null;
+  let shippingInfoOrderIds = [];
+  let courierShipDbId = null;
+  let courierShipSubmitting = false;
+  let pickupShipOtpCode = null;
+  let pickupShipOtpVerified = false;
+  let pickupRequiresOtp = false;
+
+
+  // ── Load ────────────────────────────────────────────────────────────────
+  async function load() {
+    try {
+      allOrders = await getAllOrders();
+    } catch (e) {
+      console.error('[Shipping] getAllOrders failed:', e);
+      allOrders = [];
+    }
+    // Prune selection to only ready-to-ship orders still present
+    const validIds = new Set(allOrders.filter(o => o.status === 'ready-to-ship').map(o => String(o.id)));
+    for (const id of [...selectedIds]) {
+      if (!validIds.has(id)) selectedIds.delete(id);
+    }
+    const rd = document.getElementById('receivedDate');
+    const pd = document.getElementById('pickupCompletedDate');
+    const today = new Date().toISOString().split('T')[0];
+    if (rd) rd.value = today;
+    if (pd) pd.value = today;
+    applyShipDateFilters();
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+    if (typeof registerPulseAdminConfigRefresh === 'function') {
+      registerPulseAdminConfigRefresh(() => { renderLeft(); if (selectedIds.size) renderSelectionBar(); });
+    }
+    await load();
+
+    // Handle ?packingSlip=<dbId> redirect from Production Manager
+    const params = new URLSearchParams(window.location.search);
+    const psId = params.get('packingSlip');
+    if (psId) {
+      const order = allOrders.find(o => String(o.id) === String(psId));
+      if (order && order.status === 'ready-to-ship') {
+        selectedIds.add(String(order.id));
+        renderLeft();
+        renderSelectionBar();
+        openPackingSlipModal();
+      } else if (order) {
+        showPageToast(
+          `Order #${order.orderId} is already "${order.status.replace(/-/g, ' ')}" — select it from the list below to reprint.`,
+          'info', 5000
+        );
+      } else {
+        showPageToast('Order not found — it may have already shipped or been archived.', 'warning', 4000);
+      }
+    }
+  });
+  onDBUpdate(() => load());
+
+  function getShipPageFilterDate(o) {
+    if (['shipped', 'received', 'completed'].includes(o.status)) {
+      return o.shippedAt || o.pickupCompletedAt || o.receivedAt || o.createdAt;
+    }
+    if (o.status === 'waiting-pickup') return o.waitingPickupAt || o.createdAt;
+    if (o.status === 'delivery-ready') return o.deliveryReadyAt || o.waitingPickupAt || o.createdAt;
+    return o.createdAt;
+  }
+
+  function matchesShipDateFilter(o) {
+    const dateFilter = document.getElementById('shipDateFilter')?.value || 'all';
+    const customDate = document.getElementById('shipCustomDate')?.value || '';
+    if (!dateFilter || dateFilter === 'all') return true;
+    const iso = getShipPageFilterDate(o);
+    if (!iso) return false;
+    return typeof pulseOrderMatchesCreatedDateFilter === 'function'
+      && pulseOrderMatchesCreatedDateFilter({ createdAt: iso }, dateFilter, customDate);
+  }
+
+  function onShipDateFilterChange() {
+    const v = document.getElementById('shipDateFilter')?.value || 'all';
+    const customEl = document.getElementById('shipCustomDate');
+    if (customEl) customEl.style.display = v === 'custom' ? '' : 'none';
+    applyShipDateFilters();
+  }
+
+  function applyShipDateFilters() {
+    try { renderStats(); } catch (e) { console.error('[Shipping] renderStats:', e); }
+    try { renderLeft(); } catch (e) { console.error('[Shipping] renderLeft:', e); }
+    try { renderPickup(); } catch (e) { console.error('[Shipping] renderPickup:', e); }
+    try { renderDeliveryReady(); } catch (e) { console.error('[Shipping] renderDeliveryReady:', e); }
+    try { renderShipped(); } catch (e) { console.error('[Shipping] renderShipped:', e); }
+  }
+
+  // ── Stats bar ───────────────────────────────────────────────────────────
+  function renderStats() {
+    const ready         = allOrders.filter(o => o.status === 'ready-to-ship' && matchesShipDateFilter(o));
+    const waitPickup    = allOrders.filter(o => o.status === 'waiting-pickup' && matchesShipDateFilter(o));
+    const waitPickupGroups = groupShipColumnOrders(waitPickup, 'label-created');
+    const deliveryReady = allOrders.filter(o => o.status === 'delivery-ready' && matchesShipDateFilter(o));
+    const deliveryReadyGroups = groupShipColumnOrders(deliveryReady, 'delivery-ready');
+    const shippedCol    = allOrders.filter(o => ['shipped', 'received', 'completed'].includes(o.status) && matchesShipDateFilter(o));
+    const sumQty = arr => arr.reduce((s, o) => s + (o.quantity || 0), 0);
+
+    document.getElementById('statsBar').innerHTML = [
+      { val: ready.length,         sub: sumQty(ready).toLocaleString() + ' units',         lbl: 'In Shipping Station', color: 'var(--green)'      },
+      { val: waitPickupGroups.length,    sub: sumQty(waitPickup).toLocaleString() + ' units',    lbl: 'Label Created',       color: 'var(--yellow)'     },
+      { val: deliveryReadyGroups.length, sub: sumQty(deliveryReady).toLocaleString() + ' units', lbl: 'Delivery Ready',      color: '#0891b2'           },
+      { val: shippedCol.length,    sub: sumQty(shippedCol).toLocaleString() + ' units',    lbl: 'Shipped',             color: 'var(--text-muted)' },
+    ].map(s => `<div class="ship-stat">
+           <span class="ship-stat-val" style="color:${s.color};">${s.val}</span>
+           ${s.sub ? `<span class="ship-stat-units">${s.sub}</span>` : ''}
+           <span class="ship-stat-lbl">${s.lbl}</span>
+         </div>`).join('');
+  }
+
+
+  // ── Left Panel ─────────────────────────────────────────────────────────
+  function renderLeft() {
+    const q = (document.getElementById('leftSearch')?.value || '').toLowerCase().trim();
+    const orders = allOrders
+      .filter(o => o.status === 'ready-to-ship')
+      .filter(matchesShipDateFilter)
+      .filter(o => !q || (o.orderId + ' ' + o.customerName + ' ' + (o.productType || '')).toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (a.isRush && !b.isRush) return -1;
+        if (!a.isRush && b.isRush) return 1;
+        return (a.dueDate || '') < (b.dueDate || '') ? -1 : 1;
+      });
+
+    document.getElementById('leftCount').textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('leftList');
+
+    if (!orders.length) {
+      container.innerHTML = '<div class="panel-empty">No orders in shipping station</div>';
+      renderSelectionBar();
+      return;
+    }
+
+    container.innerHTML = orders.map(o => {
+      const sid = String(o.id);
+      const today = new Date().toISOString().split('T')[0];
+      const overdue = o.dueDate && o.dueDate < today;
+      const line = getProductionLine(o);
+      const lineColor = { '6k': '#2563eb', '15k': '#7c3aed', 'boyd': '#d97706' }[line] || '#6b7280';
+      const isSelected = selectedIds.has(sid);
+      return `
+        <div class="ready-card${isSelected ? ' selected' : ''}" data-id="${sid}" onclick="toggleSelect('${sid}', ${!isSelected})">
+          <div class="ready-card-top">
+            <span class="ready-card-order">#${escHtml(o.orderId)}</span>
+            <span class="ready-card-meta">${o.dueDate ? 'Due: ' + o.dueDate : ''}</span>
+          </div>
+          <div class="ready-card-customer">${escHtml(o.customerName || 'Unknown Customer')}</div>
+          <div class="ready-card-product">${escHtml(o.productType || '')}${o.quantity ? ' &times; ' + o.quantity.toLocaleString() : ''}</div>
+          ${ticketDatesHtml(o)}
+          <div class="ready-card-chips" style="margin-top:5px;">
+            ${o.isRush ? '<span class="chip chip-rush">Rush</span>' : ''}
+            <span class="chip" style="background:rgba(0,0,0,.05);color:${lineColor};">${(line || '').toUpperCase()}</span>
+            ${overdue ? '<span class="chip chip-overdue">Overdue</span>' : ''}
+          </div>
+          <div class="ready-card-footer">
+            <button class="btn-view-ticket"
+              onclick="event.stopPropagation();openTicketDetail('${sid}')">
+              View Ticket
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+
+    renderSelectionBar();
+  }
+
+  function toggleSelect(id, checked) {
+    const sid = String(id);
+    if (checked) selectedIds.add(sid);
+    else selectedIds.delete(sid);
+    const card = document.querySelector(`.ready-card[data-id="${sid}"]`);
+    if (card) card.classList.toggle('selected', !!checked);
+    renderSelectionBar();
+  }
+
+  function quickShip(id) {
+    selectedIds.clear();
+    selectedIds.add(String(id));
+    renderLeft();
+    openPackingSlipModal();
+  }
+
+  function renderSelectionBar() {
+    const bar = document.getElementById('selectionBar');
+    const n = selectedIds.size;
+    bar.style.display = n > 0 ? 'flex' : 'none';
+    if (n > 0) {
+      document.getElementById('selCount').textContent = `${n} ticket${n !== 1 ? 's' : ''} selected`;
+    }
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    renderLeft();
+  }
+
+
+  // ── Column Panels ────────────────────────────────────────────────────────
+  function renderPickup() {
+    const q = (document.getElementById('pickupSearch')?.value || '').toLowerCase().trim();
+    let orders = allOrders.filter(o => o.status === 'waiting-pickup').filter(matchesShipDateFilter);
+    if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
+    const groups = groupShipColumnOrders(orders, 'label-created');
+    document.getElementById('pickupCount').textContent = `${groups.length} label${groups.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('pickupList');
+    container.innerHTML = groups.length
+      ? groups.map(g => renderShipColumnGroupCard(g, 'label-created')).join('')
+      : '<div class="panel-empty">No label-created orders</div>';
+  }
+
+  function renderDeliveryReady() {
+    const q = (document.getElementById('deliveryReadySearch')?.value || '').toLowerCase().trim();
+    let orders = allOrders.filter(o => o.status === 'delivery-ready').filter(matchesShipDateFilter);
+    if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
+    const groups = groupShipColumnOrders(orders, 'delivery-ready');
+    document.getElementById('deliveryReadyCount').textContent = `${groups.length} label${groups.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('deliveryReadyList');
+    container.innerHTML = groups.length
+      ? groups.map(g => renderShipColumnGroupCard(g, 'delivery-ready')).join('')
+      : '<div class="panel-empty">No delivery-ready orders</div>';
+  }
+
+  function renderShipped() {
+    const q = (document.getElementById('shippedSearch')?.value || '').toLowerCase().trim();
+    let orders = allOrders
+      .filter(o => ['shipped', 'received', 'completed'].includes(o.status))
+      .filter(matchesShipDateFilter);
+    if (q) orders = orders.filter(o => (o.orderId + ' ' + o.customerName + ' ' + (o.trackingNumber || '')).toLowerCase().includes(q));
+    const groups = groupShipColumnOrders(orders, 'shipped')
+      .sort((ga, gb) => {
+        const aTs = Math.max(...ga.map(x => new Date(x.receivedAt || x.completedAt || x.shippedAt || 0).getTime()));
+        const bTs = Math.max(...gb.map(x => new Date(x.receivedAt || x.completedAt || x.shippedAt || 0).getTime()));
+        return bTs - aTs;
+      })
+      .slice(0, 80);
+    const ticketCount = groups.reduce((n, g) => n + g.length, 0);
+    document.getElementById('shippedCount').textContent = groups.length === ticketCount
+      ? `${ticketCount} order${ticketCount !== 1 ? 's' : ''}`
+      : `${groups.length} shipment${groups.length !== 1 ? 's' : ''} · ${ticketCount} tickets`;
+    const container = document.getElementById('shippedList');
+    container.innerHTML = groups.length
+      ? groups.map(g => renderShipColumnGroupCard(g, 'shipped')).join('')
+      : '<div class="panel-empty">No shipped orders</div>';
+  }
+
+  function getTrackingUrl(carrier, tn) {
+    if (!tn) return null;
+    const t = encodeURIComponent(tn);
+    const map = {
+      'UPS':    `https://www.ups.com/track?tracknum=${t}`,
+      'FedEx':  `https://www.fedex.com/fedextrack/?trknbr=${t}`,
+      'USPS':   `https://tools.usps.com/go/TrackConfirmAction?tLabels=${t}`,
+      'DHL':    `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${t}`,
+      'OnTrac': `https://www.ontrac.com/trackingdetail.asp?tracking=${t}`,
+    };
+    return map[carrier] || null;
+  }
+
+  /** Job, packing-slip box, and ship/delivery notes for list cards */
+  function collectShipNotesForOrder(o) {
+    const lines = [];
+    if (o?.specialNotes?.trim()) lines.push({ label: 'Job', text: o.specialNotes.trim() });
+    const ps = o?.packingSlip;
+    if (ps?.assignments?.length) {
+      const seen = new Set();
+      ps.assignments
+        .filter(a => ticketKey(a.ticketId) === ticketKey(o.orderId) && (a.notes || '').trim())
+        .forEach(a => {
+          const t = a.notes.trim();
+          if (!seen.has(t)) { seen.add(t); lines.push({ label: 'Box', text: t }); }
+        });
+    }
+    if (o?.pickupCompleteNotes?.trim()) lines.push({ label: 'Ship', text: o.pickupCompleteNotes.trim() });
+    if (o?.receivedNotes?.trim()) lines.push({ label: 'Delivered', text: o.receivedNotes.trim() });
+    return lines;
+  }
+
+  function renderShipCardNotesHtml(o) {
+    const lines = collectShipNotesForOrder(o);
+    if (!lines.length) return '';
+    const body = lines.map(l =>
+      l.label ? `<span><strong>${escHtml(l.label)}:</strong> ${escHtml(l.text)}</span>` : escHtml(l.text)
+    ).join('<br>');
+    return `<div class="ship-card-notes"><span class="ship-card-notes-label">Notes</span>${body}</div>`;
+  }
+
+  function _buildShipCardHtml(o, dateStr, actionsHtml) {
+    const sid = String(o.id);
+    const trackUrl = getTrackingUrl(o.carrier, o.trackingNumber);
+    const trackingHtml = (o.trackingNumber || o.carrier) ? `
+          <div class="ship-card-tracking">
+            ${o.carrier ? `<span>${escHtml(o.carrier)}</span>` : '<span>Tracking</span>'}
+            ${o.trackingNumber
+              ? (trackUrl
+                ? `<a href="${trackUrl}" target="_blank" rel="noopener" class="tracking-link">${escHtml(o.trackingNumber)}</a>`
+                : `<span>${escHtml(o.trackingNumber)}</span>`)
+              : '<span style="color:var(--text-muted);">No tracking #</span>'}
+          </div>` : '';
+    const statusNote = (o.status === 'received' || o.status === 'completed')
+      ? `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Delivered ${formatTicketDateTime(o.receivedAt)}</div>`
+      : (o.status === 'shipped'
+        ? (o.pickupCompletedAt || o.pickupCompletedBy
+          ? `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Picked up ${formatTicketDateTime(o.pickupCompletedAt || o.shippedAt)}</div>`
+          : '')
+        : '');
+    return `
+      <div class="ship-card">
+        <div class="ship-card-top">
+          <span class="ship-card-order">#${escHtml(o.orderId)}</span>
+          <span class="ship-card-date">${dateStr}</span>
+        </div>
+        <div class="ship-card-customer">${escHtml(o.customerName || '—')}</div>
+        <div class="ship-card-meta">${escHtml(o.productType || '')}${o.quantity ? ' &times; ' + o.quantity.toLocaleString() : ''}</div>
+        ${ticketDatesHtml(o)}
+        ${trackingHtml}
+        ${o.pickupContact ? `<div class="ship-card-meta" style="margin-top:4px;">Contact: ${escHtml(o.pickupContact)}</div>` : ''}
+        ${renderShipCardNotesHtml(o)}
+        ${statusNote}
+        <div class="ship-card-actions">
+          <button class="btn-view-ticket" onclick="openTicketDetail('${sid}')">View Ticket</button>
+          ${actionsHtml}
+        </div>
+      </div>`;
+  }
+
+  function renderLabelCreatedCard(o) {
+    const sid = String(o.id);
+    const dateStr = o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '';
+    const actionsHtml = `
+        <button class="btn-xs" onclick="printLabelForOrder('${sid}')">Print Label</button>
+        <button class="btn-xs btn-xs-primary" onclick="openShippingInfoModal('${sid}')">Add Shipping Info</button>`;
+    return _buildShipCardHtml(o, dateStr, actionsHtml);
+  }
+
+  function renderCombinedTicketSummary(group) {
+    return group.map(ord =>
+      `<span class="ship-card-ticket-pill">#${escHtml(ord.orderId)} · ${escHtml(ord.productType || '—')}${ord.quantity ? ' × ' + Number(ord.quantity).toLocaleString() : ''}</span>`
+    ).join('');
+  }
+
+  function renderShipStatusNoteHtml(o) {
+    if (o.status === 'received' || o.status === 'completed') {
+      return `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Delivered ${formatTicketDateTime(o.receivedAt)}</div>`;
+    }
+    if (o.status === 'shipped' && (o.pickupCompletedAt || o.pickupCompletedBy)) {
+      return `<div class="ship-card-meta" style="margin-top:4px;color:var(--green);">Picked up ${formatTicketDateTime(o.pickupCompletedAt || o.shippedAt)}</div>`;
+    }
+    return '';
+  }
+
+  function renderShipColumnGroupCard(group, columnKind) {
+    if (!group?.length) return '';
+    if (group.length === 1) {
+      if (columnKind === 'label-created') return renderLabelCreatedCard(group[0]);
+      if (columnKind === 'delivery-ready') return renderDeliveryReadyCard(group[0]);
+      return renderShipCard(group[0]);
+    }
+    const groupKey = getShipmentGroupKey(group[0]);
+    const encKey = encodeURIComponent(groupKey);
+    let activeIdx = shipGroupActiveTab[groupKey] || 0;
+    if (activeIdx >= group.length) activeIdx = 0;
+    shipGroupActiveTab[groupKey] = activeIdx;
+    const o = group[activeIdx];
+    const primaryId = String(group[0].id);
+    const sid = String(o.id);
+    const dateStr = columnKind === 'shipped'
+      ? (o.receivedAt
+        ? new Date(o.receivedAt).toLocaleDateString()
+        : (o.shippedAt ? new Date(o.shippedAt).toLocaleDateString() : ''))
+      : columnKind === 'delivery-ready'
+        ? (o.deliveryReadyAt
+          ? new Date(o.deliveryReadyAt).toLocaleDateString()
+          : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : ''))
+        : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '');
+    const tabsHtml = group.map((ord, i) => {
+      const shippedTag = ord.status === 'shipped' || ord.status === 'received' || ord.status === 'completed'
+        ? ' ✓' : '';
+      const drTag = columnKind === 'delivery-ready' && ord.status !== 'delivery-ready' ? ' · shipped' : '';
+      return `<button type="button" class="ship-card-tab${i === activeIdx ? ' active' : ''}" onclick="setShipGroupTab('${encKey}', ${i})">#${escHtml(ord.orderId)}${shippedTag}${drTag}</button>`;
+    }).join('');
+    const customers = [...new Set(group.map(x => x.customerName).filter(Boolean))];
+    const customerLabel = customers.length === 1 ? (customers[0] || '—') : customers.join(' · ');
+    const actionsHtml = columnKind === 'label-created'
+      ? `<button class="btn-xs" onclick="printLabelForOrder('${primaryId}')">Print Label</button>
+         <button class="btn-xs btn-xs-primary" onclick="openShippingInfoModal('${primaryId}')">Add Shipping Info</button>`
+      : columnKind === 'delivery-ready'
+        ? (group.some(ord => ord.status === 'delivery-ready')
+          ? `<button class="btn-xs btn-xs-primary" onclick="markShippedFromDeliveryReady('${primaryId}')">Mark as Shipped</button>`
+          : '')
+        : (o.trackingNumber
+          ? `<button class="btn-xs" onclick="copyTracking('${escHtml(o.trackingNumber || '')}')">Copy Tracking</button>`
+          : '');
+    const trackUrl = getTrackingUrl(o.carrier, o.trackingNumber);
+    const trackingHtml = (o.trackingNumber || o.carrier) ? `
+          <div class="ship-card-tracking">
+            ${o.carrier ? `<span>${escHtml(o.carrier)}</span>` : '<span>Tracking</span>'}
+            ${o.trackingNumber
+              ? (trackUrl
+                ? `<a href="${trackUrl}" target="_blank" rel="noopener" class="tracking-link">${escHtml(o.trackingNumber)}</a>`
+                : `<span>${escHtml(o.trackingNumber)}</span>`)
+              : '<span style="color:var(--text-muted);">No tracking #</span>'}
+          </div>` : '';
+    return `
+      <div class="ship-card ship-card-combined">
+        <div class="ship-card-top">
+          <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span class="ship-card-order">${group.length} tickets · 1 label</span>
+            <span class="ship-card-badge">Combined</span>
+          </span>
+          <span class="ship-card-date">${dateStr}</span>
+        </div>
+        <div class="ship-card-customer">${escHtml(customerLabel)}</div>
+        <div class="ship-card-tabs">${tabsHtml}</div>
+        <div class="ship-card-combined-tickets">${renderCombinedTicketSummary(group)}</div>
+        <div class="ship-card-meta">${escHtml(o.productType || '')}${o.quantity ? ' &times; ' + o.quantity.toLocaleString() : ''}</div>
+        ${ticketDatesHtml(o)}
+        ${trackingHtml}
+        ${renderShipCardNotesHtml(o)}
+        ${renderShipStatusNoteHtml(o)}
+        <div class="ship-card-actions">
+          <button class="btn-view-ticket" onclick="openTicketDetail('${sid}')">View Ticket</button>
+          ${actionsHtml}
+        </div>
+      </div>`;
+  }
+
+  function renderDeliveryReadyCard(o) {
+    const dateStr = o.deliveryReadyAt
+      ? new Date(o.deliveryReadyAt).toLocaleDateString()
+      : (o.waitingPickupAt ? new Date(o.waitingPickupAt).toLocaleDateString() : '');
+    const actionsHtml = `<button class="btn-xs btn-xs-primary" onclick="markShippedFromDeliveryReady('${o.id}')">Mark as Shipped</button>`;
+    return _buildShipCardHtml(o, dateStr, actionsHtml);
+  }
+
+  function renderShipCard(o) {
+    const dateStr = o.receivedAt
+      ? new Date(o.receivedAt).toLocaleDateString()
+      : (o.shippedAt ? new Date(o.shippedAt).toLocaleDateString() : '');
+    const actionsHtml = o.trackingNumber
+      ? `<button class="btn-xs" onclick="copyTracking('${escHtml(o.trackingNumber || '')}')">Copy Tracking</button>`
+      : '';
+    return _buildShipCardHtml(o, dateStr, actionsHtml);
+  }
+
+  function copyTracking(tn) {
+    if (!tn) { showPageToast('No tracking number to copy.', 'warning'); return; }
+    navigator.clipboard.writeText(tn).then(() => showPageToast('Tracking number copied.', 'success', 2000));
+  }
+
+  async function confirmCarrierPickup(dbId) {
+    const orders = getShipmentGroupOrders(dbId);
+    const order = orders[0];
+    if (!order) return;
+    const idList = orders.map(o => '#' + o.orderId).join(', ');
+    if (!confirm(`Mark ${idList} as shipped?\n\nThis confirms the carrier has picked up the package.`)) return;
+    try {
+      const shippedAt = new Date().toISOString();
+      for (const o of orders) {
+        await updateOrder(o.id, {
+          status: 'shipped',
+          shippedAt,
+          carrier: o.carrier || order.carrier || null,
+          trackingNumber: o.trackingNumber || order.trackingNumber || null,
+          packingSlip: o.packingSlip || null,
+        });
+        await addActivity({
+          orderId: o.orderId,
+          type: 'shipped',
+          message: `Carrier pickup confirmed — ${o.carrier || order.carrier || 'carrier'} has collected the package.`
+            + (orders.length > 1 ? ' (combined label)' : ''),
+          by: 'Shipping Dept',
+        });
+      }
+      showPageToast(`${idList} marked as shipped.`, 'success', 3000);
+      await load();
+    } catch (err) {
+      console.error('[confirmCarrierPickup]', err);
+      showPageToast('Error: ' + (err.message || err), 'error');
+    }
+  }
+
+
+  function markShippedFromDeliveryReady(dbId) {
+    const order = findOrderByDbRef(dbId);
+    if (!order) {
+      showPageToast('Order not found — refresh and try again.', 'warning');
+      return;
+    }
+    dbId = order.id;
+    const method = order.packingSlip?.method || '';
+    if (method === 'local-pickup') {
+      openPickupCompleteModal(dbId, true);
+    } else if (method === 'courier') {
+      openCourierShipModal(dbId);
+    } else {
+      confirmCarrierPickup(dbId);
+    }
+  }
+
+  function openShippingInfoModal(dbId) {
+    const group = getShipmentGroupOrders(dbId);
+    if (!group.length) return;
+    shippingInfoOrderIds = group.map(o => o.id);
+    shippingInfoOrderId = group[0].id;
+    const order = group[0];
+    const ticketLine = group.length > 1
+      ? `<strong>Combined label</strong> — ${group.map(o => '#' + escHtml(o.orderId)).join(', ')}<br>
+         <span style="font-size:12px;color:var(--text-muted);">${group.length} job tickets on one packing slip</span>`
+      : `<strong>#${escHtml(order.orderId)}</strong> — ${escHtml(order.customerName || '—')}<br>
+         ${escHtml(order.productType || '')} &times; ${escHtml(String(order.quantity || '—'))}`;
+    document.getElementById('shippingInfoOrderInfo').innerHTML = ticketLine;
+    document.getElementById('siMethod').value = order.packingSlip?.method || '';
+    document.getElementById('siCarrierSelect').value = order.packingSlip?.carrier || order.carrier || '';
+    document.getElementById('siTracking').value = order.packingSlip?.tracking || order.trackingNumber || '';
+    document.getElementById('siBol').value = order.packingSlip?.bol || '';
+    document.getElementById('siPallets').value = order.packingSlip?.palletCount || '';
+    onSiMethodChange();
+    updateSiSaveBtn();
+    document.getElementById('shippingInfoModal').classList.remove('hidden');
+  }
+
+  function closeShippingInfoModal() {
+    document.getElementById('shippingInfoModal').classList.add('hidden');
+    shippingInfoOrderId = null;
+    shippingInfoOrderIds = [];
+  }
+
+  function onSiMethodChange() {
+    const method = document.getElementById('siMethod').value;
+    const hasMethod = method !== '';
+    document.getElementById('siPickupHint').style.display = method === 'local-pickup' ? 'block' : 'none';
+    document.getElementById('siCourierHint').style.display = method === 'courier' ? 'block' : 'none';
+    document.getElementById('siCarrierFields').style.display = method === 'traditional-carrier' ? 'block' : 'none';
+    document.getElementById('siFreightFields').style.display = method === 'freight' ? 'block' : 'none';
+    const ph = document.getElementById('siNoMethodPlaceholder');
+    if (ph) ph.style.display = hasMethod ? 'none' : 'block';
+    updateSiSaveBtn();
+  }
+
+  function updateSiSaveBtn() {
+    const method = document.getElementById('siMethod')?.value || '';
+    let valid = false;
+    if (method === 'local-pickup' || method === 'courier') valid = true;
+    else if (method === 'freight') {
+      valid = (document.getElementById('siBol')?.value || '').trim().length > 0
+        && (document.getElementById('siPallets')?.value || '').trim().length > 0;
+    } else if (method === 'traditional-carrier') {
+      valid = (document.getElementById('siCarrierSelect')?.value || '').trim().length > 0
+        && (document.getElementById('siTracking')?.value || '').trim().length > 0;
+    }
+    const btn = document.getElementById('siSaveBtn');
+    if (btn) btn.disabled = !valid;
+  }
+
+  async function submitShippingInfo() {
+    const targetIds = shippingInfoOrderIds.length
+      ? shippingInfoOrderIds
+      : (shippingInfoOrderId ? [shippingInfoOrderId] : []);
+    if (!targetIds.length) return;
+    const orders = targetIds
+      .map(id => allOrders.find(o => String(o.id) === String(id)))
+      .filter(Boolean);
+    if (!orders.length) return;
+    const order = orders[0];
+    const saveBtn = document.getElementById('siSaveBtn');
+    if (saveBtn?.disabled && saveBtn.dataset.saving === '1') return;
+    const method = document.getElementById('siMethod').value;
+    if (!method) { showPageToast('Select a shipping method.', 'warning'); return; }
+    const meta = {};
+    let carrier = null;
+    let tracking = null;
+    if (method === 'traditional-carrier') {
+      meta.carrier = document.getElementById('siCarrierSelect').value;
+      meta.tracking = document.getElementById('siTracking').value.trim();
+      carrier = meta.carrier;
+      tracking = meta.tracking;
+    } else if (method === 'freight') {
+      meta.bol = document.getElementById('siBol').value.trim();
+      meta.palletCount = document.getElementById('siPallets').value.trim();
+      meta.carrier = 'Freight';
+      carrier = 'Freight';
+    } else if (method === 'courier') {
+      meta.carrier = 'Courier/Rideshare';
+      carrier = 'Courier/Rideshare';
+    } else if (method === 'local-pickup') {
+      meta.carrier = 'Local Pickup';
+      carrier = 'Local Pickup';
+    }
+    const packingSlip = {
+      ...(order.packingSlip || {}),
+      method,
+      ...meta,
+    };
+    if (saveBtn) {
+      saveBtn.dataset.saving = '1';
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+    }
+    try {
+      const readyAt = new Date().toISOString();
+      for (const o of orders) {
+        const slip = { ...(o.packingSlip || {}), method, ...meta };
+        await updateOrder(o.id, {
+          status: 'delivery-ready',
+          deliveryReadyAt: readyAt,
+          carrier,
+          trackingNumber: tracking,
+          packingSlip: slip,
+        });
+        await addActivity({
+          orderId: o.orderId,
+          type: 'delivery-ready',
+          message: `Delivery info added — ${carrier || method}`
+            + (tracking ? ` · Tracking: ${tracking}` : '')
+            + (meta.bol ? ` · BOL: ${meta.bol}` : '')
+            + (orders.length > 1 ? ' (combined label)' : ''),
+          by: 'Shipping Dept',
+        });
+      }
+      const toastIds = orders.map(o => '#' + o.orderId).join(', ');
+      showPageToast(`${toastIds} moved to Delivery Ready.`, 'success', 4000);
+      closeShippingInfoModal();
+      await load();
+    } catch (err) {
+      console.error('[submitShippingInfo]', err);
+      showPageToast('Error: ' + (err.message || err), 'error', 8000);
+    } finally {
+      if (saveBtn) {
+        saveBtn.dataset.saving = '0';
+        saveBtn.textContent = 'Save & Move to Delivery Ready';
+        updateSiSaveBtn();
+      }
+    }
+  }
+
+  function openCourierShipModal(dbId) {
+    const group = getShipmentGroupOrders(dbId);
+    const order = group[0] || findOrderByDbRef(dbId);
+    if (!order) {
+      showPageToast('Order not found — refresh and try again.', 'warning');
+      return;
+    }
+    courierShipDbId = order.id;
+    const ticketLine = group.length > 1
+      ? `<strong>Combined label</strong> — ${group.map(o => '#' + escHtml(o.orderId)).join(', ')}`
+      : `<strong>#${escHtml(order.orderId)}</strong> — ${escHtml(order.customerName || '—')}`;
+    document.getElementById('courierShipOrderInfo').innerHTML = ticketLine;
+    document.getElementById('courierShipPlate').value = order.packingSlip?.plateNumber || '';
+    document.getElementById('courierShipHandoff').value = '';
+    document.getElementById('courierShipNotes').value = '';
+    updateCourierShipBtn();
+    document.getElementById('courierShipModal').classList.remove('hidden');
+  }
+
+  function closeCourierShipModal() {
+    document.getElementById('courierShipModal').classList.add('hidden');
+    courierShipDbId = null;
+    courierShipSubmitting = false;
+  }
+
+  function updateCourierShipBtn() {
+    const plate = (document.getElementById('courierShipPlate')?.value || '').trim();
+    const btn = document.getElementById('courierShipSubmitBtn');
+    if (btn) btn.disabled = courierShipSubmitting || plate.length === 0;
+  }
+
+  async function submitCourierShip() {
+    if (!courierShipDbId || courierShipSubmitting) return;
+    const orders = getShipmentGroupOrders(courierShipDbId);
+    const order = orders[0];
+    if (!order) {
+      showPageToast('Order not found — refresh and try again.', 'warning');
+      return;
+    }
+    const plate = document.getElementById('courierShipPlate').value.trim();
+    const handoff = document.getElementById('courierShipHandoff').value.trim();
+    const notes = document.getElementById('courierShipNotes').value.trim();
+    if (!plate) { showPageToast('Enter vehicle plate number.', 'warning'); return; }
+    const idList = orders.map(o => '#' + o.orderId).join(', ');
+    courierShipSubmitting = true;
+    const btn = document.getElementById('courierShipSubmitBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const shippedAt = new Date().toISOString();
+      for (const o of orders) {
+        const packingSlip = { ...(o.packingSlip || {}), plateNumber: plate };
+        await updateOrder(o.id, {
+          status: 'shipped',
+          shippedAt,
+          carrier: o.carrier || order.carrier || 'Courier/Rideshare',
+          trackingNumber: o.trackingNumber || order.trackingNumber || null,
+          packingSlip,
+          pickupHandoffBy: handoff || null,
+          pickupCompleteNotes: notes || null,
+        });
+        await addActivity({
+          orderId: o.orderId,
+          type: 'shipped',
+          message: `Courier delivery confirmed — plate ${plate}${handoff ? ' · Handed off by: ' + handoff : ''}`
+            + (orders.length > 1 ? ' (combined label)' : ''),
+          by: handoff || 'Shipping Dept',
+        });
+      }
+      showPageToast(`${idList} marked as shipped.`, 'success', 4000);
+      closeCourierShipModal();
+      await load();
+    } catch (err) {
+      console.error('[submitCourierShip]', err);
+      showPageToast('Error: ' + (err.message || err), 'error');
+    } finally {
+      courierShipSubmitting = false;
+      updateCourierShipBtn();
+    }
+  }
+
+  function printLabelForOrder(sid) {
+    const orders = getShipmentGroupOrders(sid);
+    const order = orders[0];
+    if (!order) { showPageToast('Order not found.', 'warning'); return; }
+    const ps = order.packingSlip;
+    if (ps && ps.boxes && ps.boxes.length > 0) {
+      const meta = {};
+      if (ps.phone)       meta.phone = ps.phone;
+      if (ps.plateNumber) meta.plateNumber = ps.plateNumber;
+      if (ps.tracking)    meta.tracking = ps.tracking;
+      if (ps.carrier)     meta.carrier = ps.carrier;
+      if (ps.bol)         meta.bol = ps.bol;
+      if (ps.palletCount) meta.palletCount = ps.palletCount;
+      renderPrintGroups(orders, ps.boxes, ps.assignments || [], ps.method || '', meta);
+    } else if (ps && ps.generatedAt) {
+      renderPrintGroups(orders, ps.boxes || [], ps.assignments || [], ps.method || '', { carrier: 'Delivery pending' });
+    } else {
+      // Fallback: simple label for quick-marked orders
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('printTarget').innerHTML = `
+        <div class="box-label">
+          <div style="font-size:18px;font-weight:800;margin-bottom:8px;">#${escHtml(order.orderId)}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${escHtml(order.customerName || '—')}</div>
+          <div style="font-size:12px;color:#555;margin-bottom:12px;">${escHtml(order.productType || '')}${order.quantity ? ' × ' + order.quantity.toLocaleString() : ''}</div>
+          <hr style="border:none;border-top:1px solid #000;margin:0 0 10px;">
+          ${order.carrier ? `<div style="font-size:12px;margin-bottom:4px;">Carrier: ${escHtml(order.carrier)}</div>` : ''}
+          ${order.trackingNumber ? `<div style="font-size:12px;margin-bottom:4px;">Tracking: ${escHtml(order.trackingNumber)}</div>` : ''}
+          <div style="font-size:11px;color:#666;margin-top:8px;">Printed: ${today}</div>
+        </div>`;
+    }
+    window.print();
+  }
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // PACKING SLIP WIZARD
+  // ══════════════════════════════════════════════════════════════════════
+
+  function openPackingSlipModal() {
+    if (selectedIds.size === 0) {
+      showPageToast('Select at least one order from the In Shipping Station list first.', 'warning');
+      return;
+    }
+    try {
+      psSelectedOrders = allOrders.filter(o => selectedIds.has(String(o.id)));
+      boxes = []; nextBoxId = 1; assignments = [];
+      otpCode = null; otpVerified = false; psSkipped = false;
+      document.getElementById('packingSlipModal').classList.remove('hidden');
+      goToStep(1);
+    } catch (err) {
+      console.error('[Shipping] openPackingSlipModal error:', err);
+      alert('Error opening packing slip wizard: ' + err.message + '\n\nPlease refresh the page and try again.');
+    }
+  }
+
+  function closePackingSlipModal() {
+    document.getElementById('packingSlipModal').classList.add('hidden');
+    psSelectedOrders = []; boxes = []; nextBoxId = 1;
+    assignments = []; otpCode = null; otpVerified = false; psStep = 1; psSkipped = false;
+  }
+
+  // ── Action dropdown menu ──
+  function toggleActionMenu(e) {
+    e.stopPropagation();
+    document.getElementById('actionMenu').classList.toggle('open');
+  }
+  function closeActionMenu() {
+    document.getElementById('actionMenu').classList.remove('open');
+  }
+  document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('actionMenuWrap');
+    if (wrap && !wrap.contains(e.target)) closeActionMenu();
+  });
+
+  function goToStep(n) {
+    if (n > 3) n = 3;
+    psStep = n;
+    [1, 2, 3].forEach(i => {
+      const dot = document.getElementById('dot' + i);
+      if (dot) {
+        dot.classList.toggle('active', i === n);
+        dot.classList.toggle('done', i < n);
+      }
+    });
+    ['1-2', '2-3'].forEach((pair, idx) => {
+      const conn = document.getElementById('conn' + pair);
+      if (conn) conn.classList.toggle('done', (idx + 2) <= n);
+    });
+    [1, 2, 3].forEach(i => {
+      const el = document.getElementById('psStep' + i);
+      if (el) el.style.display = i === n ? 'block' : 'none';
+    });
+    if (n === 1) renderStep1();
+    if (n === 2) renderBoxTable();
+    if (n === 3) {
+      initAssignmentsForPackStep();
+      renderStep3Assignments();
+      renderRemainderTracker();
+    }
+  }
+
+
+  // ── Step 1: Review ──────────────────────────────────────────────────────
+  function renderStep1() {
+    const rows = psSelectedOrders.map(o => `
+      <tr>
+        <td>#${escHtml(o.orderId)}</td>
+        <td>${escHtml(o.customerName || '—')}</td>
+        <td>${escHtml(o.productType || '—')}</td>
+        <td class="col-r">${(o.quantity || 0).toLocaleString()}</td>
+      </tr>`).join('');
+    document.getElementById('step1Table').innerHTML = `
+      <table class="ps-table">
+        <thead><tr>
+          <th>Ticket #</th>
+          <th>Customer</th>
+          <th>Product</th>
+          <th class="col-r">Ordered Qty</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+
+  // ── Step 2: Boxes ───────────────────────────────────────────────────────
+  function renderBoxTable() {
+    const tbody = document.getElementById('boxTableBody');
+    if (!boxes.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;font-size:12px;">No boxes yet — click + Add Box below.</td></tr>';
+    } else {
+      tbody.innerHTML = boxes.map((b, idx) => `
+        <tr>
+          <td style="text-align:center;font-weight:700;">${b.num}</td>
+          <td><input type="text" class="ps-input-sm" value="${escHtml(b.size)}"
+            placeholder="e.g. 12&times;12&times;10" oninput="boxes[${idx}].size=this.value"></td>
+          <td style="text-align:center;">
+            <button class="btn-xs" onclick="removeBox(${b.id})">Remove</button>
+          </td>
+        </tr>`).join('');
+    }
+    const next = document.getElementById('step2Next');
+    if (next) next.disabled = boxes.length === 0;
+  }
+
+  function renumberBoxes() {
+    boxes.forEach((b, i) => { b.num = i + 1; });
+  }
+
+  function addBox() {
+    boxes.push({ id: nextBoxId++, size: '' });
+    renumberBoxes();
+    renderBoxTable();
+  }
+
+  function removeBox(boxId) {
+    boxes = boxes.filter(b => b.id !== boxId);
+    assignments = assignments.filter(a => a.boxId !== boxId);
+    renumberBoxes();
+    renderBoxTable();
+  }
+
+  async function finishPackingAndPrint() {
+    if (!psSkipped) {
+      const v = validatePackStep();
+      if (!v.ok) {
+        showPageToast(v.message, 'warning', 6000);
+        updateStep3Hint(v.message);
+        return;
+      }
+    }
+    await generateAndPrint();
+  }
+
+
+  // ── Step 3: Balance Reconciliation ─────────────────────────────────────
+  function ticketKey(id) {
+    return String(id ?? '').trim();
+  }
+
+  function packedQtyForTicket(ticketId) {
+    const key = ticketKey(ticketId);
+    return assignments
+      .filter(a => ticketKey(a.ticketId) === key)
+      .reduce((s, a) => s + (+a.qty || 0), 0);
+  }
+
+  function getValidAssignments() {
+    return assignments.filter(a => a.boxId && a.ticketId && (+a.qty || 0) > 0);
+  }
+
+  function getUnusedBoxes() {
+    const used = new Set(getValidAssignments().map(a => a.boxId));
+    return boxes.filter(b => !used.has(b.id));
+  }
+
+  function hasDuplicateAssignments() {
+    const seen = new Set();
+    for (const a of getValidAssignments()) {
+      const key = `${a.boxId}|${a.ticketId}`;
+      if (seen.has(key)) return true;
+      seen.add(key);
+    }
+    return false;
+  }
+
+  function validatePackStep() {
+    const remainders = computeRemainders();
+    const allBalanced = remainders.length > 0 && remainders.every(r => r.remaining === 0);
+    if (!allBalanced) {
+      return { ok: false, message: 'All tickets must show Balanced in the remainder tracker.' };
+    }
+    if (!getValidAssignments().length) {
+      return { ok: false, message: 'Add at least one assignment with a box, product, and quantity greater than zero.' };
+    }
+    const incomplete = assignments.filter(a => !a.boxId || !a.ticketId || (+a.qty || 0) <= 0);
+    if (incomplete.length) {
+      return { ok: false, message: 'Remove empty rows or enter quantity greater than zero on every assignment row.' };
+    }
+    if (hasDuplicateAssignments()) {
+      return { ok: false, message: 'Each ticket can only be assigned once per box. Combine duplicate rows or delete extras.' };
+    }
+    const unused = getUnusedBoxes();
+    if (unused.length) {
+      const labels = unused.map(b => `Box ${b.num}`).join(', ');
+      return { ok: false, message: `${labels} has no items. Assign products to every declared box, or remove unused boxes on the Boxes step.` };
+    }
+    return { ok: true, message: '' };
+  }
+
+  function updateStep3Hint(message) {
+    const el = document.getElementById('step3Hint');
+    if (!el) return;
+    if (message) {
+      el.textContent = message;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+      el.textContent = '';
+    }
+  }
+
+  function initAssignmentsForPackStep() {
+    if (assignments.length > 0 || !boxes.length || !psSelectedOrders.length) return;
+    const firstBoxId = boxes[0].id;
+    psSelectedOrders.forEach(o => {
+      assignments.push({
+        boxId: firstBoxId,
+        ticketId: ticketKey(o.orderId),
+        product: o.productType || '',
+        qty: o.quantity || 0,
+        notes: '',
+      });
+    });
+  }
+
+  function renderStep3Assignments() {
+    const tbody = document.getElementById('assignmentRows');
+    if (!assignments.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px;font-size:12px;">No items added — click + Add Item below.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = assignments.map((a, idx) => {
+      const invalid = !a.boxId || !a.ticketId || (+a.qty || 0) <= 0;
+      const boxOpts = boxes.map(b =>
+        `<option value="${b.id}" ${+a.boxId === b.id ? 'selected' : ''}>Box ${b.num}${b.size ? ' (' + escHtml(b.size) + ')' : ''}</option>`
+      ).join('');
+      const prodOpts = psSelectedOrders.map(o =>
+        `<option value="${escHtml(o.orderId)}" ${ticketKey(a.ticketId) === ticketKey(o.orderId) ? 'selected' : ''}>#${escHtml(o.orderId)} — ${escHtml(o.productType || '')}</option>`
+      ).join('');
+      const qtyVal = (a.qty === '' || a.qty == null) ? '' : String(a.qty);
+      return `<tr class="${invalid ? 'ps-row-invalid' : ''}" data-assign-idx="${idx}">
+        <td><select class="ps-sel" onchange="updateAssignment(${idx},'boxId',+this.value)">
+          <option value="">Box…</option>${boxOpts}</select></td>
+        <td><select class="ps-sel" onchange="updateAssignmentProduct(${idx},this.value)">${prodOpts}</select></td>
+        <td><input type="number" class="ps-num" value="${escHtml(qtyVal)}" min="0" inputmode="numeric"
+          oninput="updateAssignmentQty(${idx},this.value)"
+          onblur="normalizeAssignmentQty(${idx})"></td>
+        <td><input type="text" class="ps-input-sm" value="${escHtml(a.notes || '')}"
+          placeholder="Notes" oninput="assignments[${idx}].notes=this.value"></td>
+        <td style="text-align:center;">
+          <button class="btn-xs" onclick="removeAssignment(${idx})">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function addAssignment() {
+    if (assignments.some(a => !a.boxId || !a.ticketId || (+a.qty || 0) <= 0)) {
+      showPageToast('Complete or remove empty rows before adding another.', 'warning', 4000);
+      updateStep3Hint('Complete or remove empty rows before adding another.');
+      renderStep3Assignments();
+      return;
+    }
+    const remainders = computeRemainders();
+    const pending = remainders.find(r => r.remaining > 0);
+    const unusedBox = getUnusedBoxes()[0];
+    const order = pending
+      ? psSelectedOrders.find(o => ticketKey(o.orderId) === ticketKey(pending.orderId))
+      : psSelectedOrders[0];
+    const boxId = unusedBox ? unusedBox.id : (boxes[0]?.id ?? null);
+    if (!boxId || !order) {
+      showPageToast('No box or ticket available to assign.', 'warning');
+      return;
+    }
+    const dup = assignments.some(a => a.boxId === boxId && ticketKey(a.ticketId) === ticketKey(order.orderId));
+    if (dup) {
+      showPageToast(`#${order.orderId} is already assigned to that box. Edit the existing row instead.`, 'warning', 5000);
+      return;
+    }
+    assignments.push({
+      boxId,
+      ticketId: ticketKey(order.orderId),
+      product: order.productType || '',
+      qty: pending ? Math.max(0, pending.remaining) : 0,
+      notes: '',
+    });
+    renderStep3Assignments();
+    renderRemainderTracker();
+  }
+
+  function removeAssignment(idx) {
+    assignments.splice(idx, 1);
+    renderStep3Assignments();
+    renderRemainderTracker();
+  }
+
+  function updateAssignment(idx, field, val) {
+    if (!assignments[idx]) return;
+    if (field === 'boxId' && val) {
+      const dup = assignments.some((a, i) => i !== idx && a.boxId === val && ticketKey(a.ticketId) === ticketKey(assignments[idx].ticketId));
+      if (dup && assignments[idx].ticketId) {
+        showPageToast('That ticket is already assigned to this box.', 'warning', 4000);
+        renderStep3Assignments();
+        return;
+      }
+    }
+    assignments[idx][field] = val;
+    renderStep3Assignments();
+    renderRemainderTracker();
+  }
+
+  function updateAssignmentProduct(idx, val) {
+    if (!assignments[idx]) return;
+    const dup = assignments.some((a, i) => i !== idx && a.boxId === assignments[idx].boxId && ticketKey(a.ticketId) === ticketKey(val));
+    if (dup && assignments[idx].boxId && val) {
+      showPageToast('That ticket is already assigned to this box.', 'warning', 4000);
+      renderStep3Assignments();
+      return;
+    }
+    const order = psSelectedOrders.find(o => ticketKey(o.orderId) === ticketKey(val));
+    assignments[idx].ticketId = ticketKey(val);
+    assignments[idx].product = order ? (order.productType || '') : '';
+    renderStep3Assignments();
+    renderRemainderTracker();
+  }
+
+  function updateAssignmentQty(idx, val) {
+    if (!assignments[idx]) return;
+    const raw = String(val).trim();
+    assignments[idx].qty = raw === '' ? '' : Math.max(0, parseInt(raw, 10) || 0);
+    updateAssignmentRowValidity(idx);
+    renderRemainderTracker();
+  }
+
+  function normalizeAssignmentQty(idx) {
+    if (!assignments[idx]) return;
+    const q = assignments[idx].qty;
+    if (q === '' || q == null) assignments[idx].qty = 0;
+    updateAssignmentRowValidity(idx);
+  }
+
+  function updateAssignmentRowValidity(idx) {
+    const row = document.querySelector(`#assignmentRows tr[data-assign-idx="${idx}"]`);
+    if (!row || !assignments[idx]) return;
+    const a = assignments[idx];
+    const invalid = !a.boxId || !a.ticketId || (+a.qty || 0) <= 0;
+    row.classList.toggle('ps-row-invalid', invalid);
+  }
+
+  function computeRemainders() {
+    return psSelectedOrders.map(o => {
+      const orderedQty = +(o.quantity || 0);
+      const packedQty = packedQtyForTicket(o.orderId);
+      return {
+        orderId: o.orderId,
+        product: o.productType || '',
+        orderedQty,
+        packedQty,
+        remaining: orderedQty - packedQty,
+      };
+    });
+  }
+
+  function renderRemainderTracker() {
+    const remainders = computeRemainders();
+    const validation = validatePackStep();
+
+    document.getElementById('remainderBody').innerHTML = remainders.map(r => {
+      let statusHtml;
+      if (r.remaining === 0) {
+        statusHtml = '<span style="color:var(--green);font-weight:700;font-size:11px;">Balanced</span>';
+      } else if (r.remaining > 0) {
+        statusHtml = `<span style="color:var(--yellow);font-weight:700;font-size:11px;">Pending (${r.remaining.toLocaleString()})</span>`;
+      } else {
+        statusHtml = `<span style="color:var(--red);font-weight:700;font-size:11px;">Over by ${Math.abs(r.remaining).toLocaleString()}</span>`;
+      }
+      return `<tr>
+        <td>${escHtml(r.product)}</td>
+        <td>#${escHtml(r.orderId)}</td>
+        <td class="col-r">${r.orderedQty.toLocaleString()}</td>
+        <td class="col-r">${r.packedQty.toLocaleString()}</td>
+        <td>${statusHtml}</td>
+      </tr>`;
+    }).join('');
+
+    const gen3 = document.getElementById('step3Generate');
+    if (gen3) gen3.disabled = psSkipped ? false : !validation.ok;
+    updateStep3Hint(validation.ok ? '' : validation.message);
+  }
+
+
+
+
+  // ── Generate & Print ────────────────────────────────────────────────────
+  async function generateAndPrint() {
+    const btn = document.getElementById('step3Generate');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+    try {
+      const validAssignments = psSkipped ? [] : getValidAssignments();
+      const ticketIds = psSelectedOrders.map(o => String(o.orderId));
+      const shipmentGroupId = psSelectedOrders.length > 1
+        ? `ship-${Date.now()}-${ticketIds.join('-')}`
+        : null;
+      const labelCreatedAt = new Date().toISOString();
+      const packingSlipData = {
+        boxes: psSkipped ? [] : boxes,
+        assignments: validAssignments,
+        generatedAt: labelCreatedAt,
+        ticketIds,
+        shipmentGroupId,
+      };
+      const newStatus = 'waiting-pickup';
+      const meta = { carrier: 'Delivery pending' };
+
+      for (const order of psSelectedOrders) {
+        await updateOrder(order.id, {
+          status: newStatus,
+          carrier: null,
+          trackingNumber: null,
+          shippedAt: null,
+          waitingPickupAt: labelCreatedAt,
+          deliveryReadyAt: null,
+          packingSlip: packingSlipData,
+        });
+        await addActivity({
+          orderId: order.orderId,
+          type: newStatus,
+          message: 'Labels and packing slip generated — awaiting delivery info',
+          by: 'Shipping Dept',
+        });
+      }
+
+      renderPrintGroups(psSelectedOrders, packingSlipData.boxes, validAssignments, '', meta);
+      window.print();
+      closePackingSlipModal();
+      clearSelection();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Generate & Print'; }
+    }
+  }
+
+
+  // ── Print DOM builder ───────────────────────────────────────────────────
+  function renderPrintGroups(orders, bxs, assigns, method, meta) {
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const customerNames = [...new Set(orders.map(o => o.customerName))].join(', ');
+    const ticketList    = orders.map(o => '#' + o.orderId).join(', ');
+
+    let proofStr;
+    if      (method === 'local-pickup') proofStr = `Local Pickup — OTP Verified (${meta.phone || ''})`;
+    else if (method === 'courier')      proofStr = `Courier/Rideshare — Plate: ${meta.plateNumber || ''}`;
+    else if (method === 'freight')      proofStr = `Pallet/Freight — BOL: ${meta.bol || ''}, ${meta.palletCount || 0} Pallets`;
+    else if (method === 'traditional-carrier') proofStr = `${meta.carrier || 'Carrier'} — Tracking: ${meta.tracking || 'N/A'}`;
+    else if (!method)                   proofStr = meta.carrier || 'Delivery pending';
+    else                                proofStr = `${meta.carrier || method} — ${meta.tracking ? 'Tracking: ' + meta.tracking : 'No tracking'}`;
+
+    // Box contents rows for section A
+    let boxContentRows = '';
+    bxs.forEach(box => {
+      const items = assigns.filter(a => a.boxId === box.id);
+      boxContentRows += `
+        <tr style="background:#f5f5f5;">
+          <td colspan="4" style="padding:5px 8px;font-weight:700;font-size:12px;">
+            Box ${box.num || box.id}${box.size ? ' — ' + escHtml(box.size) : ''}
+          </td>
+        </tr>`;
+      items.forEach(a => {
+        boxContentRows += `
+          <tr>
+            <td style="padding-left:20px;">${escHtml(a.product)}</td>
+            <td>#${escHtml(a.ticketId || '')}</td>
+            <td style="text-align:right;">${(+a.qty || 0).toLocaleString()}</td>
+            <td>${escHtml(a.notes || '')}</td>
+          </tr>`;
+      });
+    });
+
+    // Balance verification rows
+    const balanceRows = orders.map(o => {
+      const packed = assigns
+        .filter(a => ticketKey(a.ticketId) === ticketKey(o.orderId))
+        .reduce((s, a) => s + (+a.qty || 0), 0);
+      const ok = packed === (o.quantity || 0);
+      return `
+        <tr>
+          <td>#${escHtml(o.orderId)}</td>
+          <td>${escHtml(o.productType || '')}</td>
+          <td style="text-align:right;">${(o.quantity || 0).toLocaleString()}</td>
+          <td style="text-align:right;">${packed.toLocaleString()}</td>
+          <td style="text-align:center;font-weight:700;color:${ok ? '#16a34a' : '#dc2626'};">${ok ? 'OK' : 'MISMATCH'}</td>
+        </tr>`;
+    }).join('');
+
+    // Section A: Packing slip summary
+    const sectionA = `
+      <div class="print-slip">
+        <h2>PACKING SLIP</h2>
+        <p style="margin:0 0 14px;font-size:12px;color:#666;">Generated: ${today}</p>
+        <table style="width:100%;margin-bottom:16px;font-size:13px;border-collapse:collapse;">
+          <tr><td style="padding:3px 0;font-weight:600;width:100px;">Customer</td><td>${escHtml(customerNames)}</td></tr>
+          <tr><td style="padding:3px 0;font-weight:600;">Tickets</td><td>${escHtml(ticketList)}</td></tr>
+          <tr><td style="padding:3px 0;font-weight:600;">Delivery</td><td>${escHtml(proofStr)}</td></tr>
+        </table>
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px;">Box Contents</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;border:1px solid #ccc;">
+          <thead><tr style="background:#e8e8e8;">
+            <th style="padding:6px 8px;text-align:left;border:1px solid #ccc;">Product</th>
+            <th style="padding:6px 8px;text-align:left;border:1px solid #ccc;">Ticket</th>
+            <th style="padding:6px 8px;text-align:right;border:1px solid #ccc;">Qty</th>
+            <th style="padding:6px 8px;text-align:left;border:1px solid #ccc;">Notes</th>
+          </tr></thead>
+          <tbody>${boxContentRows}</tbody>
+        </table>
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px;">Balance Verification</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #ccc;">
+          <thead><tr style="background:#e8e8e8;">
+            <th style="padding:6px 8px;text-align:left;border:1px solid #ccc;">Ticket</th>
+            <th style="padding:6px 8px;text-align:left;border:1px solid #ccc;">Product</th>
+            <th style="padding:6px 8px;text-align:right;border:1px solid #ccc;">Ordered</th>
+            <th style="padding:6px 8px;text-align:right;border:1px solid #ccc;">Packed</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid #ccc;">Status</th>
+          </tr></thead>
+          <tbody>${balanceRows}</tbody>
+        </table>
+      </div>`;
+
+    // Section B: Individual box labels
+    const sectionB = bxs.map(box => {
+      const items = assigns.filter(a => a.boxId === box.id);
+      return `
+        <div class="box-label">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+            <span style="font-size:20px;font-weight:800;">BOX ${box.num || box.id} OF ${bxs.length}</span>
+            <span style="font-size:14px;color:#444;">${escHtml(box.size || '')}</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${escHtml(customerNames)}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:12px;">Tickets: ${escHtml(ticketList)}</div>
+          <hr style="border:none;border-top:1px solid #000;margin:0 0 10px;">
+          ${items.map(a => `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;">
+              <span>${escHtml(a.product)} (#${escHtml(a.ticketId || '')})</span>
+              <strong>${(+a.qty || 0).toLocaleString()}</strong>
+            </div>`).join('')}
+          <hr style="border:none;border-top:1px solid #000;margin:10px 0;">
+          <div style="font-size:11px;color:#333;">${escHtml(proofStr)}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('printTarget').innerHTML = sectionA + sectionB;
+  }
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // RECEIVE MODAL (preserved)
+  // ══════════════════════════════════════════════════════════════════════
+
+  function openReceiveModal(dbId) {
+    receiveTargetDbId = dbId;
+    receiveTargetOrder = allOrders.find(o => o.id === dbId);
+    if (!receiveTargetOrder) return;
+    document.getElementById('receiveOrderInfo').innerHTML = `
+      <strong>#${escHtml(receiveTargetOrder.orderId)}</strong> — ${escHtml(receiveTargetOrder.customerName || '—')}<br>
+      ${escHtml(receiveTargetOrder.productType || '')} &times; ${escHtml(String(receiveTargetOrder.quantity || '—'))}<br>
+      ${receiveTargetOrder.carrier ? `Carrier: <strong>${escHtml(receiveTargetOrder.carrier)}</strong>` : ''}
+      ${receiveTargetOrder.trackingNumber ? ` — Tracking: <strong>${escHtml(receiveTargetOrder.trackingNumber)}</strong>` : ''}`;
+    document.getElementById('receivedDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('receivedBy').value = '';
+    document.getElementById('receivedNotes').value = '';
+    document.getElementById('createFollowUpTask').checked = false;
+    document.getElementById('receiveModal').classList.remove('hidden');
+  }
+
+  function closeReceiveModal() {
+    document.getElementById('receiveModal').classList.add('hidden');
+    receiveTargetDbId = null; receiveTargetOrder = null;
+  }
+
+  async function submitReceive() {
+    if (!receiveTargetOrder) return;
+    const receivedDate   = document.getElementById('receivedDate').value || new Date().toISOString().split('T')[0];
+    const receivedBy     = document.getElementById('receivedBy').value.trim();
+    const notes          = document.getElementById('receivedNotes').value.trim();
+    const createFollowUp = document.getElementById('createFollowUpTask').checked;
+    try {
+      await updateOrder(receiveTargetDbId, {
+        status: 'received',
+        receivedAt: new Date(receivedDate).toISOString(),
+        receivedBy: receivedBy || null,
+        receivedNotes: notes || null,
+        completedAt: new Date().toISOString(),
+      });
+      await addActivity({
+        orderId: receiveTargetOrder.orderId,
+        type: 'received',
+        message: `Order received${receivedBy ? ' by ' + receivedBy : ''}${notes ? '. Notes: ' + notes : ''}${createFollowUp ? ' — Follow-up task created for AM.' : ''}`,
+        by: receivedBy || 'Shipping Dept',
+      });
+      showPageToast(`Order #${receiveTargetOrder.orderId} marked as Received`, 'success', 5000);
+      closeReceiveModal();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    }
+  }
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // PICKUP COMPLETE MODAL (preserved)
+  // ══════════════════════════════════════════════════════════════════════
+
+  function openPickupCompleteModal(dbId, requireOtp) {
+    pickupCompleteDbId = dbId;
+    pickupCompleteOrder = allOrders.find(o => String(o.id) === String(dbId));
+    pickupRequiresOtp = !!requireOtp;
+    pickupShipOtpCode = null;
+    pickupShipOtpVerified = false;
+    if (!pickupCompleteOrder) return;
+    document.getElementById('pickupCompleteOrderInfo').innerHTML = `
+      <strong>#${escHtml(pickupCompleteOrder.orderId)}</strong> — ${escHtml(pickupCompleteOrder.customerName || '—')}<br>
+      ${escHtml(pickupCompleteOrder.productType || '')} &times; ${escHtml(String(pickupCompleteOrder.quantity || '—'))}<br>
+      ${pickupCompleteOrder.pickupContact ? `Contact: <strong>${escHtml(pickupCompleteOrder.pickupContact)}</strong>` : ''}`;
+    document.getElementById('pickupCompletedDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupCompletedBy').value = pickupCompleteOrder.pickupContact || '';
+    document.getElementById('pickupHandoffBy').value = '';
+    document.getElementById('pickupCompleteNotes').value = '';
+    const otpSec = document.getElementById('pickupOtpSection');
+    if (otpSec) otpSec.style.display = pickupRequiresOtp ? 'block' : 'none';
+    if (pickupRequiresOtp) {
+      document.getElementById('pickupShipPhone').value = pickupCompleteOrder.packingSlip?.phone || '';
+      document.getElementById('pickupOtpEntry').value = '';
+      document.getElementById('pickupOtpStatus').textContent = '';
+      document.getElementById('pickupOtpEntrySection').style.display = 'none';
+    }
+    document.getElementById('pickupCompleteModal').classList.remove('hidden');
+    updatePickupShipBtn();
+  }
+
+  function updatePickupShipBtn() {
+    const btn = document.querySelector('#pickupCompleteModal .btn-primary');
+    if (!btn || !pickupRequiresOtp) return;
+    btn.disabled = !pickupShipOtpVerified;
+  }
+
+  function sendPickupShipOtp() {
+    const phone = document.getElementById('pickupShipPhone').value.trim();
+    if (!phone) { showPageToast('Enter a phone number first.', 'warning'); return; }
+    pickupShipOtpCode = Math.floor(1000 + Math.random() * 9000).toString();
+    pickupShipOtpVerified = false;
+    document.getElementById('pickupOtpEntry').value = '';
+    document.getElementById('pickupOtpStatus').textContent = '';
+    document.getElementById('pickupOtpEntrySection').style.display = 'block';
+    const normalized = (typeof normalizePhoneNumber === 'function') ? normalizePhoneNumber(phone) : phone;
+    sendSmsViaPulseProxy({ to: normalized,
+      message: `Your Bazaar Print pickup code is: ${pickupShipOtpCode}. Show this to staff when collecting your order.` });
+    showPageToast('Verification code sent via SMS.', 'success', 3000);
+    updatePickupShipBtn();
+  }
+
+  function checkPickupShipOtp() {
+    const val = document.getElementById('pickupOtpEntry').value.trim();
+    const status = document.getElementById('pickupOtpStatus');
+    if (val.length === 4) {
+      if (val === pickupShipOtpCode) {
+        pickupShipOtpVerified = true;
+        status.textContent = '✓ Code verified';
+        status.style.color = 'var(--green)';
+      } else {
+        pickupShipOtpVerified = false;
+        status.textContent = '✗ Incorrect code — try again';
+        status.style.color = 'var(--red)';
+      }
+    } else {
+      pickupShipOtpVerified = false;
+      status.textContent = '';
+    }
+    updatePickupShipBtn();
+  }
+
+  function closePickupCompleteModal() {
+    document.getElementById('pickupCompleteModal').classList.add('hidden');
+    pickupCompleteDbId = null; pickupCompleteOrder = null; pickupRequiresOtp = false; pickupShipOtpCode = null; pickupShipOtpVerified = false;
+  }
+
+  async function submitPickupComplete() {
+    if (!pickupCompleteOrder) return;
+    if (pickupRequiresOtp && !pickupShipOtpVerified) {
+      showPageToast('Verify the SMS code before confirming pickup.', 'warning');
+      return;
+    }
+    const pickedUpBy = document.getElementById('pickupCompletedBy').value.trim();
+    const handoffBy  = document.getElementById('pickupHandoffBy').value.trim();
+    const notes      = document.getElementById('pickupCompleteNotes').value.trim();
+    const pickupDate = document.getElementById('pickupCompletedDate').value || new Date().toISOString().split('T')[0];
+    const pickupAt = new Date(pickupDate + 'T12:00:00').toISOString();
+    try {
+      const phone = pickupRequiresOtp ? document.getElementById('pickupShipPhone').value.trim() : (pickupCompleteOrder.packingSlip?.phone || null);
+      const packingSlip = { ...(pickupCompleteOrder.packingSlip || {}), method: 'local-pickup', phone: phone || null };
+      await updateOrder(pickupCompleteOrder.id, {
+        status: 'shipped',
+        shippedAt: pickupAt,
+        pickupCompletedAt: pickupAt,
+        pickupCompletedBy: pickedUpBy || null,
+        pickupHandoffBy: handoffBy || null,
+        pickupCompleteNotes: notes || null,
+        carrier: pickupCompleteOrder.carrier || 'Local Pickup',
+        packingSlip,
+      });
+      await addActivity({
+        orderId: pickupCompleteOrder.orderId,
+        type: 'shipped',
+        message: `Customer pickup complete — moved to Shipped${pickedUpBy ? ' · Picked up by: ' + pickedUpBy : ''}${handoffBy ? ' · Handed off by: ' + handoffBy : ''}${notes ? '. Notes: ' + notes : ''}`,
+        by: handoffBy || pickedUpBy || 'Shipping Dept',
+      });
+      showPageToast(`Order #${pickupCompleteOrder.orderId} picked up — moved to Shipped`, 'success', 5000);
+      closePickupCompleteModal();
+      await load();
+    } catch (err) {
+      console.error(err);
+      showPageToast('Error: ' + err.message, 'error');
+    }
+  }
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TICKET DETAIL MODAL
+  // ══════════════════════════════════════════════════════════════════════
+
+  function _renderTicketDetailModal(o) {
+    document.getElementById('tdOrderId').textContent = '#' + o.orderId;
+    document.getElementById('tdCustomer').textContent = o.customerName || '—';
+
+    const statusColors = {
+      'ready-to-ship': { bg: '#dcfce7', color: '#15803d' },
+      'shipped':        { bg: '#dbeafe', color: '#1d4ed8' },
+      'waiting-pickup': { bg: '#fef9c3', color: '#a16207' },
+      'delivery-ready': { bg: '#cffafe', color: '#0e7490' },
+      'received':       { bg: '#f0fdf4', color: '#15803d' },
+    };
+    const sc = statusColors[o.status] || { bg: '#f1f5f9', color: '#475569' };
+    const statusLabel = (o.status || 'unknown').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    let badges = `<span class="td-badge" style="background:${sc.bg};color:${sc.color};">${escHtml(statusLabel)}</span>`;
+    if (o.isRush) badges += `<span class="td-badge" style="background:#fee2e2;color:#dc2626;">🔥 Rush</span>`;
+    if (o.isReprint) badges += `<span class="td-badge" style="background:#f3e8ff;color:#7c3aed;">Reprint</span>`;
+    document.getElementById('tdBadges').innerHTML = badges;
+
+    tdCurrentOrder = o;
+    document.getElementById('tdTabJob').classList.add('active');
+    document.getElementById('tdTabDelivery').classList.remove('active');
+    document.getElementById('tdBody').innerHTML = _buildTicketDetailHTML(o);
+    document.getElementById('ticketDetailModal').classList.remove('hidden');
+  }
+
+  async function _inferPrepressApprovedAt(orderUuid) {
+    // Look in order_status_history for the first transition TO in-production
+    // which is when production manager approves the prepress queue
+    try {
+      const supa = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+      if (!supa) return null;
+      const { data, error } = await supa
+        .from('order_status_history')
+        .select('created_at, changed_by_name')
+        .eq('order_id', orderUuid)
+        .eq('to_status', 'in-production')
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (error || !data?.length) return null;
+      return { at: data[0].created_at, by: data[0].changed_by_name || null };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function openTicketDetail(id) {
+    // Show the modal immediately with cached data so it feels instant
+    let o = allOrders.find(ord => String(ord.id) === String(id));
+    if (!o) {
+      showPageToast('Could not find order details. Try refreshing the page.', 'warning');
+      return;
+    }
+    _renderTicketDetailModal(o);
+
+    // Fetch fresh data from Supabase in the background for accuracy
+    try {
+      const fresh = typeof getOrder === 'function' ? await getOrder(id) : null;
+      if (fresh) o = fresh;
+    } catch (e) { /* keep cached copy */ }
+
+    // If prepressApprovedAt is missing, infer it from status history
+    if (!o.prepressApprovedAt && o.id) {
+      const inferred = await _inferPrepressApprovedAt(o.id);
+      if (inferred) {
+        o = { ...o, prepressApprovedAt: inferred.at, prepressApprovedBy: inferred.by || o.prepressApprovedBy };
+        // Persist so future views show the date without needing another lookup
+        try {
+          await updateOrder(o.id, { prepressApprovedAt: inferred.at, prepressApprovedBy: inferred.by });
+        } catch (e) { /* non-critical — display still works */ }
+      }
+    }
+
+    // Re-render the modal body with the enriched order
+    _renderTicketDetailModal(o);
+  }
+
+  function switchDetailTab(tab) {
+    document.getElementById('tdTabJob').classList.toggle('active', tab === 'job');
+    document.getElementById('tdTabDelivery').classList.toggle('active', tab === 'delivery');
+    if (!tdCurrentOrder) return;
+    document.getElementById('tdBody').innerHTML =
+      tab === 'delivery' ? _buildDeliveryHTML(tdCurrentOrder) : _buildTicketDetailHTML(tdCurrentOrder);
+  }
+
+  function closeTicketDetail() {
+    document.getElementById('ticketDetailModal').classList.add('hidden');
+    tdCurrentOrder = null;
+  }
+
+  // ── Delivery Info tab ───────────────────────────────────────────────────
+  function _buildDeliveryHTML(o) {
+    const ps = o.packingSlip;
+
+    // ── Shipping Summary ──
+    const methodLabels = {
+      'local-pickup':       'Local Pickup',
+      'courier':            'Courier / Rideshare',
+      'traditional-carrier':'Traditional Carrier',
+      'freight':            'Pallet / Freight',
+    };
+    const methodDisplay = methodLabels[ps?.method || ''] || (o.carrier ? 'Carrier' : '—');
+    const trackUrl = getTrackingUrl(o.carrier, o.trackingNumber);
+    const trackDisplay = o.trackingNumber
+      ? (trackUrl ? `<a href="${trackUrl}" target="_blank" rel="noopener" style="color:var(--accent);">${escHtml(o.trackingNumber)}</a>` : escHtml(o.trackingNumber))
+      : null;
+
+    const proofDetail = ps?.method === 'local-pickup'  ? (ps.phone ? `SMS verified — ${ps.phone}` : null)
+      : ps?.method === 'courier'                        ? (ps.plateNumber ? `Plate: ${ps.plateNumber}` : null)
+      : ps?.method === 'freight'                        ? [ps.bol ? `BOL: ${ps.bol}` : null, ps.palletCount ? `${ps.palletCount} pallets` : null].filter(Boolean).join(' · ') || null
+      : null;
+
+    const sSummary = _tdSection('Shipping Summary', [
+      _tdField('Status',         (o.status || '').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())),
+      _tdField('Method',         methodDisplay),
+      _tdField('Carrier',        o.carrier,                   { hide: true }),
+      _tdField('Tracking #',     trackDisplay,                { hide: true, raw: true }),
+      _tdField('Proof / Detail', proofDetail,                 { hide: true }),
+      _tdField('Label printed',  ps?.generatedAt ? formatTicketDateTime(ps.generatedAt) : null, { hide: true }),
+      _tdField('Label created', o.waitingPickupAt ? formatTicketDateTime(o.waitingPickupAt) : null, { hide: true }),
+      _tdField('Delivery ready', o.deliveryReadyAt ? formatTicketDateTime(o.deliveryReadyAt) : null, { hide: true }),
+      _tdField('Shipped',        o.shippedAt      ? formatTicketDateTime(o.shippedAt)      : null, { hide: true }),
+      _tdField('Delivered',      o.receivedAt     ? formatTicketDateTime(o.receivedAt)     : null, { hide: true }),
+      _tdField('Ship notes',     o.pickupCompleteNotes, { hide: true, full: true }),
+      _tdField('Delivery notes', o.receivedNotes,       { hide: true, full: true }),
+      _tdField('Special notes',  o.specialNotes,        { hide: true, full: true }),
+    ]);
+
+    // ── Box Manifest ──
+    let sManifest = '';
+    if (!ps || !ps.boxes || ps.boxes.length === 0) {
+      sManifest = `<div class="td-section">
+        <div class="td-section-hdr">Box Manifest</div>
+        <div class="delivery-no-slip">No packing slip on file — this order was marked shipped without a packing slip wizard.</div>
+      </div>`;
+    } else {
+      let rows = '';
+      ps.boxes.forEach(box => {
+        const items = (ps.assignments || []).filter(a => a.boxId === box.id);
+        rows += `<tr>
+          <td colspan="4" class="delivery-box-hdr">
+            Box ${box.num || box.id}${box.size ? ' — ' + escHtml(box.size) : ''}
+            <span style="font-weight:400;color:var(--text-muted);margin-left:8px;">(${items.length} item${items.length !== 1 ? 's' : ''})</span>
+          </td>
+        </tr>`;
+        if (items.length === 0) {
+          rows += `<tr><td colspan="4" style="padding:6px 8px;color:var(--text-muted);font-style:italic;font-size:11px;">No items assigned</td></tr>`;
+        } else {
+          items.forEach(a => {
+            rows += `<tr>
+              <td style="padding-left:16px;">${escHtml(a.product || '—')}</td>
+              <td>#${escHtml(a.ticketId || '—')}</td>
+              <td style="text-align:right;">${(+a.qty || 0).toLocaleString()}</td>
+              <td style="color:var(--text-muted);">${escHtml(a.notes || '')}</td>
+            </tr>`;
+          });
+        }
+      });
+      sManifest = `<div class="td-section">
+        <div class="td-section-hdr">Box Manifest — ${ps.boxes.length} box${ps.boxes.length !== 1 ? 'es' : ''}</div>
+        <table class="delivery-manifest-table">
+          <thead><tr>
+            <th>Product</th><th>Ticket #</th><th style="text-align:right;">Qty</th><th>Notes</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    // ── Combined Shipment ──
+    let sCombined = '';
+    if (ps?.assignments) {
+      const ticketIds = [...new Set(ps.assignments.map(a => a.ticketId).filter(Boolean))];
+      if (ticketIds.length > 1) {
+        const ticketRows = ticketIds.map(tid => {
+          const rel = allOrders.find(x => x.orderId === tid);
+          return `<tr>
+            <td>#${escHtml(tid)}</td>
+            <td>${escHtml(rel?.customerName || '—')}</td>
+            <td>${escHtml(rel?.productType  || '—')}</td>
+          </tr>`;
+        }).join('');
+        sCombined = `<div class="td-section">
+          <div class="td-section-hdr">Combined Shipment — ${ticketIds.length} tickets in this packing slip</div>
+          <table class="delivery-manifest-table">
+            <thead><tr><th>Ticket #</th><th>Customer</th><th>Product</th></tr></thead>
+            <tbody>${ticketRows}</tbody>
+          </table>
+        </div>`;
+      }
+    }
+
+    // ── Balance Verification ──
+    let sBalance = '';
+    if (ps?.assignments && ps.assignments.length > 0) {
+      const ticketIds = [...new Set(ps.assignments.map(a => a.ticketId).filter(Boolean))];
+      const balRows = ticketIds.map(tid => {
+        const rel = allOrders.find(x => x.orderId === tid) || o;
+        const packed = ps.assignments.filter(a => ticketKey(a.ticketId) === ticketKey(tid)).reduce((s, a) => s + (+a.qty || 0), 0);
+        const ordered = rel?.quantity || 0;
+        const diff = ordered - packed;
+        let statusHtml;
+        if (diff === 0)      statusHtml = `<span class="delivery-status-ok">Balanced</span>`;
+        else if (diff > 0)   statusHtml = `<span class="delivery-status-warn">Under by ${diff.toLocaleString()}</span>`;
+        else                 statusHtml = `<span class="delivery-status-err">Over by ${Math.abs(diff).toLocaleString()}</span>`;
+        return `<tr>
+          <td>#${escHtml(tid)}</td>
+          <td>${escHtml(rel?.productType || '—')}</td>
+          <td style="text-align:right;">${ordered.toLocaleString()}</td>
+          <td style="text-align:right;">${packed.toLocaleString()}</td>
+          <td>${statusHtml}</td>
+        </tr>`;
+      }).join('');
+      sBalance = `<div class="td-section">
+        <div class="td-section-hdr">Balance Verification</div>
+        <table class="delivery-manifest-table">
+          <thead><tr>
+            <th>Ticket #</th><th>Product</th>
+            <th style="text-align:right;">Ordered</th>
+            <th style="text-align:right;">Packed</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${balRows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    return [sSummary, sManifest, sCombined, sBalance].filter(Boolean).join('');
+  }
+
+  // ── Shared helpers for ticket detail sections ───────────────────────────
+  function _tdField(label, value, opts = {}) {
+    const display = value != null ? String(value) : '';
+    if (!display && opts.hide) return '';
+    const cls = display ? '' : ' td-empty';
+    const shown = display || '—';
+    const span = opts.full ? ' td-full' : '';
+    return `<div class="td-field${span}">
+      <div class="td-field-label">${label}</div>
+      <div class="td-field-value${cls}">${opts.raw ? shown : escHtml(shown)}</div>
+    </div>`;
+  }
+
+  function _tdSection(title, fieldsHtml) {
+    const content = fieldsHtml.filter(Boolean).join('');
+    if (!content) return '';
+    return `<div class="td-section">
+      <div class="td-section-hdr">${title}</div>
+      <div class="td-grid">${content}</div>
+    </div>`;
+  }
+
+  function _getOrderSkus(o) {
+    return (o?.skus || []).filter(s => {
+      if (!s) return false;
+      const hasName = String(s.name || '').trim();
+      const hasQty = s.quantity != null && s.quantity !== '';
+      const hasArt = typeof getOrderSkuArtFiles === 'function' && getOrderSkuArtFiles(s).length > 0;
+      return hasName || hasQty || hasArt;
+    });
+  }
+
+  function _skuLayersLabel(sku) {
+    const layers = [];
+    if (sku?.whiteDataUrl) layers.push('White');
+    if (sku?.uvDataUrl) layers.push('UV');
+    if (sku?.foilDataUrl) layers.push('Foil');
+    return layers.length ? layers.join(' · ') : '—';
+  }
+
+  function _buildShippingSkuTable(skus) {
+    const rows = skus.map((sku, i) => {
+      const name = sku.name?.trim() || `SKU ${i + 1}`;
+      const qty = (sku.quantity || 0).toLocaleString();
+      const artCount = typeof getOrderSkuArtFiles === 'function' ? getOrderSkuArtFiles(sku).length : 0;
+      return `<tr>
+        <td style="font-weight:600;">${escHtml(name)}</td>
+        <td style="text-align:right;white-space:nowrap;">${qty}</td>
+        <td>${escHtml(_skuLayersLabel(sku))}</td>
+        <td style="color:var(--text-muted);">${artCount ? `${artCount} file${artCount !== 1 ? 's' : ''}` : '—'}</td>
+      </tr>`;
+    }).join('');
+    return `<table class="td-sku-table">
+      <thead><tr>
+        <th>SKU name</th>
+        <th style="text-align:right;">Quantity</th>
+        <th>Layers</th>
+        <th>Artwork</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function _buildShippingSkuSection(o) {
+    const skus = _getOrderSkus(o);
+    // Single-artwork jobs (no SKU versions) still carry order-level artwork
+    // (artworkFiles + white/UV/foil layers) — show those too instead of bailing.
+    const globalFiles = typeof collectOrderArtworkFiles === 'function' ? collectOrderArtworkFiles(o) : [];
+    if (!skus.length && !globalFiles.length) return '';
+
+    const title = skus.length > 1 ? `SKU Versions (${skus.length})`
+                : skus.length === 1 ? 'SKU'
+                : 'Artwork';
+    let inner = typeof renderOrderSkuSection === 'function' ? (renderOrderSkuSection(o) || '') : '';
+    if (!inner) inner = skus.length ? _buildShippingSkuTable(skus) : '';
+    if (!inner) return '';
+
+    return `<div class="td-section td-section-skus">
+      <div class="td-section-hdr">${title}</div>
+      <div class="td-sku-body">${inner}</div>
+    </div>`;
+  }
+
+  function _buildTicketDetailHTML(o) {
+    const field   = _tdField;
+    const section = _tdSection;
+    const v  = (val, fallback) => val != null && val !== '' ? escHtml(String(val)) : (fallback || null);
+    const yn = val => val ? 'Yes' : 'No';
+
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = o.dueDate && o.dueDate < today;
+    const dueDateDisplay = o.dueDate
+      ? o.dueDate + (overdue ? ' ⚠ Overdue' : '') + (o.isRush ? ' 🔥' : '')
+      : null;
+
+    // Quantity + unit info
+    let qtyDisplay = o.quantity ? o.quantity.toLocaleString() : null;
+    if (o.sheetCount) qtyDisplay = (qtyDisplay || '—') + ` (${o.sheetCount.toLocaleString()} sheets)`;
+    if (o.piecesPerSheet) qtyDisplay = (qtyDisplay || '—') + `, ${o.piecesPerSheet} pcs/sheet`;
+
+    // Dimensions
+    let dimsDisplay = null;
+    if (o.labelWidth && o.labelHeight) {
+      dimsDisplay = `${o.labelWidth}" × ${o.labelHeight}"`;
+      if (o.boxDepth) dimsDisplay += ` × ${o.boxDepth}" (depth)`;
+    }
+    if (o.pouchGusset) dimsDisplay = (dimsDisplay || '') + `  Gusset: ${o.pouchGusset}"`;
+
+    // Finishing
+    const finishingParts = [
+      o.lamination    ? `Lam: ${o.lamination}` : null,
+      o.hasUV         ? 'UV Coating'            : null,
+      o.hasFoil || o.foilType ? `Foil: ${o.foilType || 'Yes'}` : null,
+      o.hasWhiteLayer ? 'White Layer'           : null,
+    ].filter(Boolean);
+    const finishingDisplay = finishingParts.length ? finishingParts.join(' · ') : null;
+
+    // Rush info
+    let rushDisplay = null;
+    if (o.isRush) {
+      rushDisplay = 'Yes';
+      if (o.rushApprovedBy) rushDisplay += ` — approved by ${o.rushApprovedBy}`;
+    }
+
+    const sTicketDates = section('Job Ticket Dates', [
+      field('Job ticket created date', formatTicketDateTime(o.createdAt)),
+      field('Job ticket Pre-press approved date', formatTicketDateTime(o.prepressApprovedAt)),
+      field('Job ticket Ready to deliver date', formatTicketDateTime(getReadyToDeliverDate(o))),
+      field('Label created', formatTicketDateTime(o.waitingPickupAt), { hide: true }),
+      field('Delivery ready', formatTicketDateTime(o.deliveryReadyAt), { hide: true }),
+      field('Picked up', formatTicketDateTime(o.pickupCompletedAt || (o.pickupCompletedBy ? o.shippedAt : null)), { hide: true }),
+      field('Shipped', formatTicketDateTime(o.shippedAt && !o.pickupCompletedAt && !o.pickupCompletedBy ? o.shippedAt : null), { hide: true }),
+    ]);
+
+    const skus = _getOrderSkus(o);
+    let skuSummary = null;
+    if (skus.length === 1) {
+      const s = skus[0];
+      skuSummary = `${s.name || 'SKU 1'} — ${(s.quantity || 0).toLocaleString()} pcs`;
+    } else if (skus.length > 1) {
+      const totalSkuQty = skus.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+      skuSummary = `${skus.length} SKUs (${totalSkuQty.toLocaleString()} pcs total)`;
+    } else {
+      skuSummary = 'No SKU versions on this ticket (single artwork job)';
+    }
+
+    const s1 = section('Job Overview', [
+      field('Order ID',      '#' + o.orderId),
+      field('Customer',      o.customerName),
+      field('Product Type',  o.productType),
+      field('Material',      o.material),
+      field('SKU',           skuSummary),
+      field('Quantity',      qtyDisplay),
+      field('Due Date',      dueDateDisplay),
+      field('Account Manager', o.accountManager, { hide: true }),
+      field('Sales Rep',     o.rep,             { hide: true }),
+      field('Rush',          rushDisplay,        { hide: true }),
+      field('Job Description', o.jobDescription, { hide: true, full: true }),
+    ]);
+
+    const s2 = section('Print Specifications', [
+      field('Print Type',    o.printType),
+      field('Facility',      typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(o.facility) : o.facility),
+      field('Color Mode',    o.colorMode),
+      field('Sides',         o.sides),
+      field('Lamination',    o.lamination,  { hide: true }),
+      field('UV Coating',    o.hasUV ? 'Yes' : null, { hide: true }),
+      field('Foil',          o.foilType || (o.hasFoil ? 'Yes' : null), { hide: true }),
+      field('White Layer',   o.hasWhiteLayer ? 'Yes' : null, { hide: true }),
+      field('Finishing',     o.finishingNotes, { hide: true }),
+      field('Roll Direction', o.rollDirection, { hide: true }),
+    ]);
+
+    const s3 = section('Dimensions & Packaging', [
+      field('Label Size',        dimsDisplay,              { hide: true }),
+      field('Custom Batching',   o.customBatching ? `Yes — ${o.unitsPerRoll || '?'} units/roll` : null, { hide: true }),
+      field('Packaging Instr.',  o.packagingInstructions,  { hide: true, full: true }),
+    ]);
+
+    const hasDieInfo = o.dieStatus || o.dieName;
+    const hasSpecial = o.hasSpecialColor || o.hasPerforation || o.specialNotes || o.noteType;
+    const s4 = section('Die & Special Details', [
+      hasDieInfo ? field('Die Status', o.dieStatus, { hide: true }) : '',
+      hasDieInfo ? field('Die Name',   o.dieName,   { hide: true }) : '',
+      o.hasSpecialColor ? field('Special Colors', o.specialColorDetails || 'Yes') : '',
+      o.hasPerforation  ? field('Perforation',    o.perforationNotes   || 'Yes') : '',
+      o.specialNotes    ? field('Special Notes',  o.specialNotes, { full: true }) : '',
+    ]);
+
+    const hasBilling = o.customerPO || o.quoteRef || o.orderTotal || o.invoiceNumber;
+    const s5 = hasBilling ? section('Billing', [
+      field('Customer PO',    o.customerPO,    { hide: true }),
+      field('Quote Ref',      o.quoteRef,      { hide: true }),
+      field('Price / Unit',   o.pricePerUnit   ? '$' + Number(o.pricePerUnit).toFixed(4) : null, { hide: true }),
+      field('Order Total',    o.orderTotal     ? '$' + Number(o.orderTotal).toFixed(2)   : null, { hide: true }),
+      field('Payment Terms',  o.paymentTerms,  { hide: true }),
+      field('Invoice #',      o.invoiceNumber, { hide: true }),
+      field('Invoice Status', o.invoiceStatus, { hide: true }),
+    ]) : '';
+
+    const s6 = o.isReprint ? section('Reprint Info', [
+      field('Reprinted From', o.reprintOfOrderId ? '#' + o.reprintOfOrderId : null),
+      field('Reason',         o.reprintReason),
+      field('Requested By',   o.reprintRequestedBy, { hide: true }),
+      field('Notes',          o.reprintNotes,        { hide: true, full: true }),
+    ]) : '';
+
+    const s7 = o.workflowTemplate ? section('Workflow', [
+      field('Template',     o.workflowTemplate),
+      field('Current Step', o.currentStep != null ? `Step ${o.currentStep}` : null),
+    ]) : '';
+
+    const sSku = _buildShippingSkuSection(o);
+
+    return [sTicketDates, s1, sSku, s2, s3, s4, s5, s6, s7].filter(Boolean).join('');
+  }
+</script>
+</body>
+</html>

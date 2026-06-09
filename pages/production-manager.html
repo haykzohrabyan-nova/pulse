@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Manager — Bazaar Print</title>
+  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/organisation-local-store.js"></script>
+  <script src="/js/pulse-config.js"></script>
+  <script src="/js/pulse-config.local.js"></script>
+  <script src="/js/supabase-client.js?v=20260609-realtime"></script>
+  <script src="/js/auth.js?v=20260609-email-login"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div class="pm-layout">
+  <!-- Sidebar: same filter UX as Prepress (creation-date ranges) -->
+  <aside class="pm-sidebar">
+    <div class="queue-header">
+      <div class="queue-title">🏭 Production queue</div>
+      <div class="queue-subtitle" id="pmSidebarOrderCount">—</div>
+    </div>
+    <div class="queue-filters">
+      <input type="text" id="searchInput" placeholder="Search order or customer..." oninput="renderList()" autocomplete="off">
+      <select id="pmStatusFilter" onchange="renderList()">
+        <option value="all">All</option>
+        <option value="approved-queue">✅ Approved — production queue</option>
+        <option value="new">New</option>
+        <option value="pending-review">Pending Review</option>
+        <option value="in-production">In Production</option>
+        <option value="on-hold">On Hold</option>
+        <option value="qc-checkout">QC Checkout</option>
+        <option value="qc-failed">QC Failed</option>
+        <option value="reprint">🔄 Reprint</option>
+        <option value="ready-to-ship">Ready to Ship</option>
+        <option value="overdue">🔴 Overdue</option>
+      </select>
+      <select id="pmDateFilter" onchange="onPmDateFilterChange()">
+        <option value="all">📅 All (Created)</option>
+        <option value="today">Created Today</option>
+        <option value="yesterday">Created Yesterday</option>
+        <option value="last-week">Created Last Week</option>
+        <option value="last-month">Created Last Month</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="date" id="pmCustomDate" onchange="renderList()" style="display:none;">
+      <select id="pmFacilityFilter" onchange="renderList()">
+        <option value="all">All Facilities</option>
+      </select>
+    </div>
+    <div class="pm-sidebar-actions">
+      <a href="/pages/job-ticket.html" class="btn btn-primary pm-new-job-btn">+ New Job</a>
+      <div class="pm-sidebar-hint">Ticket editing is done in pop up window. Related ticket examples: 17919_1, 17919_1_R1, 17919_1_RS.</div>
+    </div>
+    <div class="sidebar-stats" id="sidebarStats"></div>
+  </aside>
+
+  <!-- Main: Order List -->
+  <div class="pm-main">
+    <div class="pm-main-header">
+      <h2 id="listTitle">All Orders</h2>
+      <span id="orderCount" style="color:var(--text-muted);font-size:13px;"></span>
+    </div>
+    <!-- Column headers -->
+    <div class="order-list-header">
+      <span class="olh-col olh-id">Job #</span>
+      <span class="olh-col olh-status">Status</span>
+      <span class="olh-col olh-customer">Customer</span>
+      <span class="olh-col olh-product">Product · Material</span>
+      <span class="olh-col olh-machine">Current Stage</span>
+      <span class="olh-col olh-qty">Quantity</span>
+      <span class="olh-col olh-due">Due Date</span>
+      <span class="olh-col olh-expand"></span>
+    </div>
+    <div id="orderList"></div>
+  </div>
+</div>
+
+<!-- Remove Step Confirmation Modal -->
+<div class="modal-overlay" id="removeStepModal">
+  <div class="modal" style="max-width:400px;">
+    <div id="removeStepInfo"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRemoveStepModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmRemoveStep()">🗑️ Remove Step</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+  <div class="modal order-detail-modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="detailTitle">Order Details</h2>
+        <span id="detailOrderId" style="color:var(--text-muted);font-size:13px;"></span>
+      </div>
+      <button class="btn btn-sm" onclick="closeDetail()">✕ Close</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- Reprint Modal -->
+<div class="modal-overlay" id="reprintModal">
+  <div class="modal">
+    <h2>Create Reprint / Shortage Ticket</h2>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Reason</label>
+        <select id="reprintReason">
+          <option value="shortage">Shortage (not enough units)</option>
+          <option value="quality">Quality Issue</option>
+          <option value="damaged">Damaged in Production</option>
+          <option value="customer-request">Customer Request</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Quantity to Reprint</label>
+        <input type="number" id="reprintQty" min="1" placeholder="100" oninput="syncReprintFromQty()">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label id="reprintSheetQtyLabel">Frames / Sheets to Reprint</label>
+        <input type="number" id="reprintSheetQty" min="1" placeholder="50" oninput="syncReprintFromSheetQty()">
+        <span id="reprintSheetQtyHint" style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;"></span>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Notes</label>
+        <textarea id="reprintNotes" rows="3" placeholder="Describe the issue..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeReprintModal()">Cancel</button>
+      <button class="btn btn-warning" onclick="submitReprint()">Create Reprint Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Operator Modal -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <h2>Assign Operator to Step</h2>
+    <div style="margin-top:12px;">
+      <div class="field">
+        <label>Select Operator</label>
+        <select id="assignSelect">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAssign()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Step Modal -->
+<div class="modal-overlay" id="addStepModal">
+  <div class="modal">
+    <h2>Add Workflow Step</h2>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Machine / Station</label>
+        <select id="newStepMachine">
+          <option value="">— Select Machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Operation</label>
+        <select id="newStepOperation">
+          <option value="">— Select Operation —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="newStepNotes" placeholder="Any notes for this step">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddStepModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddStep()">Add Step</button>
+    </div>
+  </div>
+</div>
+
+<!-- Redirect / Reassign Machine Modal -->
+<div class="modal-overlay" id="redirectModal">
+  <div class="modal" style="max-width:520px;">
+    <h2>🔀 Redirect / Reassign Step</h2>
+    <div id="redirectInfo" style="margin:12px 0;padding:10px;background:#f8f9fb;border-radius:var(--radius);font-size:13px;"></div>
+    <div style="margin-top:12px;">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Redirect To Machine</label>
+        <select id="redirectMachine" onchange="onRedirectMachineChange()">
+          <option value="">— Select Machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Operation</label>
+        <select id="redirectOperation">
+          <option value="">— Auto from machine —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Redirect Amount</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="radio" name="redirectType" value="full" checked onchange="toggleRedirectQty()"> Entire Ticket
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="radio" name="redirectType" value="partial" onchange="toggleRedirectQty()"> Partial
+          </label>
+        </div>
+      </div>
+      <div class="field" id="redirectQtyRow" style="display:none;margin-bottom:12px;">
+        <label>Quantity to Redirect (units or sheets)</label>
+        <input type="number" id="redirectQty" min="1" placeholder="e.g. 5000">
+        <span id="redirectQtyHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;"></span>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Manager Code (optional)</label>
+        <input type="password" id="redirectCode" placeholder="Enter manager code to confirm" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Reason / Notes</label>
+        <input type="text" id="redirectNotes" placeholder="e.g. Sending to Boyd for faster turnaround">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRedirectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRedirect()">🔀 Confirm Redirect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('production-manager');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Production Manager' }]);
+initAuth('production-manager');
+
+document.getElementById('page-styles').textContent = `
+  .pm-layout { display: flex; gap: 14px; padding: 14px; min-height: calc(100vh - 52px); overflow: hidden; box-sizing: border-box; align-items: stretch; }
+  .pm-sidebar {
+    width: 300px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 80px);
+    background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(15,23,42,0.05); overflow: hidden;
+  }
+  .pm-sidebar .queue-header { padding: 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-sidebar .queue-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .pm-sidebar .queue-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .pm-sidebar .queue-filters { padding: 10px 14px; display: grid; gap: 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-sidebar .queue-filters input,
+  .pm-sidebar .queue-filters select {
+    width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; box-sizing: border-box;
+    background: #fff; color: var(--text);
+  }
+  .pm-sidebar-actions { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pm-new-job-btn { width: 100%; text-align: center; justify-content: center; box-sizing: border-box; font-weight: 600; padding: 10px 14px; border-radius: 10px; }
+  .pm-sidebar-hint { margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+  .sidebar-section { margin-bottom: 16px; }
+  .sidebar-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 4px 8px 6px; }
+  .filter-btn { display: block; width: 100%; text-align: left; padding: 7px 12px; border: none; border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; font-size: 13px; margin-bottom: 2px; }
+  .filter-btn:hover { background: var(--card-hover); }
+  .filter-btn.active { background: #e0edff; color: var(--accent); font-weight: 600; }
+  .sidebar-stats { font-size: 12px; color: var(--text-muted); padding: 10px 14px 14px; overflow-y: auto; flex: 1; min-height: 0; }
+  .pm-main { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 8px 16px 4px; background: transparent; }
+  .pm-main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .pm-main-header h2 { font-size: 18px; font-weight: 700; }
+
+  /* Order Row */
+  .order-row { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; box-shadow: var(--shadow); overflow: hidden; transition: box-shadow 0.2s; }
+  .order-row:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.1); }
+  .order-list-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f8f9fb; border-bottom: 2px solid var(--border); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); position: sticky; top: 0; z-index: 2; }
+  .olh-id { min-width: 70px; }
+  .olh-status { min-width: 100px; }
+  .olh-customer { flex: 1; }
+  .olh-product { flex: 1; }
+  .olh-machine { min-width: 140px; }
+  .olh-qty { min-width: 80px; text-align: right; }
+  .olh-due { min-width: 90px; text-align: right; }
+  .olh-expand { width: 24px; }
+  .order-row-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+  .order-row-header .order-id { font-weight: 700; font-size: 14px; color: var(--accent); min-width: 70px; }
+  .order-row-header .order-status { min-width: 100px; }
+  .order-row-header .order-customer { font-size: 14px; font-weight: 600; flex: 1; }
+  .order-row-header .order-product { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .order-row-header .order-machine { font-size: 12px; color: var(--text-muted); min-width: 140px; }
+  .order-row-header .order-qty { font-size: 12px; color: var(--text-muted); min-width: 80px; text-align: right; }
+  .order-row-header .order-due { font-size: 12px; min-width: 90px; text-align: right; }
+  .order-row-header .expand-icon { color: var(--text-muted); font-size: 12px; transition: transform 0.2s; width: 24px; text-align: center; }
+  .order-row.expanded .expand-icon { transform: rotate(180deg); }
+  .order-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .order-row.expanded .order-body { display: block; }
+
+  /* Detail sections */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .order-body .pulse-sku-section { width: 100%; max-width: 100%; }
+  .detail-section { }
+  .detail-section h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .detail-item { display: flex; gap: 8px; margin-bottom: 4px; font-size: 13px; }
+  .detail-item .di-label { color: var(--text-muted); min-width: 100px; }
+  .detail-item .di-val { font-weight: 500; }
+
+  /* Workflow Steps */
+  .workflow-steps-section { margin-top: 16px; }
+  .workflow-steps-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .step-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #f8f9fb; }
+  .step-row.step-current { background: #e0edff; border-color: var(--accent); }
+  .step-row.step-completed { background: #f0fff4; border-color: #bbf7d0; opacity: 0.8; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .step-num.num-current { background: var(--accent); color: #fff; }
+  .step-num.num-completed { background: var(--green); color: #fff; }
+  .step-machine { font-size: 13px; font-weight: 600; flex: 1; }
+  .step-assigned { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .step-status { font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .step-status.pending { color: var(--text-muted); }
+  .step-status.in-progress { color: #2563eb; }
+  .step-status.completed { color: var(--green); }
+
+  /* Action bar */
+  .action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* Order detail modal */
+  .order-detail-modal { max-width: 820px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+
+  .overdue { color: var(--red); }
+  .due-soon { color: var(--yellow); }
+
+  @media (max-width: 960px) {
+    .pm-layout { flex-direction: column; overflow: auto; align-items: stretch; height: auto; min-height: calc(100vh - 52px); }
+    .pm-sidebar { width: 100%; max-height: none; }
+    .pm-main { overflow: visible; }
+  }
+
+  .artwork-preview-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .art-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
+  .art-thumb-pdf { width: 80px; height: 80px; background: #f0f0f5; border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+`;
+
+// State
+let allOrders = [];
+let pmLastLoadError = null;
+/** Production pipeline: prepress through shipped (for “Approved — production queue” filter). */
+const PM_APPROVED_PRODUCTION_STATUSES = [
+  'prepress', 'prepress-active', 'prepress-paused', 'pending-account-manager', 'pending-review',
+  'in-production', 'on-hold', 'qc-checkout', 'qc-failed', 'ready-to-ship', 'waiting-pickup',
+  'completed', 'shipped', 'received', 'delivery-ready',
+];
+let currentStatusFilter = 'all';
+let currentFacilityFilter = 'all';
+let activeOrderId = null; // the DB id currently expanded
+let reprintTargetOrderId = null;
+let reprintPiecesPerSheet = 1;
+let assignTargetOrderDbId = null;
+let assignTargetStepId = null;
+let addStepTargetOrderDbId = null;
+
+function pmStepKey(step, index) {
+  return step?.id != null && step.id !== '' ? String(step.id) : String(index);
+}
+
+function pmFindOrder(dbId) {
+  const key = String(dbId ?? '');
+  return allOrders.find(o => String(o.id ?? '') === key || String(o.orderId ?? '') === key);
+}
+
+function pmAssignStep(orderDbId, stepKey, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  openAssignModal(orderDbId, stepKey).catch(err => {
+    console.error('[Pulse] openAssignModal', err);
+    showPageToast('Could not open assign dialog: ' + (err?.message || err), 'error', 6000);
+  });
+}
+
+function populatePmMachineSelectors() {
+  const machineSelect = document.getElementById('newStepMachine');
+  if (!machineSelect) return;
+  const prev = machineSelect.value;
+  const names = typeof getPulseMachineNames === 'function' ? getPulseMachineNames() : [];
+  machineSelect.innerHTML = names.length
+    ? '<option value="">— Select Machine —</option>'
+    : '<option value="">— Configure in Admin → Organisation —</option>';
+  names.forEach(m => { machineSelect.innerHTML += `<option value="${m}">${m}</option>`; });
+  if (prev && names.includes(prev)) machineSelect.value = prev;
+  onPmNewStepMachineChange();
+}
+
+function onPmNewStepMachineChange() {
+  const machineSelect = document.getElementById('newStepMachine');
+  const opSel = document.getElementById('newStepOperation');
+  if (!machineSelect || !opSel) return;
+  const ops = typeof getPulseMachineOperations === 'function'
+    ? getPulseMachineOperations(machineSelect.value)
+    : [];
+  opSel.innerHTML = '<option value="">— Select Operation —</option>';
+  (ops.length ? ops : (typeof OPERATIONS !== 'undefined' ? OPERATIONS : [])).forEach(o => {
+    opSel.innerHTML += `<option value="${o}">${o}</option>`;
+  });
+}
+
+document.getElementById('newStepMachine')?.addEventListener('change', onPmNewStepMachineChange);
+
+function getPmFacilityLabel(slug) {
+  return typeof getPulseFacilityLabel === 'function' ? getPulseFacilityLabel(slug) : (slug || '—');
+}
+
+function populatePmFacilityFilter() {
+  const sel = document.getElementById('pmFacilityFilter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">All Facilities</option>';
+  (typeof getPulseFacilityList === 'function' ? getPulseFacilityList() : []).forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.slug;
+    opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+  if (current && current !== 'all') sel.value = current;
+}
+
+// ── Init ──────────────────────────────────────────────────
+async function bootstrapProductionManager() {
+  if (typeof waitForPulseAuthReady === 'function') await waitForPulseAuthReady();
+  if (typeof waitForPulseSupabaseSession === 'function') await waitForPulseSupabaseSession();
+  if (typeof initPulseAdminData === 'function') {
+    try { await initPulseAdminData(); } catch (e) { console.warn('[Pulse] PM admin bootstrap', e); }
+  }
+  populatePmFacilityFilter();
+  populatePmMachineSelectors();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(() => {
+      populatePmFacilityFilter();
+      populatePmMachineSelectors();
+      renderList();
+    });
+  }
+  await loadOrders();
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order');
+  if (orderId) {
+    const order = allOrders.find(o => o.orderId === orderId);
+    if (order) openDetail(order.id);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  bootstrapProductionManager().catch(e => console.error('[Pulse] production-manager init', e));
+  window.addEventListener('pulse:auth-ready', () => {
+    loadOrders().catch(e => console.error('[Pulse] production-manager reload', e));
+  });
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders' || data.store === 'reprints' || data.store === 'personnel') {
+      await loadOrders();
+    }
+  });
+});
+
+async function loadOrders() {
+  allOrders = await getAllOrders();
+  pmLastLoadError = window.PULSE_LAST_ORDERS_ERROR || null;
+  if (!Array.isArray(allOrders)) allOrders = [];
+  allOrders.sort((a, b) => getPrioritySortValue(a) - getPrioritySortValue(b));
+  renderSidebarStats();
+  renderList();
+}
+
+function getPrioritySortValue(order) {
+  const dueMs = order.dueDate ? new Date(order.dueDate + 'T12:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+  const statusWeight = {
+    'prepress-active': 0,
+    'prepress-paused': 1,
+    'prepress': 2,
+    'pending-account-manager': 3,
+    'pending-review': 4,
+    'in-production': 5,
+    'qc-checkout': 6,
+    'ready-to-ship': 7,
+    'on-hold': 8,
+  };
+  const rushWeight = isRushApproved(order) ? -1 : 0;
+  const weight = statusWeight[order.status] ?? 20;
+  return ((rushWeight + weight) * 10 ** 15) + dueMs;
+}
+
+function getSmartBatchSuggestions(orders) {
+  const active = orders.filter(o => ['prepress','prepress-active','prepress-paused','pending-review','in-production'].includes(o.status));
+  const groups = new Map();
+  active.forEach(order => {
+    const key = [getProductionLine(order), order.facility, order.material, order.printType, order.lamination || 'None'].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(order);
+  });
+
+  return [...groups.values()]
+    .filter(group => group.length > 1 && group[0]?.material)
+    .map(group => {
+      const sorted = [...group].sort((a, b) => new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01'));
+      const earliest = sorted[0]?.dueDate || null;
+      const latest = sorted[sorted.length - 1]?.dueDate || null;
+      const dueSpreadDays = earliest && latest ? Math.round((new Date(latest) - new Date(earliest)) / 86400000) : 0;
+      return {
+        line: getProductionLine(group[0]),
+        facility: getPmFacilityLabel(group[0].facility),
+        material: group[0].material,
+        printType: group[0].printType || '—',
+        lamination: group[0].lamination || 'None',
+        orders: sorted,
+        dueSpreadDays,
+      };
+    })
+    .filter(group => group.dueSpreadDays <= 3)
+    .sort((a, b) => new Date(a.orders[0].dueDate || '2099-01-01') - new Date(b.orders[0].dueDate || '2099-01-01'))
+    .slice(0, 4);
+}
+
+function setStatusFilter(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  renderList();
+}
+
+function setFacilityFilter(facility) {
+  currentFacilityFilter = facility;
+  document.querySelectorAll('[data-facility]').forEach(b => b.classList.toggle('active', b.dataset.facility === facility));
+  renderList();
+}
+
+function renderSidebarStats() {
+  const stats = {};
+  allOrders.forEach(o => { stats[o.status] = (stats[o.status] || 0) + 1; });
+  const suggestions = getSmartBatchSuggestions(allOrders);
+  document.getElementById('sidebarStats').innerHTML = `
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Order Stats</div>
+    <div style="font-size:12px;">Total: <strong>${allOrders.length}</strong></div>
+    ${Object.entries(stats).map(([s, c]) => `<div style="font-size:12px;">${STATUS_LABELS[s] || s}: <strong>${c}</strong></div>`).join('')}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 6px;">Smart Batch Suggestions</div>
+    ${suggestions.length > 0 ? suggestions.map(group => `
+      <div style="font-size:11px;padding:8px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:8px;line-height:1.45;">
+        <div style="font-weight:700;color:var(--text);">${group.material} • ${group.printType} • ${group.lamination}</div>
+        <div style="color:var(--text-muted);margin-top:2px;">${group.facility}</div>
+        <div style="color:var(--green);margin-top:4px;">Suggested gang run: ${group.orders.map(o => `#${o.orderId}`).join(', ')}</div>
+        <div style="color:var(--text-muted);margin-top:3px;">Due window: ${group.orders[0].dueDate ? formatDate(group.orders[0].dueDate) : '—'}${group.orders[group.orders.length - 1].dueDate && group.orders[group.orders.length - 1].dueDate !== group.orders[0].dueDate ? ` → ${formatDate(group.orders[group.orders.length - 1].dueDate)}` : ''}</div>
+      </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted);">No same-material batch opportunities in the next 3-day window.</div>'}
+  `;
+}
+
+function onPmDateFilterChange() {
+  const v = document.getElementById('pmDateFilter').value;
+  document.getElementById('pmCustomDate').style.display = v === 'custom' ? '' : 'none';
+  renderList();
+}
+
+function renderList() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const statusFilter = document.getElementById('pmStatusFilter')?.value || 'all';
+  const facilityFilter = document.getElementById('pmFacilityFilter')?.value || 'all';
+  const dateFilter = document.getElementById('pmDateFilter')?.value || 'all';
+  const customDate = document.getElementById('pmCustomDate')?.value || '';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const doneStatuses = ['completed', 'shipped', 'received', 'waiting-pickup'];
+
+  let filtered = allOrders.filter(o => {
+    if (statusFilter === 'reprint') {
+      if (!o.isReprint) return false;
+    } else if (statusFilter === 'approved-queue') {
+      if (!PM_APPROVED_PRODUCTION_STATUSES.includes(o.status)) return false;
+    } else if (statusFilter === 'overdue') {
+      if (doneStatuses.includes(o.status) || !o.dueDate || new Date(o.dueDate+'T12:00:00') >= today) return false;
+    } else if (statusFilter !== 'all' && o.status !== statusFilter) {
+      return false;
+    }
+    if (facilityFilter !== 'all' && o.facility !== facilityFilter) return false;
+    if (search) {
+      const haystack = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription, o.reprintOfOrderId, o.reprintReason].join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    if (!pulseOrderMatchesCreatedDateFilter(o, dateFilter, customDate)) return false;
+    return true;
+  });
+
+  document.getElementById('listTitle').textContent =
+    statusFilter === 'all' ? 'All Orders'
+      : statusFilter === 'approved-queue' ? 'Approved — production queue'
+        : statusFilter === 'reprint' ? 'Reprints / Shortages'
+          : (STATUS_LABELS[statusFilter] || statusFilter);
+  const countLabel = `${filtered.length} order${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('orderCount').textContent = countLabel;
+  const sideCt = document.getElementById('pmSidebarOrderCount');
+  if (sideCt) sideCt.textContent = countLabel;
+
+  const container = document.getElementById('orderList');
+  if (filtered.length === 0) {
+    let msg = 'No orders match the current filters. Try <strong>Status: All</strong> and <strong>All Facilities</strong>.';
+    if (pmLastLoadError) {
+      const detail = pmLastLoadError.message || String(pmLastLoadError);
+      msg = `Could not load job tickets from the database.<br><span style="font-size:12px;">${detail}</span><br>Sign in with Admin, Supervisor, or Production Manager and refresh.`;
+    } else if (!allOrders.length) {
+      msg = `No job tickets found for your account.<br><a href="/pages/job-ticket.html" class="btn btn-primary" style="margin-top:12px;display:inline-block;">+ New Job Ticket</a>`;
+    }
+    container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px;line-height:1.5;max-width:480px;margin:0 auto;">${msg}</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(order => {
+    try {
+      return renderOrderRow(order);
+    } catch (e) {
+      console.error('[Pulse] renderOrderRow', order?.orderId, e);
+      return `<div class="order-row" style="border:1px solid var(--red);padding:12px;margin-bottom:8px;border-radius:8px;">
+        <strong>#${order?.orderId || '?'}</strong> — could not display this ticket (${e.message || e}).
+        <a href="/pages/job-ticket.html?order=${encodeURIComponent(order?.orderId || '')}" style="margin-left:8px;">Open in Job Ticket</a>
+      </div>`;
+    }
+  }).join('');
+}
+
+function renderOrderRow(order) {
+  const dueClass = getDueClass(order.dueDate);
+  const isExpanded = order.id === activeOrderId;
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const line = getProductionLine(order);
+  const lineInfo = PRODUCTION_LINES[line];
+  const currentStepName = order.workflowSteps?.[order.currentStep || 0]?.machine || '—';
+  const reprintTag = order.isReprint ? `<span style="font-size:10px;background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:999px;margin-left:6px;">REPRINT</span>` : '';
+
+  return `
+    <div class="order-row ${isExpanded ? 'expanded' : ''} line-${line}" id="order-row-${order.id}" style="border-left: 3px solid ${lineInfo?.color || 'var(--border)'};">
+      <div class="order-row-header" onclick="toggleOrderRow('${orderIdEsc}')">
+        <span class="order-id">#${order.orderId}${reprintTag} ${renderRushFlag(order)}</span>
+        <span class="order-status">${renderStatusBadge(order.status)}</span>
+        <span class="order-customer">${order.customer || order.customerName}</span>
+        <span class="order-product">${order.productType || ''}${order.material ? ' · ' + order.material : ''}</span>
+        <span class="order-machine">@${currentStepName}</span>
+        <span class="order-qty">${(order.quantity || 0).toLocaleString()}</span>
+        <span class="order-due ${dueClass}">${order.dueDate ? formatDate(order.dueDate) : '—'}</span>
+        <span class="expand-icon">${isExpanded ? '▲' : '▼'}</span>
+      </div>
+      <div class="order-body" id="order-body-${order.id}">
+        ${renderOrderBody(order)}
+      </div>
+    </div>
+  `;
+}
+
+function renderOrderBody(order) {
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const steps = order.workflowSteps || [];
+  const currentStep = order.currentStep || 0;
+
+  const stepsHtml = steps.length > 0 ? steps.map((step, i) => {
+    const isCurrent = i === currentStep && order.status === 'in-production';
+    const isCompleted = step.status === 'completed';
+    const stepKeyEsc = pmStepKey(step, i).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const machineLabel = step.machine || step.operation || 'Unnamed step';
+    return `
+      <div class="step-row ${isCurrent ? 'step-current' : ''} ${isCompleted ? 'step-completed' : ''}">
+        <div class="step-num ${isCurrent ? 'num-current' : ''} ${isCompleted ? 'num-completed' : ''}">${i + 1}</div>
+        <div class="step-machine">
+          ${machineLabel}
+          ${step.redirectedFrom ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">↩ was ${step.redirectedFrom}</span>` : ''}
+          ${step.isSplit ? `<span style="font-size:10px;color:var(--purple);margin-left:4px;">✂️ SPLIT: ${(step.splitQuantity||0).toLocaleString()} units</span>` : ''}
+          ${step.partialRedirect ? `<span style="font-size:10px;color:var(--yellow);margin-left:4px;">→ ${(step.partialRedirectQty||0).toLocaleString()} sent to ${step.partialRedirectTo}</span>` : ''}
+        </div>
+        <div class="step-assigned">${step.assignedTo ? '👤 ' + step.assignedTo : 'Unassigned'}</div>
+        ${step.startedAt ? `<div style="font-size:11px;color:var(--text-muted);">Started ${formatDateTime(step.startedAt)}</div>` : ''}
+        ${step.completedAt ? `<div style="font-size:11px;color:var(--green);">Done ${formatDateTime(step.completedAt)}</div>` : ''}
+        <div class="step-status ${step.status}">${step.status}</div>
+        <div style="display:flex;gap:4px;">
+          ${((step.alternativeMachines && step.alternativeMachines.length) || (step.alternatives && step.alternatives.length)) ? `<button type="button" class="btn btn-sm" onclick="event.stopPropagation(); openRedirectModal('${orderIdEsc}','${stepKeyEsc}',${i})">🔀 Swap</button>` : ''}
+          <button type="button" class="btn btn-sm${step.assignedTo ? ' btn-success' : ''}" onclick="pmAssignStep('${orderIdEsc}','${stepKeyEsc}', event)">${step.assignedTo ? '✅ ' + step.assignedTo : '👤 Assign'}</button>
+          <button type="button" class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeStepByIndex('${orderIdEsc}',${i})">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('') : '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No workflow steps defined.</div>';
+
+  return `
+    <div class="detail-grid">
+      <div class="detail-section">
+        <h4>Job Details</h4>
+        ${di('Product', order.productType)}
+        ${di('Material', order.material)}
+        ${di('Quantity', typeof formatOrderQuantityDisplay === 'function' ? formatOrderQuantityDisplay(order) : (order.quantity?.toLocaleString() + ' units'))}
+        ${di('Sheet Count', order.sheetCount || '—')}
+        ${di('Print Type', order.printType)}
+        ${di('Sides', order.sides + '-sided')}
+        ${di('Colors', order.colors)}
+        ${di('Lamination', order.lamination)}
+        ${di('Foil', order.foilType !== 'None' ? order.foilType : '—')}
+        ${di('Due Date', order.dueDate ? formatDate(order.dueDate) : '—')}
+      </div>
+      <div class="detail-section">
+        <h4>Cutting & Die</h4>
+        ${di('Cut Method', order.cutMethod || '—')}
+        ${di('Die Status', order.dieStatus || '—')}
+        ${di('Die Name', order.dieName || '—')}
+        <h4 style="margin-top:12px;">Notes</h4>
+        <div style="font-size:13px;color:var(--text);">${order.specialNotes || '—'}</div>
+      </div>
+    </div>
+
+    ${renderOrderSkuSection(order)}
+
+    <div class="workflow-steps-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Workflow Steps</h4>
+        <button class="btn btn-sm" onclick="openAddStepModal('${orderIdEsc}')">+ Add Step</button>
+      </div>
+      <div class="workflow-steps-list">${stepsHtml}</div>
+    </div>
+
+    <div class="action-bar">
+      ${getActionButtons(order)}
+    </div>
+  `;
+}
+
+function di(label, val) {
+  return `<div class="detail-item"><span class="di-label">${label}</span><span class="di-val">${val || '—'}</span></div>`;
+}
+
+function getActionButtons(order) {
+  const orderIdEsc = String(order.id ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const btns = [];
+  const ticketLocked = typeof isJobTicketStatusLocked === 'function' && isJobTicketStatusLocked(order.status);
+  if (ticketLocked) {
+    btns.push(`<a href="/pages/job-ticket.html?order=${encodeURIComponent(order.orderId)}" class="btn btn-sm">👁 View Job Ticket</a>`);
+  } else {
+    btns.push(`<a href="/pages/job-ticket.html?order=${encodeURIComponent(order.orderId)}" class="btn btn-sm">✏️ Edit Job Ticket</a>`);
+  }
+
+  // Prepress operations are handled in the Prepress module — not shown here
+  if (order.status === 'new' || order.status === 'pending-review') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus('${orderIdEsc}','in-production')">▶ Start Production</button>`);
+  }
+  if (order.status === 'pending-confirmation') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="approveConfirmation('${orderIdEsc}')">✅ Approve OT / Confirm</button>`);
+    btns.push(`<button class="btn btn-sm btn-danger" onclick="rejectConfirmation('${orderIdEsc}')">❌ Reject — Put On Hold</button>`);
+  }
+  if (order.status === 'pending-account-manager') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="changeStatus('${orderIdEsc}','prepress')">↩ Issue Resolved — Return to Prepress</button>`);
+  }
+  if (order.status === 'in-production') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="advanceStep('${orderIdEsc}')">⏭ Next Step</button>`);
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="changeStatus('${orderIdEsc}','on-hold')">⏸ Put On Hold</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus('${orderIdEsc}','qc-checkout')">🔍 Send to QC</button>`);
+  }
+  if (order.status === 'on-hold') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','resume')">▶ Resume Production</button>`);
+  }
+  if (order.status === 'qc-checkout') {
+    btns.push(`<a href="/pages/qc-checkout.html?order=${order.orderId}" class="btn btn-sm btn-primary">🔍 Go to QC</a>`);
+  }
+  if (order.status === 'qc-failed') {
+    btns.push(`<button class="btn btn-sm btn-primary" onclick="returnToProductionFromQCFail('${orderIdEsc}')">↩ Return to Production</button>`);
+  }
+  if (order.status === 'ready-to-ship') {
+    btns.push(`<a href="/pages/shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','shipped')">📦 Mark Shipped</button>`);
+    btns.push(`<button class="btn btn-sm" onclick="changeStatus('${orderIdEsc}','waiting-pickup')">🏪 Waiting Pickup</button>`);
+  }
+  if (order.status === 'shipped' || order.status === 'waiting-pickup') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','received')">📬 Mark Received</button>`);
+  }
+  if (order.status === 'received') {
+    btns.push(`<button class="btn btn-sm btn-success" onclick="changeStatus('${orderIdEsc}','completed')">✅ Mark Completed</button>`);
+  }
+  if (['shipped', 'waiting-pickup', 'received', 'completed'].includes(order.status)) {
+    btns.push(`<a href="/pages/shipping.html?packingSlip=${order.id}" class="btn btn-sm">📋 Packing Slip</a>`);
+  }
+  if (!['ready-to-ship', 'shipped', 'received', 'completed'].includes(order.status)) {
+    btns.push(`<button class="btn btn-sm btn-warning" onclick="openReprintModal('${orderIdEsc}')">🖨 Reprint/Shortage</button>`);
+  }
+
+  return btns.join('');
+}
+
+function toggleOrderRow(dbId) {
+  const wasExpanded = activeOrderId === dbId;
+  // Collapse all
+  document.querySelectorAll('.order-row.expanded').forEach(el => el.classList.remove('expanded'));
+  activeOrderId = null;
+  if (!wasExpanded) {
+    const row = document.getElementById(`order-row-${dbId}`);
+    if (row) row.classList.add('expanded');
+    activeOrderId = dbId;
+  }
+}
+
+function getDueClass(dueDate) {
+  if (!dueDate) return '';
+  const d = new Date(dueDate);
+  const now = new Date();
+  if (d < now) return 'overdue';
+  const diff = (d - now) / (1000 * 60 * 60 * 24);
+  if (diff <= 3) return 'due-soon';
+  return '';
+}
+
+// ── Status Changes ────────────────────────────────────────
+async function changeStatus(dbId, newStatus) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+
+  if (newStatus === 'on-hold') {
+    const patch = await buildHoldPatch(order);
+    if (!patch) return;
+    await updateOrder(dbId, { ...order, ...patch });
+    await addActivity({ orderId: order.orderId, type: 'hold', message: `Order put on hold${patch.holdReason ? ` — ${patch.holdReason}` : ''}`, by: patch.holdRequestedBy || 'Manager' });
+    await loadOrders();
+    return;
+  }
+
+  if (newStatus === 'resume') {
+    const resumeStatus = order.holdPreviousStatus || 'in-production';
+    await updateOrder(dbId, { ...order, status: resumeStatus, holdReason: '', holdPreviousStatus: null, resumedAt: new Date().toISOString(), resumedBy: (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager' });
+    await addActivity({ orderId: order.orderId, type: 'resume', message: `Order resumed to ${STATUS_LABELS[resumeStatus] || resumeStatus}`, by: (typeof getCurrentName === 'function' ? getCurrentName() : 'Manager') });
+    await loadOrders();
+    return;
+  }
+
+  // Guard: cannot manually set ready-to-ship without a QC pass record
+  if (newStatus === 'ready-to-ship') {
+    const hasQcPass = order.qcRecord?.verdict === 'pass' || !!order.qcPassedAt;
+    if (!hasQcPass) {
+      showPageToast('Cannot mark Ready to Ship — this order has not passed QC. Use the QC Checkout page to complete the QC inspection first.', 'error', 6000);
+      return;
+    }
+    if (order.status === 'qc-failed') {
+      showPageToast('Cannot mark Ready to Ship — this order has a QC fail on record. Return it to production, fix the defects, then re-run QC.', 'error', 6000);
+      return;
+    }
+  }
+
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  const patch = { ...order, status: newStatus };
+  if (newStatus === 'prepress-active' && order.status === 'prepress') patch.prepressStartedAt = new Date().toISOString(), patch.prepressStartedBy = by;
+  if (newStatus === 'prepress-paused') patch.prepressPausedAt = new Date().toISOString(), patch.prepressPausedBy = by;
+  if (newStatus === 'prepress-active' && order.status === 'prepress-paused') patch.prepressResumedAt = new Date().toISOString(), patch.prepressResumedBy = by;
+  if (newStatus === 'pending-review' && ['prepress-active','prepress-paused'].includes(order.status)) patch.prepressCompletedAt = new Date().toISOString(), patch.prepressCompletedBy = by;
+  // When approving to production from pending-review, reset prepress review section
+  if (newStatus === 'in-production' && order.status === 'pending-review') {
+    patch.prepressCompletedAt = null;
+    patch.prepressCompletedBy = null;
+    patch.prepressStartedAt = null;
+    patch.prepressStartedBy = null;
+    patch.prepressPausedAt = null;
+    patch.prepressPausedBy = null;
+    patch.prepressResumedAt = null;
+    patch.prepressResumedBy = null;
+    patch.prepressApprovedAt = new Date().toISOString();
+    patch.prepressApprovedBy = by;
+    // Reset prepress checklist fields (Ticket Details, Artwork, Size/Qty, Die/Cut checkboxes + Issue Category + Comment)
+    patch.prepressChecklist = { details: false, artwork: false, sizing: false, cutting: false };
+    patch.prepressIssueCategory = '';
+    patch.prepressComment = '';
+    patch.prepressIssueComment = '';
+  }
+  await updateOrder(dbId, patch);
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Status changed to ${STATUS_LABELS[newStatus]}`, by });
+  await loadOrders();
+}
+
+async function advanceStep(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps || [];
+  const currentStep = order.currentStep || 0;
+
+  if (currentStep < steps.length) {
+    steps[currentStep].status = 'completed';
+    steps[currentStep].completedAt = new Date().toISOString();
+  }
+
+  const nextStep = currentStep + 1;
+  let newStatus = 'in-production';
+  if (nextStep >= steps.length) {
+    newStatus = 'qc-checkout';
+  }
+
+  await updateOrder(dbId, {
+    workflowSteps: steps,
+    currentStep: nextStep,
+    status: newStatus
+  });
+  await addActivity({ orderId: order.orderId, type: 'step-advance', message: `Advanced to step ${nextStep + 1}: ${steps[nextStep]?.machine || 'QC'}`, by: 'Manager' });
+  await loadOrders();
+  if (newStatus === 'qc-checkout') {
+    showPageToast(`All production steps complete for Order #${order.orderId}. Order sent to QC Checkout.`, 'success', 5000);
+  }
+}
+
+// ── Confirmation / OT Approval ────────────────────────────
+async function approveConfirmation(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  await updateOrder(dbId, { ...order, status: 'prepress', needsConfirmation: false, confirmationApprovedBy: by, confirmationApprovedAt: new Date().toISOString() });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override approved — order moved to Prepress`, by });
+  await loadOrders();
+}
+
+async function rejectConfirmation(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  const reason = prompt('Reason for rejecting overtime/capacity override:') || 'OT approval rejected';
+  await updateOrder(dbId, { ...order, status: 'on-hold', holdReason: reason, holdPreviousStatus: 'pending-confirmation', holdRequestedBy: by, holdRequestedAt: new Date().toISOString(), needsConfirmation: false });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `OT/capacity override rejected — ${reason}`, by });
+  await loadOrders();
+}
+
+// ── QC Failed → Return to Production ──────────────────────
+async function returnToProductionFromQCFail(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps || [];
+  // Reset to last production step so it can be reworked
+  const lastStepIdx = Math.max(0, steps.length - 1);
+  const resetSteps = steps.map((s, i) => i === lastStepIdx ? { ...s, status: 'pending', completedAt: null } : s);
+  const by = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  await updateOrder(dbId, { ...order, status: 'in-production', workflowSteps: resetSteps, currentStep: lastStepIdx });
+  await addActivity({ orderId: order.orderId, type: 'status-change', message: `Returned to production from QC fail — step ${lastStepIdx + 1} reset`, by });
+  await loadOrders();
+}
+
+// ── Reprint Modal ─────────────────────────────────────────
+async function _populateReprintReasons() {
+  const sel = document.getElementById('reprintReason');
+  if (!sel) return;
+  const DEFAULTS = [
+    { value: 'shortage',         label: 'Shortage (not enough units)' },
+    { value: 'quality',          label: 'Quality Issue' },
+    { value: 'damaged',          label: 'Damaged in Production' },
+    { value: 'customer-request', label: 'Customer Request' },
+    { value: 'other',            label: 'Other' },
+  ];
+  try {
+    const cfg = await getConfig('pulseReprintReasons');
+    const reasons = cfg?.value || cfg;
+    if (Array.isArray(reasons) && reasons.length > 0) {
+      sel.innerHTML = reasons.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+      return;
+    }
+  } catch (_) {}
+  sel.innerHTML = DEFAULTS.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+}
+
+function openReprintModal(dbId) {
+  reprintTargetOrderId = dbId;
+  _populateReprintReasons().catch(() => {});
+  const order = allOrders.find(o => o.id === dbId);
+  const maxQty = order?.quantity || 0;
+  const maxSheetQty = order?.sheetCount || Math.max(1, Math.ceil(maxQty / Math.max(1, parseFloat(order?.piecesPerSheet) || 1)));
+  reprintPiecesPerSheet = parseFloat(order?.piecesPerSheet) || (maxQty && maxSheetQty ? maxQty / maxSheetQty : 1) || 1;
+  const qtyInput = document.getElementById('reprintQty');
+  const sheetQtyInput = document.getElementById('reprintSheetQty');
+  qtyInput.max = maxQty;
+  qtyInput.value = '';
+  qtyInput.placeholder = `Max: ${maxQty.toLocaleString()}`;
+  sheetQtyInput.max = maxSheetQty;
+  sheetQtyInput.value = '';
+  sheetQtyInput.placeholder = `Max: ${maxSheetQty.toLocaleString()}`;
+  document.getElementById('reprintSheetQtyLabel').textContent = `${order?.printType === 'Roll' ? 'Frames' : 'Sheets'} to Reprint`;
+  document.getElementById('reprintSheetQtyHint').textContent = `Original job: ${(order?.quantity || 0).toLocaleString()} units ≈ ${(maxSheetQty || 0).toLocaleString()} ${order?.printType === 'Roll' ? 'frames' : 'sheets'} (${reprintPiecesPerSheet.toFixed(2)} units each)`;
+  document.getElementById('reprintNotes').value = '';
+  document.getElementById('reprintModal').classList.add('active');
+}
+function closeReprintModal() {
+  document.getElementById('reprintModal').classList.remove('active');
+}
+
+async function submitReprint() {
+  const order = allOrders.find(o => o.id === reprintTargetOrderId);
+  if (!order) return;
+  const qty = parseInt(document.getElementById('reprintQty').value) || 0;
+  const sheetQty = parseInt(document.getElementById('reprintSheetQty').value) || 0;
+  const reason = document.getElementById('reprintReason').value;
+  const notes = document.getElementById('reprintNotes').value;
+  const requestedBy = (typeof getCurrentName === 'function' ? getCurrentName() : null) || 'Manager';
+  if (!qty) { showPageToast('Please enter a quantity.', 'warning'); return; }
+  if (qty > (order.quantity || 0)) {
+    showPageToast(`Reprint quantity (${qty.toLocaleString()}) cannot exceed the original order quantity (${(order.quantity || 0).toLocaleString()}).`, 'warning', 5000);
+    return;
+  }
+  const recreatedOrder = await createReprintOrderFromSource(order, {
+    quantity: qty,
+    reasonLabel: reason,
+    notes,
+    requestedBy,
+  });
+  await addReprint({
+    parentOrderId: order.orderId,
+    linkedOrderId: recreatedOrder.orderId,
+    reason,
+    quantity: qty,
+    sheetQuantity: sheetQty || Math.ceil(qty / Math.max(1, reprintPiecesPerSheet)),
+    notes,
+    status: 'queued-in-dashboard',
+    requestedBy
+  });
+  await addActivity({ orderId: order.orderId, type: 'reprint', message: `Reprint job #${recreatedOrder.orderId} created for ${qty} units - ${reason}`, by: requestedBy });
+  await addActivity({ orderId: recreatedOrder.orderId, type: 'create', message: `Recreated from #${order.orderId} (${reason})`, by: requestedBy });
+  closeReprintModal();
+  await loadOrders();
+  showPageToast(`Recreated job #${recreatedOrder.orderId} was added to the dashboard in Prepress.`, 'success', 5000);
+}
+
+function syncReprintFromQty() {
+  const qty = parseFloat(document.getElementById('reprintQty').value);
+  const sheetInput = document.getElementById('reprintSheetQty');
+  if (!qty || qty <= 0) {
+    sheetInput.value = '';
+    return;
+  }
+  sheetInput.value = String(Math.ceil(qty / Math.max(1, reprintPiecesPerSheet)));
+}
+
+function syncReprintFromSheetQty() {
+  const sheetQty = parseFloat(document.getElementById('reprintSheetQty').value);
+  const qtyInput = document.getElementById('reprintQty');
+  if (!sheetQty || sheetQty <= 0) {
+    qtyInput.value = '';
+    return;
+  }
+  qtyInput.value = String(Math.round(sheetQty * Math.max(1, reprintPiecesPerSheet)));
+}
+
+// ── Assign Modal ──────────────────────────────────────────
+async function openAssignModal(dbId, stepId) {
+  assignTargetOrderDbId = dbId;
+  assignTargetStepId = String(stepId ?? '');
+  const order = pmFindOrder(dbId);
+  if (!order) {
+    throw new Error('Job ticket not found. Refresh the page and try again.');
+  }
+  const targetKey = assignTargetStepId;
+  const stepExists = (order.workflowSteps || []).some((s, i) => pmStepKey(s, i) === targetKey);
+  if (!stepExists) {
+    throw new Error('Workflow step not found on this ticket.');
+  }
+  let personnel = [];
+  try {
+    personnel = await getAllPersonnel();
+  } catch (e) {
+    console.error('[Pulse] getAllPersonnel', e);
+    throw new Error('Could not load personnel list.');
+  }
+  if (!Array.isArray(personnel)) personnel = [];
+  const operators = personnel.filter(p => {
+    if (p.active === false) return false;
+    const role = String(p.role || 'operator').replace(/_/g, '-').toLowerCase();
+    return role === 'operator';
+  });
+  const sel = document.getElementById('assignSelect');
+  sel.innerHTML = '<option value="">— Select —</option>';
+  operators.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  operators.forEach(p => {
+    sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
+  });
+  if (!operators.length) {
+    sel.innerHTML += '<option value="" disabled>No active operators — add them in Admin → Personnel</option>';
+  }
+  document.getElementById('assignModal').classList.add('active');
+}
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('active');
+}
+
+async function confirmAssign() {
+  const name = document.getElementById('assignSelect').value;
+  if (!name) { showPageToast('Please select an operator.', 'warning'); return; }
+  const order = pmFindOrder(assignTargetOrderDbId);
+  if (!order) {
+    showPageToast('Job ticket not found. Refresh the page and try again.', 'error');
+    return;
+  }
+  const targetKey = String(assignTargetStepId ?? '');
+  const steps = (order.workflowSteps || []).map((s, i) => {
+    const matches = pmStepKey(s, i) === targetKey;
+    return matches ? { ...s, assignedTo: name } : s;
+  });
+  if (!(order.workflowSteps || []).some((s, i) => pmStepKey(s, i) === targetKey)) {
+    showPageToast('Could not find that workflow step. Refresh and try again.', 'warning');
+    return;
+  }
+  try {
+    await updateOrder(order.id, { workflowSteps: steps });
+    await addActivity({ orderId: order.orderId, type: 'assign', message: `Step assigned to ${name}`, by: 'Manager' });
+    closeAssignModal();
+    await loadOrders();
+    showPageToast(`${name} assigned to workflow step.`, 'success', 3000);
+  } catch (e) {
+    console.error('[Pulse] confirmAssign', e);
+    showPageToast('Assign failed: ' + (e?.message || e), 'error', 6000);
+  }
+}
+
+// ── Add Step Modal ────────────────────────────────────────
+function openAddStepModal(dbId) {
+  addStepTargetOrderDbId = dbId;
+  document.getElementById('newStepMachine').value = '';
+  document.getElementById('newStepOperation').innerHTML = '<option value="">— Select Operation —</option>';
+  document.getElementById('newStepNotes').value = '';
+  document.getElementById('addStepModal').classList.add('active');
+}
+function closeAddStepModal() {
+  document.getElementById('addStepModal').classList.remove('active');
+}
+
+async function confirmAddStep() {
+  const machine = document.getElementById('newStepMachine').value;
+  const operation = document.getElementById('newStepOperation').value;
+  if (!machine) { showPageToast('Please select a machine.', 'warning'); return; }
+  const order = allOrders.find(o => o.id === addStepTargetOrderDbId);
+  if (!order) return;
+  const newStep = {
+    id: generateStepId(),
+    machine,
+    operation: operation || ((typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(machine) : [])[0] || 'Processing'),
+    status: 'pending',
+    assignedTo: null,
+    startedAt: null,
+    completedAt: null,
+    unitsLost: 0,
+    notes: document.getElementById('newStepNotes').value,
+    stepIndex: (order.workflowSteps || []).length
+  };
+  const steps = [...(order.workflowSteps || []), newStep];
+  await updateOrder(addStepTargetOrderDbId, { workflowSteps: steps });
+  closeAddStepModal();
+  await loadOrders();
+}
+
+async function removeStep(dbId, stepId) {
+  if (!confirm('Remove this workflow step?')) return;
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const steps = order.workflowSteps.filter(s => s.id !== stepId);
+  await updateOrder(dbId, { workflowSteps: steps });
+  await loadOrders();
+}
+
+let removeStepTarget = null;
+
+async function removeStepByIndex(dbId, stepIndex) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const step = order.workflowSteps[stepIndex];
+  const stepName = step ? step.machine : `Step ${stepIndex + 1}`;
+  const stepOp = step?.operation || '';
+
+  removeStepTarget = { dbId, stepIndex, stepName };
+
+  document.getElementById('removeStepInfo').innerHTML = `
+    <div style="text-align:center;margin:12px 0;">
+      <div style="font-size:32px;margin-bottom:8px;">🗑️</div>
+      <div style="font-size:16px;font-weight:700;">Remove this step?</div>
+      <div style="margin-top:8px;padding:10px;background:#f4f6f9;border-radius:8px;">
+        <strong>Step ${stepIndex + 1}:</strong> ${stepName}<br>
+        <span style="color:var(--text-muted);">${stepOp}</span>
+      </div>
+      <div style="margin-top:8px;color:var(--red);font-size:13px;">This action cannot be undone.</div>
+    </div>
+  `;
+  document.getElementById('removeStepModal').classList.add('active');
+}
+
+async function confirmRemoveStep() {
+  if (!removeStepTarget) return;
+  const { dbId, stepIndex, stepName } = removeStepTarget;
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+
+  const steps = [...order.workflowSteps];
+  steps.splice(stepIndex, 1);
+  steps.forEach((s, i) => { s.stepIndex = i; });
+  await updateOrder(dbId, { workflowSteps: steps });
+  await addActivity({ orderId: order.orderId, type: 'step-remove', message: `Removed step: ${stepName}`, by: 'Manager' });
+
+  document.getElementById('removeStepModal').classList.remove('active');
+  removeStepTarget = null;
+  await loadOrders();
+}
+
+function closeRemoveStepModal() {
+  document.getElementById('removeStepModal').classList.remove('active');
+  removeStepTarget = null;
+}
+
+// ── Redirect / Reassign Machine Modal ─────────────────────
+let redirectTargetOrderDbId = null;
+let redirectTargetStepId = null;
+let redirectTargetStepIndex = null;
+
+function openRedirectModal(dbId, stepId, stepIndex) {
+  redirectTargetOrderDbId = dbId;
+  redirectTargetStepId = stepId;
+  redirectTargetStepIndex = stepIndex;
+
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  const step = order.workflowSteps.find(s => s.id === stepId || s.stepId === stepId) ?? order.workflowSteps[stepIndex];
+  if (!step) return;
+
+  // Show info
+  document.getElementById('redirectInfo').innerHTML = `
+    <strong>Order #${order.orderId}</strong> — ${order.customer || order.customerName}<br>
+    <strong>Current:</strong> Step ${stepIndex + 1} → <strong>${step.machine}</strong> (${step.operation})<br>
+    <strong>Quantity:</strong> ${(order.quantity || 0).toLocaleString()} units | ${order.sheetCount || '—'} sheets
+  `;
+
+  // Populate machine dropdown — only admin-configured alternatives
+  const machineSel = document.getElementById('redirectMachine');
+  machineSel.innerHTML = '<option value="">— Select Machine —</option>';
+  const currentMachine = step.machine;
+  const allowed = typeof getAllowedMachineDisplaysForWorkflowStep === 'function'
+    ? getAllowedMachineDisplaysForWorkflowStep(step)
+    : [currentMachine];
+  const swapOptions = allowed.filter(m => m && m !== currentMachine);
+  if (!swapOptions.length) {
+    machineSel.innerHTML = '<option value="">No allowed alternatives for this step</option>';
+  } else {
+    swapOptions.forEach(m => {
+      machineSel.innerHTML += `<option value="${m}">${m}</option>`;
+    });
+  }
+
+  // Reset form
+  document.getElementById('redirectQty').value = '';
+  document.getElementById('redirectNotes').value = '';
+  document.getElementById('redirectCode').value = '';
+  document.querySelector('input[name="redirectType"][value="full"]').checked = true;
+  document.getElementById('redirectQtyRow').style.display = 'none';
+  document.getElementById('redirectQtyHint').textContent = '';
+
+  document.getElementById('redirectModal').classList.add('active');
+}
+
+function closeRedirectModal() {
+  document.getElementById('redirectModal').classList.remove('active');
+}
+
+function onRedirectMachineChange() {
+  const machine = document.getElementById('redirectMachine').value;
+  const opSel = document.getElementById('redirectOperation');
+  opSel.innerHTML = '<option value="">— Auto from machine —</option>';
+  const ops = typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(machine) : [];
+  ops.forEach(op => {
+    opSel.innerHTML += `<option value="${op}">${op}</option>`;
+  });
+}
+
+function toggleRedirectQty() {
+  const isPartial = document.querySelector('input[name="redirectType"]:checked').value === 'partial';
+  document.getElementById('redirectQtyRow').style.display = isPartial ? 'block' : 'none';
+  if (isPartial) {
+    const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
+    if (order) {
+      document.getElementById('redirectQtyHint').textContent = `Total: ${(order.quantity || 0).toLocaleString()} units / ${order.sheetCount || '?'} sheets`;
+    }
+  }
+}
+
+async function confirmRedirect() {
+  const order = allOrders.find(o => o.id === redirectTargetOrderDbId);
+  if (!order) return;
+  const newMachine = document.getElementById('redirectMachine').value;
+  if (!newMachine) { showPageToast('Please select a machine to redirect to.', 'warning'); return; }
+
+  const stepIdx = order.workflowSteps.findIndex(s => s.id === redirectTargetStepId || s.stepId === redirectTargetStepId);
+  const resolvedIdx = stepIdx >= 0 ? stepIdx : redirectTargetStepIndex;
+  const step = order.workflowSteps[resolvedIdx];
+  if (!step) return;
+
+  const allowed = typeof getAllowedMachineDisplaysForWorkflowStep === 'function'
+    ? getAllowedMachineDisplaysForWorkflowStep(step)
+    : [step.machine];
+  if (!allowed.includes(newMachine)) {
+    showPageToast('That machine is not an allowed alternative for this step.', 'warning');
+    return;
+  }
+
+  const newOp = document.getElementById('redirectOperation').value || ((typeof getPulseMachineOperations === 'function' ? getPulseMachineOperations(newMachine) : [])[0] || 'Processing');
+  const redirectType = document.querySelector('input[name="redirectType"]:checked').value;
+  const notes = document.getElementById('redirectNotes').value;
+  const originalMachine = step.machine;
+
+  async function _logSwap() {
+    if (typeof logWorkflowOverride !== 'function' || !order.id) return;
+    await logWorkflowOverride({
+      orderDbId: order.id,
+      stepIndex: resolvedIdx,
+      originalMachineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(originalMachine) : null,
+      newMachineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : null,
+      originalMachine,
+      newMachine,
+      changedBy: typeof getCurrentName === 'function' ? getCurrentName() : 'Manager',
+      reason: notes,
+    });
+  }
+
+  if (redirectType === 'full') {
+    // Full redirect: just change the machine on the existing step
+    const steps = order.workflowSteps.map((s, idx) => {
+      if (s.id === redirectTargetStepId || s.stepId === redirectTargetStepId || idx === redirectTargetStepIndex) {
+        return {
+          ...s,
+          machine: newMachine,
+          machineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : s.machineId,
+          operation: newOp,
+          redirectedFrom: s.machine,
+          redirectNotes: notes,
+        };
+      }
+      return s;
+    });
+    await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await _logSwap();
+    await addActivity({
+      orderId: order.orderId,
+      type: 'redirect',
+      message: `Step ${redirectTargetStepIndex + 1} redirected: ${order.workflowSteps[redirectTargetStepIndex].machine} → ${newMachine} (FULL). ${notes}`,
+      by: 'Manager'
+    });
+    closeRedirectModal();
+    await loadOrders();
+    showPageToast(`Step redirected to ${newMachine} (full job).`, 'success', 4000);
+  } else {
+    // Partial redirect: split the step — keep original with reduced qty, add new step for the partial
+    const partialQty = parseInt(document.getElementById('redirectQty').value) || 0;
+    if (!partialQty || partialQty <= 0) { showPageToast('Please enter the quantity to redirect.', 'warning'); return; }
+    if (partialQty >= (order.quantity || 0)) { showPageToast('Partial quantity must be less than the total. Use "Entire Ticket" for a full redirect.', 'warning', 5000); return; }
+
+    // Mark the partial redirect on the existing step
+    const steps = [...order.workflowSteps];
+    let stepIdx = steps.findIndex(s => s.id === redirectTargetStepId || s.stepId === redirectTargetStepId);
+    if (stepIdx === -1) stepIdx = redirectTargetStepIndex;
+    if (stepIdx < 0 || stepIdx >= steps.length) return;
+
+    // Add a new split step right after the current one
+    const splitStep = {
+      id: generateStepId(),
+      machine: newMachine,
+      machineId: typeof displayNameToMachineSlug === 'function' ? displayNameToMachineSlug(newMachine) : null,
+      operation: newOp,
+      status: 'pending',
+      assignedTo: null,
+      startedAt: null,
+      completedAt: null,
+      unitsLost: 0,
+      notes: `SPLIT: ${partialQty} units redirected from ${steps[stepIdx].machine}. ${notes}`,
+      stepIndex: stepIdx + 1,
+      isSplit: true,
+      splitQuantity: partialQty,
+      splitFromStepId: redirectTargetStepId,
+    };
+
+    // Mark the original step as partially redirected
+    steps[stepIdx] = {
+      ...steps[stepIdx],
+      partialRedirect: true,
+      partialRedirectQty: partialQty,
+      partialRedirectTo: newMachine,
+      originalQtyRemaining: (order.quantity || 0) - partialQty,
+    };
+
+    // Insert split step after the current step
+    steps.splice(stepIdx + 1, 0, splitStep);
+
+    // Reindex
+    steps.forEach((s, i) => { s.stepIndex = i; });
+
+    await updateOrder(redirectTargetOrderDbId, { workflowSteps: steps });
+    await _logSwap();
+    await addActivity({
+      orderId: order.orderId,
+      type: 'redirect-split',
+      message: `Step ${stepIdx + 1} SPLIT: ${partialQty} units → ${newMachine}, remaining on ${steps[stepIdx].machine}. ${notes}`,
+      by: 'Manager'
+    });
+    closeRedirectModal();
+    await loadOrders();
+    showPageToast(`Split: ${partialQty} units redirected to ${newMachine}. Original step continues with remaining.`, 'success', 5000);
+  }
+}
+
+// ── Packing Slip → handled by shipping.html ───────────────
+// (Removed: modal, generatePackingSlip, renderPackingSlipEditor,
+//  renderShipments, addShipment, removeShipment, addBox, removeBox,
+//  updatePSTotals, printPackingSlips, closePackingSlipModal, _packingSlipLegacy)
+
+
+// ── Detail Modal ──────────────────────────────────────────
+function openDetail(dbId) {
+  const order = allOrders.find(o => o.id === dbId);
+  if (!order) return;
+  document.getElementById('detailTitle').textContent = `${order.customer || order.customerName} — #${order.orderId}`;
+  document.getElementById('detailOrderId').textContent = `${order.productType || ''} · ${order.facility || ''}`;
+  document.getElementById('detailContent').innerHTML = renderOrderBody(order);
+  document.getElementById('detailModal').classList.add('active');
+}
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('active');
+}
+
+function openArtworkLightbox(dataUrl) {
+  // Simple lightbox via new window
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;">`);
+}
+</script>
+</body>
+</html>

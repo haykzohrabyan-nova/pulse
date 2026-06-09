@@ -1,0 +1,166 @@
+# Pulse — Supabase production status (June 2026)
+
+This document summarizes what is **live in production config** after the IndexedDB → Supabase cutover. Use it with [`connection-spec.html`](connection-spec.html) for full technical detail.
+
+**Doc index:** [`docs/README.md`](../README.md)
+
+---
+
+## Production config
+
+| Setting | Value |
+|---------|--------|
+| `PULSE_STORAGE_BACKEND` | `supabase` (in committed `js/pulse-config.js`) |
+| `PULSE_ORG_STORAGE` | `supabase` |
+| Supabase project | `gkyupebgulpgwugsbvny.supabase.co` |
+| Local dev | `python3 -m http.server 8081` — open **http://127.0.0.1:8081/pages/dashboard.html**, not `file://` |
+
+### `pulse-config.local.js` (gitignored)
+
+- **Leave empty** on normal dev/production machines so `js/pulse-config.js` wins.
+- Do **not** set `PULSE_STORAGE_BACKEND = 'indexeddb'` unless you intentionally want offline browser-only mode.
+- Template: `js/pulse-config.local.js.example`
+
+---
+
+## Data source of truth
+
+| Data | Supabase location | Browser IndexedDB |
+|------|-------------------|-------------------|
+| Orders, workflow, activity | `orders`, `order_workflow_steps`, … | **Not used** in production |
+| Personnel / profiles | **`profiles`** table | **Not used** |
+| Config (catalog, roles, QA, …) | `config` table | **Not used** |
+| Dies, knowledge base | `dies`, `knowledge_base` | **Not used** |
+| Operator sessions/points | `operator_sessions`, `operator_points` | **Not used** |
+| Organisation | `organisations`, `organisation_facilities`, `organisation_hardware` | **Not used** |
+
+**Session-only in browser:** `sessionStorage.pulse_session`, Supabase auth JWT (`sb-*-auth-token`).
+
+---
+
+## Login (Supabase mode)
+
+Production login uses **email + password** (Supabase Auth). Implemented in `auth.js` when `pulseUsesSupabaseStorage()` is true.
+
+1. User enters **email** and **password** (accounts provisioned in Supabase Auth + `profiles`).
+2. App calls `supabaseSignIn(email, password)`.
+3. App loads **`profiles`** row for the authenticated user → sets `pulse_session` (`name`, `role`).
+4. RLS uses **`profiles.role`** on every data request.
+
+**Admin → Personnel** creates/updates auth users via RPC **`upsert_pulse_personnel`** (migration **046**). Email is derived as `firstname@bazaar-admin.com`; password is the **User ID** set in the personnel modal (or `Pulse2026!` if empty). Seeded accounts (e.g. David via **047b**) may use `Pulse2026!` until changed.
+
+**IndexedDB dev mode** (`PULSE_STORAGE_BACKEND = 'indexeddb'`) still supports legacy Name + User ID login with hardcoded fallbacks — not used in production.
+
+Hardcoded lists in `shared.js` / `auth.js` (`OPERATOR_PROFILES`, etc.) are **IndexedDB dev fallback only**.
+
+---
+
+## Multi-user Realtime sync
+
+Multiple users can work simultaneously on the **same Supabase database**. UI updates are **push-driven**, not timer-polled.
+
+| Mechanism | What it does |
+|-----------|----------------|
+| **`supabase-client.js`** | Subscribes to `postgres_changes` on orders, workflow steps, comments, tasks, config, dies, org, profiles, etc. |
+| **`shared.js` `onDBUpdate()`** | Bridges Realtime events → page refresh handlers |
+| **Removed polling** | Dashboard 60s refresh and job-ticket queue 60s poll are **off** |
+
+**Pages that auto-refresh on DB changes:** dashboard, job-ticket (queue + open ticket), admin, prepress, production-manager, operator-terminal, shipping, qc-checkout, machine-issues.
+
+**Apply migration 048** on hosted Supabase so reference tables publish Realtime events:
+
+```bash
+supabase db push --linked --yes
+# or run supabase/migrations/048_realtime_reference_tables.sql in SQL Editor
+```
+
+Migration **048** is idempotent and skips tables that do not exist (e.g. `qc_tasks` was dropped in migration 030).
+
+### Two-user smoke test
+
+1. Hard-refresh two browsers (`?v=20260609-realtime` or latest deploy cache buster).
+2. Log in as two different users.
+3. User A edits an order → User B’s dashboard/job-ticket updates within a few seconds **without** manual refresh.
+4. Console: `[Pulse/Supabase] Realtime channel active` (no channel errors).
+
+### Known limits
+
+- **Same ticket, two editors:** last save wins; Realtime may reload the other user’s open form.
+- **WebSocket disconnect:** no fallback poll; user may need manual refresh if Realtime drops.
+
+---
+
+## Required SQL migrations (apply on hosted Supabase)
+
+Apply via Supabase SQL Editor (separate **Run** per file when noted):
+
+| Migration | Purpose |
+|-----------|---------|
+| `039_ensure_pulse_profile.sql` | Self-heal missing `profiles` row on login |
+| `046_upsert_pulse_personnel_fn.sql` | Admin → Personnel save + auth provisioning |
+| `047a_user_role_david_review.sql` | Add `david_review` to `user_role` enum (**Run alone first**) |
+| `047b_ensure_david_review_user.sql` | Create David Zargaryan auth + profile |
+| `047c_fix_david_auth_tokens.sql` | Fix SQL-seeded auth users (“Database error querying schema”) |
+| `048_realtime_reference_tables.sql` | Realtime publication for config, dies, org, profiles, etc. |
+
+```bash
+npm run migrate:supabase    # prints instructions for 046
+npm run migrate:david-a     # 047a instructions
+npm run migrate:david-b     # 047b instructions
+npm run migrate:david-c     # 047c instructions
+npm run audit:staff         # verify profiles vs legacy config.personnel
+npm run import:supabase     # import backup JSON → cloud (dies, knowledge, …)
+```
+
+---
+
+## Verification checklist
+
+### Browser console (after hard refresh)
+
+```javascript
+pulseUsesSupabaseStorage()           // true
+window.PULSE_STORAGE_BACKEND       // 'supabase'
+(await getAllPersonnel()).length   // matches Supabase profiles count
+```
+
+Console on load:
+
+```
+[Pulse] Storage backend: Supabase → https://gkyupebgulpgwugsbvny.supabase.co
+[Pulse/Supabase] Realtime channel active
+```
+
+### IndexedDB
+
+After login, DevTools → Application → IndexedDB: **`BazaarPrintDB` should not reappear** on refresh. If it does, check `pulse-config.local.js` is empty and cache-bust (`Cmd+Shift+R`).
+
+---
+
+## Scripts & tools
+
+| Script | Command |
+|--------|---------|
+| Import backup to Supabase | `npm run import:supabase -- --file /path/to/backup.json` |
+| Audit staff sources | `npm run audit:staff` |
+| Check David auth | `npm run check:david` |
+| Push roles export | `node scripts/push-pulse-roles.mjs` |
+| One-time IDB → cloud (legacy) | `pages/migrate-to-supabase.html` |
+| Wipe local browser data | `pages/reset-pulse-local-data.html` |
+
+---
+
+## Security model (short)
+
+- **JWT** on every Supabase request after login.
+- **RLS** enforces access in Postgres (`profiles.role` → policies).
+- **Anon** can read limited bootstrap data before login (migration `042`).
+
+---
+
+## Related docs
+
+- [`connection-spec.html`](connection-spec.html) — full spec + runbook
+- [`schema.md`](schema.md) — schema reference
+- [`../deploy/release-checklist.md`](../deploy/release-checklist.md) — deploy smoke tests
+- [`../app/overview.md`](../app/overview.md) — app overview for AI/rebuild

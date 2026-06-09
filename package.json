@@ -6,7 +6,15 @@
   "scripts": {
     "test": "playwright test",
     "dev": "node auth.js",
-    "start": "node auth.js"
+    "start": "node auth.js",
+    "import:supabase": "node scripts/import-pulse-backup-to-supabase.mjs",
+    "migrate:supabase": "node scripts/apply-supabase-migration.mjs 046_upsert_pulse_personnel_fn.sql",
+    "migrate:david-a": "node scripts/apply-supabase-migration.mjs 047a_user_role_david_review.sql",
+    "migrate:david-b": "node scripts/apply-supabase-migration.mjs 047b_ensure_david_review_user.sql",
+    "migrate:david-c": "node scripts/apply-supabase-migration.mjs 047c_fix_david_auth_tokens.sql",
+    "migrate:david": "node scripts/apply-supabase-migration.mjs 047a_user_role_david_review.sql && node scripts/apply-supabase-migration.mjs 047b_ensure_david_review_user.sql",
+    "check:david": "node scripts/check-david-supabase.mjs",
+    "audit:staff": "node scripts/audit-staff-sources.mjs"
   },
   "repository": {
     "type": "git",
