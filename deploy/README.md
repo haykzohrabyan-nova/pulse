@@ -21,7 +21,10 @@ The repo includes **`vercel.json`** so Vercel runs `bash deploy/build.sh` on eac
 | Variable | Example / value |
 |----------|-----------------|
 | `PULSE_SUPABASE_URL` | `https://gkyupebgulpgwugsbvny.supabase.co` |
-| `PULSE_SUPABASE_ANON_KEY` | anon key from Supabase → Settings → API |
+| `PULSE_SUPABASE_ANON_KEY` | **anon public** key (JWT `eyJ...`) — **never** `sb_secret_...` |
+| `VITE_SUPABASE_ANON_KEY` | Same as above if using Vite-style names |
+
+**Wrong key = 401 everywhere.** Supabase → Settings → API → copy **anon** / **public**, not **service_role** / **secret**.
 | `PULSE_STORAGE_BACKEND` | `supabase` |
 | `PULSE_ENV` | `production` (or `preview` for preview deploys) |
 
