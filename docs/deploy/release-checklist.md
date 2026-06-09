@@ -49,6 +49,7 @@ Staging deployments (`pulse-staging.bazaar-admin.com`) only require the **Stagin
   - Build command: `bash deploy/build.sh`
   - Build output directory: `.`
   - Production env vars set: `PULSE_SUPABASE_URL`, `PULSE_SUPABASE_ANON_KEY`, `PULSE_STORAGE_BACKEND=supabase`, `PULSE_ENV=production`
+- [ ] **Vercel** (if using git-push deploy): `vercel.json` runs `bash deploy/build.sh` — set the same four env vars in **Vercel → Project → Settings → Environment Variables** (see [`deploy/README.md`](../../deploy/README.md))
 
 ---
 

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bash deploy/build.sh",
+  "installCommand": "echo \"Pulse static site — no npm install required for deploy\"",
+  "outputDirectory": "."
+}

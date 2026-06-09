@@ -2,7 +2,8 @@
 # deploy/build.sh — Pulse deployment build step
 # ─────────────────────────────────────────────
 # Generates js/pulse-config.local.js from environment variables.
-# Run by Cloudflare Pages as the build command: bash deploy/build.sh
+# Run on deploy (Vercel vercel.json, Cloudflare Pages, or GitHub Actions):
+#   bash deploy/build.sh
 #
 # Required env vars (set per-environment in Cloudflare Pages dashboard):
 #   PULSE_SUPABASE_URL        — Supabase project URL
@@ -15,9 +16,13 @@
 
 set -euo pipefail
 
+# Accept PULSE_* (deploy scripts) or VITE_* (common Vercel naming)
+PULSE_SUPABASE_URL="${PULSE_SUPABASE_URL:-${VITE_SUPABASE_URL:-}}"
+PULSE_SUPABASE_ANON_KEY="${PULSE_SUPABASE_ANON_KEY:-${VITE_SUPABASE_ANON_KEY:-}}"
+
 # ── Validate required env vars ──────────────────────────────
-: "${PULSE_SUPABASE_URL:?ERROR: PULSE_SUPABASE_URL is not set}"
-: "${PULSE_SUPABASE_ANON_KEY:?ERROR: PULSE_SUPABASE_ANON_KEY is not set}"
+: "${PULSE_SUPABASE_URL:?ERROR: Set PULSE_SUPABASE_URL or VITE_SUPABASE_URL in Vercel}"
+: "${PULSE_SUPABASE_ANON_KEY:?ERROR: Set PULSE_SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY in Vercel}"
 : "${PULSE_STORAGE_BACKEND:=supabase}"
 : "${PULSE_ENV:=production}"
 
