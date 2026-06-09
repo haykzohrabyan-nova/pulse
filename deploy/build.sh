@@ -20,6 +20,18 @@ set -euo pipefail
 PULSE_SUPABASE_URL="${PULSE_SUPABASE_URL:-${VITE_SUPABASE_URL:-}}"
 PULSE_SUPABASE_ANON_KEY="${PULSE_SUPABASE_ANON_KEY:-${VITE_SUPABASE_ANON_KEY:-}}"
 
+# ── Reject service-role / secret keys (browser must use anon key only) ──
+if [[ "$PULSE_SUPABASE_ANON_KEY" == sb_secret_* ]]; then
+  echo "[build] ERROR: VITE_SUPABASE_ANON_KEY / PULSE_SUPABASE_ANON_KEY is a SECRET key (sb_secret_...)."
+  echo "[build] Use the anon PUBLIC key from Supabase → Settings → API → anon public (starts with eyJ...)."
+  echo "[build] Rotate the exposed secret key in Supabase immediately if it was deployed to the browser."
+  exit 1
+fi
+if echo "$PULSE_SUPABASE_ANON_KEY" | grep -q 'service_role'; then
+  echo "[build] ERROR: JWT contains service_role — use the anon public key only."
+  exit 1
+fi
+
 # ── Validate required env vars ──────────────────────────────
 : "${PULSE_SUPABASE_URL:?ERROR: Set PULSE_SUPABASE_URL or VITE_SUPABASE_URL in Vercel}"
 : "${PULSE_SUPABASE_ANON_KEY:?ERROR: Set PULSE_SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY in Vercel}"
