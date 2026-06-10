@@ -45,6 +45,7 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 | `migrations/039_ensure_pulse_profile.sql` | Self-heal missing `profiles` row on login |
 | `migrations/042_config_anon_read_personnel.sql` | Anon read of active profiles for login dropdown (pre-auth bootstrap) |
 | `migrations/046_upsert_pulse_personnel_fn.sql` | **Admin Personnel** — `upsert_pulse_personnel` RPC: create/update auth user + `profiles` row |
+| `migrations/049_upsert_pulse_personnel_email_check.sql` | Personnel RPC — reject duplicate `firstname@bazaar-admin.com` on add; optional `p_profile_id` for edits |
 | `migrations/047a_user_role_david_review.sql` | Add `david_review` to `user_role` enum (**run alone**, separate transaction) |
 | `migrations/047b_ensure_david_review_user.sql` | Create David Zargaryan auth account + profile (User ID 1111) |
 | `migrations/047c_fix_david_auth_tokens.sql` | Fix SQL-seeded auth users: empty token columns, password, `auth.identities` row |

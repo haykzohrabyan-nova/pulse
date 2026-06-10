@@ -13,7 +13,7 @@
 |------|---------|
 | Name **“Davit”** | **Not found** anywhere in the repository (no personnel seed, no `auth.js` entry). |
 | Closest match | **David Zargaryan** — role **`david-review`** (“David Review”) in `auth.js`. |
-| Login | **Email + password** (Supabase Auth). David's account: migration **047b** (`david@bazaar-admin.com`). Provisioned via Admin → Personnel + RPC **`upsert_pulse_personnel`**. |
+| Login | **Email + password** (Supabase Auth). David's account: migration **047b** (`david@bazaar-admin.com`). Provisioned via Admin → Personnel + RPC **`upsert_pulse_personnel`** (migrations **046**, **049** — duplicate login email rejected on add). |
 | Session | `sessionStorage` key `pulse_session` → `{ name, role, loginTime }`. |
 | Home page after login | `/pages/dashboard.html` (`ROLE_HOME_PAGE['david-review']` via `pulsePage()`). |
 

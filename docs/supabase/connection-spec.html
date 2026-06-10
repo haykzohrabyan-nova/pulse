@@ -328,7 +328,7 @@
   <h3>Personnel &amp; login</h3>
   <ul>
     <li><strong>Login UI:</strong> email + password form (<code>js/auth.js</code> → <code>supabaseSignIn</code>). No Name dropdown in Supabase mode.</li>
-    <li>Admin → Personnel saves via RPC <strong>046</strong> (<code>upsert_pulse_personnel</code>): email = <code>firstname@bazaar-admin.com</code>, password = User ID field.</li>
+    <li>Admin → Personnel saves via RPC <strong>046</strong> / <strong>049</strong> (<code>upsert_pulse_personnel</code>): email = <code>firstname@bazaar-admin.com</code> (auto, shown in table + modal), password = User ID field; duplicate login emails rejected on add.</li>
     <li>Personnel source of truth: <code>profiles</code> table only (no merge with <code>OPERATOR_PROFILES</code> / <code>EXTRA_AUTH_USERS</code>).</li>
     <li>David Zargaryan (<code>david_review</code>): migrations <strong>047a</strong> → <strong>047b</strong> → <strong>047c</strong> (047a must run alone first).</li>
     <li>Realtime reference tables: migration <strong>048</strong>.</li>
@@ -339,6 +339,7 @@
     <tbody>
       <tr><td><code>npm run import:supabase</code></td><td>Import backup JSON → cloud (dies, knowledge, config, …)</td></tr>
       <tr><td><code>npm run migrate:supabase</code></td><td>Apply migration 046 (personnel RPC)</td></tr>
+      <tr><td><code>npm run migrate:personnel-email</code></td><td>Apply migration 049 (duplicate email guard)</td></tr>
       <tr><td><code>npm run migrate:david-a/b/c</code></td><td>Apply David review user migrations</td></tr>
       <tr><td><code>npm run audit:staff</code></td><td>Compare <code>profiles</code> vs legacy <code>config.personnel</code></td></tr>
       <tr><td><code>npm run check:david</code></td><td>Verify David auth + profile rows</td></tr>
@@ -618,7 +619,7 @@ Implement Phase A / WP-1 only. Stop when done and give me the Verify checklist f
       <tr>
         <td>3</td>
         <td>Admin → Personnel</td>
-        <td>Add/edit people — writes <code>profiles</code> via <code>upsert_pulse_personnel</code> RPC (migration <strong>046</strong>). Legacy <code>config.personnel</code> JSON may still exist; prefer <code>profiles.pulse_user_id</code>.</td>
+        <td>Add/edit people — writes <code>profiles</code> via <code>upsert_pulse_personnel</code> RPC (migrations <strong>046</strong>, <strong>049</strong>). Table shows auto login email; duplicate emails blocked. Legacy <code>config.personnel</code> JSON may still exist; prefer <code>profiles.pulse_user_id</code>.</td>
       </tr>
       <tr>
         <td>4</td>
@@ -1404,6 +1405,7 @@ Rules:
       <tr><td><code>pages/migrate-to-supabase.html</code></td><td>One-time IDB → Postgres tool (legacy)</td></tr>
       <tr><td><code>pages/reset-pulse-local-data.html</code></td><td>Wipe browser IndexedDB/localStorage</td></tr>
       <tr><td><code>supabase/migrations/046_*.sql</code></td><td>Personnel RPC</td></tr>
+      <tr><td><code>supabase/migrations/049_*.sql</code></td><td>Personnel duplicate-email guard</td></tr>
       <tr><td><code>supabase/migrations/047a/b/c_*.sql</code></td><td>David review user</td></tr>
       <tr><td><code>supabase/migrations/048_*.sql</code></td><td>Realtime reference tables publication</td></tr>
     </tbody>

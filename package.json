@@ -9,6 +9,7 @@
     "start": "node auth.js",
     "import:supabase": "node scripts/import-pulse-backup-to-supabase.mjs",
     "migrate:supabase": "node scripts/apply-supabase-migration.mjs 046_upsert_pulse_personnel_fn.sql",
+    "migrate:personnel-email": "node scripts/apply-supabase-migration.mjs 049_upsert_pulse_personnel_email_check.sql",
     "migrate:david-a": "node scripts/apply-supabase-migration.mjs 047a_user_role_david_review.sql",
     "migrate:david-b": "node scripts/apply-supabase-migration.mjs 047b_ensure_david_review_user.sql",
     "migrate:david-c": "node scripts/apply-supabase-migration.mjs 047c_fix_david_auth_tokens.sql",
