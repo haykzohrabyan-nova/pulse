@@ -54,7 +54,7 @@ Production login uses **email + password** (Supabase Auth). Implemented in `auth
 3. App loads **`profiles`** row for the authenticated user → sets `pulse_session` (`name`, `role`).
 4. RLS uses **`profiles.role`** on every data request.
 
-**Admin → Personnel** creates/updates auth users via RPC **`upsert_pulse_personnel`** (migration **046**). Email is derived as `firstname@bazaar-admin.com`; password is the **User ID** set in the personnel modal (or `Pulse2026!` if empty). Seeded accounts (e.g. David via **047b**) may use `Pulse2026!` until changed.
+**Admin → Personnel** creates/updates auth users via RPC **`upsert_pulse_personnel`** (migrations **046**, **049**). Email is derived as `firstname@bazaar-admin.com` (shown in Admin table + modal hint); password is the **User ID** set in the personnel modal (or `Pulse2026!` if empty). Adding a person whose login email already exists is blocked in the UI and rejected by the RPC. Seeded accounts (e.g. David via **047b**) may use `Pulse2026!` until changed.
 
 **IndexedDB dev mode** (`PULSE_STORAGE_BACKEND = 'indexeddb'`) still supports legacy Name + User ID login with hardcoded fallbacks — not used in production.
 
@@ -105,6 +105,7 @@ Apply via Supabase SQL Editor (separate **Run** per file when noted):
 |-----------|---------|
 | `039_ensure_pulse_profile.sql` | Self-heal missing `profiles` row on login |
 | `046_upsert_pulse_personnel_fn.sql` | Admin → Personnel save + auth provisioning |
+| `049_upsert_pulse_personnel_email_check.sql` | Reject duplicate login emails on add; pass `p_profile_id` when editing |
 | `047a_user_role_david_review.sql` | Add `david_review` to `user_role` enum (**Run alone first**) |
 | `047b_ensure_david_review_user.sql` | Create David Zargaryan auth + profile |
 | `047c_fix_david_auth_tokens.sql` | Fix SQL-seeded auth users (“Database error querying schema”) |
@@ -112,6 +113,7 @@ Apply via Supabase SQL Editor (separate **Run** per file when noted):
 
 ```bash
 npm run migrate:supabase    # prints instructions for 046
+npm run migrate:personnel-email  # 049 duplicate-email guard (requires 046 applied first)
 npm run migrate:david-a     # 047a instructions
 npm run migrate:david-b     # 047b instructions
 npm run migrate:david-c     # 047c instructions

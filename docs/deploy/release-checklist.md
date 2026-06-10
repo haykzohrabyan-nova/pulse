@@ -36,6 +36,7 @@ Staging deployments (`pulse-staging.bazaar-admin.com`) only require the **Stagin
   - `022_product_workflows.sql`, `023_workflow_override_log.sql` (workflows)
   - `039_ensure_pulse_profile.sql` (profile self-heal on login)
   - `046_upsert_pulse_personnel_fn.sql` (Admin → Personnel save)
+  - `049_upsert_pulse_personnel_email_check.sql` (duplicate login email rejection + edit `p_profile_id`)
   - `047a_user_role_david_review.sql`, `047b_ensure_david_review_user.sql`, `047c_fix_david_auth_tokens.sql` (David review user — 047a must run alone first)
   - `048_realtime_reference_tables.sql` (Realtime for config, dies, org, profiles, machine_issues)
   ```bash
@@ -82,7 +83,7 @@ Manual post-deploy checks:
   - [ ] Operator — sees only operator-terminal
   - [ ] QC — sees qc-checkout
 - [ ] **Multi-user Realtime:** two browsers logged in — edit order in one, other updates without manual refresh
-- [ ] Create a test job ticket → confirm it appears in Supabase production DB
+- [ ] **Admin Personnel:** table shows **Email** column; adding a duplicate first-name shows error; migration **049** applied on Supabase
 - [ ] Upload a test file → confirm presigned URL is generated and file lands in R2
 
 ---

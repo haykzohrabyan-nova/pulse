@@ -14,8 +14,8 @@
   <script src="/js/organisation-local-store.js"></script>
   <script src="/js/pulse-config.js"></script>
   <script src="/js/pulse-config.local.js"></script>
-  <script src="/js/supabase-client.js?v=20260609-realtime"></script>
-  <script src="/js/auth.js?v=20260609-email-login"></script>
+  <script src="/js/supabase-client.js?v=20260609-personnel-email"></script>
+  <script src="/js/auth.js?v=20260609-personnel-email"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -54,14 +54,14 @@
           <option value="">All roles</option>
         </select>
         <input type="text" id="personnelSearch" oninput="renderPersonnelTable()" autocomplete="off"
-          placeholder="🔍 Search name, User ID, phone…"
+          placeholder="🔍 Search name, email, User ID, phone…"
           style="width:100%;padding:8px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;">
       </div>
       <div style="margin-bottom:12px;"><span id="personnelCount" style="font-size:13px;color:var(--text-muted);"></span></div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>Name</th><th>Role</th><th>User ID</th><th>Facility</th><th>Phone</th><th>Status</th><th>Actions</th>
+            <th>Name</th><th>Email</th><th>Role</th><th>User ID</th><th>Facility</th><th>Phone</th><th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="personnelTableBody"></tbody>
         </table>
@@ -532,7 +532,9 @@
     <h2 id="personnelModalTitle">Add Personnel</h2>
     <input type="hidden" id="personnelId">
     <div class="modal-form">
-      <div class="field"><label>Name *</label><input type="text" id="pName" required></div>
+      <div class="field"><label>Name *</label><input type="text" id="pName" required oninput="updatePersonnelLoginEmailHint()">
+        <div id="pLoginEmailHint" style="font-size:12px;color:var(--text-muted,#64748b);margin-top:4px;"></div>
+      </div>
       <div class="field"><label>Role *</label>
         <select id="pRole">
           <option value="">— Select Role —</option>
@@ -2173,6 +2175,13 @@ function _populatePersonnelRoleFilter(people) {
   if (current && roles.includes(current)) sel.value = current;
 }
 
+// Login email derived from display name (matches auth.js / upsert_pulse_personnel).
+function _personnelLoginEmail(name) {
+  if (typeof pulsePersonnelLoginEmail === 'function') return pulsePersonnelLoginEmail(name);
+  const first = String(name || '').trim().split(/\s+/)[0].toLowerCase();
+  return first ? `${first}@bazaar-admin.com` : '—';
+}
+
 // Render the personnel table from cache, applying the search box + role filter.
 function renderPersonnelTable() {
   const tbody = document.getElementById('personnelTableBody');
@@ -2185,7 +2194,7 @@ function renderPersonnelTable() {
   if (roleFilter) people = people.filter(p => String(p.role || '') === roleFilter);
   if (term) {
     people = people.filter(p => {
-      const hay = [p.name, p.userId, p.phone, personnelRoleLabel(p.role), _personnelFacilityLabel(p.facility)]
+      const hay = [p.name, _personnelLoginEmail(p.name), p.userId, p.phone, personnelRoleLabel(p.role), _personnelFacilityLabel(p.facility)]
         .map(x => String(x || '').toLowerCase()).join(' ');
       return hay.includes(term);
     });
@@ -2197,20 +2206,22 @@ function renderPersonnelTable() {
   }
 
   if (!_personnelCache || _personnelCache.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel yet. Add your first operator.</td></tr>';
     return;
   }
   if (people.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel match your search / filter.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No personnel match your search / filter.</td></tr>';
     return;
   }
   tbody.innerHTML = people.map(p => {
     const id = String(p.id ?? '');
     const safeId = id.replace(/"/g, '&quot;');
     const safeName = String(p.name || '').replace(/"/g, '&quot;');
+    const loginEmail = _personnelLoginEmail(p.name);
     return `
     <tr>
       <td style="font-weight:600;">${p.name}</td>
+      <td style="font-family:monospace;font-size:12px;">${loginEmail}</td>
       <td>${personnelRoleLabel(p.role)}</td>
       <td style="font-family:monospace;font-weight:700;">${p.userId || '—'}</td>
       <td>${_personnelFacilityLabel(p.facility)}</td>
@@ -2307,7 +2318,38 @@ async function openPersonnelModal(person) {
   document.getElementById('pPhone').value = person?.phone || '';
   document.getElementById('pActive').checked = person?.active !== false;
   populateFacilityDropdown(_personnelFacilityForModal(person));
+  updatePersonnelLoginEmailHint();
   document.getElementById('personnelModal').classList.add('active');
+}
+
+function updatePersonnelLoginEmailHint() {
+  const el = document.getElementById('pLoginEmailHint');
+  if (!el) return;
+  const name = (document.getElementById('pName')?.value || '').trim();
+  if (!name) {
+    el.textContent = '';
+    return;
+  }
+  const email = typeof pulsePersonnelLoginEmail === 'function'
+    ? pulsePersonnelLoginEmail(name)
+    : '';
+  el.textContent = email
+    ? `Login email (auto): ${email} — password is the User ID below.`
+    : '';
+}
+
+async function findPersonnelEmailConflict(loginEmail, excludeProfileId) {
+  if (!loginEmail) return null;
+  const all = _personnelCache?.length ? _personnelCache : await getAllPersonnel();
+  for (const p of all) {
+    const pid = String(p._profileId || p.id || '');
+    if (excludeProfileId && pid === String(excludeProfileId)) continue;
+    const existingEmail = typeof pulsePersonnelLoginEmail === 'function'
+      ? pulsePersonnelLoginEmail(p.name)
+      : '';
+    if (existingEmail && existingEmail === loginEmail) return p;
+  }
+  return null;
 }
 
 async function editPersonnel(id) {
@@ -2338,6 +2380,17 @@ async function savePersonnel() {
   if (!userId) { alert('User ID is required.'); return; }
   const idRaw = document.getElementById('personnelId').value.trim();
   const id = idRaw || null;
+  const loginEmail = typeof pulsePersonnelLoginEmail === 'function'
+    ? pulsePersonnelLoginEmail(name)
+    : '';
+  const emailConflict = await findPersonnelEmailConflict(loginEmail, id);
+  if (emailConflict) {
+    alert(
+      `Login email ${loginEmail} is already used by “${emailConflict.name}”. ` +
+      'Use a different first name in the display name (the login email is taken from the first word).'
+    );
+    return;
+  }
   const data = {
     name,
     role,
@@ -2346,6 +2399,7 @@ async function savePersonnel() {
     phone: document.getElementById('pPhone').value.trim(),
     active: document.getElementById('pActive').checked
   };
+  if (id) data.id = id;
   try {
     // Single write path: upsertPulsePersonnel creates/updates both the
     // Supabase auth account (User ID becomes the password) and the profiles row.

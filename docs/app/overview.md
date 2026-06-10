@@ -240,13 +240,18 @@ Defines **how** each catalog product is manufactured (ordered machine sequence),
 
 ### 9.3 Personnel tab (Supabase production)
 
+- Table columns: **Name**, **Email**, **Role**, **User ID**, **Facility**, **Phone**, **Status**, **Actions**.
 - Modal title: **Add Personnel** / **Edit Personnel**; button: **+ Add Personnel**.
 - Required fields: **Name \***, **Role \***, **Facility \*** (multi-checkbox), **User ID \***.
-- **Save** calls RPC **`upsert_pulse_personnel`** (migration **046**):
-  - **Login email** = first word of name + `@bazaar-admin.com` (e.g. `David Zargaryan` → `david@bazaar-admin.com`).
+- **Login email (auto):** shown under the Name field in the modal and in the table — derived via `window.pulsePersonnelLoginEmail()` in `auth.js` (first word of name + `@bazaar-admin.com`, e.g. `David Zargaryan` → `david@bazaar-admin.com`). Not a separate form field.
+- **Duplicate email guard:** before save, the UI blocks if that login email is already used by another person; migration **049** makes `upsert_pulse_personnel` reject duplicate emails on add (and when editing would steal another account’s email). Use a unique first word in the display name if two people share a first name (e.g. `John2 Smith`).
+- **Save** calls RPC **`upsert_pulse_personnel`** (migrations **046** + **049**):
+  - **Login email** = first word of name + `@bazaar-admin.com`.
   - **Login password** = the **User ID** the admin sets (or `Pulse2026!` if empty).
+  - Optional RPC arg **`p_profile_id`** when editing — keeps the same auth account.
   - Upserts Supabase Auth user + **`profiles`** row.
 - Users sign in on the login form with that **email + password** (not Name dropdown).
+- Search box matches name, email, User ID, phone, role label, facility.
 - **Bulk Set User IDs**: legacy bulk helper for the `userId` / password field.
 
 ### 9.4 Roles & Permissions matrix
@@ -318,6 +323,7 @@ SQL under **`supabase/migrations/`** — run in numeric order:
 
 | Date | Change |
 |------|--------|
+| 2026-06-09 | **Admin Personnel email UX** — table **Email** column; modal login-email hint; duplicate-email validation (UI + migration **049**). `pulsePersonnelLoginEmail()` exported from `auth.js`. |
 | 2026-06-09 | **Supabase Realtime multi-user sync** — removed dashboard/job-ticket polling; Realtime push via `supabase-client.js` + `onDBUpdate`. Migration **048** for reference-table publication. See [`production-status.md`](../supabase/production-status.md). |
 | 2026-06-09 | **Email + password login** (Supabase mode) in `auth.js`. |
 | 2026-06-09 | **Supabase production cutover** — `PULSE_STORAGE_BACKEND = 'supabase'`. Migrations 046, 047a/b/c. |

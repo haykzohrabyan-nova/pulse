@@ -604,6 +604,9 @@
     if (/duplicate key|order_workflow_steps_order_id_step_index_key/i.test(msg)) {
       return 'Workflow step save conflict — refresh the page and try again. If it keeps failing, ask an admin to run Supabase migration 040_order_workflow_steps_delete.sql.';
     }
+    if (/EMAIL_ALREADY_EXISTS/i.test(msg)) {
+      return msg.replace(/^EMAIL_ALREADY_EXISTS:\s*/i, '').trim();
+    }
     if (/statement timeout|canceling statement due to statement timeout/i.test(msg)) {
       return 'Save timed out. Refresh the page and try again; if it persists, ask an admin to check Supabase load or apply migration 040.';
     }
@@ -2218,13 +2221,16 @@
   // single source of truth. Requires admin or supervisor session.
   window.upsertPulsePersonnel = async function (person) {
     const supa = await _getClient();
-    const { data, error } = await supa.rpc('upsert_pulse_personnel', {
+    const profileId = person.id || person._profileId;
+    const rpcArgs = {
       p_display_name: String(person.name || '').trim(),
       p_role:         String(person.role || 'operator'),
       p_user_id:      String(person.userId ?? '').trim(),
       p_facility:     person.facility || null,
       p_active:       person.active !== false,
-    });
+    };
+    if (_isProfileUuid(profileId)) rpcArgs.p_profile_id = profileId;
+    const { data, error } = await supa.rpc('upsert_pulse_personnel', rpcArgs);
     if (error) throw new Error(await _formatPulseDbError(error));
     return data;
   };

@@ -106,8 +106,11 @@ function _supaActive() {
 // "QC Inspector"   → "qc@bazaar-admin.com"
 function _getUserEmail(displayName) {
   const first = String(displayName || '').trim().split(/\s+/)[0].toLowerCase();
-  return `${first}@bazaar-admin.com`;
+  return first ? `${first}@bazaar-admin.com` : '';
 }
+
+/** Login email derived from personnel display name (Admin → Personnel). */
+window.pulsePersonnelLoginEmail = _getUserEmail;
 
 // ── Local-mode email → {name, role} mapping (IndexedDB dev only) ─────────────
 // Supabase mode: login list + roles come from profiles table only.
