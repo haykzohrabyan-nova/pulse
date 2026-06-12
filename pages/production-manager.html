@@ -612,17 +612,47 @@ function renderList() {
     return;
   }
 
-  container.innerHTML = filtered.map(order => {
+  // Render each row — but if the row already exists in the DOM, patch it
+  // in-place so an open/expanded row stays open during a realtime reload.
+  const newIds = new Set(filtered.map(o => o.id));
+
+  // Remove rows that are no longer in the filtered set.
+  container.querySelectorAll('.order-row[id^="order-row-"]').forEach(el => {
+    const rowId = el.id.replace('order-row-', '');
+    if (!newIds.has(rowId)) el.remove();
+  });
+
+  filtered.forEach(order => {
+    const existingRow = document.getElementById(`order-row-${order.id}`);
     try {
-      return renderOrderRow(order);
+      const html = renderOrderRow(order);
+      if (existingRow) {
+        // Preserve expanded state across the re-render.
+        const wasExpanded = existingRow.classList.contains('expanded');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const newRow = tmp.firstElementChild;
+        if (wasExpanded) newRow.classList.add('expanded');
+        existingRow.replaceWith(newRow);
+      } else {
+        // New row — append in sorted order by inserting before the first row
+        // whose order appears after this one in the filtered array.
+        const idx = filtered.indexOf(order);
+        const nextOrder = filtered[idx + 1];
+        const nextEl = nextOrder ? document.getElementById(`order-row-${nextOrder.id}`) : null;
+        container.insertAdjacentHTML('beforeend', html);
+        if (nextEl) container.insertBefore(container.lastElementChild, nextEl);
+      }
     } catch (e) {
       console.error('[Pulse] renderOrderRow', order?.orderId, e);
-      return `<div class="order-row" style="border:1px solid var(--red);padding:12px;margin-bottom:8px;border-radius:8px;">
+      const errHtml = `<div class="order-row" id="order-row-${order.id}" style="border:1px solid var(--red);padding:12px;margin-bottom:8px;border-radius:8px;">
         <strong>#${order?.orderId || '?'}</strong> — could not display this ticket (${e.message || e}).
         <a href="/pages/job-ticket.html?order=${encodeURIComponent(order?.orderId || '')}" style="margin-left:8px;">Open in Job Ticket</a>
       </div>`;
+      if (existingRow) existingRow.outerHTML = errHtml;
+      else container.insertAdjacentHTML('beforeend', errHtml);
     }
-  }).join('');
+  });
 }
 
 function renderOrderRow(order) {
@@ -787,13 +817,13 @@ function getActionButtons(order) {
 }
 
 function toggleOrderRow(dbId) {
-  const wasExpanded = activeOrderId === dbId;
-  // Collapse all
+  const row = document.getElementById(`order-row-${dbId}`);
+  const wasExpanded = row?.classList.contains('expanded');
+  // Collapse all other rows
   document.querySelectorAll('.order-row.expanded').forEach(el => el.classList.remove('expanded'));
   activeOrderId = null;
-  if (!wasExpanded) {
-    const row = document.getElementById(`order-row-${dbId}`);
-    if (row) row.classList.add('expanded');
+  if (!wasExpanded && row) {
+    row.classList.add('expanded');
     activeOrderId = dbId;
   }
 }

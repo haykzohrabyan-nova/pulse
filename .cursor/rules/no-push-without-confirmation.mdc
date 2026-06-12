@@ -1,0 +1,25 @@
+---
+description: Never run git push without explicit user confirmation
+alwaysApply: true
+---
+
+# No Git Push Without Confirmation
+
+NEVER run `git push` (or any variant: `git push --force`, `git push origin`, etc.) unless the user has **explicitly confirmed** they want to push in that message.
+
+## Rules
+
+- Complete all commits, staging, and local git operations freely.
+- When a push would be the next logical step, **stop and ask** the user: "Ready to push — should I go ahead?"
+- Only push after the user responds with a clear confirmation (e.g. "yes", "go ahead", "push it", "confirmed").
+- A general task like "commit and push" is NOT sufficient — wait for confirmation at the push step.
+
+## Examples
+
+❌ BAD — pushing without explicit confirmation:
+> User: "Commit my changes"
+> Agent: `git add . && git commit -m "..." && git push`
+
+✅ GOOD — stop before push and ask:
+> User: "Commit my changes"
+> Agent: Commits, then says "Done! Committed locally. Ready to push to remote — should I go ahead?"
