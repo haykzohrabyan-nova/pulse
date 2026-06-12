@@ -32,6 +32,7 @@
     <div style="display:flex;gap:8px;">
       <!-- PUL-137 Req 9: New Ticket button — clears selection and resets to blank without page reload when already on a new form; navigates to fresh form when editing -->
       <button type="button" class="btn" id="newTicketBtn" onclick="resetToNewTicket()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;">✏️ New Ticket</button>
+      <button type="button" class="btn" id="btn-create-via-link" onclick="openOrderLinkModal()" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;">🔗 Create via Order Link</button>
       <a id="addSubTicketBtn" href="#" class="btn" style="display:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-decoration:none;">➕ Add Sub-Ticket</a>
       <button type="button" class="btn btn-primary" id="editLockedBtn" onclick="openAdminCodeModal()" style="display:none;background:#2563eb;color:#fff;border:none;">✏️ Edit</button>
       <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">💾 Save Job Ticket</button>
@@ -3330,8 +3331,11 @@ function renderSKUs() {
           <input type="text" value="${safeName}" placeholder="e.g. Strawberry" onchange="updateSKU(${i},'name',this.value)">
         </div>
         <div class="sku-field sku-field-qty">
-          <label>Qty</label>
-          <input type="number" value="${sku.quantity || ''}" min="0" placeholder="0" onchange="updateSKU(${i},'quantity',this.value)">
+          <label>Qty <span style="color:#ef4444;">*</span></label>
+          <input type="number" value="${sku.quantity || ''}" min="1" placeholder="Qty" required
+            style="border-color:${(!sku.quantity || sku.quantity < 1) ? '#ef4444' : ''};"
+            oninput="updateSKU(${i},'quantity',this.value);this.style.borderColor=(!this.value||+this.value<1)?'#ef4444':'';"
+            onchange="updateSKU(${i},'quantity',this.value);this.style.borderColor=(!this.value||+this.value<1)?'#ef4444':'';">
           ${frameCount > 0 ? `<div class="sku-qty-meta">${frameCount} ${fw}</div>` : ''}
         </div>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" title="Remove SKU">✕</button>
@@ -4611,8 +4615,8 @@ async function saveTicket(suppressRedirect = false) {
         alert(`Please enter a name for SKU #${i + 1}.`);
         return;
       }
-      if (!sku.quantity) {
-        alert(`Please enter quantity for "${label}".`);
+      if (!sku.quantity || sku.quantity < 1) {
+        alert(`SKU "${label}" requires a quantity of at least 1.`);
         return;
       }
       if (!sku.artworkDataUrl) {
@@ -6104,6 +6108,201 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 })();
+
+// ── Create via Order Link ────────────────────────────────────────────────────
+
+function openOrderLinkModal() {
+  const modal = document.getElementById('order-link-modal');
+  modal.style.display = 'flex';
+  const inp = document.getElementById('order-link-input');
+  inp.value = '';
+  document.getElementById('order-link-error').style.display = 'none';
+  setTimeout(() => inp.focus(), 100);
+}
+
+function closeOrderLinkModal() {
+  document.getElementById('order-link-modal').style.display = 'none';
+}
+
+function createFromOrderLink() {
+  const raw = document.getElementById('order-link-input').value.trim();
+  let params;
+  try {
+    const url = new URL(raw);
+    params = url.searchParams;
+    if (params.get('from') !== 'workflow') throw new Error('missing from=workflow');
+  } catch {
+    document.getElementById('order-link-error').style.display = 'block';
+    return;
+  }
+  closeOrderLinkModal();
+  _prefillFromLinkParams(params);
+}
+
+function _prefillFromLinkParams(p) {
+  function setVal(id, value) {
+    if (!value) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('input',  { bubbles: true }));
+  }
+
+  function selectByText(id, text) {
+    if (!text) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    const lower = text.toLowerCase();
+    const opt = Array.from(el.options).find(o =>
+      o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
+    );
+    if (opt) { el.value = opt.value; el.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+
+  // Customer
+  setVal('customerName', p.get('customer'));
+
+  // Order ref (pre-fill job ticket number only if explicitly provided)
+  setVal('jobTicketNumber', p.get('order_ref'));
+
+  // Product type
+  if (p.get('product')) {
+    selectByText('productType', p.get('product'));
+    if (p.get('product').toLowerCase() === 'other') {
+      setVal('otherProductDesc', p.get('product_type'));
+    }
+  }
+
+  // Material
+  selectByText('material', p.get('material'));
+
+  // Color mode
+  selectByText('colorMode', p.get('color'));
+
+  // Sides
+  selectByText('sides', p.get('sides'));
+
+  // Dimensions
+  setVal('labelWidth',  p.get('width'));
+  setVal('labelHeight', p.get('height'));
+
+  // Quantity
+  setVal('quantity', p.get('qty'));
+
+  // Due date (expects YYYY-MM-DD)
+  setVal('dueDate', p.get('due'));
+  if (p.get('due')) checkDueDate?.();
+
+  // Notes
+  const noteParts = [];
+  if (p.get('notes'))   noteParts.push(p.get('notes'));
+  if (p.get('contact')) noteParts.push('Customer contact: ' + p.get('contact'));
+  if (p.get('artwork')) noteParts.push('Artwork (GDrive): ' + p.get('artwork'));
+  if (noteParts.length) setVal('specialNotes', noteParts.join('\n\n'));
+
+  // Finishing
+  const finishing = (p.get('finishing') || '').toLowerCase();
+  if (finishing) {
+    if (finishing.includes('lamin') || finishing.includes('gloss') || finishing.includes('matte') || finishing.includes('soft')) {
+      const cb = document.getElementById('hasLamination');
+      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (finishing.includes('gloss'))      selectByText('lamination', 'Gloss');
+      else if (finishing.includes('matte')) selectByText('lamination', 'Matte');
+      else if (finishing.includes('soft'))  selectByText('lamination', 'Soft Touch');
+    }
+    if (finishing.includes('uv') || finishing.includes('spot uv')) {
+      const cb = document.getElementById('hasUV');
+      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+    if (finishing.includes('foil')) {
+      const cb = document.getElementById('hasFoil');
+      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (finishing.includes('gold'))        selectByText('foilType', 'Gold');
+      else if (finishing.includes('silver')) selectByText('foilType', 'Silver');
+    }
+    if (finishing.includes('perf')) {
+      const cb = document.getElementById('hasPerforation');
+      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+  }
+
+  // SKUs — format: "Name:Qty|Name:Qty"
+  const skusStr = p.get('skus');
+  if (skusStr) {
+    const skus = skusStr.split('|')
+      .map(s => { const [name, qty] = s.split(':'); return { name: (name||'').trim(), qty: (qty||'').trim() }; })
+      .filter(s => s.name);
+    skus.forEach((sku, i) => {
+      if (typeof addSKU === 'function') addSKU();
+      setTimeout(() => {
+        const nameInputs = document.querySelectorAll('[data-sku-field="name"], .sku-name-input');
+        const qtyInputs  = document.querySelectorAll('[data-sku-field="qty"],  .sku-qty-input');
+        const last = nameInputs.length - 1;
+        if (nameInputs[last]) nameInputs[last].value = sku.name;
+        if (qtyInputs[last])  qtyInputs[last].value  = sku.qty;
+      }, 100 * (i + 1));
+    });
+  }
+
+  // Banner + toast
+  _showPrefillBanner(p.get('order_ref'));
+  const filled = ['customer','product','material','color','sides','width','height','qty','due','finishing']
+    .filter(k => p.get(k)).map(k => p.get(k)).join(', ');
+  if (typeof showToast === 'function') {
+    showToast('✅ Pre-filled from order link. Check all fields before saving.', 6000);
+  }
+}
+
+function _showPrefillBanner(orderRef) {
+  document.getElementById('prefill-banner')?.remove();
+  const div = document.createElement('div');
+  div.id = 'prefill-banner';
+  div.style.cssText = 'background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#15803d;display:flex;align-items:center;gap:8px;';
+  div.innerHTML = `🔗 <strong>Pre-filled from Workflow Order${orderRef ? ' #' + orderRef : ''}.</strong>&nbsp;
+    Verify all fields — Facility, Account Manager, Cut Method and Die must be added manually.
+    <button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#86efac;font-size:18px;">✕</button>`;
+  const form = document.getElementById('ticketForm');
+  if (form) form.prepend(div);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('order-link-modal')?.addEventListener('click', function (e) {
+    if (e.target === this) closeOrderLinkModal();
+  });
+  document.getElementById('order-link-input')?.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') createFromOrderLink();
+    if (e.key === 'Escape') closeOrderLinkModal();
+  });
+});
 </script>
+
+<!-- ── Create via Order Link Modal ─────────────────────────────────────── -->
+<div id="order-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:540px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:16px;font-weight:700;">🔗 Create Job Ticket via Order Link</h3>
+    <p style="margin:0 0 16px;font-size:13px;color:#6b7280;">
+      Copy the order link from the Workflow board, paste it below, and click <strong>Create</strong>.
+    </p>
+    <input
+      id="order-link-input"
+      type="text"
+      placeholder="https://pulse-jade-five.vercel.app/pages/job-ticket.html?from=workflow&order_ref=…"
+      style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:12px;font-family:monospace;margin-bottom:6px;"
+    />
+    <p id="order-link-error" style="color:#dc2626;font-size:12px;margin:0 0 4px;display:none;">
+      ⚠️ Invalid link — make sure it contains <code>from=workflow</code> and was copied from the Workflow board.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+      <button onclick="closeOrderLinkModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">
+        Cancel
+      </button>
+      <button onclick="createFromOrderLink()" style="padding:8px 20px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">
+        Create ✓
+      </button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
