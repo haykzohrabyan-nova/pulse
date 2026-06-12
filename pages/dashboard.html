@@ -436,8 +436,6 @@
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
       ${subProgressHTML}
-      ${order.status === 'prepress-active' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();pausePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">⏸ Pause</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
-      ${order.status === 'prepress-paused' ? `<div style="display:flex;gap:6px;margin-top:8px;"><button onclick="event.stopPropagation();resumePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">▶ Resume</button><button onclick="event.stopPropagation();completePrepressOrder(${order.id},'${order.orderId}')" style="flex:1;padding:5px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✅ Complete</button></div>` : ''}
       ${['shipped','waiting-pickup','delivery-ready'].includes(order.status) ? `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : ''}</div>` : ''}
     </div>`;
   }
@@ -1157,14 +1155,6 @@
         <a href="/pages/job-ticket.html?order=${o.orderId}" class="btn btn-primary btn-sm" style="text-decoration:none;">✏️ Edit</a>
         <a href="/pages/job-ticket.html?parent=${o.orderId}" class="btn btn-sm" style="text-decoration:none;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">➕ Sub-Ticket</a>
         ${o.parentOrderId ? `<a href="/pages/job-ticket.html?order=${o.parentOrderId}" class="btn btn-sm" style="text-decoration:none;font-size:11px;">📎 Parent #${o.parentOrderId}</a>` : ''}
-        ${o.status === 'prepress-active' ? `<button class="btn btn-warning btn-sm" onclick="pausePrepressOrder(${o.id},'${o.orderId}')">⏸️ Pause Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
-        ${o.status === 'prepress-paused' ? `<button class="btn btn-primary btn-sm" onclick="resumePrepressOrder(${o.id},'${o.orderId}')">▶️ Resume Prepress</button><button class="btn btn-success btn-sm" onclick="completePrepressOrder(${o.id},'${o.orderId}')">✅ Complete Prepress</button><button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
-        ${o.status === 'pending-confirmation' ? `<button class="btn btn-success btn-sm" onclick="approveConfirmationDetail(${o.id})">✅ Approve OT / Confirm</button><button class="btn btn-danger btn-sm" onclick="rejectConfirmationDetail(${o.id})">❌ Reject — Hold</button>` : ''}
-        ${o.status === 'pending-account-manager' ? `<button class="btn btn-primary btn-sm" onclick="returnToPrepressDetail(${o.id})">↩ Issue Resolved — Return to Prepress</button>` : ''}
-        ${o.status === 'on-hold' ? `<button class="btn btn-success btn-sm" onclick="resumeOrder(${o.id})">▶️ Resume</button>` : ''}
-        ${o.status === 'in-production' ? `<button class="btn btn-warning btn-sm" onclick="holdOrder(${o.id})">⏸️ Hold</button>` : ''}
-        ${o.status === 'shipped' || o.status === 'waiting-pickup' ? `<button class="btn btn-success btn-sm" onclick="markReceivedDetail(${o.id})">📬 Mark Received</button>` : ''}
-        ${o.status === 'received' ? `<button class="btn btn-success btn-sm" onclick="markCompletedDetail(${o.id})">✅ Mark Completed</button>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
         <div><strong>Product:</strong> ${o.productType || '—'}</div>
