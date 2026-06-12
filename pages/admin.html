@@ -15,7 +15,7 @@
   <script src="/js/pulse-config.js"></script>
   <script src="/js/pulse-config.local.js"></script>
   <script src="/js/supabase-client.js?v=20260609-personnel-email"></script>
-  <script src="/js/auth.js?v=20260609-personnel-email"></script>
+  <script src="/js/auth.js?v=20260611-email-domain"></script>
   <style id="page-styles"></style>
 </head>
 <body>
@@ -2179,7 +2179,7 @@ function _populatePersonnelRoleFilter(people) {
 function _personnelLoginEmail(name) {
   if (typeof pulsePersonnelLoginEmail === 'function') return pulsePersonnelLoginEmail(name);
   const first = String(name || '').trim().split(/\s+/)[0].toLowerCase();
-  return first ? `${first}@bazaar-admin.com` : '—';
+  return first ? `${first}@bazaarprinting.com` : '—';
 }
 
 // Render the personnel table from cache, applying the search box + role filter.

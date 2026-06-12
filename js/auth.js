@@ -101,12 +101,12 @@ function _supaActive() {
 }
 
 // Derive email from display name for supabase.auth.signInWithPassword
-// "Hayk Zohrabyan" → "hayk@bazaar-admin.com"
-// "Admin"          → "admin@bazaar-admin.com"
-// "QC Inspector"   → "qc@bazaar-admin.com"
+// "Hayk Zohrabyan" → "hayk@bazaarprinting.com"
+// "Admin"          → "admin@bazaarprinting.com"
+// "QC Inspector"   → "qc@bazaarprinting.com"
 function _getUserEmail(displayName) {
   const first = String(displayName || '').trim().split(/\s+/)[0].toLowerCase();
-  return first ? `${first}@bazaar-admin.com` : '';
+  return first ? `${first}@bazaarprinting.com` : '';
 }
 
 /** Login email derived from personnel display name (Admin → Personnel). */
@@ -115,25 +115,25 @@ window.pulsePersonnelLoginEmail = _getUserEmail;
 // ── Local-mode email → {name, role} mapping (IndexedDB dev only) ─────────────
 // Supabase mode: login list + roles come from profiles table only.
 const LOCAL_EMAIL_USERS = {
-  'admin@bazaar-admin.com':    { name: 'Admin',            role: 'admin' },
-  'hayk@bazaar-admin.com':     { name: 'Hayk Zohrabyan',   role: 'admin' },
-  'david@bazaar-admin.com':    { name: 'David Zargaryan',  role: 'david-review' },
-  'mauricio@bazaar-admin.com': { name: 'Mauricio',         role: 'supervisor' },
-  'tigran@bazaar-admin.com':   { name: 'Tigran Zohrabyan', role: 'supervisor' },
-  'mike@bazaar-admin.com':     { name: 'Mike',             role: 'production-manager' },
-  'shipping@bazaar-admin.com': { name: 'Shipping',          role: 'shipping' },
-  'hrach@bazaar-admin.com':    { name: 'Hrach',            role: 'prepress' },
-  'qc@bazaar-admin.com':       { name: 'QC Inspector',     role: 'qc' },
-  'arsen@bazaar-admin.com':    { name: 'Arsen',            role: 'operator' },
-  'tuoyo@bazaar-admin.com':    { name: 'Tuoyo',            role: 'operator' },
-  'abel@bazaar-admin.com':     { name: 'Abel',             role: 'operator' },
-  'juan@bazaar-admin.com':     { name: 'Juan',             role: 'operator' },
-  'vahe@bazaar-admin.com':     { name: 'Vahe',             role: 'operator' },
-  'avgustin@bazaar-admin.com': { name: 'Avgustin',         role: 'operator' },
-  'jaime@bazaar-admin.com':    { name: 'Jaime',            role: 'operator' },
-  'lisandro@bazaar-admin.com': { name: 'Lisandro',         role: 'operator' },
-  'adrian@bazaar-admin.com':   { name: 'Adrian',           role: 'operator' },
-  'harry@bazaar-admin.com':    { name: 'Harry',            role: 'operator' },
+  'admin@bazaarprinting.com':    { name: 'Admin',            role: 'admin' },
+  'hayk@bazaarprinting.com':     { name: 'Hayk Zohrabyan',   role: 'admin' },
+  'david@bazaarprinting.com':    { name: 'David Zargaryan',  role: 'david-review' },
+  'mauricio@bazaarprinting.com': { name: 'Mauricio',         role: 'supervisor' },
+  'tigran@bazaarprinting.com':   { name: 'Tigran Zohrabyan', role: 'supervisor' },
+  'mike@bazaarprinting.com':     { name: 'Mike',             role: 'production-manager' },
+  'shipping@bazaarprinting.com': { name: 'Shipping',          role: 'shipping' },
+  'hrach@bazaarprinting.com':    { name: 'Hrach',            role: 'prepress' },
+  'qc@bazaarprinting.com':       { name: 'QC Inspector',     role: 'qc' },
+  'arsen@bazaarprinting.com':    { name: 'Arsen',            role: 'operator' },
+  'tuoyo@bazaarprinting.com':    { name: 'Tuoyo',            role: 'operator' },
+  'abel@bazaarprinting.com':     { name: 'Abel',             role: 'operator' },
+  'juan@bazaarprinting.com':     { name: 'Juan',             role: 'operator' },
+  'vahe@bazaarprinting.com':     { name: 'Vahe',             role: 'operator' },
+  'avgustin@bazaarprinting.com': { name: 'Avgustin',         role: 'operator' },
+  'jaime@bazaarprinting.com':    { name: 'Jaime',            role: 'operator' },
+  'lisandro@bazaarprinting.com': { name: 'Lisandro',         role: 'operator' },
+  'adrian@bazaarprinting.com':   { name: 'Adrian',           role: 'operator' },
+  'harry@bazaarprinting.com':    { name: 'Harry',            role: 'operator' },
 };
 const LOCAL_DEFAULT_PASSWORD = 'Pulse2026!';
 
@@ -388,7 +388,7 @@ async function injectLoginModal() {
         id="loginEmail"
         type="email"
         autocomplete="username"
-        placeholder="you@bazaar-admin.com"
+        placeholder="you@bazaarprinting.com"
         style="${_inputStyle(accent)}"
         onfocus="this.style.borderColor='${accent}'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.15)';"
         onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
