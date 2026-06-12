@@ -437,7 +437,20 @@
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
       ${subProgressHTML}
-      ${['shipped','waiting-pickup','delivery-ready'].includes(order.status) ? `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : ''}</div>` : ''}
+      ${(() => {
+        if (order.status === 'shipped') {
+          const ts = order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : '';
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${ts}</div>`;
+        }
+        if (order.status === 'delivery-ready') {
+          const ts = order.deliveryReadyAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.deliveryReadyAt) : new Date(order.deliveryReadyAt).toLocaleDateString()) : '';
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">📦 Delivery Ready${ts}</div>`;
+        }
+        if (order.status === 'waiting-pickup') {
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">🏷 Label Created</div>`;
+        }
+        return '';
+      })()}
     </div>`;
   }
 
