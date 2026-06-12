@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QC Checkout — Bazaar Print</title>
+  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/organisation-local-store.js"></script>
+  <script src="/js/pulse-config.js"></script>
+  <script src="/js/pulse-config.local.js"></script>
+  <script src="/js/supabase-client.js?v=20260609-realtime"></script>
+  <script src="/js/auth.js?v=20260611-email-domain"></script>
+  <style id="page-styles"></style>
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<!-- Two-column QC layout (order history / activity feed removed) -->
+<div class="qc-layout">
+
+  <!-- LEFT PANEL: Needs QC -->
+  <div class="qc-panel qc-panel-left">
+    <div class="panel-header">
+      <div class="panel-title">📋 Needs QC</div>
+      <div class="panel-subtitle" id="leftCount">0 jobs</div>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="qcSearchLeft" placeholder="Search order or customer…" oninput="renderLeftPanel()">
+    </div>
+    <div class="panel-list" id="leftJobList">
+      <div class="panel-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL: QC Window -->
+  <div class="qc-panel qc-panel-center">
+    <div class="center-header">
+      <h2 class="center-title">🔍 Quality Control Checkout</h2>
+    </div>
+
+    <!-- Placeholder when no order selected -->
+    <div id="qcPlaceholder" class="qc-placeholder">
+      <div class="placeholder-icon">🔍</div>
+      <div class="placeholder-text">Select a job from the left panel to begin QC</div>
+      <div class="placeholder-sub">Jobs in <strong>QC Queue</strong> are shown on the left</div>
+    </div>
+
+    <!-- QC Form (shown after selecting an order) -->
+    <div id="qcFormSection" style="display:none;">
+      <!-- Scrollable content: banner + checklist + assessment all scroll together -->
+      <div class="qc-form-scroll">
+        <div class="card qc-order-banner" id="orderBanner"></div>
+
+        <div id="qcChecklistsWrap"></div>
+
+        <!-- Observations & Verdict -->
+        <div class="card" style="margin-bottom:0;">
+          <h3 class="section-title">📋 QC Assessment</h3>
+          <div class="qc-assessment-toolbar">
+            <div class="qc-toolbar-group qc-toolbar-verdict">
+              <span class="qc-toolbar-label">QC Verdict *</span>
+              <div class="verdict-buttons">
+                <button type="button" class="verdict-btn verdict-pass" id="verdictPass" onclick="setVerdict('pass')">✅ PASS</button>
+                <button type="button" class="verdict-btn verdict-fail" id="verdictFail" onclick="setVerdict('fail')">❌ FAIL</button>
+              </div>
+            </div>
+            <div class="qc-toolbar-group qc-toolbar-notes">
+              <label class="qc-toolbar-label" for="qcNotes">QC Notes</label>
+              <input type="text" id="qcNotes" class="qc-notes-inline" placeholder="Comments…" autocomplete="off">
+            </div>
+            <div class="qc-toolbar-group qc-toolbar-inspector">
+              <label class="qc-toolbar-label" for="qcInspector">QC Inspector Name *</label>
+              <select id="qcInspector" class="qc-inspector-select" aria-label="QC Inspector Name"></select>
+            </div>
+          </div>
+
+          <!-- Fail Options -->
+          <div id="failOptions" style="display:none;margin-top:12px;padding:12px;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;">
+            <h4 style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:10px;">❌ QC Failed — Required Actions</h4>
+            <div class="field" style="margin-bottom:10px;">
+              <label>Failure Reason(s)</label>
+              <div class="fail-reasons">
+                <label class="cb-row"><input type="checkbox" value="version-wrong"> Wrong version / incorrect artwork</label>
+                <label class="cb-row"><input type="checkbox" value="print-quality"> Print quality issue (banding, smear, color off)</label>
+                <label class="cb-row"><input type="checkbox" value="color-accuracy"> Color accuracy fail (out of spec)</label>
+                <label class="cb-row"><input type="checkbox" value="quantity-short"> Quantity short</label>
+                <label class="cb-row"><input type="checkbox" value="finishing-issue"> Finishing defect (lamination, UV, foil)</label>
+                <label class="cb-row"><input type="checkbox" value="cutting-off"> Cutting/die accuracy off</label>
+                <label class="cb-row"><input type="checkbox" value="damage"> Physical damage</label>
+                <label class="cb-row"><input type="checkbox" value="other-fail"> Other</label>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:10px;">
+              <label>Create Reprint / Shortage Ticket?</label>
+              <label class="cb-row"><input type="checkbox" id="createReprintCheck" onchange="toggleReprintQty()"> Yes — create reprint ticket</label>
+            </div>
+            <div id="reprintQtySection" style="display:none;">
+              <div class="field">
+                <label>Reprint Quantity</label>
+                <input type="number" id="reprintQtyInput" min="1" placeholder="e.g. 500">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit bar — flex-shrink:0 child of #qcFormSection, always visible regardless of scroll -->
+      <div class="save-bar">
+        <button class="btn" onclick="clearQCForm()">Cancel / Clear</button>
+        <button class="btn btn-primary" id="submitQCBtn" type="button" disabled onclick="submitQC()">Submit QC Result</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+injectThemeCSS();
+document.getElementById('nav').innerHTML = renderNav('qc-checkout');
+document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'QC Checkout' }]);
+initAuth('qc-checkout');
+
+document.getElementById('page-styles').textContent = `
+  html, body { height: 100%; }
+  body { overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Two-panel grid */
+  .qc-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── Shared panel styles ── */
+  .qc-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 12px 6px;
+    background: var(--card);
+  }
+  .qc-panel-center { margin: 12px; }
+
+  .panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .panel-search { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .panel-search input { width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+
+  .panel-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .panel-empty { font-size: 13px; color: var(--text-muted); padding: 16px; text-align: center; }
+
+  /* ── Left panel job cards ── */
+  .qj-card {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--card);
+  }
+  .qj-card:hover { border-color: var(--accent); background: #e0edff; }
+  .qj-card.active { border-color: var(--accent); background: #dbeafe; }
+  .qj-id { font-weight: 700; color: var(--accent); font-size: 13px; }
+  .qj-customer { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .qj-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── Center panel ── */
+  .center-header {
+    padding: 16px 20px 0;
+    flex-shrink: 0;
+  }
+  .center-title { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+
+  .qc-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .placeholder-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .placeholder-text { font-size: 16px; font-weight: 600; color: var(--text); }
+  .placeholder-sub { font-size: 13px; margin-top: 8px; }
+
+  #qcFormSection {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 20px 0;
+  }
+  .qc-form-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 4px;
+  }
+
+  .section-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .qc-order-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #e0edff; border-color: #bfdbfe; }
+  .banner-id { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .banner-customer { font-size: 16px; font-weight: 700; }
+  .banner-details { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  .qc-checklist-card { margin-bottom: 16px; }
+  .qc-sku-panel {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card);
+  }
+  .qc-sku-panel:last-child { margin-bottom: 0; }
+  .qc-sku-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .qc-sku-thumb-empty {
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    background: #f1f5f9;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  .qc-sku-header-meta { flex: 1; min-width: 0; }
+  .qc-sku-header-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .qc-sku-header-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.25;
+    word-break: break-word;
+  }
+  .qc-sku-header-qty {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.1;
+    margin-top: 6px;
+  }
+  .qc-sku-header-qty-unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  /* ── SKU badge on left panel cards ── */
+  .qj-sku-badge {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── Artwork gallery ── */
+  .qc-art-gallery {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 4px 0;
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+  .qc-art-gallery-job {
+    padding: 0;
+    min-width: unset;
+  }
+  .qc-art-layer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    max-width: 120px;
+  }
+  .qc-art-layer img.qc-sku-thumb {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    display: block;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .qc-art-layer img.qc-sku-thumb:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .qc-art-layer-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    word-break: break-word;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .qc-art-doc-tile {
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .qc-art-doc-tile:hover { box-shadow: 0 0 0 2px var(--accent); }
+  .qc-job-art-section {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+  }
+  .qc-job-art-section .section-title { margin-bottom: 12px; }
+
+  .qc-sku-checklist-inner { padding: 0; }
+  .qc-sku-checklist-inner .section-title {
+    margin: 0;
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+  }
+  .checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+    background: var(--card);
+  }
+  .checklist-item:nth-child(2n) { border-right: none; }
+  .checklist-item:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) {
+    .checklist { grid-template-columns: 1fr; }
+    .checklist-item { border-right: none; }
+    .checklist-item:nth-last-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .checklist-item:last-child { border-bottom: none; }
+  }
+  .ci-left { flex: 1; min-width: 0; }
+  .ci-label { font-weight: 600; font-size: 14px; }
+  .ci-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .ci-verdict { display: flex; gap: 8px; }
+  .ci-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; background: var(--card); transition: all 0.15s; }
+  .ci-btn:hover { opacity: 0.9; }
+  .ci-btn.ci-pass.selected { background: var(--green); color: white; border-color: var(--green); }
+  .ci-btn.ci-fail.selected { background: var(--red); color: white; border-color: var(--red); }
+  .ci-btn.ci-na.selected { background: var(--text-muted); color: white; border-color: var(--text-muted); }
+
+  .qc-assessment-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .qc-toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .qc-toolbar-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .qc-toolbar-verdict { flex: 0 0 auto; }
+  .qc-toolbar-notes { flex: 1 1 140px; min-width: min(100%, 120px); }
+  .qc-toolbar-inspector { flex: 0 1 220px; min-width: min(100%, 160px); }
+  .verdict-buttons { display: flex; gap: 8px; margin-top: 0; min-height: 52px; }
+  .verdict-btn {
+    flex: 0 1 auto;
+    min-width: 96px;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+  }
+  .qc-notes-inline {
+    width: 100%;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--text);
+  }
+  .qc-notes-inline:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+  .qc-inspector-select {
+    width: 100%;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .qc-inspector-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+  .verdict-pass.selected { background: var(--green); color: white; border-color: var(--green); }
+  .verdict-fail.selected { background: var(--red); color: white; border-color: var(--red); }
+  .fail-reasons { display: flex; flex-direction: column; gap: 6px; }
+  .cb-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .cb-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
+  .save-bar { flex-shrink: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 10px 0 12px; border-top: 1px solid var(--border); margin-top: 4px; }
+  #submitQCBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .field { display: flex; flex-direction: column; }
+
+  /* ── Right panel ── */
+  .right-filter-row {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .rf-btn {
+    flex: 1;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    background: var(--card);
+    transition: all 0.15s;
+  }
+  .rf-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .rj-card {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+    font-size: 12px;
+    background: var(--card);
+  }
+  .rj-header { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+  .rj-meta { font-size: 11px; color: var(--text-muted); }
+  .rj-msg { font-size: 11px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+`;
+
+const QC_CHECKLIST_ITEMS = [
+  { id: 'version', label: 'Version / Artwork Correct', desc: 'The correct artwork file was printed — no wrong version, old file, or missing design elements.' },
+  { id: 'print-quality', label: 'Print Quality', desc: 'No banding, ink smear, streaks, or missing colors. Sharp registration.' },
+  { id: 'color-accuracy', label: 'Color Accuracy', desc: 'Colors match the approved proof or reference. Pantone/CMYK values within tolerance.' },
+  { id: 'quantity', label: 'Quantity Count', desc: 'Final count matches the ordered quantity (within acceptable overrun/underrun).' },
+  { id: 'finishing', label: 'Finishing Quality', desc: 'Lamination uniform, no bubbles or peeling. UV/foil applied correctly. No delamination.' },
+  { id: 'cutting', label: 'Cutting / Die Accuracy', desc: 'Cut lines accurate, die aligned correctly. No overcut or undercut. Clean edges.' },
+];
+
+let selectedOrderDbId = null;
+let selectedOrder = null;
+let currentVerdict = null;
+/** Per SKU or `_job` when no SKU versions: { 'sku-0': { version: 'pass', ... } } */
+let checklistResults = {};
+let qcActiveSkuKeys = [];
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof initPulseAdminData === 'function') await initPulseAdminData();
+  await refreshQcInspectorSelect();
+  applyQcDefaultInspector();
+  if (typeof registerPulseAdminConfigRefresh === 'function') {
+    registerPulseAdminConfigRefresh(async () => {
+      await refreshQcInspectorSelect();
+      applyQcDefaultInspector();
+    });
+  }
+  await renderLeftPanel();
+
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order');
+  if (orderId) {
+    const order = await getOrderByOrderId(orderId);
+    if (order) selectOrder(order);
+  }
+
+  onDBUpdate(async (data) => {
+    if (data.store === 'orders') {
+      await renderLeftPanel();
+    }
+    if (data.store === 'personnel') {
+      await refreshQcInspectorSelect();
+    }
+  });
+});
+
+async function refreshQcInspectorSelect() {
+  const sel = document.getElementById('qcInspector');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const prev = sel.value;
+  const people = await getAllPersonnel();
+  const qc = people
+    .filter(p => String(p.role || '').toLowerCase() === 'qc' && p.active !== false)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+  sel.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = qc.length ? 'Select inspector…' : 'No QC personnel — add in Admin → Personnel';
+  sel.appendChild(placeholder);
+  for (const p of qc) {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.name;
+    sel.appendChild(o);
+  }
+  if (prev && [...sel.options].some(opt => opt.value === prev)) sel.value = prev;
+  sel.onchange = updateSubmitQcButtonState;
+  updateSubmitQcButtonState();
+}
+
+function applyQcDefaultInspector() {
+  const sel = document.getElementById('qcInspector');
+  if (!sel || sel.value) return;
+  const def = typeof getPulseSettings === 'function' ? getPulseSettings().defaultQCInspector : '';
+  if (def && [...sel.options].some(opt => opt.value === def)) sel.value = def;
+  updateSubmitQcButtonState();
+}
+
+// ── Left panel ────────────────────────────────────────────
+async function renderLeftPanel() {
+  const q = (document.getElementById('qcSearchLeft')?.value || '').trim().toLowerCase();
+  const allOrders = await getAllOrders();
+  let jobs = allOrders.filter(o => o.status === 'qc-checkout');
+
+  if (q) {
+    jobs = jobs.filter(o => {
+      const hay = [o.orderId, o.customer || o.customerName, o.productType, o.jobDescription].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  const countEl = document.getElementById('leftCount');
+  if (countEl) countEl.textContent = `${jobs.length} job${jobs.length !== 1 ? 's' : ''}`;
+
+  const list = document.getElementById('leftJobList');
+  if (!jobs.length) {
+    list.innerHTML = '<div class="panel-empty">No jobs in QC queue</div>';
+    return;
+  }
+
+  list.innerHTML = jobs.map(o => {
+    const isActive = selectedOrder && selectedOrder.id === o.id;
+    const due = o.dueDate ? formatDate(o.dueDate) : '';
+    const overdue = o.dueDate && new Date(o.dueDate) < new Date() ? ' style="color:var(--red)"' : '';
+    const skuCount = (o.skus || []).filter(s => s && (s.name || s.quantity)).length;
+    const skuBadge = skuCount > 1 ? `<span class="qj-sku-badge">${skuCount} SKUs</span>` : '';
+    const idAttr = String(o.id ?? '').replace(/'/g, "\\'");
+    return `<div class="qj-card${isActive ? ' active' : ''}" onclick="selectOrder('${idAttr}')">
+      <div class="qj-id">#${o.orderId} ${skuBadge}</div>
+      <div class="qj-customer">${o.customerName || o.customer || '—'}</div>
+      <div class="qj-meta">${o.productType || ''}${due ? ` · <span${overdue}>Due ${due}</span>` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Select Order ──────────────────────────────────────────
+async function selectOrder(orderOrId) {
+  if (typeof orderOrId === 'string' || typeof orderOrId === 'number') {
+    try {
+      // Try direct DB fetch first (works in Supabase mode with full specs/artwork)
+      const fetched = typeof getOrder === 'function'
+        ? await getOrder(orderOrId)
+        : null;
+      if (fetched) {
+        selectedOrder = fetched;
+      } else {
+        const all = await getAllOrders();
+        selectedOrder = all.find(o => o.id == orderOrId || o.orderId == orderOrId) || null;
+      }
+    } catch (e) {
+      const all = await getAllOrders();
+      selectedOrder = all.find(o => o.id == orderOrId || o.orderId == orderOrId) || null;
+    }
+  } else {
+    selectedOrder = orderOrId;
+  }
+  if (!selectedOrder) return;
+  selectedOrderDbId = selectedOrder.id;
+
+  document.getElementById('qcPlaceholder').style.display = 'none';
+  document.getElementById('qcFormSection').style.display = 'flex';
+
+  const dueClass = selectedOrder.dueDate && new Date(selectedOrder.dueDate) < new Date() ? 'color:var(--red)' : '';
+  const priorFailBanner = selectedOrder.status === 'qc-failed'
+    ? `<div style="background:#fde8e8;border:1.5px solid #dc2626;border-radius:8px;padding:10px 12px;margin-top:10px;">
+        <strong style="color:#7f1d1d;">⚠️ Previously Failed QC</strong>
+        <div style="font-size:12px;color:#7f1d1d;margin-top:3px;">
+          This order failed QC${selectedOrder.qcFailedAt ? ` on ${formatDate(selectedOrder.qcFailedAt)}` : ''}.
+          Only submit PASS if defects have been physically corrected and re-inspected.
+        </div>
+      </div>`
+    : '';
+  document.getElementById('orderBanner').innerHTML = `
+    <div class="banner-info">
+      <div class="banner-id">#${selectedOrder.orderId}</div>
+      <div class="banner-customer">${selectedOrder.customerName}</div>
+      <div class="banner-details">${selectedOrder.productType || ''} · ${selectedOrder.material || ''} · ${typeof formatOrderQuantityDisplay === 'function' ? formatOrderQuantityDisplay(selectedOrder) : `Qty: ${(selectedOrder.quantity || 0).toLocaleString()} units`}</div>
+      ${selectedOrder.dueDate ? `<div style="font-size:12px;${dueClass}">Due: ${formatDate(selectedOrder.dueDate)}</div>` : ''}
+      ${selectedOrder.specialNotes ? `<div style="font-size:12px;color:var(--text);margin-top:4px;">Notes: ${selectedOrder.specialNotes}</div>` : ''}
+      ${priorFailBanner}
+    </div>
+    <div>
+      ${renderStatusBadge(selectedOrder.status)}
+    </div>
+  `;
+
+  initChecklistStateForOrder(selectedOrder);
+  renderOrderChecklists(selectedOrder);
+  currentVerdict = null;
+  document.getElementById('verdictPass').classList.remove('selected');
+  document.getElementById('verdictFail').classList.remove('selected');
+  document.getElementById('qcNotes').value = '';
+  await refreshQcInspectorSelect();
+  document.getElementById('failOptions').style.display = 'none';
+  document.getElementById('createReprintCheck').checked = false;
+  document.getElementById('reprintQtySection').style.display = 'none';
+  document.querySelectorAll('.fail-reasons input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateSubmitQcButtonState();
+
+  // Highlight active card in left panel
+  renderLeftPanel();
+}
+
+// ── Checklist (per SKU or single job) ─────────────────────
+function getQcSkuList(order) {
+  if (typeof getOrderSkusFiltered === 'function') return getOrderSkusFiltered(order);
+  return (order?.skus || []).filter(s => s && (s.name || s.quantity));
+}
+
+function qcSkuKey(index) {
+  return index == null ? '_job' : `sku-${index}`;
+}
+
+function initChecklistStateForOrder(order) {
+  checklistResults = {};
+  qcActiveSkuKeys = [];
+  const skus = getQcSkuList(order);
+  if (skus.length) {
+    skus.forEach((_, i) => {
+      const key = qcSkuKey(i);
+      qcActiveSkuKeys.push(key);
+      checklistResults[key] = {};
+    });
+  } else {
+    qcActiveSkuKeys.push('_job');
+    checklistResults._job = {};
+  }
+}
+
+function qcChecklistItemsForSku(sku) {
+  const qty = Number(sku?.quantity) || 0;
+  const qtyLabel = qty ? qty.toLocaleString() : 'ordered';
+  return QC_CHECKLIST_ITEMS.map(item => {
+    if (item.id !== 'quantity') return item;
+    return {
+      ...item,
+      desc: `Final count matches this SKU quantity (${qtyLabel} pcs for this version).`,
+    };
+  });
+}
+
+function qcEscAttr(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function renderQcArtThumb(url, label, clickable) {
+  if (!url) return '';
+  const open = clickable !== false ? `onclick="window.open(this.src,'_blank')" style="cursor:pointer;"` : '';
+  return `<div class="qc-art-layer">
+    <img src="${qcEscAttr(url)}" alt="${qcEscAttr(label)}" class="qc-sku-thumb" ${open}>
+    <div class="qc-art-layer-label">${qcEscAttr(label)}</div>
+  </div>`;
+}
+
+function renderQcArtFileTile(f) {
+  if (!f?.dataUrl) return '';
+  const isImg = /^data:image\//i.test(f.dataUrl) || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.name || '');
+  if (isImg) return renderQcArtThumb(f.dataUrl, f.name || 'Artwork', true);
+  return `<div class="qc-art-layer">
+    <div class="qc-art-doc-tile" onclick="window.open('${qcEscAttr(f.dataUrl)}','_blank')">📄</div>
+    <div class="qc-art-layer-label">${qcEscAttr(f.name || 'File')}</div>
+  </div>`;
+}
+
+function renderSkuHeaderHtml(sku, index) {
+  const name = sku?.name?.trim() || `SKU ${index + 1}`;
+  const qty = (Number(sku?.quantity) || 0).toLocaleString();
+  const files = typeof getOrderSkuArtFiles === 'function' ? getOrderSkuArtFiles(sku) : [];
+
+  let gallery = '';
+  if (files.length) {
+    gallery = `<div class="qc-art-gallery">${files.map(f => renderQcArtFileTile(f)).join('')}</div>`;
+  } else {
+    gallery = `<div class="qc-art-gallery"><div class="qc-sku-thumb-empty">No artwork<br>uploaded</div></div>`;
+  }
+
+  return `
+    <div class="qc-sku-header">
+      ${gallery}
+      <div class="qc-sku-header-meta">
+        <div class="qc-sku-header-label">SKU ${index + 1}</div>
+        <div class="qc-sku-header-name">${qcEscAttr(name)}</div>
+        <div class="qc-sku-header-qty">${qty}</div>
+        <div class="qc-sku-header-qty-unit">pieces</div>
+      </div>
+    </div>`;
+}
+
+function renderJobArtworkSectionHtml(order) {
+  // When the job has SKUs, all artwork is per-SKU — suppress the job-level block entirely
+  if (order.skus?.length > 0) return '';
+
+  // Collect job-level artwork files (not per-SKU)
+  const files = [];
+  const seen = new Set();
+  const addFile = (f) => {
+    if (!f?.dataUrl) return;
+    const key = f.dataUrl.slice(0, 64);
+    if (seen.has(key)) return;
+    seen.add(key);
+    files.push(f);
+  };
+  (order.artworkFiles || []).forEach(f => addFile({ name: f.name || 'Artwork', dataUrl: f.dataUrl }));
+  if (order.whiteLayerFile?.dataUrl) addFile({ name: order.whiteLayerFile.name || 'White layer', dataUrl: order.whiteLayerFile.dataUrl });
+  if (order.uvFile?.dataUrl)          addFile({ name: order.uvFile.name         || 'UV layer',    dataUrl: order.uvFile.dataUrl });
+  if (order.foilFile?.dataUrl)        addFile({ name: order.foilFile.name       || 'Foil layer',  dataUrl: order.foilFile.dataUrl });
+
+  if (!files.length) return '';
+  return `<div class="card qc-job-art-section">
+    <div class="section-title">🖼 Job Artwork Files</div>
+    <div class="qc-art-gallery qc-art-gallery-job">${files.map(f => renderQcArtFileTile(f)).join('')}</div>
+  </div>`;
+}
+
+function renderChecklistGridHtml(skuKey, sku) {
+  const items = sku ? qcChecklistItemsForSku(sku) : QC_CHECKLIST_ITEMS;
+  const prefix = skuKey === '_job' ? '' : `${skuKey}-`;
+  return items.map(item => `
+    <div class="checklist-item" id="ci-${prefix}${item.id}">
+      <div class="ci-left">
+        <div class="ci-label">${item.label}</div>
+        <div class="ci-desc">${item.desc}</div>
+        <div class="ci-notes" style="margin-top:6px;display:none;" id="ci-notes-${prefix}${item.id}">
+          <input type="text" placeholder="Notes for this item…" id="ci-note-${prefix}${item.id}">
+        </div>
+      </div>
+      <div class="ci-verdict">
+        <button type="button" class="ci-btn ci-pass" id="ci-pass-${prefix}${item.id}" onclick="setCheckItem('${skuKey}','${item.id}','pass')">✅ Pass</button>
+        <button type="button" class="ci-btn ci-fail" id="ci-fail-${prefix}${item.id}" onclick="setCheckItem('${skuKey}','${item.id}','fail')">❌ Fail</button>
+        <button type="button" class="ci-btn ci-na" id="ci-na-${prefix}${item.id}" onclick="setCheckItem('${skuKey}','${item.id}','na')">N/A</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderOrderChecklists(order) {
+  const wrap = document.getElementById('qcChecklistsWrap');
+  if (!wrap) return;
+
+  // Inject job-level artwork at top (before per-SKU checklists)
+  const artHtml = renderJobArtworkSectionHtml(order);
+
+  const skus = getQcSkuList(order);
+
+  if (!skus.length) {
+    wrap.innerHTML = artHtml + `
+      <div class="card qc-checklist-card qc-sku-panel">
+        <div class="qc-sku-checklist-inner">
+          <h3 class="section-title">✅ QC Checklist</h3>
+          <div class="checklist" id="checklist-_job">${renderChecklistGridHtml('_job', null)}</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = artHtml + skus.map((sku, i) => {
+    const key = qcSkuKey(i);
+    return `
+      <div class="card qc-checklist-card qc-sku-panel">
+        ${renderSkuHeaderHtml(sku, i)}
+        <div class="qc-sku-checklist-inner">
+          <h3 class="section-title">✅ QC Checklist — ${qcEscAttr(sku.name || `SKU ${i + 1}`)}</h3>
+          <div class="checklist" id="checklist-${key}">${renderChecklistGridHtml(key, sku)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function resetChecklistUI() {
+  qcActiveSkuKeys.forEach(skuKey => {
+    const prefix = skuKey === '_job' ? '' : `${skuKey}-`;
+    QC_CHECKLIST_ITEMS.forEach(item => {
+      ['pass', 'fail', 'na'].forEach(v => {
+        document.getElementById(`ci-${v}-${prefix}${item.id}`)?.classList.remove('selected');
+      });
+      const notesRow = document.getElementById(`ci-notes-${prefix}${item.id}`);
+      if (notesRow) notesRow.style.display = 'none';
+    });
+  });
+}
+
+function setCheckItem(skuKey, itemId, verdict) {
+  if (!checklistResults[skuKey]) checklistResults[skuKey] = {};
+  checklistResults[skuKey][itemId] = verdict;
+  const prefix = skuKey === '_job' ? '' : `${skuKey}-`;
+  ['pass', 'fail', 'na'].forEach(v => {
+    const btn = document.getElementById(`ci-${v}-${prefix}${itemId}`);
+    if (btn) btn.classList.toggle('selected', v === verdict);
+  });
+  const notesRow = document.getElementById(`ci-notes-${prefix}${itemId}`);
+  if (notesRow) notesRow.style.display = verdict === 'fail' ? 'block' : 'none';
+
+  const allResults = Object.values(checklistResults).flatMap(block => Object.values(block || {}));
+  const hasAnyFail = allResults.some(v => v === 'fail');
+  const allChecked = isQcChecklistComplete();
+  if (hasAnyFail) setVerdict('fail');
+  else if (allChecked) setVerdict('pass');
+  else updateSubmitQcButtonState();
+}
+
+function setVerdict(v) {
+  currentVerdict = v;
+  document.getElementById('verdictPass').classList.toggle('selected', v === 'pass');
+  document.getElementById('verdictFail').classList.toggle('selected', v === 'fail');
+  document.getElementById('failOptions').style.display = v === 'fail' ? 'block' : 'none';
+  updateSubmitQcButtonState();
+}
+
+function isSkuChecklistComplete(skuKey) {
+  const block = checklistResults[skuKey] || {};
+  return QC_CHECKLIST_ITEMS.every(item => {
+    const v = block[item.id];
+    return v === 'pass' || v === 'fail' || v === 'na';
+  });
+}
+
+function isQcChecklistComplete() {
+  return qcActiveSkuKeys.length > 0 && qcActiveSkuKeys.every(isSkuChecklistComplete);
+}
+
+function collectChecklistPayload() {
+  const skus = getQcSkuList(selectedOrder);
+  if (skus.length) {
+    return {
+      mode: 'per-sku',
+      skus: skus.map((sku, i) => {
+        const key = qcSkuKey(i);
+        return {
+          index: i,
+          name: sku.name || `SKU ${i + 1}`,
+          quantity: Number(sku.quantity) || 0,
+          checklist: QC_CHECKLIST_ITEMS.map(item => ({
+            id: item.id,
+            label: item.label,
+            verdict: checklistResults[key]?.[item.id] || 'not-checked',
+            notes: document.getElementById(`ci-note-${key}-${item.id}`)?.value || '',
+          })),
+        };
+      }),
+    };
+  }
+  const flat = QC_CHECKLIST_ITEMS.map(item => ({
+    id: item.id,
+    label: item.label,
+    verdict: checklistResults._job?.[item.id] || 'not-checked',
+    notes: document.getElementById(`ci-note-${item.id}`)?.value || '',
+  }));
+  return { mode: 'job', checklist: flat };
+}
+
+function isQcFormReady() {
+  if (!selectedOrder) return false;
+  if (!isQcChecklistComplete()) return false;
+  if (currentVerdict !== 'pass' && currentVerdict !== 'fail') return false;
+  return !!(document.getElementById('qcInspector')?.value || '').trim();
+}
+
+function updateSubmitQcButtonState() {
+  const btn = document.getElementById('submitQCBtn');
+  if (!btn || btn.textContent === 'Submitting…') return;
+  const ready = isQcFormReady();
+  btn.disabled = !ready;
+  const skuHint = qcActiveSkuKeys.length > 1
+    ? ` Complete the checklist for all ${qcActiveSkuKeys.length} SKUs,`
+    : '';
+  btn.title = ready ? '' : `${skuHint} complete every checklist item, choose Pass or Fail, and select an inspector`.trim();
+}
+
+function toggleReprintQty() {
+  const checked = document.getElementById('createReprintCheck').checked;
+  document.getElementById('reprintQtySection').style.display = checked ? 'block' : 'none';
+}
+
+// ── Submit QC ─────────────────────────────────────────────
+async function submitQC() {
+  if (!selectedOrder) { showPageToast('Please select an order first.', 'warning'); return; }
+  if (!isQcChecklistComplete()) {
+    const n = qcActiveSkuKeys.length;
+    const skuMsg = n > 1 ? ` for all ${n} SKUs` : '';
+    showPageToast(`Please complete every checklist item${skuMsg} (Pass, Fail, or N/A).`, 'warning');
+    return;
+  }
+  if (!currentVerdict) { showPageToast('Please set a QC verdict (Pass or Fail).', 'warning'); return; }
+  const inspector = (document.getElementById('qcInspector').value || '').trim();
+  if (!inspector) { showPageToast('Please select a QC Inspector from the list.', 'warning'); return; }
+
+  const btn = document.getElementById('submitQCBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const notes = document.getElementById('qcNotes').value.trim();
+
+    const checklistPayload = collectChecklistPayload();
+    const checklistData = checklistPayload.mode === 'per-sku'
+      ? checklistPayload.skus.flatMap(s => s.checklist)
+      : checklistPayload.checklist;
+
+    const failReasons = currentVerdict === 'fail'
+      ? Array.from(document.querySelectorAll('.fail-reasons input[type=checkbox]:checked')).map(cb => cb.value)
+      : [];
+
+    const qcRecord = {
+      orderId: selectedOrder.orderId,
+      verdict: currentVerdict,
+      inspector,
+      notes,
+      checklist: checklistData,
+      checklistBySku: checklistPayload.mode === 'per-sku' ? checklistPayload.skus : null,
+      failReasons,
+      timestamp: new Date().toISOString()
+    };
+
+    if (currentVerdict === 'pass' && selectedOrder.status === 'qc-failed') {
+      const confirmed = confirm(
+        `⚠️ This order previously FAILED QC.\n\n` +
+        `Only mark PASS if all defects have been physically corrected and re-inspected.\n\n` +
+        `Confirm: defects have been resolved and the product is ready to ship?`
+      );
+      if (!confirmed) {
+        btn.textContent = 'Submit QC Result';
+        updateSubmitQcButtonState();
+        return;
+      }
+    }
+
+    if (currentVerdict === 'pass') {
+      await updateOrder(selectedOrderDbId, {
+        status: 'ready-to-ship',
+        qcStatus: 'passed',
+        qcRecord,
+        qcPassedAt: new Date().toISOString(),
+        qcInspector: inspector
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'qc-pass',
+        message: `QC PASSED by ${inspector}. Order moved to Ready to Ship.`,
+        by: inspector
+      });
+      showPageToast(`✅ QC Passed — Order #${selectedOrder.orderId} is now Ready to Ship`, 'success', 6000);
+    } else {
+      await updateOrder(selectedOrderDbId, {
+        status: 'qc-failed',
+        qcRecord,
+        qcFailedAt: new Date().toISOString(),
+        qcInspector: inspector,
+        qcFailReasons: failReasons
+      });
+      await addActivity({
+        orderId: selectedOrder.orderId,
+        type: 'qc-fail',
+        message: `QC FAILED by ${inspector}. Reasons: ${failReasons.join(', ') || 'See notes'}. ${notes}`,
+        by: inspector
+      });
+
+      if (document.getElementById('createReprintCheck').checked) {
+        const reprintQty = parseInt(document.getElementById('reprintQtyInput').value) || 0;
+        if (reprintQty > 0) {
+          const reason = failReasons[0] || 'qc-fail';
+          const reprintNotes = `QC Failed - ${failReasons.join(', ')}. ${notes}`;
+          const recreatedOrder = await createReprintOrderFromSource(selectedOrder, {
+            quantity: reprintQty,
+            reasonLabel: reason,
+            notes: reprintNotes,
+            requestedBy: inspector,
+          });
+          await addReprint({
+            parentOrderId: selectedOrder.orderId,
+            linkedOrderId: recreatedOrder.orderId,
+            reason,
+            quantity: reprintQty,
+            notes: reprintNotes,
+            status: 'queued-in-dashboard',
+            requestedBy: inspector
+          });
+          await addActivity({
+            orderId: recreatedOrder.orderId,
+            type: 'create',
+            message: `Recreated from #${selectedOrder.orderId} after QC fail`,
+            by: inspector
+          });
+        }
+      }
+
+      showPageToast(`❌ QC Failed — Order #${selectedOrder.orderId} returned to production queue`, 'error', 6000);
+    }
+
+    await renderLeftPanel();
+    clearQCForm();
+  } catch (err) {
+    console.error(err);
+    showPageToast('Error submitting QC: ' + err.message, 'error');
+  } finally {
+    btn.textContent = 'Submit QC Result';
+    updateSubmitQcButtonState();
+  }
+}
+
+function clearQCForm() {
+  selectedOrderDbId = null;
+  selectedOrder = null;
+  currentVerdict = null;
+  checklistResults = {};
+  qcActiveSkuKeys = [];
+  const wrap = document.getElementById('qcChecklistsWrap');
+  if (wrap) wrap.innerHTML = '';
+  document.getElementById('qcFormSection').style.display = 'none';
+  document.getElementById('qcPlaceholder').style.display = 'flex';
+  renderLeftPanel();
+}
+</script>
+</body>
+</html>

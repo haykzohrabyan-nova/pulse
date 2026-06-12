@@ -1,0 +1,17 @@
+// pulse-config.local.js — Optional overrides (gitignored)
+// ─────────────────────────────────────────────────────────────
+// Copy to js/pulse-config.local.js ONLY when you need to override js/pulse-config.js.
+//
+// For normal Supabase production use: leave js/pulse-config.local.js EMPTY
+// (or delete it). pulse-config.js already sets PULSE_STORAGE_BACKEND = 'supabase'.
+//
+// IndexedDB-only dev (no cloud):
+//   window.PULSE_STORAGE_BACKEND = 'indexeddb';
+//
+// NEVER uncomment placeholder URL/key below — that breaks Supabase and forces IndexedDB fallback.
+
+// window.PULSE_SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
+// window.PULSE_SUPABASE_ANON_KEY = 'eyJ...YOUR-ANON-KEY';
+// window.PULSE_STORAGE_BACKEND = 'supabase';
+
+// window.PULSE_ORG_STORAGE = 'local-json';  // organisation.html local JSON only

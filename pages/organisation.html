@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organisation — Bazaar Print</title>
+  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/organisation-local-store.js"></script>
+  <script src="/js/pulse-config.js"></script>
+  <script src="/js/pulse-config.local.js"></script>
+  <script src="/js/supabase-client.js?v=20260609-realtime"></script>
+  <script src="/js/auth.js?v=20260611-email-domain"></script>
+  <style id="page-styles"></style>
+  <!--
+    Follow-up (not implemented here): migrate orders.facility off Postgres ENUM to TEXT or FK
+    to organisation_facilities so new facility slugs work on job tickets; optionally hydrate
+    FACILITIES/MACHINES in shared.js from these tables.
+    Run migration 018_organisations_website_url.sql so the Website field persists to Supabase.
+    Run migration 019_organisation_facilities_address.sql for facility Address on save.
+    Run migration 020_organisation_facilities_manager.sql for the Facility Manager dropdown.
+    Local JSON: organisation-local-store.js + data/pulse-organisation-default.json (Export / Import on the page).
+  -->
+</head>
+<body>
+<div id="nav"></div>
+<div id="breadcrumb"></div>
+
+<div id="orgRoot" class="org-layout" style="display:none;">
+  <div id="orgBanner" class="org-banner" style="display:none;"></div>
+
+  <section class="org-card org-org-header">
+    <h1 class="org-page-title">Organisation</h1>
+    <p class="org-page-lead">Company profile, locations (facilities), and hardware. Slugs should stay aligned with job-ticket facility codes until orders move off the facility ENUM.</p>
+
+    <div class="org-profile-grid">
+      <label class="org-logo-drop" id="orgLogoDrop" for="orgLogoFile">
+        <input type="file" id="orgLogoFile" class="org-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <img id="orgLogoPreview" class="org-logo-preview-img" alt="Organisation logo preview">
+        <div id="orgLogoPlaceholder" class="org-logo-placeholder-inner">No logo</div>
+        <span id="orgLogoHint" class="org-logo-hint">Click or drop image · max 5MB</span>
+      </label>
+
+      <div class="org-fields-top">
+        <div class="field">
+          <label>Name <span style="color:#dc2626;">*</span></label>
+          <input type="text" id="orgName" placeholder="e.g. Bazaar Print" required autocomplete="organization">
+        </div>
+        <div class="field">
+          <label>Website</label>
+          <input type="url" id="orgWebsite" placeholder="https://example.com" autocomplete="url">
+        </div>
+      </div>
+      <div class="field org-fields-desc">
+        <label>Description</label>
+        <textarea id="orgDesc" rows="4" placeholder="One or two lines for headers and internal docs."></textarea>
+      </div>
+    </div>
+
+    <div class="org-save-row">
+      <button type="button" class="btn btn-primary" id="btnSaveOrg" onclick="saveOrganisation()">Save organisation</button>
+      <button type="button" class="btn btn-sm" id="btnEditOrg" onclick="editOrganisation()" style="display:none;">Edit organisation</button>
+      <button type="button" class="btn btn-sm btn-danger" id="btnDeleteOrg" onclick="deleteOrganisation()" style="display:none;">Delete organisation</button>
+      <span id="orgJsonActionsWrap" class="org-json-actions" style="display:none;">
+        <button type="button" class="btn btn-sm" onclick="exportOrganisationJsonFile()">Export JSON</button>
+        <label class="btn btn-sm org-json-file-btn">Import JSON
+          <input type="file" id="orgJsonImportFile" accept=".json,application/json" style="display:none;">
+        </label>
+      </span>
+    </div>
+  </section>
+
+  <div class="org-split" id="orgFacilitiesSection" style="display:none;">
+    <aside class="org-card org-facility-list">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h2 style="margin:0;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);">Facilities</h2>
+        <button type="button" class="btn btn-sm" onclick="openFacilityModal(null)">+ Add</button>
+      </div>
+      <div id="facilityList" class="org-facility-items"></div>
+    </aside>
+
+    <main class="org-card org-facility-detail">
+      <div id="facilityEmpty" style="padding:24px;color:var(--text-muted);text-align:center;font-size:14px;">
+        Select a facility on the left, or add one.
+      </div>
+      <div id="facilityPanel" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;" id="facTitle">—</h2>
+            <div style="font-size:11px;color:var(--text-muted);font-family:ui-monospace,monospace;" id="facSlugChip">—</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-sm" onclick="openFacilityModalForSelection()">Edit facility</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSelectedFacility()">Delete</button>
+          </div>
+        </div>
+        <div class="org-fac-meta">
+          <div class="org-fac-meta-row">
+            <div class="org-fac-meta-label">Manager</div>
+            <div class="org-fac-meta-value" id="facManagerText">—</div>
+          </div>
+          <div class="org-fac-meta-row">
+            <div class="org-fac-meta-label">Address</div>
+            <div class="org-fac-meta-value" id="facAddressText">—</div>
+          </div>
+          <div class="org-fac-meta-row">
+            <div class="org-fac-meta-label">About</div>
+            <div class="org-fac-meta-value" id="facDescription">—</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);">Hardware</h3>
+          <button type="button" class="btn btn-sm btn-primary" id="btnAddHardware" onclick="openHardwareModal(null)">+ Add hardware</button>
+        </div>
+        <div class="org-table-wrap">
+          <table class="org-table" id="hardwareTable">
+            <thead>
+              <tr>
+                <th>Machine</th>
+                <th>Facility</th>
+                <th>Operations</th>
+                <th>Daily capacity</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="hardwareBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Facility modal -->
+<div class="modal-overlay" id="facilityModal" style="display:none;">
+  <div class="modal" style="max-width:480px;">
+    <h2 id="facilityModalTitle" style="margin-bottom:12px;">Facility</h2>
+    <input type="hidden" id="facModalId">
+    <input type="hidden" id="facModalSlug">
+    <div class="field">
+      <label>Facility name <span style="color:#dc2626;">*</span></label>
+      <input type="text" id="facModalName" placeholder="e.g. 16th Street — Main Production" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Address</label>
+      <textarea id="facModalAddress" rows="2" placeholder="Street, city, state, ZIP"></textarea>
+    </div>
+    <div class="field">
+      <label>About</label>
+      <textarea id="facModalDesc" rows="3" placeholder="What happens at this facility"></textarea>
+    </div>
+    <div class="field">
+      <label>Facility manager</label>
+      <select id="facModalManager">
+        <option value="">— Unassigned —</option>
+      </select>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="facModalManagerHint">Select from Admin → Personnel.</div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn" onclick="closeModal('facilityModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveFacilityModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hardware modal -->
+<div class="modal-overlay" id="hardwareModal" style="display:none;">
+  <div class="modal" style="max-width:520px;">
+    <h2 id="hardwareModalTitle" style="margin-bottom:12px;">Hardware</h2>
+    <input type="hidden" id="hwModalId">
+    <input type="hidden" id="hwModalName">
+    <div class="field">
+      <label>Machine <span style="color:#dc2626;">*</span></label>
+      <select id="hwModalMachinePick" onchange="onOrgHardwareMachinePick()">
+        <option value="">— Select machine —</option>
+      </select>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Same catalog as Admin → Machine Capacity Settings (<code>MACHINES</code> / <code>MACHINE_CAPACITY</code> in shared.js).</div>
+    </div>
+    <div class="field">
+      <label>Operations (comma-separated)</label>
+      <input type="text" id="hwModalOps" placeholder="Printing, Die Cutting">
+    </div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label>Daily capacity value</label>
+        <input type="number" id="hwModalCapVal" min="0" step="any" placeholder="Leave empty for —">
+      </div>
+      <div>
+        <label>Unit</label>
+        <select id="hwModalCapUnit">
+          <option value="">— (not tracked)</option>
+          <option value="sheets">Sheets / day</option>
+          <option value="sq_ft">Sq ft / day</option>
+          <option value="units">Units / day</option>
+          <option value="none">Tracked, no numeric (—)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="hwModalNotes" rows="3"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn" onclick="closeModal('hardwareModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveHardwareModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+injectThemeCSS();
+const ORG_EMBEDDED = new URLSearchParams(window.location.search).get('embedded') === 'admin';
+if (!ORG_EMBEDDED) {
+  document.getElementById('nav').innerHTML = renderNav('organisation');
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb([{ label: 'Organisation' }]);
+} else {
+  document.getElementById('nav').style.display = 'none';
+  document.getElementById('breadcrumb').style.display = 'none';
+}
+
+document.getElementById('page-styles').textContent = `
+  .org-layout { max-width: 1200px; margin: 0 auto; padding: ${ORG_EMBEDDED ? '16px 24px' : '14px'}; display: flex; flex-direction: column; gap: 14px; }
+  .org-banner { padding: 12px 14px; border-radius: 10px; background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; font-size: 13px; }
+  .org-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+  .org-page-title { margin: 0 0 4px; font-size: 20px; font-weight: 800; color: var(--text); }
+  .org-page-lead { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); line-height: 1.45; max-width: 72ch; }
+  .org-profile-grid {
+    display: grid;
+    grid-template-columns: minmax(148px, 200px) 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px 16px;
+    align-items: stretch;
+  }
+  .org-logo-drop {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    background: #f8fafc;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+    text-align: center;
+    min-height: 0;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .org-logo-drop:hover { border-color: #93c5fd; background: #eff6ff; }
+  .org-logo-drop.is-dragover { border-color: #2563eb; background: #dbeafe; }
+  .org-logo-file-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .org-logo-preview-img {
+    display: none;
+    max-width: 100%;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 48px;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .org-logo-placeholder-inner {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .org-logo-hint {
+    font-size: 10px;
+    line-height: 1.35;
+    color: var(--text-muted);
+    max-width: 11rem;
+  }
+  .org-fields-top {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+    min-width: 0;
+  }
+  .org-fields-desc {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .org-fields-desc textarea {
+    flex: 1;
+    min-height: 88px;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .org-save-row { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .org-json-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+  .org-json-file-btn { cursor: pointer; margin: 0; font-weight: 600; }
+  @media (max-width: 720px) {
+    .org-profile-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .org-logo-drop {
+      grid-column: 1;
+      grid-row: 1;
+      min-height: 140px;
+      max-height: 220px;
+    }
+    .org-fields-top {
+      grid-column: 1;
+      grid-row: 2;
+      grid-template-columns: 1fr;
+    }
+    .org-fields-desc { grid-column: 1; grid-row: 3; }
+  }
+  .org-split { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .org-split { grid-template-columns: 1fr; } }
+  .org-facility-items { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; }
+  .org-fac-item { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; }
+  .org-fac-item:hover { border-color: #93c5fd; background: #eff6ff; }
+  .org-fac-item.active { border-color: #2563eb; background: #eff6ff; font-weight: 600; }
+  .org-fac-item .sub { font-size: 11px; color: var(--text-muted); font-weight: 400; margin-top: 4px; font-family: ui-monospace, monospace; word-break: break-all; }
+  .org-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  .org-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .org-table th, .org-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  .org-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); background: #f8fafc; }
+  .org-table tr:last-child td { border-bottom: none; }
+  .org-fac-meta { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: #f9fafb; }
+  .org-fac-meta-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: start; }
+  .org-fac-meta-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); padding-top: 1px; }
+  .org-fac-meta-value { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  @media (max-width: 540px) {
+    .org-fac-meta-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+`;
+
+let organisationId = null;
+let facilities = [];
+let hardwareByFacility = {};
+let selectedFacilityId = null;
+let cachedOrgLogoUrl = '';
+let pendingLogoObjectUrl = '';
+let facilityManagers = [];
+let facilityManagersLoaded = false;
+let facilityManagersSchemaSupported = true;
+let __orgLocalPeopleFallback = [];
+let organisationSaved = false;
+let organisationEditMode = true;
+
+function sb() {
+  return typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+}
+
+function useOrganisationLocalJson() {
+  if (window.PULSE_ORG_STORAGE === 'supabase') return false;
+  if (window.PULSE_ORG_STORAGE === 'local-json') return true;
+  if (isPulseConfigPlaceholder()) return true;
+  if (String(window.PULSE_STORAGE_BACKEND || '') !== 'supabase') return true;
+  return false;
+}
+
+async function getSupabaseSessionSafe() {
+  if (typeof window.supabaseGetSession !== 'function') return null;
+  try { return await window.supabaseGetSession(); } catch (_) { return null; }
+}
+
+function defaultOrganisationBundleForSeed() {
+  if (window.PulseOrgJsonStore && typeof PulseOrgJsonStore.defaultBundle === 'function') {
+    return PulseOrgJsonStore.defaultBundle();
+  }
+  return {
+    organisation: {
+      id: '00000000-0000-4000-8000-000000000001',
+      name: 'Bazaar Print',
+      short_description: 'Master production organisation for Pulse — facilities and hardware below.',
+      website_url: '',
+      logo_url: ''
+    },
+    facilities: [],
+    hardwareByFacilityId: {}
+  };
+}
+
+async function seedOrganisationDefaultsInSupabase(client) {
+  const bundle = defaultOrganisationBundleForSeed();
+  const orgPayload = {
+    id: bundle.organisation.id || undefined,
+    name: bundle.organisation.name || 'Bazaar Print',
+    short_description: bundle.organisation.short_description || '',
+    website_url: bundle.organisation.website_url || null,
+    logo_url: bundle.organisation.logo_url || null
+  };
+
+  let orgRow;
+  {
+    const { data, error } = await client
+      .from('organisations')
+      .upsert(orgPayload, { onConflict: 'id' })
+      .select('*')
+      .single();
+    if (error && /website_url/i.test(error.message || '')) {
+      const fallbackPayload = { ...orgPayload };
+      delete fallbackPayload.website_url;
+      const retry = await client
+        .from('organisations')
+        .upsert(fallbackPayload, { onConflict: 'id' })
+        .select('*')
+        .single();
+      if (retry.error) throw retry.error;
+      orgRow = retry.data;
+    } else if (error) {
+      throw error;
+    } else {
+      orgRow = data;
+    }
+  }
+
+  const facilitiesSeed = Array.isArray(bundle.facilities) ? bundle.facilities : [];
+  for (const fac of facilitiesSeed) {
+    const facPayload = {
+      id: fac.id || undefined,
+      organisation_id: orgRow.id,
+      slug: fac.slug,
+      name: fac.name || fac.slug,
+      description: fac.description || '',
+      address: fac.address || null,
+      manager_id: fac.manager_id || null,
+      sort_order: fac.sort_order ?? 0
+    };
+    let facErr = null;
+    {
+      const { error } = await client
+        .from('organisation_facilities')
+        .upsert(facPayload, { onConflict: 'organisation_id,slug' });
+      facErr = error;
+    }
+    if (facErr && /address|manager_id/i.test(facErr.message || '')) {
+      const fallbackFacPayload = {
+        id: facPayload.id,
+        organisation_id: facPayload.organisation_id,
+        slug: facPayload.slug,
+        name: facPayload.name,
+        description: facPayload.description,
+        sort_order: facPayload.sort_order
+      };
+      const retry = await client
+        .from('organisation_facilities')
+        .upsert(fallbackFacPayload, { onConflict: 'organisation_id,slug' });
+      if (retry.error) throw retry.error;
+    } else if (facErr) {
+      throw facErr;
+    }
+  }
+
+  const { data: facRows, error: facRowsErr } = await client
+    .from('organisation_facilities')
+    .select('id, slug')
+    .eq('organisation_id', orgRow.id);
+  if (facRowsErr) throw facRowsErr;
+  const facIdBySlug = new Map((facRows || []).map(f => [f.slug, f.id]));
+  const hwByFac = bundle.hardwareByFacilityId || {};
+
+  for (const fac of facilitiesSeed) {
+    const facilityId = facIdBySlug.get(fac.slug);
+    if (!facilityId) continue;
+    const hwRows = Array.isArray(hwByFac[fac.id]) ? hwByFac[fac.id] : [];
+    for (const hw of hwRows) {
+      const hwPayload = {
+        id: hw.id || undefined,
+        facility_id: facilityId,
+        machine_name: hw.machine_name || '',
+        operations: Array.isArray(hw.operations) ? hw.operations : [],
+        daily_capacity_value: hw.daily_capacity_value ?? null,
+        daily_capacity_unit: hw.daily_capacity_unit ?? null,
+        notes: hw.notes || '',
+        sort_order: hw.sort_order ?? 0,
+        active: hw.active !== false
+      };
+      const { error } = await client
+        .from('organisation_hardware')
+        .upsert(hwPayload, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  }
+  return orgRow;
+}
+
+async function waitForSupabaseClient(maxMs) {
+  const cap = maxMs == null ? 10000 : maxMs;
+  const step = 150;
+  let t = 0;
+  while (t < cap) {
+    const c = sb();
+    if (c) return c;
+    await new Promise(r => setTimeout(r, step));
+    t += step;
+  }
+  return sb();
+}
+
+function isPulseConfigPlaceholder() {
+  const url = String(window.PULSE_SUPABASE_URL || '');
+  const key = String(window.PULSE_SUPABASE_ANON_KEY || '');
+  if (!url || /YOUR-PROJECT-REF/i.test(url)) return true;
+  if (!key || /YOUR-ANON-KEY/i.test(key)) return true;
+  return false;
+}
+
+function slugifyFacilityName(name) {
+  const base = String(name || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return base || 'facility';
+}
+
+function ensureUniqueFacilitySlug(base, ignoreFacilityId) {
+  const used = new Set(facilities
+    .filter(f => !ignoreFacilityId || f.id !== ignoreFacilityId)
+    .map(f => String(f.slug || '').toLowerCase()));
+  if (!used.has(base)) return base;
+  for (let i = 2; i < 100; i++) {
+    const next = `${base}-${i}`;
+    if (!used.has(next)) return next;
+  }
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+async function loadFacilityManagers() {
+  const client = sb();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('id, display_name, role, active')
+        .eq('active', true)
+        .order('display_name', { ascending: true });
+      if (error) throw error;
+      facilityManagers = data || [];
+      facilityManagersLoaded = true;
+      return;
+    } catch (err) {
+      console.warn('[Organisation] Could not load profiles (Personnel):', err.message || err);
+    }
+  }
+  if (typeof getAllPersonnel === 'function') {
+    if (typeof seedPersonnelFromProfiles === 'function'
+        && typeof pulseUsesSupabaseStorage === 'function'
+        && !pulseUsesSupabaseStorage()) {
+      await seedPersonnelFromProfiles();
+    }
+    const people = await getAllPersonnel();
+    facilityManagers = (people || [])
+      .filter(p => p.active !== false)
+      .map(p => ({
+        id: String(p.id),
+        display_name: p.name || p.display_name || '',
+        role: p.role || 'operator',
+        active: true
+      }));
+  } else {
+    facilityManagers = [];
+  }
+  facilityManagersLoaded = true;
+}
+
+function updateOrgJsonToolbarVisibility() {
+  const wrap = document.getElementById('orgJsonActionsWrap');
+  if (!wrap) return;
+  const local = useOrganisationLocalJson();
+  wrap.style.display = local ? 'inline-flex' : 'none';
+}
+
+function setOrganisationFieldsDisabled(disabled) {
+  ['orgName', 'orgWebsite', 'orgDesc', 'orgLogoFile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+  const logoDrop = document.getElementById('orgLogoDrop');
+  if (logoDrop) {
+    logoDrop.style.pointerEvents = disabled ? 'none' : '';
+    logoDrop.style.opacity = disabled ? '0.82' : '';
+  }
+}
+
+function renderOrganisationState() {
+  const hasSavedOrg = !!organisationSaved;
+  const editing = !hasSavedOrg || organisationEditMode;
+  const saveBtn = document.getElementById('btnSaveOrg');
+  const editBtn = document.getElementById('btnEditOrg');
+  const deleteBtn = document.getElementById('btnDeleteOrg');
+  const facilitiesSection = document.getElementById('orgFacilitiesSection');
+
+  setOrganisationFieldsDisabled(!editing);
+  if (saveBtn) {
+    saveBtn.style.display = editing ? '' : 'none';
+    saveBtn.textContent = hasSavedOrg ? 'Save changes' : 'Save organisation';
+  }
+  if (editBtn) editBtn.style.display = hasSavedOrg && !editing ? '' : 'none';
+  if (deleteBtn) deleteBtn.style.display = hasSavedOrg && !editing ? '' : 'none';
+  if (facilitiesSection) facilitiesSection.style.display = hasSavedOrg ? 'grid' : 'none';
+
+  if (!hasSavedOrg) {
+    selectedFacilityId = null;
+    renderFacilityPanel();
+  }
+}
+
+function describeManager(p) {
+  if (!p) return '';
+  const role = p.role ? ` · ${String(p.role).replace(/_/g, ' ')}` : '';
+  return `${p.display_name || 'Unnamed user'}${role}`;
+}
+
+function fillManagerSelect(selectedId) {
+  const sel = document.getElementById('facModalManager');
+  if (!sel) return;
+  const current = selectedId || '';
+  const options = ['<option value="">— Unassigned —</option>'];
+  if (!facilityManagers.length) {
+    const msg = sb()
+      ? 'No active personnel — add users in Admin → Personnel'
+      : 'No active personnel — add people in Admin → Personnel';
+    options.push(`<option value="" disabled>${msg}</option>`);
+  } else {
+    for (const p of facilityManagers) {
+      options.push(`<option value="${escOrg(p.id)}">${escOrg(describeManager(p))}</option>`);
+    }
+  }
+  sel.innerHTML = options.join('');
+  if (current && facilityManagers.some(p => p.id === current)) {
+    sel.value = current;
+  } else if (current) {
+    const opt = document.createElement('option');
+    opt.value = current;
+    opt.textContent = '(Previously assigned — no longer active)';
+    sel.appendChild(opt);
+    sel.value = current;
+  }
+}
+
+function findManagerById(id) {
+  if (!id) return null;
+  const target = String(id);
+  return facilityManagers.find(p => String(p.id) === target)
+    || null;
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+function showBanner(msg, isError) {
+  const b = document.getElementById('orgBanner');
+  b.textContent = msg;
+  b.style.display = '';
+  b.style.background = isError ? '#fee2e2' : '#fef3c7';
+  b.style.borderColor = isError ? '#fca5a5' : '#fcd34d';
+  b.style.color = isError ? '#991b1b' : '#92400e';
+}
+
+function hideBanner() {
+  const b = document.getElementById('orgBanner');
+  b.style.display = 'none';
+  b.textContent = '';
+}
+
+function buildLocalBundleFromState() {
+  const logoUrl = (cachedOrgLogoUrl && String(cachedOrgLogoUrl).startsWith('http')) ? cachedOrgLogoUrl : '';
+  const logoData = (cachedOrgLogoUrl && String(cachedOrgLogoUrl).startsWith('data:')) ? cachedOrgLogoUrl : '';
+  return {
+    schemaVersion: 1,
+    organisation: {
+      id: organisationId,
+      name: (document.getElementById('orgName') && document.getElementById('orgName').value.trim()) || 'Bazaar Print',
+      short_description: (document.getElementById('orgDesc') && document.getElementById('orgDesc').value.trim()) || '',
+      website_url: (document.getElementById('orgWebsite') && document.getElementById('orgWebsite').value.trim()) || '',
+      logo_url: logoUrl,
+      logo_data_url: logoData,
+      saved: !!organisationSaved
+    },
+    people: __orgLocalPeopleFallback.slice(),
+    facilities: JSON.parse(JSON.stringify(facilities)),
+    hardwareByFacilityId: JSON.parse(JSON.stringify(hardwareByFacility))
+  };
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(new Error('Could not read file'));
+    fr.readAsDataURL(file);
+  });
+}
+
+function exportOrganisationJsonFile() {
+  if (!window.PulseOrgJsonStore) {
+    alert('Local store script missing.');
+    return;
+  }
+  PulseOrgJsonStore.exportDownload(buildLocalBundleFromState(), 'pulse-organisation.json');
+}
+
+async function loadAllFromJsonStore() {
+  if (!window.PulseOrgJsonStore) throw new Error('organisation-local-store.js not loaded');
+  let b;
+  const storedRaw = localStorage.getItem(PulseOrgJsonStore.KEY);
+  const hadStoredBundle = !!storedRaw;
+  if (!hadStoredBundle) {
+    try {
+      const r = await fetch('data/pulse-organisation-default.json', { cache: 'no-store' });
+      if (r.ok) {
+        b = PulseOrgJsonStore.normalizeBundle(await r.json());
+        if (typeof b.organisation.saved !== 'boolean') b.organisation.saved = true;
+      }
+    } catch (_) { /* file:// or missing file */ }
+    if (!b) {
+      b = PulseOrgJsonStore.defaultBundle();
+    }
+  } else {
+    b = PulseOrgJsonStore.loadRaw();
+    if (!/"saved"\s*:/.test(storedRaw)) b.organisation.saved = true;
+  }
+
+  const seeded = PulseOrgJsonStore.ensureStructureSeed(b);
+  b = seeded.bundle;
+  const skipLocalSave = typeof window.usePulseSupabaseStorage === 'function' && window.usePulseSupabaseStorage();
+  if (!skipLocalSave && (!hadStoredBundle || seeded.changed)) PulseOrgJsonStore.saveRaw(b);
+
+  organisationId = b.organisation.id;
+  organisationSaved = !!b.organisation.saved;
+  organisationEditMode = !organisationSaved;
+  __orgLocalPeopleFallback = (b.people || []).map(p => ({
+    id: p.id,
+    display_name: p.display_name || '',
+    role: p.role || 'contact',
+    active: p.active !== false
+  }));
+  facilityManagersLoaded = false;
+  facilities = JSON.parse(JSON.stringify(b.facilities || []));
+  hardwareByFacility = JSON.parse(JSON.stringify(b.hardwareByFacilityId || {}));
+
+  revokePendingLogoPreview();
+  const logoInput = document.getElementById('orgLogoFile');
+  if (logoInput) logoInput.value = '';
+  document.getElementById('orgName').value = b.organisation.name || '';
+  document.getElementById('orgWebsite').value = b.organisation.website_url || '';
+  document.getElementById('orgDesc').value = b.organisation.short_description || '';
+  cachedOrgLogoUrl = b.organisation.logo_data_url || b.organisation.logo_url || '';
+  updateLogoPreview(cachedOrgLogoUrl);
+
+  await loadFacilityManagers();
+  hideBanner();
+  updateOrgJsonToolbarVisibility();
+  renderOrganisationState();
+
+  renderFacilityList();
+  if (facilities.length && !selectedFacilityId) selectedFacilityId = facilities[0].id;
+  if (selectedFacilityId && !facilities.some(f => f.id === selectedFacilityId)) selectedFacilityId = facilities[0]?.id || null;
+  renderFacilityPanel();
+  document.getElementById('orgRoot').style.display = 'flex';
+}
+
+async function loadAll(opts = {}) {
+  if (useOrganisationLocalJson()) {
+    await loadAllFromJsonStore();
+    return;
+  }
+
+  const client = await waitForSupabaseClient(12000);
+  if (!client) {
+    document.getElementById('orgRoot').style.display = 'flex';
+    showBanner('Supabase client did not become ready. Check pulse-config.local.js (URL + anon key) and the browser console, or set PULSE_ORG_STORAGE = "local-json" to use local JSON only.', true);
+    return;
+  }
+  const supaSession = await getSupabaseSessionSafe();
+  if (!supaSession) {
+    showBanner(
+      'Supabase session is missing, so cloud organisation rows are not readable in this tab. Please log in again. Showing local fallback data.',
+      true
+    );
+    await loadAllFromJsonStore();
+    document.getElementById('orgRoot').style.display = 'flex';
+    return;
+  }
+  hideBanner();
+  updateOrgJsonToolbarVisibility();
+
+  facilityManagersLoaded = false;
+  facilityManagers = [];
+  __orgLocalPeopleFallback = [];
+
+  const { data: orgs, error: oe } = await client.from('organisations').select('*').limit(1);
+  if (oe) {
+    if (/permission denied|42501/i.test(oe.message || '')) {
+      showBanner(
+        'Supabase denied access to organisation tables (missing GRANT). Run migration 032_grant_organisation_tables.sql on your project (Supabase SQL Editor or `npx supabase db push`). Until then, showing facilities from this browser’s local organisation seed — job tickets use the same seed, which is why they can show facilities while this tab errors.',
+        true
+      );
+      await loadAllFromJsonStore();
+      updateOrgJsonToolbarVisibility();
+      document.getElementById('orgRoot').style.display = 'flex';
+      return;
+    }
+    throw oe;
+  }
+  let org = (orgs && orgs[0]) || null;
+  if (!org) {
+    if (opts.autoSeed !== false) {
+      try {
+        await seedOrganisationDefaultsInSupabase(client);
+        if (typeof showPageToast === 'function') {
+          showPageToast('Organisation defaults restored from seed.', 'success');
+        }
+        await loadAll({ autoSeed: false });
+        return;
+      } catch (seedError) {
+        console.warn('[Organisation] seed from defaults failed:', seedError);
+      }
+    }
+    organisationId = null;
+    organisationSaved = false;
+    organisationEditMode = true;
+    facilities = [];
+    hardwareByFacility = {};
+    selectedFacilityId = null;
+    revokePendingLogoPreview();
+    const logoInput = document.getElementById('orgLogoFile');
+    if (logoInput) logoInput.value = '';
+    document.getElementById('orgName').value = 'Bazaar Print';
+    document.getElementById('orgWebsite').value = '';
+    document.getElementById('orgDesc').value = '';
+    cachedOrgLogoUrl = '';
+    updateLogoPreview('');
+    await loadFacilityManagers();
+    renderFacilityList();
+    renderOrganisationState();
+    document.getElementById('orgRoot').style.display = 'flex';
+    return;
+  }
+  organisationId = org.id;
+  organisationSaved = true;
+  organisationEditMode = false;
+  revokePendingLogoPreview();
+  const logoInput = document.getElementById('orgLogoFile');
+  if (logoInput) logoInput.value = '';
+  document.getElementById('orgName').value = org.name || '';
+  document.getElementById('orgWebsite').value = org.website_url || '';
+  document.getElementById('orgDesc').value = org.short_description || '';
+  cachedOrgLogoUrl = org.logo_url || '';
+  updateLogoPreview(cachedOrgLogoUrl);
+
+  const { data: facs, error: fe } = await client
+    .from('organisation_facilities')
+    .select('*')
+    .eq('organisation_id', organisationId)
+    .order('sort_order', { ascending: true });
+  if (fe) throw fe;
+  facilities = facs || [];
+  hardwareByFacility = {};
+  for (const f of facilities) {
+    const { data: hw, error: he } = await client
+      .from('organisation_hardware')
+      .select('*')
+      .eq('facility_id', f.id)
+      .order('sort_order', { ascending: true });
+    if (he) throw he;
+    hardwareByFacility[f.id] = hw || [];
+  }
+
+  await loadFacilityManagers();
+  renderOrganisationState();
+  renderFacilityList();
+  if (facilities.length && !selectedFacilityId) selectedFacilityId = facilities[0].id;
+  if (selectedFacilityId && !facilities.some(f => f.id === selectedFacilityId)) selectedFacilityId = facilities[0]?.id || null;
+  renderFacilityPanel();
+  document.getElementById('orgRoot').style.display = 'flex';
+}
+
+function getOrganisationHardwareMachineNames() {
+  const set = new Set();
+  if (typeof MACHINES !== 'undefined' && MACHINES) Object.keys(MACHINES).forEach(k => set.add(k));
+  if (typeof MACHINE_CAPACITY !== 'undefined' && MACHINE_CAPACITY) Object.keys(MACHINE_CAPACITY).forEach(k => set.add(k));
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function fillHardwareMachineSelect(selectedName) {
+  const sel = document.getElementById('hwModalMachinePick');
+  if (!sel) return;
+  const names = getOrganisationHardwareMachineNames();
+  const opts = ['<option value="">— Select machine —</option>'];
+  for (const n of names) {
+    opts.push(`<option value="${escOrg(n)}">${escOrg(n)}</option>`);
+  }
+  const cur = selectedName && names.includes(selectedName) ? selectedName : '';
+  if (selectedName && !cur) {
+    opts.push(`<option value="${escOrg(selectedName)}">${escOrg(selectedName)} (not in catalog)</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  sel.value = selectedName || '';
+}
+
+function onOrgHardwareMachinePick() {
+  const sel = document.getElementById('hwModalMachinePick');
+  const name = sel && sel.value ? sel.value : '';
+  const hidden = document.getElementById('hwModalName');
+  if (hidden) hidden.value = name;
+  if (!name) return;
+  const meta = typeof MACHINES !== 'undefined' ? MACHINES[name] : null;
+  const cap = typeof MACHINE_CAPACITY !== 'undefined' ? MACHINE_CAPACITY[name] : null;
+  const opsEl = document.getElementById('hwModalOps');
+  const valEl = document.getElementById('hwModalCapVal');
+  const unitEl = document.getElementById('hwModalCapUnit');
+  const notesEl = document.getElementById('hwModalNotes');
+  if (opsEl) opsEl.value = (meta && meta.operations) ? meta.operations.join(', ') : '';
+  if (notesEl) {
+    const n = (cap && cap.notes) ? cap.notes : (meta && meta.notes) ? meta.notes : '';
+    notesEl.value = n || '';
+  }
+  if (valEl && unitEl) {
+    valEl.value = '';
+    unitEl.value = '';
+    if (cap) {
+      if (cap.dailySheets != null) {
+        valEl.value = cap.dailySheets;
+        unitEl.value = 'sheets';
+      } else if (cap.dailyPouches != null) {
+        valEl.value = cap.dailyPouches;
+        unitEl.value = 'units';
+      } else if (cap.dailySqFt != null) {
+        valEl.value = cap.dailySqFt;
+        unitEl.value = 'sq_ft';
+      } else if (cap.dailyUnits != null) {
+        valEl.value = cap.dailyUnits;
+        unitEl.value = 'units';
+      }
+    }
+  }
+}
+
+function revokePendingLogoPreview() {
+  if (pendingLogoObjectUrl) {
+    URL.revokeObjectURL(pendingLogoObjectUrl);
+    pendingLogoObjectUrl = '';
+  }
+}
+
+function previewPendingLogoFromInput() {
+  const input = document.getElementById('orgLogoFile');
+  const f = input && input.files && input.files[0];
+  if (!f) return;
+  revokePendingLogoPreview();
+  pendingLogoObjectUrl = URL.createObjectURL(f);
+  updateLogoPreview(pendingLogoObjectUrl);
+}
+
+function setLogoFileFromDrop(file) {
+  const input = document.getElementById('orgLogoFile');
+  if (!input || !file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  previewPendingLogoFromInput();
+}
+
+function wireOrgLogoDropzone() {
+  const drop = document.getElementById('orgLogoDrop');
+  const fileInput = document.getElementById('orgLogoFile');
+  if (!drop || !fileInput || drop.dataset.wired === '1') return;
+  drop.dataset.wired = '1';
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) previewPendingLogoFromInput();
+  });
+
+  drop.addEventListener('dragenter', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    drop.classList.add('is-dragover');
+  });
+  drop.addEventListener('dragleave', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = e.relatedTarget;
+    if (!next || !drop.contains(next)) drop.classList.remove('is-dragover');
+  });
+  drop.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    try { e.dataTransfer.dropEffect = 'copy'; } catch (_) {}
+  });
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    drop.classList.remove('is-dragover');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    if (!/^image\//.test(f.type)) {
+      showBanner('Please use an image file (PNG, JPEG, WebP, or SVG).', true);
+      return;
+    }
+    if (f.size > 5242880) {
+      showBanner('Logo file must be 5MB or smaller.', true);
+      return;
+    }
+    setLogoFileFromDrop(f);
+  });
+}
+
+function updateLogoPreview(url) {
+  const img = document.getElementById('orgLogoPreview');
+  const ph = document.getElementById('orgLogoPlaceholder');
+  const hint = document.getElementById('orgLogoHint');
+  if (url) {
+    img.src = url;
+    img.style.display = 'block';
+    ph.style.display = 'none';
+    if (hint) {
+      hint.textContent = 'Click or drop to replace · max 5MB';
+      hint.style.display = 'block';
+    }
+    img.onerror = function() {
+      img.removeAttribute('src');
+      img.style.display = 'none';
+      ph.style.display = 'block';
+      if (hint) hint.textContent = 'Click or drop image · max 5MB';
+    };
+  } else {
+    img.removeAttribute('src');
+    img.style.display = 'none';
+    ph.style.display = 'block';
+    if (hint) hint.textContent = 'Click or drop image · max 5MB';
+  }
+}
+
+function renderFacilityList() {
+  const el = document.getElementById('facilityList');
+  if (!facilities.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px;">No facilities yet. Click Add.</div>';
+    return;
+  }
+  el.innerHTML = facilities.map(f => {
+    const mgr = findManagerById(f.manager_id);
+    const subBits = [];
+    if (mgr) subBits.push(escOrg('👤 ' + (mgr.display_name || '')));
+    else if (f.address) subBits.push(escOrg(String(f.address).split('\n')[0]));
+    return `
+    <button type="button" class="org-fac-item ${f.id === selectedFacilityId ? 'active' : ''}" onclick="selectFacility('${f.id}')">
+      <div>${escOrg(f.name)}</div>
+      ${subBits.length ? `<div class="sub">${subBits.join(' · ')}</div>` : ''}
+    </button>`;
+  }).join('');
+}
+
+function escOrg(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+
+function selectFacility(id) {
+  selectedFacilityId = id;
+  renderFacilityList();
+  renderFacilityPanel();
+}
+
+function renderFacilityPanel() {
+  const f = facilities.find(x => x.id === selectedFacilityId);
+  const empty = document.getElementById('facilityEmpty');
+  const panel = document.getElementById('facilityPanel');
+  if (!f) {
+    empty.style.display = 'block';
+    panel.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  panel.style.display = 'block';
+  document.getElementById('facTitle').textContent = f.name;
+  const slugChip = document.getElementById('facSlugChip');
+  if (slugChip) slugChip.textContent = f.slug ? `slug: ${f.slug}` : '';
+  const mgr = findManagerById(f.manager_id);
+  const mgrEl = document.getElementById('facManagerText');
+  if (mgrEl) mgrEl.textContent = mgr ? describeManager(mgr) : '—';
+  const addrEl = document.getElementById('facAddressText');
+  if (addrEl) addrEl.textContent = (f.address && String(f.address).trim()) ? String(f.address).trim() : '—';
+  document.getElementById('facDescription').textContent = (f.description && String(f.description).trim()) ? String(f.description).trim() : '—';
+
+  const rows = hardwareByFacility[f.id] || [];
+  const body = document.getElementById('hardwareBody');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);padding:16px;">No hardware rows. Add a machine.</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(h => {
+    const cap = formatCapacity(h);
+    const ops = (h.operations || []).join(', ');
+    return `<tr>
+      <td style="font-weight:600;">${escOrg(h.machine_name)}</td>
+      <td>${escOrg(f.name)}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${escOrg(ops)}</td>
+      <td>${escOrg(cap)}</td>
+      <td style="font-size:12px;">${escOrg(h.notes || '')}</td>
+      <td style="white-space:nowrap;">
+        <button type="button" class="btn btn-sm" onclick="openHardwareModal('${h.id}')">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteHardware('${h.id}')">Remove</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function formatCapacity(h) {
+  if (h.daily_capacity_unit == null || h.daily_capacity_unit === '') return '—';
+  if (h.daily_capacity_unit === 'none') return '— / day';
+  const v = h.daily_capacity_value;
+  if (v == null || v === '') return '—';
+  const u = { sheets: 'sheets/day', sq_ft: 'sq-ft/day', units: 'units/day' }[h.daily_capacity_unit] || h.daily_capacity_unit;
+  return `${Number(v).toLocaleString()} ${u}`;
+}
+
+async function saveOrganisation() {
+  const orgNameRaw = (document.getElementById('orgName') && document.getElementById('orgName').value.trim()) || '';
+  if (!orgNameRaw) {
+    showBanner('Organisation name is required.', true);
+    const el = document.getElementById('orgName');
+    if (el) el.focus();
+    return;
+  }
+
+  if (useOrganisationLocalJson()) {
+    if (!organisationId || !window.PulseOrgJsonStore) return;
+    hideBanner();
+    const fileInput = document.getElementById('orgLogoFile');
+    if (fileInput.files && fileInput.files[0]) {
+      const f = fileInput.files[0];
+      if (f.size > 1_500_000) {
+        showBanner('Logo file is too large for local JSON (max about 1.5 MB). Use a smaller image or switch to Supabase for larger logos.', true);
+        return;
+      }
+      try {
+        cachedOrgLogoUrl = await readFileAsDataURL(f);
+      } catch (e) {
+        showBanner('Could not read logo file.', true);
+        return;
+      }
+    }
+    organisationSaved = true;
+    organisationEditMode = false;
+    PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    fileInput.value = '';
+    revokePendingLogoPreview();
+    updateLogoPreview(cachedOrgLogoUrl);
+    renderOrganisationState();
+    if (typeof showPageToast === 'function') showPageToast('Saved to local JSON.', 'success');
+    else alert('Saved to local JSON.');
+    return;
+  }
+
+  const client = sb();
+  if (!client) return;
+  hideBanner();
+  let logoUrl = cachedOrgLogoUrl || '';
+  const websiteRaw = (document.getElementById('orgWebsite').value || '').trim();
+  const orgPayload = {
+    name: orgNameRaw,
+    short_description: document.getElementById('orgDesc').value.trim(),
+    website_url: websiteRaw || null,
+    logo_url: logoUrl || null
+  };
+
+  if (!organisationId) {
+    const { data: created, error: createError } = await client
+      .from('organisations')
+      .insert(orgPayload)
+      .select('*')
+      .single();
+    if (createError) {
+      showBanner(createError.message, true);
+      return;
+    }
+    organisationId = created.id;
+  }
+
+  const fileInput = document.getElementById('orgLogoFile');
+  if (fileInput.files && fileInput.files[0]) {
+    const f = fileInput.files[0];
+    if (f.size > 5242880) {
+      showBanner('Logo file must be 5MB or smaller.', true);
+      return;
+    }
+    const ext = (f.name.split('.').pop() || 'png').toLowerCase();
+    const path = `logos/${organisationId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await client.storage.from('org-assets').upload(path, f, { upsert: true, contentType: f.type || undefined });
+    if (upErr) {
+      showBanner('Logo upload failed: ' + upErr.message, true);
+      return;
+    }
+    const { data: pub } = client.storage.from('org-assets').getPublicUrl(path);
+    logoUrl = (pub && pub.publicUrl) || logoUrl;
+  }
+
+  const { error } = await client.from('organisations').update({
+    name: orgNameRaw,
+    short_description: document.getElementById('orgDesc').value.trim(),
+    website_url: websiteRaw || null,
+    logo_url: logoUrl || null
+  }).eq('id', organisationId);
+  if (error) {
+    showBanner(error.message, true);
+    return;
+  }
+  fileInput.value = '';
+  revokePendingLogoPreview();
+  cachedOrgLogoUrl = logoUrl || '';
+  updateLogoPreview(cachedOrgLogoUrl);
+  organisationSaved = true;
+  organisationEditMode = false;
+  renderOrganisationState();
+  if (typeof showPageToast === 'function') showPageToast('Organisation saved.', 'success');
+  else alert('Saved.');
+}
+
+function editOrganisation() {
+  organisationEditMode = true;
+  renderOrganisationState();
+  const nameEl = document.getElementById('orgName');
+  if (nameEl) nameEl.focus();
+}
+
+async function deleteOrganisation() {
+  if (!organisationSaved) return;
+  if (!confirm('Delete this organisation setup? Facilities and hardware for this organisation will be removed.')) return;
+
+  if (useOrganisationLocalJson()) {
+    const next = PulseOrgJsonStore.defaultBundle();
+    PulseOrgJsonStore.saveRaw(next);
+    organisationId = next.organisation.id;
+    organisationSaved = false;
+    organisationEditMode = true;
+    facilities = [];
+    hardwareByFacility = {};
+    __orgLocalPeopleFallback = [];
+    facilityManagers = [];
+    selectedFacilityId = null;
+    cachedOrgLogoUrl = '';
+    revokePendingLogoPreview();
+    document.getElementById('orgLogoFile').value = '';
+    document.getElementById('orgName').value = next.organisation.name || '';
+    document.getElementById('orgWebsite').value = '';
+    document.getElementById('orgDesc').value = '';
+    updateLogoPreview('');
+    renderFacilityList();
+    renderOrganisationState();
+    if (typeof showPageToast === 'function') showPageToast('Organisation deleted.', 'success');
+    return;
+  }
+
+  const client = sb();
+  if (!client || !organisationId) return;
+  const { error } = await client.from('organisations').delete().eq('id', organisationId);
+  if (error) {
+    showBanner(error.message, true);
+    return;
+  }
+  organisationId = null;
+  organisationSaved = false;
+  organisationEditMode = true;
+  facilities = [];
+  hardwareByFacility = {};
+  selectedFacilityId = null;
+  renderOrganisationState();
+  await loadAll();
+}
+
+function openFacilityModalForSelection() {
+  const fac = facilities.find(x => x.id === selectedFacilityId);
+  openFacilityModal(fac || null);
+}
+
+async function openFacilityModal(fac) {
+  document.getElementById('facilityModal').style.display = 'flex';
+  document.getElementById('facilityModalTitle').textContent = fac ? 'Edit facility' : 'Add facility';
+  document.getElementById('facModalId').value = fac ? fac.id : '';
+  document.getElementById('facModalSlug').value = fac ? (fac.slug || '') : '';
+  document.getElementById('facModalName').value = fac ? fac.name : '';
+  document.getElementById('facModalAddress').value = fac ? (fac.address || '') : '';
+  document.getElementById('facModalDesc').value = fac ? (fac.description || '') : '';
+  const hint = document.getElementById('facModalManagerHint');
+  if (hint) {
+    hint.textContent = sb()
+      ? 'Active users from Personnel (Supabase profiles table).'
+      : 'Active people from Admin → Personnel.';
+  }
+  facilityManagersLoaded = false;
+  await loadFacilityManagers();
+  fillManagerSelect(fac ? (fac.manager_id || '') : '');
+  setTimeout(() => {
+    const nameEl = document.getElementById('facModalName');
+    if (nameEl) nameEl.focus();
+  }, 30);
+}
+
+async function saveFacilityModal() {
+  if (!organisationId) {
+    alert('Organisation is not loaded yet. Wait for the page to finish loading.');
+    return;
+  }
+
+  const id = document.getElementById('facModalId').value;
+  const name = document.getElementById('facModalName').value.trim();
+  const address = document.getElementById('facModalAddress').value.trim();
+  const description = document.getElementById('facModalDesc').value.trim();
+  const managerSel = document.getElementById('facModalManager');
+  const manager_id = managerSel && managerSel.value ? managerSel.value : null;
+
+  if (!name) {
+    alert('Facility name is required.');
+    document.getElementById('facModalName').focus();
+    return;
+  }
+
+  const existingFacility = id ? facilities.find(x => x.id === id) : null;
+  const baseSlug = existingFacility && existingFacility.slug
+    ? existingFacility.slug
+    : ensureUniqueFacilitySlug(slugifyFacilityName(name), id || null);
+  const slug = baseSlug;
+  document.getElementById('facModalSlug').value = slug;
+
+  if (useOrganisationLocalJson()) {
+    if (!window.PulseOrgJsonStore) {
+      alert('Local store script missing.');
+      return;
+    }
+    if (id) {
+      const idx = facilities.findIndex(x => x.id === id);
+      if (idx >= 0) {
+        facilities[idx] = {
+          ...facilities[idx],
+          name,
+          address,
+          description,
+          manager_id,
+          slug: facilities[idx].slug || slug
+        };
+      }
+    } else {
+      const newId = PulseOrgJsonStore.uid();
+      facilities.push({
+        id: newId,
+        organisation_id: organisationId,
+        slug,
+        name,
+        address,
+        description,
+        manager_id,
+        sort_order: facilities.length
+      });
+      hardwareByFacility[newId] = [];
+    }
+    PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    closeModal('facilityModal');
+    if (typeof showPageToast === 'function') showPageToast('Facility saved.', 'success');
+    if (typeof pulseCascadeFacilityDisplayRefresh === 'function') {
+      try { await pulseCascadeFacilityDisplayRefresh(); } catch (e) { console.warn('[Organisation] facility cascade', e); }
+    }
+    renderFacilityList();
+    if (!id) {
+      const created = facilities.find(f => f.slug === slug);
+      if (created) selectFacility(created.id);
+    } else {
+      renderFacilityPanel();
+    }
+    return;
+  }
+
+  const client = sb();
+  if (!client) {
+    showBanner('Cannot save: Supabase is not connected. Set PULSE_STORAGE_BACKEND to supabase and valid PULSE_SUPABASE_URL / PULSE_SUPABASE_ANON_KEY in pulse-config.local.js, then refresh.', true);
+    return;
+  }
+
+  const updatePayload = { name, address, description };
+  const insertPayload = { organisation_id: organisationId, slug, name, address, description, sort_order: facilities.length };
+  if (facilityManagersSchemaSupported) {
+    updatePayload.manager_id = manager_id;
+    insertPayload.manager_id = manager_id;
+  }
+
+  let saveError = null;
+  if (id) {
+    const { error } = await client.from('organisation_facilities').update(updatePayload).eq('id', id);
+    saveError = error;
+  } else {
+    const { error } = await client.from('organisation_facilities').insert(insertPayload);
+    saveError = error;
+  }
+
+  if (saveError && /manager_id/i.test(saveError.message || '') && facilityManagersSchemaSupported) {
+    facilityManagersSchemaSupported = false;
+    delete updatePayload.manager_id;
+    delete insertPayload.manager_id;
+    showBanner('Heads up: facility manager could not be saved. Run migration 020_organisation_facilities_manager.sql in Supabase to enable that field.', true);
+    if (id) {
+      const { error } = await client.from('organisation_facilities').update(updatePayload).eq('id', id);
+      saveError = error;
+    } else {
+      const { error } = await client.from('organisation_facilities').insert(insertPayload);
+      saveError = error;
+    }
+  }
+
+  if (saveError) { alert(saveError.message); return; }
+
+  closeModal('facilityModal');
+  if (typeof showPageToast === 'function') showPageToast('Facility saved.', 'success');
+  await loadAll();
+  if (typeof pulseCascadeFacilityDisplayRefresh === 'function') {
+    try { await pulseCascadeFacilityDisplayRefresh(); } catch (e) { console.warn('[Organisation] facility cascade', e); }
+  }
+  if (!id) {
+    const created = facilities.find(f => f.slug === slug);
+    if (created) selectFacility(created.id);
+  }
+}
+
+async function deleteSelectedFacility() {
+  const f = facilities.find(x => x.id === selectedFacilityId);
+  if (!f || !confirm(`Delete facility "${f.name}" and all of its hardware?`)) return;
+  if (useOrganisationLocalJson()) {
+    facilities = facilities.filter(x => x.id !== f.id);
+    delete hardwareByFacility[f.id];
+    selectedFacilityId = facilities[0]?.id || null;
+    PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    renderFacilityList();
+    renderFacilityPanel();
+    return;
+  }
+  const client = sb();
+  const { error } = await client.from('organisation_facilities').delete().eq('id', f.id);
+  if (error) { alert(error.message); return; }
+  selectedFacilityId = null;
+  await loadAll();
+}
+
+function openHardwareModal(hwId) {
+  if (!selectedFacilityId) return;
+  if (!useOrganisationLocalJson() && !sb()) return;
+  const list = hardwareByFacility[selectedFacilityId] || [];
+  const h = hwId ? list.find(x => x.id === hwId) : null;
+  document.getElementById('hardwareModal').style.display = 'flex';
+  document.getElementById('hardwareModalTitle').textContent = h ? 'Edit hardware' : 'Add hardware';
+  document.getElementById('hwModalId').value = h ? h.id : '';
+  fillHardwareMachineSelect(h ? (h.machine_name || '') : '');
+  document.getElementById('hwModalName').value = h ? (h.machine_name || '') : '';
+  if (h) {
+    document.getElementById('hwModalOps').value = (h.operations || []).join(', ');
+    const unit = h.daily_capacity_unit != null ? String(h.daily_capacity_unit) : '';
+    document.getElementById('hwModalCapVal').value = h.daily_capacity_value != null ? h.daily_capacity_value : '';
+    document.getElementById('hwModalCapUnit').value = unit;
+    document.getElementById('hwModalNotes').value = h.notes || '';
+  } else {
+    document.getElementById('hwModalOps').value = '';
+    document.getElementById('hwModalCapVal').value = '';
+    document.getElementById('hwModalCapUnit').value = '';
+    document.getElementById('hwModalNotes').value = '';
+  }
+}
+
+async function saveHardwareModal() {
+  if (!selectedFacilityId) return;
+  const id = document.getElementById('hwModalId').value;
+  const prevHw = id ? (hardwareByFacility[selectedFacilityId] || []).find(x => x.id === id) : null;
+  const oldMachineName = prevHw?.machine_name;
+  const pick = document.getElementById('hwModalMachinePick');
+  const machine_name = (pick && pick.value ? pick.value : document.getElementById('hwModalName').value || '').trim();
+  const opsRaw = document.getElementById('hwModalOps').value;
+  const operations = opsRaw.split(',').map(s => s.trim()).filter(Boolean);
+  const unitSel = document.getElementById('hwModalCapUnit').value;
+  const valRaw = document.getElementById('hwModalCapVal').value;
+  let daily_capacity_value = valRaw === '' ? null : Number(valRaw);
+  let daily_capacity_unit = unitSel === '' ? null : unitSel;
+  if (daily_capacity_unit && daily_capacity_unit !== 'none' && (daily_capacity_value == null || Number.isNaN(daily_capacity_value))) {
+    alert('Enter a numeric daily capacity, pick “— (not tracked)”, or choose “Tracked, no numeric”.');
+    return;
+  }
+  if (!daily_capacity_unit) daily_capacity_value = null;
+  if (daily_capacity_unit === 'none') daily_capacity_value = null;
+  const notes = document.getElementById('hwModalNotes').value.trim();
+
+  if (!machine_name) {
+    alert('Please select a machine from the list (Machine Capacity catalog).');
+    if (pick) pick.focus();
+    return;
+  }
+  document.getElementById('hwModalName').value = machine_name;
+
+  if (useOrganisationLocalJson()) {
+    const list = hardwareByFacility[selectedFacilityId] || [];
+    if (id) {
+      const hi = list.findIndex(x => x.id === id);
+      if (hi >= 0) {
+        list[hi] = {
+          ...list[hi],
+          machine_name,
+          operations,
+          daily_capacity_value,
+          daily_capacity_unit,
+          notes
+        };
+      }
+    } else {
+      list.push({
+        id: PulseOrgJsonStore.uid(),
+        facility_id: selectedFacilityId,
+        machine_name,
+        operations,
+        daily_capacity_value,
+        daily_capacity_unit,
+        notes,
+        sort_order: list.length,
+        active: true
+      });
+    }
+    hardwareByFacility[selectedFacilityId] = list;
+    PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    if (oldMachineName && oldMachineName !== machine_name && typeof pulseCascadeMachineDisplayRename === 'function') {
+      try { await pulseCascadeMachineDisplayRename(oldMachineName, machine_name); } catch (e) { console.warn('[Organisation] machine cascade', e); }
+    }
+    if (typeof syncPulseMachineryFromOrganisation === 'function') syncPulseMachineryFromOrganisation();
+    if (typeof refreshPulseAdminData === 'function') {
+      try { await refreshPulseAdminData(); } catch (_) {}
+    }
+    closeModal('hardwareModal');
+    renderFacilityPanel();
+    return;
+  }
+
+  const client = sb();
+  if (!client) return;
+
+  if (id) {
+    const { error } = await client.from('organisation_hardware').update({
+      machine_name,
+      operations,
+      daily_capacity_value,
+      daily_capacity_unit,
+      notes
+    }).eq('id', id);
+    if (error) { alert(error.message); return; }
+  } else {
+    const list = hardwareByFacility[selectedFacilityId] || [];
+    const { error } = await client.from('organisation_hardware').insert({
+      facility_id: selectedFacilityId,
+      machine_name,
+      operations,
+      daily_capacity_value,
+      daily_capacity_unit,
+      notes,
+      sort_order: list.length,
+      active: true
+    });
+    if (error) { alert(error.message); return; }
+  }
+  if (oldMachineName && oldMachineName !== machine_name && typeof pulseCascadeMachineDisplayRename === 'function') {
+    try { await pulseCascadeMachineDisplayRename(oldMachineName, machine_name); } catch (e) { console.warn('[Organisation] machine cascade', e); }
+  }
+  if (typeof syncPulseMachineryFromOrganisation === 'function') syncPulseMachineryFromOrganisation();
+  if (typeof refreshPulseAdminData === 'function') {
+    try { await refreshPulseAdminData(); } catch (_) {}
+  }
+  closeModal('hardwareModal');
+  await loadAll();
+}
+
+async function deleteHardware(id) {
+  if (!confirm('Remove this hardware row?')) return;
+  if (useOrganisationLocalJson()) {
+    const list = hardwareByFacility[selectedFacilityId] || [];
+    hardwareByFacility[selectedFacilityId] = list.filter(h => h.id !== id);
+    PulseOrgJsonStore.saveRaw(buildLocalBundleFromState());
+    renderFacilityPanel();
+    return;
+  }
+  const client = sb();
+  const { error } = await client.from('organisation_hardware').delete().eq('id', id);
+  if (error) { alert(error.message); return; }
+  await loadAll();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  wireOrgLogoDropzone();
+  const imp = document.getElementById('orgJsonImportFile');
+  if (imp) {
+    imp.addEventListener('change', async ev => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f || !window.PulseOrgJsonStore) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const b = PulseOrgJsonStore.normalizeBundle(JSON.parse(reader.result));
+          PulseOrgJsonStore.saveRaw(b);
+          ev.target.value = '';
+          await loadAll();
+        } catch (err) {
+          alert('Invalid JSON: ' + (err.message || String(err)));
+          ev.target.value = '';
+        }
+      };
+      reader.readAsText(f);
+    });
+  }
+  if (!ORG_EMBEDDED) {
+    await initAuth('organisation');
+    if (typeof canAccessPage === 'function' && !canAccessPage('organisation')) return;
+  }
+  try {
+    await loadAll();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('orgRoot').style.display = 'flex';
+    const raw = (e && (e.message || String(e))) || 'Unknown error';
+    let friendly = 'Could not load organisation data: ' + raw;
+    if (/Failed to fetch|NetworkError|ERR_NAME_NOT_RESOLVED/i.test(raw)) {
+      friendly = isPulseConfigPlaceholder()
+        ? 'Could not reach Supabase. The values in pulse-config.local.js are still placeholders — replace PULSE_SUPABASE_URL and PULSE_SUPABASE_ANON_KEY with your real Supabase project URL and anon key, then reload.'
+        : 'Could not reach Supabase. Check your network and confirm PULSE_SUPABASE_URL in pulse-config.local.js matches your project.';
+    } else if (/JWT|Invalid API key|invalid api key/i.test(raw)) {
+      friendly = 'Supabase rejected the API key. Open pulse-config.local.js and paste a fresh anon (public) key from Supabase → Settings → API, then reload.';
+    } else if (/permission denied|42501/i.test(raw)) {
+      friendly = 'Permission denied on organisation tables. In Supabase, run migration 032_grant_organisation_tables.sql (or apply all pending migrations with `npx supabase db push --linked`). Job tickets may still show facilities from browser localStorage until cloud org data is readable.';
+    } else if (/relation .* does not exist|column .* does not exist/i.test(raw)) {
+      friendly = 'Database is missing a column or table. Run the latest Supabase migrations (017–020) for organisation_facilities, then reload.';
+    }
+    showBanner(friendly, true);
+  }
+});
+</script>
+</body>
+</html>

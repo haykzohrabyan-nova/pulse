@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "organisation": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Bazaar Print",
+    "short_description": "Master production organisation for Pulse — facilities and hardware below.",
+    "website_url": "",
+    "logo_url": "",
+    "logo_data_url": "",
+    "saved": true
+  },
+  "people": [],
+  "facilities": [
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "organisation_id": "00000000-0000-4000-8000-000000000001",
+      "slug": "16th-street",
+      "name": "16th Street — Main Production",
+      "address": "",
+      "description": "Primary sheetfed, Indigo, finishing, and application.",
+      "manager_id": null,
+      "sort_order": 0
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "organisation_id": "00000000-0000-4000-8000-000000000001",
+      "slug": "boyd-street",
+      "name": "Boyd Street — Design & Large Format",
+      "address": "",
+      "description": "Large-format print, vinyl, and Boyd sheet workflows.",
+      "manager_id": null,
+      "sort_order": 1
+    }
+  ],
+  "hardwareByFacilityId": {
+    "00000000-0000-4000-8000-000000000010": [
+      {
+        "id": "00000000-0000-4000-8000-1b7200000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Prepress",
+        "operations": [
+          "File Prep",
+          "Artwork Fix",
+          "Preflight",
+          "Proofing"
+        ],
+        "daily_capacity_value": null,
+        "daily_capacity_unit": null,
+        "notes": "Prepress review, file correction, proofing, and setup before production restarts.",
+        "sort_order": 0,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-71b100000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "HP Indigo 6K",
+        "operations": [
+          "Printing"
+        ],
+        "daily_capacity_value": 4200,
+        "daily_capacity_unit": "sheets",
+        "notes": "~30m/min × 7hr typical with setup.",
+        "sort_order": 1,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-50b400000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "HP Indigo 15K",
+        "operations": [
+          "Printing"
+        ],
+        "daily_capacity_value": 21000,
+        "daily_capacity_unit": "sheets",
+        "notes": "~3,000 sheets/hr × 7hr typical.",
+        "sort_order": 2,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-424c00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Laminator (Nobelus)",
+        "operations": [
+          "Laminating"
+        ],
+        "daily_capacity_value": 7000,
+        "daily_capacity_unit": "sheets",
+        "notes": "~1,000 sheets/hr × 7hr.",
+        "sort_order": 3,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-afb700000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Scodix",
+        "operations": [
+          "Spot UV",
+          "Foil Stamping",
+          "Embossing",
+          "Texture"
+        ],
+        "daily_capacity_value": 4550,
+        "daily_capacity_unit": "sheets",
+        "notes": "~650 sheets/hr × 7hr.",
+        "sort_order": 4,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-e37c00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Karlville Poucher",
+        "operations": [
+          "Pouching"
+        ],
+        "daily_capacity_value": 22500,
+        "daily_capacity_unit": "units",
+        "notes": "~22,500/shift standard.",
+        "sort_order": 5,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-be7600000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Moll Brothers Cutter",
+        "operations": [
+          "Cutting"
+        ],
+        "daily_capacity_value": 17500,
+        "daily_capacity_unit": "sheets",
+        "notes": "~2,500 sheets/hr × 7hr.",
+        "sort_order": 6,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-32d300000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Moll Brothers Folder-Gluer",
+        "operations": [
+          "Folding",
+          "Gluing"
+        ],
+        "daily_capacity_value": 70000,
+        "daily_capacity_unit": "units",
+        "notes": "~10,000 boxes/hr × 7hr mid-size.",
+        "sort_order": 7,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-519000000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Duplo",
+        "operations": [
+          "Flatbed Cutting",
+          "Scoring",
+          "Creasing"
+        ],
+        "daily_capacity_value": 84,
+        "daily_capacity_unit": "sheets",
+        "notes": "15K sheet size only (750mm x 550mm). Small runs under ~200 sheets.",
+        "sort_order": 8,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-62e400000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "GM Die Cutter w/ JetFX",
+        "operations": [
+          "Die Cutting",
+          "UV Finishing",
+          "Foil Finishing",
+          "Laminating"
+        ],
+        "daily_capacity_value": 4200,
+        "daily_capacity_unit": "sheets",
+        "notes": "Multi-function: cuts + UV + foil via JetFX.",
+        "sort_order": 9,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-f50800000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "GM Laser Cutter w/ JetFX",
+        "operations": [
+          "Laser Cutting",
+          "UV Finishing",
+          "Foil Finishing",
+          "Laminating"
+        ],
+        "daily_capacity_value": 1400,
+        "daily_capacity_unit": "sheets",
+        "notes": "~10m/min. Complex shapes slower.",
+        "sort_order": 10,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-89b500000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Guillotine Cutter",
+        "operations": [
+          "Guillotine Cutting"
+        ],
+        "daily_capacity_value": 35000,
+        "daily_capacity_unit": "sheets",
+        "notes": "Very fast.",
+        "sort_order": 11,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-c78d00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "UV Coater",
+        "operations": [
+          "UV Coating"
+        ],
+        "daily_capacity_value": 4000,
+        "daily_capacity_unit": "sheets",
+        "notes": "Inline UV coating.",
+        "sort_order": 12,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-227a00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Booklet Folder",
+        "operations": [
+          "Booklet Folding"
+        ],
+        "daily_capacity_value": null,
+        "daily_capacity_unit": "none",
+        "notes": "",
+        "sort_order": 13,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-542400000001",
+        "facility_id": "00000000-0000-4000-8000-000000000010",
+        "machine_name": "Application Dept",
+        "operations": [
+          "Label Application",
+          "Hand Gluing",
+          "Assembly"
+        ],
+        "daily_capacity_value": 6000,
+        "daily_capacity_unit": "units",
+        "notes": "~2,000 units/person/day × 3 people.",
+        "sort_order": 14,
+        "active": true
+      }
+    ],
+    "00000000-0000-4000-8000-000000000011": [
+      {
+        "id": "00000000-0000-4000-8000-02eb00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Canon Colorado",
+        "operations": [
+          "Printing"
+        ],
+        "daily_capacity_value": 2000,
+        "daily_capacity_unit": "sq_ft",
+        "notes": "Large format. CMYK only. GLOSS materials ONLY.",
+        "sort_order": 0,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-697b00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Roland Printers",
+        "operations": [
+          "Printing"
+        ],
+        "daily_capacity_value": 35,
+        "daily_capacity_unit": "sheets",
+        "notes": "~12min/sheet × 3 machines. MATTE materials ONLY.",
+        "sort_order": 1,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-f67900000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Graphtec Vinyl Cutter x4",
+        "operations": [
+          "Vinyl Cutting",
+          "Contour Cutting"
+        ],
+        "daily_capacity_value": null,
+        "daily_capacity_unit": "none",
+        "notes": "Count: 4.",
+        "sort_order": 2,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-492100000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Graphtec Flatbed (Large) x2",
+        "operations": [
+          "Flatbed Cutting"
+        ],
+        "daily_capacity_value": 168,
+        "daily_capacity_unit": "sheets",
+        "notes": "36\"x70\" max. 15K overflow / Boyd-printed sheets.",
+        "sort_order": 3,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-35fc00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Graphtec Flatbed (Small)",
+        "operations": [
+          "Flatbed Cutting"
+        ],
+        "daily_capacity_value": 84,
+        "daily_capacity_unit": "sheets",
+        "notes": "36\"x48\" max.",
+        "sort_order": 4,
+        "active": true
+      },
+      {
+        "id": "00000000-0000-4000-8000-145a00000001",
+        "facility_id": "00000000-0000-4000-8000-000000000011",
+        "machine_name": "Laminator (Boyd)",
+        "operations": [
+          "Laminating"
+        ],
+        "daily_capacity_value": 280,
+        "daily_capacity_unit": "sheets",
+        "notes": "Sheet products only. Labels do NOT get laminated at Boyd.",
+        "sort_order": 5,
+        "active": true
+      }
+    ]
+  }
+}
