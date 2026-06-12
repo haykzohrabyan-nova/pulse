@@ -2053,6 +2053,7 @@ async function stepAction(action) {
   const step = currentJob.workflowSteps?.[currentStepIdx];
   const machine = step?.machine || '';
 
+  try {
   if (action === 'start') {
     // Die check
     const needsDie = machine.includes('Moll Brothers Cutter') || machine.includes('GM Die Cutter');
@@ -2146,6 +2147,15 @@ async function stepAction(action) {
     document.getElementById('cmp-waste').value = wasteCount;
     document.getElementById('cmp-short-warning').classList.remove('visible');
     document.getElementById('complete-modal').classList.add('open');
+  }
+  } catch (err) {
+    console.error('[Operator Terminal] stepAction', action, err);
+    const msg = err?.message || String(err);
+    showToast('red', '⚠️ Action Failed', msg + (
+      /permission|blocked|rls|policy/i.test(msg)
+        ? '\n\nAsk an admin to apply Supabase migration 053_operator_orders_update.sql.'
+        : ''
+    ), 12000);
   }
 }
 
