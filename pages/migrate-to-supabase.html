@@ -82,10 +82,10 @@
     <label>Supabase anon key (eyJ…)</label>
     <input type="password" id="supaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
     <label>Admin email (project Auth)</label>
-    <input type="text" id="adminEmail" placeholder="admin@bazaar-admin.com" autocomplete="username">
+    <input type="text" id="adminEmail" placeholder="admin@bazaarprinting.com" autocomplete="username">
     <label>Admin password</label>
     <input type="password" id="adminPassword" placeholder="Supabase auth password" autocomplete="current-password">
-    <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">Required for RLS on insert. Seeded users: <code>admin@bazaar-admin.com</code> / <code>Pulse2026!</code></div>
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">Required for RLS on insert. Seeded users: <code>admin@bazaarprinting.com</code> / <code>Pulse2026!</code></div>
     <button type="button" class="btn btn-primary" id="connectBtn" onclick="connectToSupabase()">Connect &amp; verify</button>
     <span id="connectStatus" style="font-size:13px;"></span>
   </div>
@@ -470,7 +470,7 @@ async function runPreflightCheck() {
       if (delErr) throw delErr;
       items.push(_preflightItem('ok', 'Write permission (config)', 'Test insert + delete succeeded — RLS allows admin writes.'));
     } catch (e) {
-      items.push(_preflightItem('fail', 'Write permission (config)', (e.message || String(e)) + ' — sign in as admin@bazaar-admin.com'));
+      items.push(_preflightItem('fail', 'Write permission (config)', (e.message || String(e)) + ' — sign in as admin@bazaarprinting.com'));
       bump('fail');
     }
   }
