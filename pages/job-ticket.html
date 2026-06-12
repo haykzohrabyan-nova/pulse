@@ -6141,13 +6141,16 @@ function createFromOrderLink() {
 }
 
 function _prefillFromLinkParams(p) {
+  // Use non-bubbling events so we don't accidentally trigger the document-level
+  // change/input listeners (which can kick off concurrent Supabase fetches that
+  // race with renderQueuePane and leave the orders sidebar empty).
   function setVal(id, value) {
     if (!value) return;
     const el = document.getElementById(id);
     if (!el) return;
     el.value = value;
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new Event('input',  { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: false }));
+    el.dispatchEvent(new Event('input',  { bubbles: false }));
   }
 
   function selectByText(id, text) {
@@ -6158,7 +6161,7 @@ function _prefillFromLinkParams(p) {
     const opt = Array.from(el.options).find(o =>
       o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
     );
-    if (opt) { el.value = opt.value; el.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (opt) { el.value = opt.value; el.dispatchEvent(new Event('change', { bubbles: false })); }
   }
 
   // Customer
@@ -6167,19 +6170,33 @@ function _prefillFromLinkParams(p) {
   // Order ref (pre-fill job ticket number only if explicitly provided)
   setVal('jobTicketNumber', p.get('order_ref'));
 
-  // Product type
+  // Product type — call handler directly after setting value so material/color
+  // dropdowns are rebuilt without triggering the global change listener
   if (p.get('product')) {
-    selectByText('productType', p.get('product'));
+    const ptEl = document.getElementById('productType');
+    if (ptEl) {
+      const lower = p.get('product').toLowerCase();
+      const opt = Array.from(ptEl.options).find(o =>
+        o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
+      );
+      if (opt) {
+        ptEl.value = opt.value;
+        if (typeof onProductTypeChange === 'function') onProductTypeChange({ resetMaterial: true });
+      }
+    }
     if (p.get('product').toLowerCase() === 'other') {
       setVal('otherProductDesc', p.get('product_type'));
     }
   }
 
-  // Material
+  // Material (dropdown was rebuilt by onProductTypeChange above)
   selectByText('material', p.get('material'));
 
   // Color mode
-  selectByText('colorMode', p.get('color'));
+  if (p.get('color')) {
+    selectByText('colorMode', p.get('color'));
+    if (typeof onColorModeChange === 'function') onColorModeChange();
+  }
 
   // Sides
   selectByText('sides', p.get('sides'));
@@ -6190,10 +6207,11 @@ function _prefillFromLinkParams(p) {
 
   // Quantity
   setVal('quantity', p.get('qty'));
+  if (p.get('qty') && typeof calcFrames === 'function') calcFrames();
 
   // Due date (expects YYYY-MM-DD)
   setVal('dueDate', p.get('due'));
-  if (p.get('due')) checkDueDate?.();
+  if (p.get('due') && typeof checkDueDate === 'function') checkDueDate();
 
   // Notes
   const noteParts = [];
@@ -6202,29 +6220,29 @@ function _prefillFromLinkParams(p) {
   if (p.get('artwork')) noteParts.push('Artwork (GDrive): ' + p.get('artwork'));
   if (noteParts.length) setVal('specialNotes', noteParts.join('\n\n'));
 
-  // Finishing
+  // Finishing — call onFinishingChange directly instead of bubbling events
   const finishing = (p.get('finishing') || '').toLowerCase();
   if (finishing) {
     if (finishing.includes('lamin') || finishing.includes('gloss') || finishing.includes('matte') || finishing.includes('soft')) {
       const cb = document.getElementById('hasLamination');
-      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (cb && !cb.checked) { cb.checked = true; if (typeof onFinishingChange === 'function') onFinishingChange(); }
       if (finishing.includes('gloss'))      selectByText('lamination', 'Gloss');
       else if (finishing.includes('matte')) selectByText('lamination', 'Matte');
       else if (finishing.includes('soft'))  selectByText('lamination', 'Soft Touch');
     }
     if (finishing.includes('uv') || finishing.includes('spot uv')) {
       const cb = document.getElementById('hasUV');
-      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (cb && !cb.checked) { cb.checked = true; if (typeof onFinishingChange === 'function') onFinishingChange(); }
     }
     if (finishing.includes('foil')) {
       const cb = document.getElementById('hasFoil');
-      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (cb && !cb.checked) { cb.checked = true; if (typeof onFinishingChange === 'function') onFinishingChange(); }
       if (finishing.includes('gold'))        selectByText('foilType', 'Gold');
       else if (finishing.includes('silver')) selectByText('foilType', 'Silver');
     }
     if (finishing.includes('perf')) {
       const cb = document.getElementById('hasPerforation');
-      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (cb && !cb.checked) { cb.checked = true; if (typeof onPerforationChange === 'function') onPerforationChange(); }
     }
   }
 
@@ -6276,6 +6294,9 @@ function _prefillFromLinkParams(p) {
   if (typeof showToast === 'function') {
     showToast('✅ Pre-filled from order link. Check all fields before saving.', 6000);
   }
+
+  // Re-render the orders sidebar so it is never left blank after prefill
+  if (typeof renderQueuePane === 'function') renderQueuePane();
 }
 
 function _showPrefillBanner(orderRef, artworkUrl) {
