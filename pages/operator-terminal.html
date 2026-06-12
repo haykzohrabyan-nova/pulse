@@ -1098,29 +1098,39 @@ async function doClockin() {
   const name = document.getElementById('operator-select').value;
   if (!name) return;
   const enteredId = (document.getElementById('user-id-input')?.value || '').trim();
-  // Check for existing open session today
-  const existing = await getOperatorSession(name);
-  if (existing) {
+  const btn = document.getElementById('btn-clock-in');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Clocking in…'; }
+
+  try {
+    // Check for existing open session today
+    const existing = await getOperatorSession(name);
+    if (existing) {
+      currentOperator = name;
+      currentSession = existing;
+      document.getElementById('already-in-msg').style.display = 'block';
+      sessionStorage.setItem('op_operator', name);
+      setTimeout(() => enterMainScreen(), 600);
+      return;
+    }
+    const newId = await clockIn(name);
+    currentSession = await getOperatorSessionById(newId);
     currentOperator = name;
-    currentSession = existing;
-    document.getElementById('already-in-msg').style.display = 'block';
     sessionStorage.setItem('op_operator', name);
-    setTimeout(() => enterMainScreen(), 600);
-    return;
+    // Record the operator ID in the session for tracking
+    if (enteredId && currentSession) {
+      await updateOperatorSession(newId, { registeredOperatorId: enteredId, registeredOperatorIdAt: new Date().toISOString() });
+      currentSession = { ...currentSession, registeredOperatorId: enteredId };
+    }
+    await addActivity({
+      type: 'clock-in', operatorName: name, operatorId: enteredId || null, timestamp: new Date().toISOString()
+    });
+    await enterMainScreen();
+  } catch (err) {
+    console.error('[Operator Terminal] Clock-in failed:', err);
+    const msg = err?.message || String(err);
+    alert('⚠️ Clock-in failed: ' + msg + '\n\nIf this keeps happening, ask an admin to apply migration 052 in Supabase.');
+    if (btn) { btn.disabled = false; btn.textContent = '⏱ Clock In & Start My Shift'; }
   }
-  const newId = await clockIn(name);
-  currentSession = await getOperatorSessionById(newId);
-  currentOperator = name;
-  sessionStorage.setItem('op_operator', name);
-  // Record the operator ID in the session for tracking
-  if (enteredId && currentSession) {
-    await updateOperatorSession(newId, { registeredOperatorId: enteredId, registeredOperatorIdAt: new Date().toISOString() });
-    currentSession = { ...currentSession, registeredOperatorId: enteredId };
-  }
-  await addActivity({
-    type: 'clock-in', operatorName: name, operatorId: enteredId || null, timestamp: new Date().toISOString()
-  });
-  await enterMainScreen();
 }
 
 async function applyOperatorTerminalNavAccess() {

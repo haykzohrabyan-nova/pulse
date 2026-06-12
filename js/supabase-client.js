@@ -2872,8 +2872,10 @@
 
   async function _clockIn(operatorName) {
     const supa = await _getClient();
+    const user = await _getCurrentUser();
     const now = new Date();
     const { data, error } = await supa.from('operator_sessions').insert({
+      operator_id: user?.id || null,
       operator_name: operatorName,
       session_date: now.toISOString().split('T')[0],
       clock_in: now.toISOString(),
