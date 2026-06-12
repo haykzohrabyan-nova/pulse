@@ -6228,41 +6228,72 @@ function _prefillFromLinkParams(p) {
     }
   }
 
-  // SKUs — format: "Name:Qty|Name:Qty"
+  // SKUs — CLEAR ALL FIRST, then populate directly via skuList array
+  // URL format: "Name||Qty||Name||Qty"  (|| separates rows, last || separates name from qty)
   const skusStr = p.get('skus');
   if (skusStr) {
-    const skus = skusStr.split('|')
-      .map(s => { const [name, qty] = s.split(':'); return { name: (name||'').trim(), qty: (qty||'').trim() }; })
-      .filter(s => s.name);
-    skus.forEach((sku, i) => {
-      if (typeof addSKU === 'function') addSKU();
-      setTimeout(() => {
-        const nameInputs = document.querySelectorAll('[data-sku-field="name"], .sku-name-input');
-        const qtyInputs  = document.querySelectorAll('[data-sku-field="qty"],  .sku-qty-input');
-        const last = nameInputs.length - 1;
-        if (nameInputs[last]) nameInputs[last].value = sku.name;
-        if (qtyInputs[last])  qtyInputs[last].value  = sku.qty;
-      }, 100 * (i + 1));
-    });
+    const skus = skusStr.split('||')
+      .reduce((acc, _, i, arr) => {
+        if (i % 2 === 0 && arr[i + 1] !== undefined) {
+          acc.push({ name: arr[i].trim(), qty: arr[i + 1].trim() });
+        }
+        return acc;
+      }, [])
+      .filter(s => s.name && s.qty);
+
+    // Fallback: also support old "|" separator as "Name:Qty|Name:Qty"
+    const parsedSkus = skus.length
+      ? skus
+      : skusStr.split('|')
+          .map(s => { const [name, qty] = s.split(':'); return { name: (name||'').trim(), qty: (qty||'').trim() }; })
+          .filter(s => s.name && s.qty);
+
+    if (parsedSkus.length > 0) {
+      // Reset skuList and UI to single-SKU mode first
+      skuList = [];
+      if (typeof showSingleSkuMode === 'function') showSingleSkuMode();
+
+      // Build skuList entries directly — no DOM clicking needed
+      parsedSkus.forEach(sku => {
+        skuList.push({
+          name: sku.name,
+          quantity: parseInt(sku.qty) || 0,
+          artworkDataUrl: null, artworkName: '', artworkType: '',
+          whiteDataUrl: null, whiteName: '',
+          uvDataUrl: null, uvName: '',
+          foilDataUrl: null, foilName: '',
+        });
+      });
+
+      // Switch to multi-SKU mode and render
+      if (typeof showMultiSkuMode === 'function') showMultiSkuMode();
+      if (typeof renderSKUs === 'function') renderSKUs();
+    }
   }
 
   // Banner + toast
-  _showPrefillBanner(p.get('order_ref'));
-  const filled = ['customer','product','material','color','sides','width','height','qty','due','finishing']
-    .filter(k => p.get(k)).map(k => p.get(k)).join(', ');
+  _showPrefillBanner(p.get('order_ref'), p.get('artwork'));
   if (typeof showToast === 'function') {
     showToast('✅ Pre-filled from order link. Check all fields before saving.', 6000);
   }
 }
 
-function _showPrefillBanner(orderRef) {
+function _showPrefillBanner(orderRef, artworkUrl) {
   document.getElementById('prefill-banner')?.remove();
+  const artworkBtn = artworkUrl
+    ? `<a href="${artworkUrl}" target="_blank" rel="noopener"
+         style="margin-left:8px;background:#1d4ed8;color:#fff;padding:5px 12px;border-radius:6px;
+                text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0;">
+         🎨 Open Artwork in GDrive ↗
+       </a>`
+    : `<span style="margin-left:8px;color:#93c5fd;font-size:12px;font-style:italic;">⚠️ No artwork link — upload files manually</span>`;
   const div = document.createElement('div');
   div.id = 'prefill-banner';
-  div.style.cssText = 'background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#15803d;display:flex;align-items:center;gap:8px;';
-  div.innerHTML = `🔗 <strong>Pre-filled from Workflow Order${orderRef ? ' #' + orderRef : ''}.</strong>&nbsp;
-    Verify all fields — Facility, Account Manager, Cut Method and Die must be added manually.
-    <button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#86efac;font-size:18px;">✕</button>`;
+  div.style.cssText = 'background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;display:flex;align-items:center;gap:4px;flex-wrap:wrap;';
+  div.innerHTML = `🔗 <strong>Pre-filled from Workflow Order${orderRef ? ' #' + orderRef : ''}.</strong>
+    &nbsp;Add Facility, Rep, Cut Method manually.
+    ${artworkBtn}
+    <button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#93c5fd;font-size:18px;line-height:1;">✕</button>`;
   const form = document.getElementById('ticketForm');
   if (form) form.prepend(div);
 }
