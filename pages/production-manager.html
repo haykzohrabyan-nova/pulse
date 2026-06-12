@@ -612,6 +612,10 @@ function renderList() {
     return;
   }
 
+  // Clear any stale empty-state/error message left by a previous renderList()
+  // call that ran before allOrders was populated (e.g. from config-refresh callback).
+  container.querySelectorAll(':scope > div:not([class~="order-row"])').forEach(el => el.remove());
+
   // Render each row — but if the row already exists in the DOM, patch it
   // in-place so an open/expanded row stays open during a realtime reload.
   const newIds = new Set(filtered.map(o => o.id));
