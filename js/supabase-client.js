@@ -442,6 +442,7 @@
     'id','order_id','customer_name','product_type','facility','quantity',
     'status','due_date','is_rush','account_manager','rep',
     'is_reprint','parent_order_id','created_at','updated_at','current_step',
+    'material','cut_method',
   ].join(',');
 
   async function _getAllOrders() {

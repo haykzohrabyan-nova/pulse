@@ -569,8 +569,10 @@
         const currentStepIdx = order.currentStep || 0;
         const currentStep = steps[currentStepIdx];
 
+        // Derive first non-Prepress production stage for this line.
+        const firstProdStage = lineConfig.stages.find(s => s !== 'Prepress') || lineConfig.stages[0];
+
         if (isPrepressStatus(order.status)) {
-          // Prepress queue stays in the Prepress column until prepress completes it
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
         } else if (['shipped', 'waiting-pickup', 'delivery-ready'].includes(order.status)) {
@@ -583,8 +585,8 @@
           stageBuckets['QC'] = stageBuckets['QC'] || [];
           stageBuckets['QC'].push(order);
         } else if (currentStep) {
+          // Full order loaded — use step machine/operation to map to stage column.
           const stage = getStageForStep(currentStep, lineKey);
-          // Find matching stage or put in closest match
           let placed = false;
           for (const s of lineConfig.stages) {
             if (stage === s || stage.includes(s) || s.includes(stage)) {
@@ -594,17 +596,23 @@
             }
           }
           if (!placed) {
-            // Put in first stage as fallback
             if (!stageBuckets[stage]) stageBuckets[stage] = [];
             stageBuckets[stage].push(order);
           }
+        } else if (order.status === 'in-production' || order.status === 'on-hold') {
+          // Summary query doesn't load workflow steps — use current_step index to
+          // pick the right stage column by position in the line's stages array.
+          // Skip 'Prepress' (index 0) since these are already past prepress.
+          const prodStages = lineConfig.stages.filter(s => s !== 'Prepress' && s !== 'Shipped');
+          const stepIdx = order.currentStep || 0;
+          const guessedStage = prodStages[Math.min(stepIdx, prodStages.length - 1)] || firstProdStage;
+          stageBuckets[guessedStage] = stageBuckets[guessedStage] || [];
+          stageBuckets[guessedStage].push(order);
         } else if (order.status === 'pending-review') {
-          // Approved by prepress but no workflow steps yet — place in first production stage
-          const firstProdStage = lineConfig.stages.find(s => s !== 'Prepress') || lineConfig.stages[0];
           stageBuckets[firstProdStage] = stageBuckets[firstProdStage] || [];
           stageBuckets[firstProdStage].push(order);
         } else {
-          // No current step — put in Prepress
+          // Fallback for truly unknown state — Prepress
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
         }
