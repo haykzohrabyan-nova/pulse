@@ -170,9 +170,9 @@
     .job-card .card-line-tag.tag-15k { background: rgba(124,58,237,0.12); color: #7c3aed; }
     .job-card .card-line-tag.tag-boyd { background: rgba(217,119,6,0.12); color: #d97706; }
 
-    /* Compact cards — Shipping Station (collapsed = order # only) */
+    /* Compact cards — collapsed by default, expand for details */
     .job-card-compact { padding: 6px 8px; cursor: default; }
-    .job-card-compact:hover { transform: none; }
+    .job-card-compact:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: none; }
     .job-card-compact .card-header-row { display: flex; align-items: center; gap: 6px; min-height: 22px; }
     .job-card-compact .card-order { cursor: pointer; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .job-card-compact .card-order:hover { text-decoration: underline; }
@@ -184,7 +184,7 @@
     }
     .job-card-compact .card-expand-btn:hover { background: var(--bg); color: var(--text); }
     .job-card-compact.expanded .card-expand-btn { transform: rotate(180deg); }
-    .job-card-compact .card-details { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(8,145,178,0.15); cursor: pointer; }
+    .job-card-compact .card-details { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); cursor: pointer; }
     .job-card-compact.expanded .card-details { display: block; }
 
     /* ── Application capacity bar ── */
@@ -333,6 +333,7 @@
   }
 
   function renderJobCard(order, line, subProgress, opts = {}) {
+    const compact = opts.compact !== false;
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
     // Production estimate — hours format
     const steps = order.workflowSteps || [];
@@ -475,7 +476,7 @@
 
     const cardId = `dash-card-${order.id}`;
 
-    if (opts.compact) {
+    if (compact) {
       return `<div class="job-card job-card-compact line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" id="${cardId}">
         <div class="card-header-row">
           <span class="card-order" onclick="showDetail(${order.id}); event.stopPropagation();">${statusDot}#${order.orderId}</span>
@@ -763,7 +764,7 @@
                 ${loadBarHTML}
               </div>
               <div class="stage-cards">
-                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId], { compact: stage === 'Shipping Station' })).join('')}
+                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId])).join('')}
               </div>
             </div>`;
           }).join('')}
@@ -1131,22 +1132,7 @@
     document.getElementById('upcomingBody').classList.add('open');
     document.getElementById('upcomingToggle').textContent = '\u25b2';
     document.getElementById('upcomingBody').innerHTML = `<div class="upcoming-grid">
-      ${upcomingOrders.map(o => {
-        const line = o._line;
-        return `<div class="job-card line-${line}" onclick="showDetail(${o.id})" style="border:1px dashed var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span class="card-order">#${o.orderId}</span>
-            <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
-          </div>
-          <div class="card-customer">${o.customerName || o.customer || '—'}</div>
-          <div class="card-desc">${o.productType || o.jobDescription || '—'}</div>
-          <div class="card-meta">
-            <span class="card-qty">${(o.quantity || 0).toLocaleString()} pcs</span>
-            <span class="card-due ${dueClass(o.dueDate)}">${o.dueDate ? formatDate(o.dueDate) : '—'}</span>
-          </div>
-          <div style="margin-top:4px;">${renderStatusBadge(o.status)}</div>
-        </div>`;
-      }).join('')}
+      ${upcomingOrders.map(o => renderJobCard(o, o._line, _subProgressMap[o.orderId])).join('')}
     </div>`;
   }
 
