@@ -68,7 +68,11 @@ Deno.serve(async (req: Request) => {
     .single();
 
   if (orderErr || !order) {
-    return errorResponse("Order not found", 404, origin);
+    console.error("order lookup error:", orderErr);
+    const msg = orderErr?.message?.includes("permission denied")
+      ? "Server permission error — contact admin"
+      : "Order not found";
+    return errorResponse(msg, orderErr?.code === "42501" ? 500 : 404, origin);
   }
 
   // Generate 6-digit code and 5-minute expiry
@@ -92,18 +96,14 @@ Deno.serve(async (req: Request) => {
   const authToken  = Deno.env.get("TWILIO_AUTH_TOKEN")!;
   const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER")!;
 
-  const smsBody = [
-    "Bazaar Printing — Pickup Verification",
-    "",
-    `Order: ${order_ref || order_id}`,
-    picked_up_by ? `Customer: ${picked_up_by}` : "",
-    "",
-    `Your confirmation code is: ${code}`,
-    "",
+  const parts = [
+    "Bazaar Printing — Pickup Verification.",
+    `Order: ${order_ref || order_id}.`,
+    picked_up_by ? `Customer: ${picked_up_by}.` : "",
+    `Your confirmation code is: ${code}.`,
     "This code expires in 5 minutes.",
-  ]
-    .filter((l) => l !== undefined)
-    .join("\n");
+  ].filter(Boolean);
+  const smsBody = parts.join(" ");
 
   const twilioUrl =
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
