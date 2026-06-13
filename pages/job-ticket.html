@@ -2219,6 +2219,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // URL param autofill (workflow order links opened directly in the browser)
+  if (!orderId && !parentId && !fromQuote && _hasUrlPrefillParams(params)) {
+    await _prefillFromLinkParams(params);
+  }
+
   if (parentId) {
     _parentOrderId = parentId;
     const urlCustomer = params.get('customer');
@@ -3181,6 +3186,7 @@ function _emptySkuEntry() {
     whiteDataUrl: null, whiteName: '',
     uvDataUrl: null, uvName: '',
     foilDataUrl: null, foilName: '',
+    previewImageUrl: null, previewHint: false,
   };
 }
 
@@ -3302,6 +3308,20 @@ function skuFileThumbHTML(skuIdx, fileType) {
     </div>`;
 }
 
+function skuOrderPreviewHTML(sku) {
+  if (sku.previewImageUrl) {
+    const safeUrl = escHtmlJT(sku.previewImageUrl);
+    return `<div class="sku-order-preview" style="padding:8px 0 4px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Preview from order — upload final artwork below</div>
+      <img src="${safeUrl}" alt="SKU preview" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid var(--border);border-radius:4px;" referrerpolicy="no-referrer">
+    </div>`;
+  }
+  if (sku.previewHint) {
+    return `<div style="font-size:11px;color:var(--text-muted);padding:8px 0 4px;">No preview — upload artwork file</div>`;
+  }
+  return '';
+}
+
 function renderSKUs() {
   const container = document.getElementById('skuList');
   if (!container || skuList.length === 0) { if (container) container.innerHTML = ''; return; }
@@ -3341,6 +3361,7 @@ function renderSKUs() {
         </div>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" title="Remove SKU">✕</button>
       </div>
+      ${skuOrderPreviewHTML(sku)}
       <div class="sku-files" style="grid-template-columns:repeat(${fileCols}, minmax(0, 1fr));">
         <div class="sku-file-slot">
           <label>🎨 Main artwork *</label>
@@ -5835,6 +5856,7 @@ function resetToNewTicket() {
   const lockBanner = document.getElementById('editLockBanner');
   if (lockBanner) lockBanner.remove();
   document.getElementById('prepressReviewInfoBanner')?.remove();
+  document.getElementById('prefill-banner')?.remove();
   // Restore save buttons in case they were hidden by a lock
   const topSaveBtn = document.getElementById('saveBtn');
   if (topSaveBtn) { topSaveBtn.style.display = ''; topSaveBtn.disabled = false; }
@@ -6137,10 +6159,83 @@ function createFromOrderLink() {
     return;
   }
   closeOrderLinkModal();
-  _prefillFromLinkParams(params);
+  _prefillFromLinkParams(params).catch(e => console.error('[Job Ticket] prefill from link', e));
 }
 
-function _prefillFromLinkParams(p) {
+function _hasUrlPrefillParams(p) {
+  if (!p) return false;
+  if (p.get('from') === 'workflow') return true;
+  return ['customer', 'product', 'order_ref', 'skus', 'material', 'qty', 'due', 'width', 'height'].some(k => p.get(k));
+}
+
+function _waitForSelectReady(selectId, minOptions = 2, maxMs = 3000) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    const tick = () => {
+      const el = document.getElementById(selectId);
+      if (el && el.options && el.options.length >= minOptions) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start >= maxMs) {
+        resolve(false);
+        return;
+      }
+      setTimeout(tick, 200);
+    };
+    tick();
+  });
+}
+
+function _parseSkusFromParam(skusStr) {
+  if (!skusStr?.trim()) return [];
+
+  // Legacy: "Name|Qty||Name|Qty" (chunks separated by ||)
+  if (skusStr.includes('||')) {
+    return skusStr.split('||')
+      .map(chunk => {
+        const pipeIdx = chunk.indexOf('|');
+        if (pipeIdx === -1) return null;
+        const rest = chunk.substring(pipeIdx + 1);
+        const restParts = rest.split('|');
+        return {
+          name: chunk.substring(0, pipeIdx).trim(),
+          qty: (restParts[0] || '').trim(),
+          imageUrl: (restParts[1] || '').trim(),
+        };
+      })
+      .filter(s => s && s.name && s.qty);
+  }
+
+  const parts = skusStr.split('|').map(s => s.trim());
+
+  // Primary: groups of 3 — name|qty|imageUrl
+  if (parts.length >= 3 && parts.length % 3 === 0) {
+    const triples = [];
+    for (let i = 0; i < parts.length; i += 3) {
+      triples.push({ name: parts[i], qty: parts[i + 1], imageUrl: parts[i + 2] || '' });
+    }
+    if (triples.every(s => s.name && s.qty)) return triples;
+  }
+
+  // Single SKU without image: name|qty
+  if (parts.length === 2) {
+    return [{ name: parts[0], qty: parts[1], imageUrl: '' }];
+  }
+
+  // Legacy: "Name:Qty|Name:Qty"
+  return skusStr.split('|')
+    .map(s => {
+      const [name, qty] = s.split(':');
+      return { name: (name || '').trim(), qty: (qty || '').trim(), imageUrl: '' };
+    })
+    .filter(s => s.name && s.qty);
+}
+
+async function _prefillFromLinkParams(p) {
+  // Wait for async catalog dropdowns before setting values
+  await _waitForSelectReady('productType');
+
   // Use non-bubbling events so we don't accidentally trigger the document-level
   // change/input listeners (which can kick off concurrent Supabase fetches that
   // race with renderQueuePane and leave the orders sidebar empty).
@@ -6154,14 +6249,19 @@ function _prefillFromLinkParams(p) {
   }
 
   function selectByText(id, text) {
-    if (!text) return;
+    if (!text) return false;
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) return false;
     const lower = text.toLowerCase();
     const opt = Array.from(el.options).find(o =>
       o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
     );
-    if (opt) { el.value = opt.value; el.dispatchEvent(new Event('change', { bubbles: false })); }
+    if (opt) {
+      el.value = opt.value;
+      el.dispatchEvent(new Event('change', { bubbles: false }));
+      return true;
+    }
+    return false;
   }
 
   // Customer
@@ -6184,8 +6284,18 @@ function _prefillFromLinkParams(p) {
         if (typeof onProductTypeChange === 'function') onProductTypeChange({ resetMaterial: true });
       }
     }
-    if (p.get('product').toLowerCase() === 'other') {
-      setVal('otherProductDesc', p.get('product_type'));
+  }
+
+  await _waitForSelectReady('material');
+
+  const productTypeDetail = p.get('product_type');
+  let productTypeDetailNote = '';
+  if (productTypeDetail) {
+    const ptVal = document.getElementById('productType')?.value || '';
+    if (ptVal === 'Other') {
+      setVal('otherProductDesc', productTypeDetail);
+    } else if (!selectByText('productType', productTypeDetail)) {
+      productTypeDetailNote = productTypeDetail;
     }
   }
 
@@ -6194,11 +6304,13 @@ function _prefillFromLinkParams(p) {
 
   // Color mode
   if (p.get('color')) {
+    await _waitForSelectReady('colorMode', 1);
     selectByText('colorMode', p.get('color'));
     if (typeof onColorModeChange === 'function') onColorModeChange();
   }
 
   // Sides
+  await _waitForSelectReady('sides', 1);
   selectByText('sides', p.get('sides'));
 
   // Dimensions
@@ -6213,17 +6325,18 @@ function _prefillFromLinkParams(p) {
   setVal('dueDate', p.get('due'));
   if (p.get('due') && typeof checkDueDate === 'function') checkDueDate();
 
-  // Notes
+  // Notes + contact (no dedicated contact field on the form)
   const noteParts = [];
-  if (p.get('notes'))   noteParts.push(p.get('notes'));
-  if (p.get('contact')) noteParts.push('Customer contact: ' + p.get('contact'));
+  if (p.get('contact')) noteParts.push('Contact: ' + p.get('contact'));
+  if (productTypeDetailNote) noteParts.push('Product type detail: ' + productTypeDetailNote);
+  if (p.get('notes')) noteParts.push(p.get('notes'));
   if (p.get('artwork')) noteParts.push('Artwork (GDrive): ' + p.get('artwork'));
   if (noteParts.length) setVal('specialNotes', noteParts.join('\n\n'));
 
-  // Finishing — call onFinishingChange directly instead of bubbling events
+  // Finishing — case-insensitive partial match (Spot UV, Lamination, Foil, Perforation)
   const finishing = (p.get('finishing') || '').toLowerCase();
   if (finishing) {
-    if (finishing.includes('lamin') || finishing.includes('gloss') || finishing.includes('matte') || finishing.includes('soft')) {
+    if (finishing.includes('lamin') || finishing === 'lamination') {
       const cb = document.getElementById('hasLamination');
       if (cb && !cb.checked) { cb.checked = true; if (typeof onFinishingChange === 'function') onFinishingChange(); }
       if (finishing.includes('gloss'))      selectByText('lamination', 'Gloss');
@@ -6240,81 +6353,60 @@ function _prefillFromLinkParams(p) {
       if (finishing.includes('gold'))        selectByText('foilType', 'Gold');
       else if (finishing.includes('silver')) selectByText('foilType', 'Silver');
     }
-    if (finishing.includes('perf')) {
+    if (finishing.includes('perf') || finishing.includes('perforation')) {
       const cb = document.getElementById('hasPerforation');
       if (cb && !cb.checked) { cb.checked = true; if (typeof onPerforationChange === 'function') onPerforationChange(); }
     }
   }
 
-  // SKUs — CLEAR ALL FIRST, then populate directly via skuList array
-  // URL format: "Name||Qty||Name||Qty"  (|| separates rows, last || separates name from qty)
-  const skusStr = p.get('skus');
-  if (skusStr) {
-    // Primary format: "Name|Qty||Name|Qty" — each SKU is "Name|Qty", SKUs separated by "||"
-    const skus = skusStr.split('||')
-      .map(chunk => {
-        const pipeIdx = chunk.indexOf('|');
-        if (pipeIdx === -1) return null;
-        return { name: chunk.substring(0, pipeIdx).trim(), qty: chunk.substring(pipeIdx + 1).trim() };
-      })
-      .filter(s => s && s.name && s.qty);
+  // SKUs — parse name|qty|imageUrl groups (or legacy formats)
+  const parsedSkus = _parseSkusFromParam(p.get('skus'));
+  if (parsedSkus.length > 0) {
+    skuList = [];
+    if (typeof showSingleSkuMode === 'function') showSingleSkuMode();
 
-    // Fallback: legacy "Name:Qty|Name:Qty" format
-    const parsedSkus = skus.length
-      ? skus
-      : skusStr.split('|')
-          .map(s => { const [name, qty] = s.split(':'); return { name: (name||'').trim(), qty: (qty||'').trim() }; })
-          .filter(s => s.name && s.qty);
-
-    if (parsedSkus.length > 0) {
-      // Reset skuList and UI to single-SKU mode first
-      skuList = [];
-      if (typeof showSingleSkuMode === 'function') showSingleSkuMode();
-
-      // Build skuList entries directly — no DOM clicking needed
-      parsedSkus.forEach(sku => {
-        skuList.push({
-          name: sku.name,
-          quantity: parseInt(sku.qty) || 0,
-          artworkDataUrl: null, artworkName: '', artworkType: '',
-          whiteDataUrl: null, whiteName: '',
-          uvDataUrl: null, uvName: '',
-          foilDataUrl: null, foilName: '',
-        });
+    parsedSkus.forEach(sku => {
+      const imageUrl = (sku.imageUrl || '').trim();
+      skuList.push({
+        name: sku.name,
+        quantity: parseInt(sku.qty, 10) || 0,
+        previewImageUrl: imageUrl || null,
+        previewHint: !imageUrl,
+        artworkDataUrl: null, artworkName: '', artworkType: '',
+        whiteDataUrl: null, whiteName: '',
+        uvDataUrl: null, uvName: '',
+        foilDataUrl: null, foilName: '',
       });
+    });
 
-      // Switch to multi-SKU mode and render
-      if (typeof showMultiSkuMode === 'function') showMultiSkuMode();
-      if (typeof renderSKUs === 'function') renderSKUs();
-    }
+    if (typeof showMultiSkuMode === 'function') showMultiSkuMode();
+    if (typeof renderSKUs === 'function') renderSKUs();
   }
 
-  // Banner + toast
   _showPrefillBanner(p.get('order_ref'), p.get('artwork'));
   if (typeof showToast === 'function') {
-    showToast('✅ Pre-filled from order link. Check all fields before saving.', 6000);
+    showToast('✅ Form pre-filled from order link — please review before saving.', 6000);
   }
 
-  // Re-render the orders sidebar so it is never left blank after prefill
   if (typeof renderQueuePane === 'function') renderQueuePane();
 }
 
 function _showPrefillBanner(orderRef, artworkUrl) {
   document.getElementById('prefill-banner')?.remove();
   const artworkBtn = artworkUrl
-    ? `<a href="${artworkUrl}" target="_blank" rel="noopener"
+    ? `<a href="${escHtmlJT(artworkUrl)}" target="_blank" rel="noopener"
          style="margin-left:8px;background:#1d4ed8;color:#fff;padding:5px 12px;border-radius:6px;
                 text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0;">
          🎨 Open Artwork in GDrive ↗
        </a>`
-    : `<span style="margin-left:8px;color:#93c5fd;font-size:12px;font-style:italic;">⚠️ No artwork link — upload files manually</span>`;
+    : '';
   const div = document.createElement('div');
   div.id = 'prefill-banner';
   div.style.cssText = 'background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;display:flex;align-items:center;gap:4px;flex-wrap:wrap;';
-  div.innerHTML = `🔗 <strong>Pre-filled from Workflow Order${orderRef ? ' #' + orderRef : ''}.</strong>
-    &nbsp;Add Facility, Rep, Cut Method manually.
+  div.innerHTML = `✅ <strong>Form pre-filled from order link — please review before saving.</strong>
+    ${orderRef ? `<span style="margin-left:4px;">(Order #${escHtmlJT(orderRef)})</span>` : ''}
     ${artworkBtn}
-    <button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#93c5fd;font-size:18px;line-height:1;">✕</button>`;
+    <button type="button" onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#93c5fd;font-size:18px;line-height:1;">✕</button>`;
   const form = document.getElementById('ticketForm');
   if (form) form.prepend(div);
 }
