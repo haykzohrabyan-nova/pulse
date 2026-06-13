@@ -1885,6 +1885,8 @@ const ORDER_STATUSES = [
 const MATERIALS = [
   { category: 'BOPP', items: ['Clear BOPP', 'White BOPP', 'Silver BOPP', 'Holo BOPP'] },
   { category: 'Cosmetic Web', items: ['Clear Cosmetic Web', 'White Cosmetic Web', 'Silver Cosmetic Web'] },
+  { category: 'PET', items: ['Clear PET'] },
+  { category: 'Specialty', items: ['Kraft Paper', 'Foil Silver', 'Foil Gold'] },
   { category: 'Label Sheets', items: ['Gloss Label Sheet', 'Matte Label Sheet', 'Semi Gloss'] },
   { category: 'Cardstock', items: [
     '14pt C1S', '14pt C2S', '16pt C1S', '16pt C2S',
@@ -1929,10 +1931,10 @@ const PRODUCT_TYPES = {
     notes: 'Boyd vinyl label roll workflow'
   },
   'Pouches': {
-    materials: ['Cosmetic Web'],
+    materials: ['BOPP', 'Cosmetic Web', 'PET', 'Specialty'],
     defaultPrintType: 'Roll',
     facilities: ['16th-street'],
-    notes: 'Pouches — ONLY Cosmetic Web materials (Clear/White/Silver). 6K → GM → Karlville Poucher'
+    notes: 'Pouches — BOPP, Cosmetic Web, PET, and specialty materials. 6K → GM → Karlville Poucher'
   },
   'Folding Cartons / Box': {
     materials: ['Cardstock'],
@@ -4957,7 +4959,7 @@ function buildPulseDefaultProductCatalog() {
   return [
     { id: u(), name: 'Labels (Roll)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided'], rollDirection: true, notes: 'Roll labels — HP Indigo 6K → GM Die/Laser Cutter. NOT Cosmetic Web.' },
     { id: u(), name: 'Labels (Sheet)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil'], sides: ['1-sided'], rollDirection: false, notes: 'Sheet labels — HP Indigo 6K → Duplo or Guillotine.' },
-    { id: u(), name: 'Pouches', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: true, notes: 'Pouches — ONLY Cosmetic Web. HP Indigo 6K → GM Die/Laser → Karlville Poucher.' },
+    { id: u(), name: 'Pouches', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web','Clear PET','Kraft Paper','Foil Silver','Foil Gold'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: true, notes: 'Pouches — BOPP, Cosmetic Web, PET, and specialty materials. HP Indigo 6K → GM Die/Laser → Karlville Poucher.' },
     { id: u(), name: 'Folding Cartons / Box', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing'], sides: ['2-sided'], rollDirection: false, notes: 'Folding cartons — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer.' },
     { id: u(), name: 'Business Cards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','80lb Cover','100lb Cover','110lb Cover'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Business Cards — HP Indigo 15K → Lamination → Duplo or Guillotine.' },
     { id: u(), name: 'Flyers / Postcards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','14pt C1S','16pt C1S'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Flat sheets — HP Indigo 15K → Lamination → Guillotine.' },

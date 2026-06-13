@@ -6278,17 +6278,8 @@ function _inferFacilityForCatalogProduct(productName) {
   return facs[0];
 }
 
-/** Workflow board often sends BOPP names; Pouches use Cosmetic Web in Pulse. */
-function _resolveWorkflowMaterial(productName, rawMaterial) {
-  const m = _normalizeWorkflowParam(rawMaterial);
-  if (!m) return m;
-  const p = _normalizeWorkflowParam(productName);
-  if (p === 'Pouches') {
-    if (/clear/i.test(m)) return 'Clear Cosmetic Web';
-    if (/white/i.test(m)) return 'White Cosmetic Web';
-    if (/silver/i.test(m)) return 'Silver Cosmetic Web';
-  }
-  return m;
+function _resolveWorkflowMaterial(_productName, rawMaterial) {
+  return _normalizeWorkflowParam(rawMaterial);
 }
 
 async function _waitForCatalogProduct(productName, timeoutMs = 6000) {
@@ -6349,47 +6340,34 @@ async function waitForOptions(selectEl, minOptions = 2, timeoutMs = 3000) {
 function setDropdownByText(selectEl, targetText) {
   if (!selectEl || !targetText) return false;
   const target = targetText.trim().toLowerCase();
-  const options = Array.from(selectEl.options).filter(o => o.value && !o.disabled);
 
-  // 1. Exact match first (case-insensitive) — text or value
-  for (const opt of options) {
-    if (opt.text.trim().toLowerCase() === target || opt.value.trim().toLowerCase() === target) {
+  // Priority 1: exact match on visible text
+  for (const opt of selectEl.options) {
+    if (opt.text.trim().toLowerCase() === target) {
       selectEl.value = opt.value;
       selectEl.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     }
   }
-
-  // 2. Option text starts with the target
-  for (const opt of options) {
+  // Priority 2: option text starts with target
+  for (const opt of selectEl.options) {
     if (opt.text.trim().toLowerCase().startsWith(target)) {
       selectEl.value = opt.value;
       selectEl.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     }
   }
-
-  // 3. Target starts with option text (e.g. param="Clear BOPP 3mil", option="Clear BOPP")
-  for (const opt of options) {
-    const optText = opt.text.trim().toLowerCase();
-    if (optText.length > 3 && target.startsWith(optText)) {
+  // Priority 3: target starts with option text
+  for (const opt of selectEl.options) {
+    const ot = opt.text.trim().toLowerCase();
+    if (ot.length > 3 && target.startsWith(ot)) {
       selectEl.value = opt.value;
       selectEl.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     }
   }
-
-  // 4. Either contains the other (last resort)
-  for (const opt of options) {
-    const optText = opt.text.trim().toLowerCase();
-    if (optText.length > 3 && (target.includes(optText) || optText.includes(target))) {
-      selectEl.value = opt.value;
-      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
-    }
-  }
-
-  console.warn('[Autofill] No dropdown match for:', targetText, 'in', selectEl.id || selectEl.name);
+  // No match — leave on default, log warning
+  console.warn('[Autofill] No match for:', targetText, '| select:', selectEl.id);
   return false;
 }
 
@@ -6485,7 +6463,8 @@ async function _prefillFromLinkParams(p) {
     }
   }
 
-  await waitForOptions(document.getElementById('material'), 2, 3000);
+  const materialEl = document.getElementById('material');
+  await waitForOptions(materialEl, 3, 3000);
 
   const productTypeDetail = p.get('product_type');
   let productTypeDetailNote = '';
