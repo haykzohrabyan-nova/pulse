@@ -170,6 +170,23 @@
     .job-card .card-line-tag.tag-15k { background: rgba(124,58,237,0.12); color: #7c3aed; }
     .job-card .card-line-tag.tag-boyd { background: rgba(217,119,6,0.12); color: #d97706; }
 
+    /* Compact cards — Shipping Station (collapsed = order # only) */
+    .job-card-compact { padding: 6px 8px; cursor: default; }
+    .job-card-compact:hover { transform: none; }
+    .job-card-compact .card-header-row { display: flex; align-items: center; gap: 6px; min-height: 22px; }
+    .job-card-compact .card-order { cursor: pointer; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .job-card-compact .card-order:hover { text-decoration: underline; }
+    .job-card-compact .card-expand-btn {
+      flex-shrink: 0; width: 22px; height: 22px; padding: 0; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--card); color: var(--text-muted); font-size: 11px;
+      line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .job-card-compact .card-expand-btn:hover { background: var(--bg); color: var(--text); }
+    .job-card-compact.expanded .card-expand-btn { transform: rotate(180deg); }
+    .job-card-compact .card-details { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(8,145,178,0.15); cursor: pointer; }
+    .job-card-compact.expanded .card-details { display: block; }
+
     /* ── Application capacity bar ── */
     .app-capacity { margin: 8px 0; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
     .app-capacity-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
@@ -309,7 +326,13 @@
     return `${h}h ${m}m`;
   }
 
-  function renderJobCard(order, line, subProgress) {
+  function toggleDashCardExpand(ev, cardId) {
+    ev.stopPropagation();
+    const card = document.getElementById(cardId);
+    if (card) card.classList.toggle('expanded');
+  }
+
+  function renderJobCard(order, line, subProgress, opts = {}) {
     const overdue = isOverdue(order.dueDate) && !['completed','shipped','received','ready-to-ship'].includes(order.status);
     // Production estimate — hours format
     const steps = order.workflowSteps || [];
@@ -416,11 +439,22 @@
       parentLinkHTML = `<div style="font-size:10px;color:#2563eb;margin-top:3px;">📎 Order <strong>#${order.parentOrderId}</strong>${progText}${batchText}</div>`;
     }
 
-    return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="card-order">${statusDot}#${order.orderId}</span>
-        <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
-      </div>
+    const shippingStatusHTML = (() => {
+        if (order.status === 'shipped') {
+          const ts = order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : '';
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${ts}</div>`;
+        }
+        if (order.status === 'delivery-ready') {
+          const ts = order.deliveryReadyAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.deliveryReadyAt) : new Date(order.deliveryReadyAt).toLocaleDateString()) : '';
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">📦 Delivery Ready${ts}</div>`;
+        }
+        if (order.status === 'waiting-pickup') {
+          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">🏷 Label Created</div>`;
+        }
+        return '';
+      })();
+
+    const cardDetailsHTML = `
       <div class="card-customer">${order.customerName || order.customer || '—'}</div>
       <div class="card-desc">${order.productType || order.jobDescription || '—'}</div>
       ${parentLinkHTML}
@@ -437,20 +471,27 @@
       ${dieHTML ? `<div style="margin-top:4px;">${dieHTML}</div>` : ''}
       ${estLabel ? `<div class="card-est">Est: <strong>${estLabel}</strong></div>` : ''}
       ${subProgressHTML}
-      ${(() => {
-        if (order.status === 'shipped') {
-          const ts = order.shippedAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.shippedAt) : new Date(order.shippedAt).toLocaleDateString()) : '';
-          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">✅ Shipped${ts}</div>`;
-        }
-        if (order.status === 'delivery-ready') {
-          const ts = order.deliveryReadyAt ? ' · ' + (typeof formatDateTime === 'function' ? formatDateTime(order.deliveryReadyAt) : new Date(order.deliveryReadyAt).toLocaleDateString()) : '';
-          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">📦 Delivery Ready${ts}</div>`;
-        }
-        if (order.status === 'waiting-pickup') {
-          return `<div style="margin-top:6px;font-size:10px;color:#0891b2;font-weight:600;">🏷 Label Created</div>`;
-        }
-        return '';
-      })()}
+      ${shippingStatusHTML}`;
+
+    const cardId = `dash-card-${order.id}`;
+
+    if (opts.compact) {
+      return `<div class="job-card job-card-compact line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" id="${cardId}">
+        <div class="card-header-row">
+          <span class="card-order" onclick="showDetail(${order.id}); event.stopPropagation();">${statusDot}#${order.orderId}</span>
+          <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+          <button type="button" class="card-expand-btn" onclick="toggleDashCardExpand(event, '${cardId}')" aria-label="Show details" title="Show details">▾</button>
+        </div>
+        <div class="card-details" onclick="showDetail(${order.id})">${cardDetailsHTML}</div>
+      </div>`;
+    }
+
+    return `<div class="job-card line-${line} ${queueClass} ${overdue ? 'overdue' : ''}" onclick="showDetail(${order.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="card-order">${statusDot}#${order.orderId}</span>
+        <span class="card-line-tag tag-${line}">${line.toUpperCase()}</span>
+      </div>
+      ${cardDetailsHTML}
     </div>`;
   }
 
@@ -722,7 +763,7 @@
                 ${loadBarHTML}
               </div>
               <div class="stage-cards">
-                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId])).join('')}
+                ${jobs.map(o => renderJobCard(o, lineKey, _subProgressMap[o.orderId], { compact: stage === 'Shipping Station' })).join('')}
               </div>
             </div>`;
           }).join('')}

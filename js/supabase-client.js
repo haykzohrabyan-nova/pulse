@@ -2029,12 +2029,16 @@
   }
 
   function _productWorkflowToRow(wf) {
+    const rawSteps = wf.steps || [];
+    const steps = typeof enforcePressBeforeCuttingOrder === 'function'
+      ? enforcePressBeforeCuttingOrder(rawSteps)
+      : rawSteps;
     return {
       id: wf.id || undefined,
       product_catalog_id: wf.productCatalogId,
       product_name: wf.productName,
       primary_facility: wf.primaryFacility,
-      steps: wf.steps || [],
+      steps,
     };
   }
 

@@ -492,6 +492,57 @@ function _evalWorkflowCondition(step, jobOptions) {
   }
 }
 
+function _workflowStepMachineSlug(step) {
+  if (!step) return '';
+  if (step.machineId) return String(step.machineId);
+  if (typeof displayNameToMachineSlug === 'function' && step.machine) {
+    return displayNameToMachineSlug(step.machine) || '';
+  }
+  return '';
+}
+
+function _isWorkflowPressStep(step) {
+  const slug = _workflowStepMachineSlug(step);
+  const cat = MACHINE_SLUG_CATEGORY[slug] || '';
+  if (cat === 'press') return true;
+  const name = step.machine || machineSlugToDisplayName(slug) || '';
+  return /indigo|canon colorado|roland printer/i.test(name);
+}
+
+function _isWorkflowCuttingStep(step) {
+  const slug = _workflowStepMachineSlug(step);
+  const cat = MACHINE_SLUG_CATEGORY[slug] || '';
+  if (cat === 'cutting') return true;
+  const name = step.machine || machineSlugToDisplayName(slug) || '';
+  return /cutter|laser cutter|die cutter|graphtec|duplo|guillotine|moll brothers cutter/i.test(name);
+}
+
+// WORKFLOW STEP ORDER RULE:
+// 1. Press / Printing  (HP Indigo 6K, HP Indigo 15K, offset press, etc.)
+// 2. Finishing / Cutting (GM Laser Cutter, die cutter, laminator, etc.)
+// 3. Packaging / Other (boxing, kitting, etc.)
+// Never place a cutting step before the first printing step on the same ticket.
+function enforcePressBeforeCuttingOrder(steps) {
+  if (!Array.isArray(steps) || steps.length < 2) return steps;
+  const firstPressIdx = steps.findIndex(_isWorkflowPressStep);
+  if (firstPressIdx === -1) return steps;
+  const earlyCutIndices = steps
+    .map((s, i) => ({ s, i }))
+    .filter(({ s, i }) => i < firstPressIdx && _isWorkflowCuttingStep(s));
+  if (!earlyCutIndices.length) return steps;
+
+  const earlyCutIdxSet = new Set(earlyCutIndices.map(x => x.i));
+  const earlyCuts = earlyCutIndices.map(x => x.s);
+  const rest = steps.filter((_, i) => !earlyCutIdxSet.has(i));
+  const lastPressIdx = rest.reduce((last, s, i) => (_isWorkflowPressStep(s) ? i : last), -1);
+  const result = [
+    ...rest.slice(0, lastPressIdx + 1),
+    ...earlyCuts,
+    ...rest.slice(lastPressIdx + 1),
+  ];
+  return result.map((s, i) => ({ ...s, sortOrder: i + 1 }));
+}
+
 /** Resolve configured steps for a job (phase 2 — job ticket wiring). */
 function resolveProductWorkflowSteps(steps, jobOptions = {}, opts = {}) {
   if (!Array.isArray(steps)) return [];
@@ -500,7 +551,7 @@ function resolveProductWorkflowSteps(steps, jobOptions = {}, opts = {}) {
     Array.isArray(includeOptional) ? includeOptional : []
   );
   const sorted = [...steps].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  return sorted.map(step => {
+  const resolved = sorted.map(step => {
     if (step.stepType === 'optional') {
       return optionalIds.has(step.machineId) ? step : null;
     }
@@ -515,6 +566,7 @@ function resolveProductWorkflowSteps(steps, jobOptions = {}, opts = {}) {
     }
     return null;
   }).filter(Boolean);
+  return enforcePressBeforeCuttingOrder(resolved);
 }
 
 function machineSlugToDisplayName(machineId) {
@@ -605,6 +657,7 @@ if (typeof window !== 'undefined') {
   window.PRODUCT_WORKFLOW_DEFAULTS = PRODUCT_WORKFLOW_DEFAULTS;
   window.getDefaultProductWorkflowForCatalogName = getDefaultProductWorkflowForCatalogName;
   window.resolveProductWorkflowSteps = resolveProductWorkflowSteps;
+  window.enforcePressBeforeCuttingOrder = enforcePressBeforeCuttingOrder;
   window.machineSlugToDisplayName = machineSlugToDisplayName;
   window.displayNameToMachineSlug = displayNameToMachineSlug;
   window.buildProductWorkflowJobOptions = buildProductWorkflowJobOptions;
@@ -5911,7 +5964,7 @@ async function _writeLocalProductWorkflows(rows) {
 
 function _normalizeLocalProductWorkflow(wf) {
   const now = new Date().toISOString();
-  const steps = (wf.steps || []).map((s, i) => ({
+  const mapped = (wf.steps || []).map((s, i) => ({
     ...s,
     sortOrder: s.sortOrder ?? i + 1,
     operation: s.operation || _defaultOperationForMachineSlug(s.machineId),
@@ -5919,6 +5972,9 @@ function _normalizeLocalProductWorkflow(wf) {
       || (s.defaultMachineId ? _defaultOperationForMachineSlug(s.defaultMachineId) : null),
     alternatives: normalizeWorkflowAlternatives(s.alternatives),
   }));
+  const steps = typeof enforcePressBeforeCuttingOrder === 'function'
+    ? enforcePressBeforeCuttingOrder(mapped)
+    : mapped;
   return {
     id: wf.id || `pw_${wf.productCatalogId}`,
     productCatalogId: wf.productCatalogId,
