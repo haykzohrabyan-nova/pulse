@@ -7,7 +7,7 @@
   <title>Production Dashboard — Bazaar Print</title>
   <script src="/js/pulse-config.js"></script>
   <script src="/js/pulse-config.local.js"></script>
-  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/shared.js?v=20260612-shipping-station2"></script>
   <script src="/js/organisation-local-store.js"></script>
   <script src="/js/supabase-client.js?v=20260609-realtime"></script>
   <script src="/js/auth.js?v=20260611-email-domain"></script>
@@ -589,8 +589,8 @@
           stageBuckets['Prepress'] = stageBuckets['Prepress'] || [];
           stageBuckets['Prepress'].push(order);
         } else if (['shipped', 'waiting-pickup', 'delivery-ready'].includes(order.status)) {
-          stageBuckets['Shipped'] = stageBuckets['Shipped'] || [];
-          stageBuckets['Shipped'].push(order);
+          stageBuckets['Shipping Station'] = stageBuckets['Shipping Station'] || [];
+          stageBuckets['Shipping Station'].push(order);
         } else if (order.status === 'ready-to-ship') {
           stageBuckets['Ready to Ship'] = stageBuckets['Ready to Ship'] || [];
           stageBuckets['Ready to Ship'].push(order);
@@ -616,7 +616,7 @@
           // Summary query doesn't load workflow steps — use current_step index to
           // pick the right stage column by position in the line's stages array.
           // Skip 'Prepress' (index 0) since these are already past prepress.
-          const prodStages = lineConfig.stages.filter(s => s !== 'Prepress' && s !== 'Shipped');
+          const prodStages = lineConfig.stages.filter(s => s !== 'Prepress' && s !== 'Shipping Station');
           const stepIdx = order.currentStep || 0;
           const guessedStage = prodStages[Math.min(stepIdx, prodStages.length - 1)] || firstProdStage;
           stageBuckets[guessedStage] = stageBuckets[guessedStage] || [];
@@ -630,6 +630,15 @@
           stageBuckets['Prepress'].push(order);
         }
       });
+
+      // Legacy bucket key from older builds / saved config.
+      if (stageBuckets['Shipped']?.length) {
+        stageBuckets['Shipping Station'] = [
+          ...(stageBuckets['Shipping Station'] || []),
+          ...stageBuckets['Shipped'],
+        ];
+        delete stageBuckets['Shipped'];
+      }
 
       // Add Application capacity bar if this line has application jobs
       let appCapacityHTML = '';
@@ -709,7 +718,7 @@
             // Job card highlight: active = bright border, hold = red tint, pending = default
             return `<div class="stage-col">
               <div class="stage-header">
-                <div class="stage-header-top">${stage} <span class="stage-count">${jobs.length}</span></div>
+                <div class="stage-header-top">${typeof normalizeProductionLineStage === 'function' ? normalizeProductionLineStage(stage) : stage} <span class="stage-count">${jobs.length}</span></div>
                 ${loadBarHTML}
               </div>
               <div class="stage-cards">
@@ -1298,7 +1307,9 @@
       if (pl && typeof pl === 'object' && typeof PRODUCTION_LINES !== 'undefined') {
         Object.entries(pl).forEach(([key, cfg]) => {
           if (PRODUCTION_LINES[key] && Array.isArray(cfg.stages) && cfg.stages.length > 0) {
-            PRODUCTION_LINES[key].stages = cfg.stages;
+            const stages = typeof normalizeProductionLineStages === 'function'
+              ? normalizeProductionLineStages(cfg.stages) : cfg.stages;
+            PRODUCTION_LINES[key].stages = stages;
           }
           if (PRODUCTION_LINES[key] && cfg.name) PRODUCTION_LINES[key].name = cfg.name;
         });

@@ -17,6 +17,8 @@ function isAllowedOrigin(origin: string | null): boolean {
   if (ALLOWED_ORIGINS.has(origin)) return true;
   // Allow Cloudflare Pages preview deployments
   if (/^https:\/\/[\w-]+\.pages\.dev$/.test(origin)) return true;
+  // Allow Vercel deployments
+  if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return true;
   // Allow localhost on any port for dev
   if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
   return false;

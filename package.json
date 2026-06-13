@@ -14,6 +14,8 @@
     "migrate:david-b": "node scripts/apply-supabase-migration.mjs 047b_ensure_david_review_user.sql",
     "migrate:david-c": "node scripts/apply-supabase-migration.mjs 047c_fix_david_auth_tokens.sql",
     "migrate:david": "node scripts/apply-supabase-migration.mjs 047a_user_role_david_review.sql && node scripts/apply-supabase-migration.mjs 047b_ensure_david_review_user.sql",
+    "migrate:pickup-sms": "node scripts/apply-supabase-migration.mjs 054_pickup_verifications.sql",
+    "deploy:pickup-sms": "bash scripts/deploy-pickup-sms.sh",
     "check:david": "node scripts/check-david-supabase.mjs",
     "audit:staff": "node scripts/audit-staff-sources.mjs"
   },

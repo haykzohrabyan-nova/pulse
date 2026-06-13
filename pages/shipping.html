@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/shared.js?v=20260612-shipping-station2"></script>
   <script src="/js/organisation-local-store.js"></script>
   <script src="/js/pulse-config.js"></script>
   <script src="/js/pulse-config.local.js"></script>
@@ -397,10 +397,11 @@
           <button class="btn" id="pickupSendOtpBtn" onclick="sendPickupShipOtp()" style="flex-shrink:0;align-self:flex-end;">Send Code</button>
         </div>
         <div id="pickupOtpEntrySection" style="display:none;margin-top:14px;">
-          <div class="field-group" style="max-width:200px;">
-            <label>Enter 4-Digit Verification Code</label>
-            <input type="text" id="pickupOtpEntry" maxlength="4" placeholder="0000" autocomplete="off" oninput="checkPickupShipOtp()" class="otp-input">
+          <div class="field-group" style="max-width:240px;">
+            <label>Enter 6-Digit Verification Code</label>
+            <input type="text" id="pickupOtpEntry" maxlength="6" placeholder="000000" autocomplete="off" inputmode="numeric" oninput="onPickupOtpInput()" class="otp-input" style="letter-spacing:.3em;font-size:18px;text-align:center;">
           </div>
+          <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Code sent via SMS — expires in 5 minutes</p>
           <div id="pickupOtpStatus" class="otp-status"></div>
         </div>
       </div>
@@ -409,7 +410,7 @@
         <textarea id="pickupCompleteNotes" rows="2" placeholder="Any notes…"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <button class="btn btn-primary" style="flex:1;" onclick="submitPickupComplete()">Confirm Pickup Complete</button>
+        <button id="btn-confirm-pickup" class="btn btn-primary" style="flex:1;" onclick="submitPickupComplete()">Confirm Pickup Complete</button>
         <button class="btn" onclick="closePickupCompleteModal()">Cancel</button>
       </div>
     </div>
@@ -1153,9 +1154,9 @@
   let shippingInfoOrderIds = [];
   let courierShipDbId = null;
   let courierShipSubmitting = false;
-  let pickupShipOtpCode = null;
   let pickupShipOtpVerified = false;
   let pickupRequiresOtp = false;
+  let pickupCodeSent = false; // true after Edge Function confirms SMS was dispatched
 
 
   // ── Load ────────────────────────────────────────────────────────────────
@@ -2517,7 +2518,7 @@
     pickupCompleteDbId = dbId;
     pickupCompleteOrder = allOrders.find(o => String(o.id) === String(dbId));
     pickupRequiresOtp = !!requireOtp;
-    pickupShipOtpCode = null;
+    pickupCodeSent = false;
     pickupShipOtpVerified = false;
     if (!pickupCompleteOrder) return;
     document.getElementById('pickupCompleteOrderInfo').innerHTML = `
@@ -2531,75 +2532,149 @@
     const otpSec = document.getElementById('pickupOtpSection');
     if (otpSec) otpSec.style.display = pickupRequiresOtp ? 'block' : 'none';
     if (pickupRequiresOtp) {
-      document.getElementById('pickupShipPhone').value = pickupCompleteOrder.packingSlip?.phone || '';
+      const phoneEl = document.getElementById('pickupShipPhone');
+      if (phoneEl) { phoneEl.value = pickupCompleteOrder.packingSlip?.phone || ''; phoneEl.disabled = false; }
       document.getElementById('pickupOtpEntry').value = '';
       document.getElementById('pickupOtpStatus').textContent = '';
       document.getElementById('pickupOtpEntrySection').style.display = 'none';
+      const sendBtn = document.getElementById('pickupSendOtpBtn');
+      if (sendBtn) { sendBtn.textContent = 'Send Code'; sendBtn.disabled = false; }
     }
     document.getElementById('pickupCompleteModal').classList.remove('hidden');
     updatePickupShipBtn();
   }
 
   function updatePickupShipBtn() {
-    const btn = document.querySelector('#pickupCompleteModal .btn-primary');
+    const btn = document.getElementById('btn-confirm-pickup') || document.querySelector('#pickupCompleteModal .btn-primary');
     if (!btn || !pickupRequiresOtp) return;
-    btn.disabled = !pickupShipOtpVerified;
+    const entry = document.getElementById('pickupOtpEntry');
+    const hasCode = pickupCodeSent && entry && entry.value.trim().length === 6;
+    btn.disabled = !hasCode;
   }
 
-  function sendPickupShipOtp() {
+  async function sendPickupShipOtp() {
+    if (!pickupCompleteOrder) return;
     const phone = document.getElementById('pickupShipPhone').value.trim();
     if (!phone) { showPageToast('Enter a phone number first.', 'warning'); return; }
-    pickupShipOtpCode = Math.floor(1000 + Math.random() * 9000).toString();
-    pickupShipOtpVerified = false;
-    document.getElementById('pickupOtpEntry').value = '';
-    document.getElementById('pickupOtpStatus').textContent = '';
-    document.getElementById('pickupOtpEntrySection').style.display = 'block';
-    const normalized = (typeof normalizePhoneNumber === 'function') ? normalizePhoneNumber(phone) : phone;
-    sendSmsViaPulseProxy({ to: normalized,
-      message: `Your Bazaar Print pickup code is: ${pickupShipOtpCode}. Show this to staff when collecting your order.` });
-    showPageToast('Verification code sent via SMS.', 'success', 3000);
+
+    const btn = document.getElementById('pickupSendOtpBtn');
+    const originalLabel = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+    try {
+      const supabaseUrl = window.PULSE_SUPABASE_URL || '';
+      const anonKey     = window.PULSE_SUPABASE_ANON_KEY || '';
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-pickup-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
+          order_id:     pickupCompleteOrder.id,
+          phone,
+          order_ref:    pickupCompleteOrder.orderId,
+          picked_up_by: document.getElementById('pickupCompletedBy').value.trim(),
+          staff_name:   document.getElementById('pickupHandoffBy').value.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `SMS send failed (${res.status})`);
+
+      pickupCodeSent = true;
+      document.getElementById('pickupOtpEntry').value = '';
+      document.getElementById('pickupOtpStatus').textContent = '';
+      document.getElementById('pickupOtpEntrySection').style.display = 'block';
+      document.getElementById('pickupShipPhone').disabled = true;
+      if (btn) { btn.textContent = 'Resend Code'; btn.disabled = false; }
+      showPageToast(`Verification code sent to ${phone}`, 'success', 4000);
+    } catch (err) {
+      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      showPageToast(`SMS error: ${err.message}`, 'error');
+    }
     updatePickupShipBtn();
   }
 
-  function checkPickupShipOtp() {
+  function onPickupOtpInput() {
     const val = document.getElementById('pickupOtpEntry').value.trim();
     const status = document.getElementById('pickupOtpStatus');
-    if (val.length === 4) {
-      if (val === pickupShipOtpCode) {
-        pickupShipOtpVerified = true;
-        status.textContent = '✓ Code verified';
-        status.style.color = 'var(--green)';
-      } else {
-        pickupShipOtpVerified = false;
-        status.textContent = '✗ Incorrect code — try again';
-        status.style.color = 'var(--red)';
-      }
-    } else {
-      pickupShipOtpVerified = false;
-      status.textContent = '';
-    }
+    // Clear any previous error when the user edits the field
+    if (status) status.textContent = '';
     updatePickupShipBtn();
   }
 
   function closePickupCompleteModal() {
     document.getElementById('pickupCompleteModal').classList.add('hidden');
-    pickupCompleteDbId = null; pickupCompleteOrder = null; pickupRequiresOtp = false; pickupShipOtpCode = null; pickupShipOtpVerified = false;
+    // Re-enable phone field in case it was locked after sending a code
+    const phoneEl = document.getElementById('pickupShipPhone');
+    if (phoneEl) phoneEl.disabled = false;
+    pickupCompleteDbId = null;
+    pickupCompleteOrder = null;
+    pickupRequiresOtp = false;
+    pickupCodeSent = false;
+    pickupShipOtpVerified = false;
   }
 
   async function submitPickupComplete() {
     if (!pickupCompleteOrder) return;
-    if (pickupRequiresOtp && !pickupShipOtpVerified) {
-      showPageToast('Verify the SMS code before confirming pickup.', 'warning');
-      return;
+
+    if (pickupRequiresOtp) {
+      if (!pickupCodeSent) {
+        showPageToast('Please send a verification code first.', 'warning');
+        return;
+      }
+      const code = document.getElementById('pickupOtpEntry').value.trim();
+      if (code.length !== 6) {
+        showPageToast('Enter the 6-digit code from the SMS.', 'warning');
+        return;
+      }
+
+      // Verify code server-side before proceeding
+      const confirmBtn = document.getElementById('btn-confirm-pickup') || document.querySelector('#pickupCompleteModal .btn-primary');
+      if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Verifying…'; }
+
+      try {
+        const supabaseUrl = window.PULSE_SUPABASE_URL || '';
+        const anonKey     = window.PULSE_SUPABASE_ANON_KEY || '';
+        const res = await fetch(`${supabaseUrl}/functions/v1/verify-pickup-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({ order_id: pickupCompleteOrder.id, code }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const status = document.getElementById('pickupOtpStatus');
+          if (status) { status.textContent = `✗ ${data.error || 'Verification failed'}`; status.style.color = 'var(--red)'; }
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Pickup Complete'; }
+          showPageToast(data.error || 'Verification failed', 'error');
+          return;
+        }
+        // Code verified — mark in state so activity log reflects it
+        pickupShipOtpVerified = true;
+        const status = document.getElementById('pickupOtpStatus');
+        if (status) { status.textContent = '✓ Code verified'; status.style.color = 'var(--green)'; }
+      } catch (err) {
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Pickup Complete'; }
+        showPageToast(`Verification error: ${err.message}`, 'error');
+        return;
+      }
     }
+
     const pickedUpBy = document.getElementById('pickupCompletedBy').value.trim();
     const handoffBy  = document.getElementById('pickupHandoffBy').value.trim();
     const notes      = document.getElementById('pickupCompleteNotes').value.trim();
     const pickupDate = document.getElementById('pickupCompletedDate').value || new Date().toISOString().split('T')[0];
-    const pickupAt = new Date(pickupDate + 'T12:00:00').toISOString();
+    const pickupAt   = new Date(pickupDate + 'T12:00:00').toISOString();
+
     try {
-      const phone = pickupRequiresOtp ? document.getElementById('pickupShipPhone').value.trim() : (pickupCompleteOrder.packingSlip?.phone || null);
+      const phone = pickupRequiresOtp
+        ? document.getElementById('pickupShipPhone').value.trim()
+        : (pickupCompleteOrder.packingSlip?.phone || null);
       const packingSlip = { ...(pickupCompleteOrder.packingSlip || {}), method: 'local-pickup', phone: phone || null };
+
       await updateOrder(pickupCompleteOrder.id, {
         status: 'shipped',
         shippedAt: pickupAt,
@@ -2613,7 +2688,7 @@
       await addActivity({
         orderId: pickupCompleteOrder.orderId,
         type: 'shipped',
-        message: `Customer pickup complete — moved to Shipped${pickedUpBy ? ' · Picked up by: ' + pickedUpBy : ''}${handoffBy ? ' · Handed off by: ' + handoffBy : ''}${notes ? '. Notes: ' + notes : ''}`,
+        message: `Customer pickup complete — SMS verified${pickedUpBy ? ' · Picked up by: ' + pickedUpBy : ''}${handoffBy ? ' · Handed off by: ' + handoffBy : ''}${notes ? '. Notes: ' + notes : ''}`,
         by: handoffBy || pickedUpBy || 'Shipping Dept',
       });
       showPageToast(`Order #${pickupCompleteOrder.orderId} picked up — moved to Shipped`, 'success', 5000);

@@ -11,7 +11,7 @@
     .admin-content > .tab-pane.active { display: block !important; }
     #tab-organisation.active { padding: 0 !important; }
   </style>
-  <script src="/js/shared.js?v=20260609-realtime"></script>
+  <script src="/js/shared.js?v=20260612-shipping-station2"></script>
   <script src="/js/organisation-local-store.js"></script>
   <script src="/js/pulse-config.js"></script>
   <script src="/js/pulse-config.local.js"></script>
@@ -3342,9 +3342,9 @@ const CFG_REPRINT_REASONS_DEFAULTS = [
 ];
 
 const CFG_PROD_LINES_DEFAULTS = {
-  '6k':   { name: 'HP Indigo 6K Line',   stages: ['Prepress','Press 6K','Finishing','QC','Ready to Ship','Shipped'] },
-  '15k':  { name: 'HP Indigo 15K Line',  stages: ['Prepress','Press 15K','Finishing','QC','Ready to Ship','Shipped'] },
-  'boyd': { name: 'Boyd St Line',         stages: ['Prepress','Printing','Finishing','QC','Ready to Ship','Shipped'] },
+  '6k':   { name: 'HP Indigo 6K Line',   stages: ['Prepress','Press 6K','Finishing','QC','Ready to Ship','Shipping Station'] },
+  '15k':  { name: 'HP Indigo 15K Line',  stages: ['Prepress','Press 15K','Finishing','QC','Ready to Ship','Shipping Station'] },
+  'boyd': { name: 'Boyd St Line',         stages: ['Prepress','Printing','Finishing','QC','Ready to Ship','Shipping Station'] },
 };
 
 let _cfgLeadTimes   = null;
@@ -3368,6 +3368,11 @@ async function loadConfigurationTab() {
   _cfgNoteTypes = _normNoteTypes(ntCfg?.value || ntCfg);
   _cfgReprint   = (rrCfg?.value || rrCfg) || [...CFG_REPRINT_REASONS_DEFAULTS];
   _cfgProdLines = (plCfg?.value || plCfg) || JSON.parse(JSON.stringify(CFG_PROD_LINES_DEFAULTS));
+  if (typeof normalizeProductionLineStages === 'function') {
+    Object.values(_cfgProdLines).forEach(line => {
+      if (line && Array.isArray(line.stages)) line.stages = normalizeProductionLineStages(line.stages);
+    });
+  }
 
   renderCfgLeadTimes();
   renderCfgRush();
@@ -3622,6 +3627,11 @@ function cfgProdLineChange(key, field, val) {
 }
 
 async function saveCfgProdLines() {
+  if (typeof normalizeProductionLineStages === 'function') {
+    Object.values(_cfgProdLines || {}).forEach(line => {
+      if (line && Array.isArray(line.stages)) line.stages = normalizeProductionLineStages(line.stages);
+    });
+  }
   await setConfig('pulseProductionLines', _cfgProdLines);
   const el = document.getElementById('cfgProdLinesSaved');
   if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }

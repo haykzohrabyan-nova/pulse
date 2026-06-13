@@ -1,0 +1,10 @@
+# Pulse — Supabase project (production)
+# https://supabase.com/dashboard/project/gkyupebgulpgwugsbvny
+
+project_id = "gkyupebgulpgwugsbvny"
+
+[functions.send-pickup-code]
+verify_jwt = false
+
+[functions.verify-pickup-code]
+verify_jwt = false
