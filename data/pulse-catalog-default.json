@@ -61,10 +61,10 @@
       "id": "ykru89wj",
       "category": "Cardstock (Boyd)",
       "items": [
-        "16pt",
-        "18pt",
-        "20pt",
-        "24pt"
+        "16pt (Boyd)",
+        "18pt (Boyd)",
+        "20pt (Boyd)",
+        "24pt (Boyd)"
       ]
     },
     {
@@ -76,15 +76,6 @@
         "110lb Cover",
         "80lb Text",
         "100lb Text"
-      ]
-    },
-    {
-      "id": "3hug7tcs",
-      "category": "Cover Stock",
-      "items": [
-        "80lb Cover",
-        "100lb Cover",
-        "110lb Cover"
       ]
     },
     {
@@ -116,31 +107,6 @@
       "items": [
         "Self-Adhesive (Peel-and-Stick)",
         "Traditional / Unpasted"
-      ]
-    },
-    {
-      "id": "hievpkou",
-      "category": "Specialty (Boyd)",
-      "items": [
-        "Window Decal",
-        "Wallpaper Material",
-        "Banner Material"
-      ]
-    },
-    {
-      "id": "e8izryx9",
-      "category": "Sheet (Boyd)",
-      "items": [
-        "18pt (Boyd)",
-        "20pt (Boyd)",
-        "24pt (Boyd)"
-      ]
-    },
-    {
-      "id": "hge6tjyh",
-      "category": "Other",
-      "items": [
-        "Vinyl"
       ]
     }
   ],
@@ -260,7 +226,7 @@
     },
     {
       "id": "8jfrmvbp",
-      "name": "Folding Cartons / Boxes",
+      "name": "Folding Cartons / Box",
       "facilities": [
         "16th-street",
         "boyd-street"
@@ -290,7 +256,7 @@
         "2-sided"
       ],
       "rollDirection": false,
-      "notes": "Boxes — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer."
+      "notes": "Folding cartons — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer."
     },
     {
       "id": "p11u3m86",
@@ -523,6 +489,7 @@
         "CMYK"
       ],
       "materials": [
+        "16pt (Boyd)",
         "18pt (Boyd)",
         "20pt (Boyd)",
         "24pt (Boyd)"
@@ -566,16 +533,25 @@
         "16pt C2S",
         "18pt C1S",
         "18pt C2S",
+        "18pt Silver",
         "24pt C1S",
+        "24pt C2S",
+        "16pt (Boyd)",
+        "18pt (Boyd)",
+        "20pt (Boyd)",
+        "24pt (Boyd)",
         "80lb Cover",
         "100lb Cover",
         "110lb Cover",
         "80lb Text",
         "100lb Text",
         "White Vinyl",
+        "White Vinyl - Aggressive Glue",
+        "Holographic Vinyl",
         "Banner Material",
         "Window Decal",
-        "Vinyl"
+        "Self-Adhesive (Peel-and-Stick)",
+        "Traditional / Unpasted"
       ],
       "finishing": [
         "Lamination",

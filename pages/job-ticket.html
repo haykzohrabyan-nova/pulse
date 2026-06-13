@@ -2139,6 +2139,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     await renderQueuePane();
     // Re-run after auth so role/name are known — lock or unlock the AM field
     await populateAccountManagers();
+    // Catalog may load empty before auth — re-apply workflow link prefill once catalog is ready
+    const authParams = new URLSearchParams(window.location.search);
+    if (!params.get('order') && !params.get('parent') && !params.get('fromQuote') && _hasUrlPrefillParams(authParams)) {
+      const expected = _normalizeWorkflowParam(authParams.get('product'));
+      const currentPt = document.getElementById('productType')?.value || '';
+      if (expected && currentPt !== expected) {
+        await _prefillFromLinkParams(authParams);
+        _workflowPrefillDone = true;
+      }
+    }
   });
 
   // Live queue + open ticket via Supabase Realtime (onDBUpdate).
@@ -2170,7 +2180,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const parentId = params.get('parent');
   const fromQuote = params.get('fromQuote');
 
-  if (!orderId && !parentId && typeof getPulseSettings === 'function') {
+  const isWorkflowPrefill = !orderId && !parentId && !fromQuote && _hasUrlPrefillParams(params);
+
+  if (!orderId && !parentId && !isWorkflowPrefill && typeof getPulseSettings === 'function') {
     const defFac = getPulseSettings().defaultFacility;
     if (defFac && !document.getElementById('facility').value) {
       document.getElementById('facility').value = defFac;
@@ -2220,8 +2232,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // URL param autofill (workflow order links opened directly in the browser)
-  if (!orderId && !parentId && !fromQuote && _hasUrlPrefillParams(params)) {
+  if (isWorkflowPrefill) {
     await _prefillFromLinkParams(params);
+    _workflowPrefillDone = true;
   }
 
   if (parentId) {
@@ -2806,7 +2819,7 @@ function onProductTypeChange(options = {}) {
 
   // Show/hide pouch gusset field
   const isPouch = productType === 'Pouches';
-  const isBox = productType === 'Folding Cartons / Boxes';
+  const isBox = productType === 'Folding Cartons / Box';
   const isLabelSheet = productType === 'Labels (Sheet)';
   document.getElementById('gussetField').style.display = isPouch ? '' : 'none';
   const laminationField = document.getElementById('laminationField');
@@ -3077,7 +3090,7 @@ function _calcLabelFitImpl() {
     return;
   }
 
-  if (productType === 'Folding Cartons / Boxes') {
+  if (productType === 'Folding Cartons / Box') {
     result.innerHTML = boxDepth
       ? `<strong>${w}" × ${h}" × ${boxDepth}"</strong>`
       : `<strong>${w}" × ${h}"</strong>`;
@@ -4057,7 +4070,7 @@ async function updateCapacityHint() {
     // Fallback: guess machine from product type
     const pt = productType;
     if (['Labels (Roll)','Labels (Sheet)','Pouches','Stickers','Diecut Stickers'].includes(pt)) primaryMachine = 'HP Indigo 6K';
-    else if (['Folding Cartons / Boxes','Business Cards','Flyers / Postcards','Booklets'].includes(pt)) primaryMachine = 'HP Indigo 15K';
+    else if (['Folding Cartons / Box','Business Cards','Flyers / Postcards','Booklets'].includes(pt)) primaryMachine = 'HP Indigo 15K';
     else if (['Vinyl Banners','Canvas Prints','Foam Board','Yard Signs','Window Graphics','Floor Graphics','Car Wraps'].includes(pt)) primaryMachine = 'Canon Colorado';
     else { hintEl.innerHTML = ''; return; }
   }
@@ -4114,7 +4127,7 @@ function updateCutMethodOptions() {
 
   const is6KProduct = ['Labels (Roll)', 'Pouches', 'Stickers'].includes(productType);
   const isLabelSheet = productType === 'Labels (Sheet)';
-  const is15KProduct = ['Folding Cartons / Boxes', 'Business Cards', 'Flyers / Postcards', 'Booklets'].includes(productType);
+  const is15KProduct = ['Folding Cartons / Box', 'Business Cards', 'Flyers / Postcards', 'Booklets'].includes(productType);
   const isBoyd = facility === 'boyd-street';
   const isOther = productType === 'Other';
 
@@ -4149,7 +4162,7 @@ function updateCutMethodOptions() {
       options = [
         { value: 'graphtec-vinyl', label: 'Graphtec Vinyl Cutter' },
       ];
-    } else if (productType === 'Folding Cartons / Boxes' || productType === 'Sheet Products (Boyd)') {
+    } else if (productType === 'Folding Cartons / Box' || productType === 'Sheet Products (Boyd)') {
       options = [
         { value: 'graphtec-large', label: 'Graphtec Flatbed (Boyd)' },
       ];
@@ -4444,7 +4457,7 @@ function legacyAutoDetectWorkflowKey() {
     return '6k-sheet-guillotine';
   }
   if (['Labels (Roll)', 'Stickers'].includes(productType)) return cutMethod === 'gm-die' ? '6k-labels-die' : '6k-labels-laser';
-  if (productType === 'Folding Cartons / Boxes') {
+  if (productType === 'Folding Cartons / Box') {
     if (cutMethod === 'die-cut') return '15k-box-die';
     if (cutMethod === 'duplo') return '15k-box-duplo';
     if (cutMethod === 'graphtec-large') return '15k-box-boyd';
@@ -6238,13 +6251,70 @@ function createFromOrderLink() {
     return;
   }
   closeOrderLinkModal();
-  _prefillFromLinkParams(params).catch(e => console.error('[Job Ticket] prefill from link', e));
+  _prefillFromLinkParams(params)
+    .then(() => { _workflowPrefillDone = true; })
+    .catch(e => console.error('[Job Ticket] prefill from link', e));
 }
+
+let _workflowPrefillDone = false;
 
 function _hasUrlPrefillParams(p) {
   if (!p) return false;
   if (p.get('from') === 'workflow') return true;
   return ['customer', 'product', 'order_ref', 'skus', 'material', 'qty', 'due', 'width', 'height'].some(k => p.get(k));
+}
+
+/** Decode workflow URL values (Clear+BOPP → Clear BOPP). */
+function _normalizeWorkflowParam(value) {
+  return String(value || '').replace(/\+/g, ' ').trim();
+}
+
+function _inferFacilityForCatalogProduct(productName) {
+  const name = _normalizeWorkflowParam(productName);
+  const prod = (_jtProductCatalog || []).find(p => p.name === name);
+  if (!prod?.facilities?.length) return null;
+  const facs = prod.facilities;
+  if (facs.includes('16th-street')) return '16th-street';
+  return facs[0];
+}
+
+/** Workflow board often sends BOPP names; Pouches use Cosmetic Web in Pulse. */
+function _resolveWorkflowMaterial(productName, rawMaterial) {
+  const m = _normalizeWorkflowParam(rawMaterial);
+  if (!m) return m;
+  const p = _normalizeWorkflowParam(productName);
+  if (p === 'Pouches') {
+    if (/clear/i.test(m)) return 'Clear Cosmetic Web';
+    if (/white/i.test(m)) return 'White Cosmetic Web';
+    if (/silver/i.test(m)) return 'Silver Cosmetic Web';
+  }
+  return m;
+}
+
+async function _waitForCatalogProduct(productName, timeoutMs = 6000) {
+  const target = _normalizeWorkflowParam(productName);
+  if (!target) return false;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if ((_jtProductCatalog || []).some(p => p.name === target)) return true;
+    if (typeof loadJtProductCatalog === 'function') await loadJtProductCatalog();
+    await new Promise(r => setTimeout(r, 150));
+  }
+  return (_jtProductCatalog || []).some(p => p.name === target);
+}
+
+async function _applyWorkflowFacilityFromParams(p) {
+  const productName = p.get('product');
+  const urlFacility = _normalizeWorkflowParam(p.get('facility'));
+  const inferred = urlFacility || _inferFacilityForCatalogProduct(productName);
+  if (!inferred) return;
+  const facEl = document.getElementById('facility');
+  if (!facEl) return;
+  if (facEl.value === inferred) return;
+  if ([...facEl.options].some(o => o.value === inferred)) {
+    facEl.value = inferred;
+    if (typeof onFacilityChange === 'function') onFacilityChange();
+  }
 }
 
 function _waitForSelectReady(selectId, minOptions = 2, maxMs = 3000) {
@@ -6369,8 +6439,15 @@ function _parseSkusFromParam(skusStr) {
 }
 
 async function _prefillFromLinkParams(p) {
-  // Wait for async catalog dropdowns before setting values
+  // Ensure catalog is loaded and set facility before product (Pouches is 16th-street only).
+  if (typeof loadJtProductCatalog === 'function') await loadJtProductCatalog();
+  const productName = _normalizeWorkflowParam(p.get('product'));
+  if (productName) await _waitForCatalogProduct(productName);
+  await _applyWorkflowFacilityFromParams(p);
+  if (typeof populateProductTypes === 'function') populateProductTypes();
   await waitForOptions(document.getElementById('productType'), 2, 3000);
+
+  const pendingMaterial = _resolveWorkflowMaterial(productName, p.get('material'));
 
   // Use non-bubbling events so we don't accidentally trigger the document-level
   // change/input listeners (which can kick off concurrent Supabase fetches that
@@ -6397,10 +6474,14 @@ async function _prefillFromLinkParams(p) {
   setVal('jobTicketNumber', p.get('order_ref'));
 
   // Product type — match strictly (never partial-wrong)
-  if (p.get('product')) {
+  if (productName) {
     const ptEl = document.getElementById('productType');
-    if (ptEl && setDropdownByText(ptEl, p.get('product'))) {
-      if (typeof onProductTypeChange === 'function') onProductTypeChange({ resetMaterial: true });
+    if (ptEl && setDropdownByText(ptEl, productName)) {
+      if (typeof onProductTypeChange === 'function') {
+        onProductTypeChange(pendingMaterial ? { material: pendingMaterial } : { resetMaterial: true });
+      }
+    } else {
+      console.warn('[Job Ticket] Workflow product not found in catalog:', productName);
     }
   }
 
@@ -6411,9 +6492,10 @@ async function _prefillFromLinkParams(p) {
   if (productTypeDetail) {
     const ptVal = document.getElementById('productType')?.value || '';
     const detail = productTypeDetail.trim();
+    const isPouchProduct = ptVal === 'Pouches' || productName === 'Pouches';
     if (ptVal === 'Other') {
       setVal('otherProductDesc', detail);
-    } else if (/^(sheet|roll)$/i.test(detail)) {
+    } else if (/^(sheet|roll)$/i.test(detail) && !isPouchProduct) {
       const printEl = document.getElementById('printType');
       if (printEl) printEl.value = detail.toLowerCase() === 'roll' ? 'Roll' : 'Sheet';
     } else if (!setDropdownByText(document.getElementById('productType'), detail)) {
@@ -6422,7 +6504,9 @@ async function _prefillFromLinkParams(p) {
   }
 
   // Material (dropdown rebuilt by onProductTypeChange above)
-  selectByText('material', p.get('material'));
+  if (pendingMaterial) {
+    selectByText('material', pendingMaterial) || restoreJtMaterialSelect(pendingMaterial);
+  }
 
   // Color mode
   if (p.get('color')) {

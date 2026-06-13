@@ -97,7 +97,7 @@ const BENCHMARK_PT_MAP = {
   'Labels (Roll)':          'roll_labels',
   'Diecut Stickers':        'roll_labels',   // similar spec range — directional only
   'Pouches':                'stand_up_pouches',
-  'Folding Cartons / Boxes':'folding_cartons',
+  'Folding Cartons / Box':'folding_cartons',
 };
 
 const COMP_DISPLAY = {

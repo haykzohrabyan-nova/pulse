@@ -201,7 +201,7 @@ Seeded in `PRODUCT_WORKFLOW_DEFAULTS` (`shared.js`), mapped from catalog names v
 | `labels-roll` | Labels (Roll) |
 | `labels-sheet` | Labels (Sheet) |
 | `pouches` | Pouches |
-| `boxes` | Folding Cartons / Boxes |
+| `boxes` | Folding Cartons / Box |
 | `business-cards` | Business Cards |
 | `flyers` | Flyers / Postcards |
 | `booklets` | Booklets |

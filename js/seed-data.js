@@ -72,7 +72,7 @@
     },
     {
       orderId: '17905', customer: 'Cali Extracts', facility: '16th-street',
-      productType: 'Folding Cartons / Boxes', material: '16pt C2S', printType: 'Sheet',
+      productType: 'Folding Cartons / Box', material: '16pt C2S', printType: 'Sheet',
       colorMode: 'CMYK', sides: 'Both', quantity: 5000, piecesPerSheet: 4,
       sheetCount: 1250, lamination: 'Soft Touch', finishing: 'Scodix UV', hasUV: true, foilType: 'None',
       workflowTemplate: '15k-box-die', dueDate: ds(bd(now, 5)), dieStatus: 'existing',
@@ -88,7 +88,7 @@
     },
     {
       orderId: '17906', customer: 'Bloom Naturals', facility: '16th-street',
-      productType: 'Folding Cartons / Boxes', material: '18pt C1S', printType: 'Sheet',
+      productType: 'Folding Cartons / Box', material: '18pt C1S', printType: 'Sheet',
       colorMode: 'CMYK + White', sides: 'Both', quantity: 2000, piecesPerSheet: 2,
       sheetCount: 1000, lamination: 'Matte', finishing: 'Scodix UV + Foil', hasUV: true, foilType: 'Silver',
       workflowTemplate: '15k-box-die', dueDate: ds(bd(now, 7)), dieStatus: 'existing',
@@ -104,7 +104,7 @@
     },
     {
       orderId: '17907', customer: 'LA Vapor Co', facility: '16th-street',
-      productType: 'Folding Cartons / Boxes', material: '14pt C2S', printType: 'Sheet',
+      productType: 'Folding Cartons / Box', material: '14pt C2S', printType: 'Sheet',
       colorMode: 'CMYK', sides: 'Both', quantity: 10000, piecesPerSheet: 6,
       sheetCount: 1667, lamination: 'Gloss', finishing: 'None', hasUV: false, foilType: 'None',
       workflowTemplate: '15k-box-die', dueDate: ds(bd(now, 4)), dieStatus: 'existing',
@@ -120,7 +120,7 @@
     },
     {
       orderId: '17908', customer: 'Sunset Supplements', facility: '16th-street',
-      productType: 'Folding Cartons / Boxes', material: '18pt C2S', printType: 'Sheet',
+      productType: 'Folding Cartons / Box', material: '18pt C2S', printType: 'Sheet',
       colorMode: 'CMYK', sides: 'Both', quantity: 500, piecesPerSheet: 4,
       sheetCount: 125, lamination: 'Soft Touch', finishing: 'Scodix Foil', hasUV: false, foilType: 'Rose Gold',
       workflowTemplate: '15k-box-duplo', dueDate: ds(bd(now, 6)), dieStatus: 'none',
@@ -136,7 +136,7 @@
     },
     {
       orderId: '17909', customer: 'West Coast Edibles', facility: '16th-street',
-      productType: 'Folding Cartons / Boxes', material: '16pt C1S', printType: 'Sheet',
+      productType: 'Folding Cartons / Box', material: '16pt C1S', printType: 'Sheet',
       colorMode: 'CMYK', sides: 'Front Only', quantity: 20000, piecesPerSheet: 8,
       sheetCount: 2500, lamination: 'Gloss', finishing: 'None', hasUV: false, foilType: 'None',
       workflowTemplate: '15k-box-die', dueDate: ds(bd(now, 2)), dieStatus: 'existing',

@@ -279,7 +279,7 @@ const PRODUCT_PRIORITY = [
   'Labels (Roll)',
   'Labels (Sheet)',
   'Pouches',
-  'Folding Cartons / Boxes',
+  'Folding Cartons / Box',
   'Business Cards',
   'Flyers / Postcards',
   'Booklets',
@@ -591,10 +591,10 @@ function getMode() {
 
   if (facility === '16th-street' && productType === 'Pouches') return '6k-pouch';
   if (facility === '16th-street' && ['Labels (Roll)', 'Labels (Sheet)', 'Diecut Stickers'].includes(productType)) return '6k-label';
-  if (facility === '16th-street' && productType === 'Folding Cartons / Boxes') return '15k-box-manual';
+  if (facility === '16th-street' && productType === 'Folding Cartons / Box') return '15k-box-manual';
   if (facility === '16th-street' && productType === 'Booklets') return '15k-booklet';
   if (facility === '16th-street' && ['Business Cards', 'Flyers / Postcards'].includes(productType)) return '15k-flat';
-  if (facility === 'boyd-street' && productType === 'Folding Cartons / Boxes') return 'boyd-box-manual';
+  if (facility === 'boyd-street' && productType === 'Folding Cartons / Box') return 'boyd-box-manual';
   if (facility === 'boyd-street') return 'boyd-manual';
   return 'manual';
 }

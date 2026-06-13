@@ -1021,7 +1021,7 @@ const LEAD_TIMES = {
   'Labels (Roll)':        { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
   'Labels (Sheet)':       { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
   'Diecut Stickers':      { days: [3, 5], maxQtyStandard: 1000000, label: '3–5 business days (under 1M pcs)' },
-  'Folding Cartons / Boxes': { days: [5, 7], maxQtyStandard: 50000, label: '5–7 business days (under 50K pcs)' },
+  'Folding Cartons / Box': { days: [5, 7], maxQtyStandard: 50000, label: '5–7 business days (under 50K pcs)' },
   'Business Cards':       { days: [5, 7], maxQtyStandard: 50000, label: '5–7 business days' },
   'Flyers / Postcards':   { days: [5, 7], maxQtyStandard: 50000, label: '5–7 business days' },
   'Booklets':             { days: [5, 7], maxQtyStandard: 50000, label: '5–7 business days' },
@@ -1891,16 +1891,12 @@ const MATERIALS = [
     '18pt C1S', '18pt C2S', '18pt Silver',
     '24pt C1S', '24pt C2S'
   ]},
-  { category: 'Cardstock (Boyd)', items: ['16pt', '18pt', '20pt', '24pt'] },
+  { category: 'Cardstock (Boyd)', items: ['16pt (Boyd)', '18pt (Boyd)', '20pt (Boyd)', '24pt (Boyd)'] },
   { category: 'Cover/Text Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover', '80lb Text', '100lb Text'] },
-  { category: 'Cover Stock', items: ['80lb Cover', '100lb Cover', '110lb Cover'] },
   { category: 'Vinyl (Boyd)', items: ['White Vinyl', 'White Vinyl - Aggressive Glue', 'Holographic Vinyl'] },
   { category: 'Banner Material (Boyd)', items: ['Banner Material'] },
   { category: 'Window Decal Material (Boyd)', items: ['Window Decal'] },
   { category: 'Wallpaper Material (Boyd)', items: ['Self-Adhesive (Peel-and-Stick)', 'Traditional / Unpasted'] },
-  { category: 'Specialty (Boyd)', items: ['Window Decal', 'Wallpaper Material', 'Banner Material'] },
-  { category: 'Sheet (Boyd)', items: ['18pt (Boyd)', '20pt (Boyd)', '24pt (Boyd)'] },
-  { category: 'Other', items: ['Vinyl'] }
 ];
 
 const OPERATIONS = [
@@ -1938,14 +1934,14 @@ const PRODUCT_TYPES = {
     facilities: ['16th-street'],
     notes: 'Pouches — ONLY Cosmetic Web materials (Clear/White/Silver). 6K → GM → Karlville Poucher'
   },
-  'Folding Cartons / Boxes': {
+  'Folding Cartons / Box': {
     materials: ['Cardstock'],
     defaultPrintType: 'Sheet',
     facilities: ['16th-street', 'boyd-street'],
-    notes: 'Boxes — 15K at 16th Street or Boyd box workflow depending facility'
+    notes: 'Folding cartons — 15K at 16th Street or Boyd box workflow depending facility'
   },
   'Business Cards': {
-    materials: ['Cardstock', 'Cover Stock'],
+    materials: ['Cardstock', 'Cover/Text Stock'],
     defaultPrintType: 'Sheet',
     defaultPiecesPerSheet: 16,
     facilities: ['16th-street'],
@@ -1978,31 +1974,31 @@ const PRODUCT_TYPES = {
     notes: 'Vinyl — Canon Colorado (gloss) or Roland (matte) → Graphtec vinyl cutters'
   },
   'Banners / Large Format': {
-    materials: ['Specialty (Boyd)'],
+    materials: ['Banner Material (Boyd)'],
     defaultPrintType: 'Roll',
     facilities: ['boyd-street'],
     notes: 'Large format — Canon Colorado or Roland'
   },
   'Window Decals': {
-    materials: ['Specialty (Boyd)'],
+    materials: ['Window Decal Material (Boyd)'],
     defaultPrintType: 'Roll',
     facilities: ['boyd-street'],
     notes: 'Window decals — print + contour cut'
   },
   'Wallpaper': {
-    materials: ['Specialty (Boyd)'],
+    materials: ['Wallpaper Material (Boyd)'],
     defaultPrintType: 'Roll',
     facilities: ['boyd-street'],
     notes: 'Wallpaper material'
   },
   'Sheet Products (Boyd)': {
-    materials: ['Sheet (Boyd)'],
+    materials: ['Cardstock (Boyd)'],
     defaultPrintType: 'Sheet',
     facilities: ['boyd-street'],
-    notes: '18pt/20pt/24pt sheets at Boyd → Lamination → Graphtec Flatbed'
+    notes: '16pt–24pt (Boyd) sheets → Lamination → Graphtec Flatbed'
   },
   'Other': {
-    materials: ['BOPP', 'Cosmetic Web', 'Label Sheets', 'Cardstock', 'Cover/Text Stock', 'Vinyl (Boyd)', 'Specialty (Boyd)', 'Sheet (Boyd)', 'Other'],
+    materials: ['BOPP', 'Cosmetic Web', 'Label Sheets', 'Cardstock', 'Cardstock (Boyd)', 'Cover/Text Stock', 'Vinyl (Boyd)', 'Banner Material (Boyd)', 'Window Decal Material (Boyd)', 'Wallpaper Material (Boyd)'],
     defaultPrintType: 'Sheet',
     facilities: ['16th-street', 'boyd-street'],
     notes: ''
@@ -3586,7 +3582,7 @@ function getMaterialsForProduct(productType, facility = '') {
   const pt = PRODUCT_TYPES[productType];
   if (!pt) return MATERIALS; // show all if unknown
   let allowedCategories = pt.materials;
-  if (facility === 'boyd-street' && productType === 'Folding Cartons / Boxes') {
+  if (facility === 'boyd-street' && productType === 'Folding Cartons / Box') {
     allowedCategories = ['Cardstock (Boyd)'];
   } else if (facility === 'boyd-street' && productType === 'Diecut Stickers') {
     allowedCategories = ['Vinyl (Boyd)'];
@@ -4962,7 +4958,7 @@ function buildPulseDefaultProductCatalog() {
     { id: u(), name: 'Labels (Roll)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided'], rollDirection: true, notes: 'Roll labels — HP Indigo 6K → GM Die/Laser Cutter. NOT Cosmetic Web.' },
     { id: u(), name: 'Labels (Sheet)', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Gloss Label Sheet','Matte Label Sheet','Semi Gloss'], finishing: ['Lamination','Spot UV','Foil'], sides: ['1-sided'], rollDirection: false, notes: 'Sheet labels — HP Indigo 6K → Duplo or Guillotine.' },
     { id: u(), name: 'Pouches', facilities: ['16th-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web'], finishing: ['Lamination'], sides: ['1-sided'], rollDirection: true, notes: 'Pouches — ONLY Cosmetic Web. HP Indigo 6K → GM Die/Laser → Karlville Poucher.' },
-    { id: u(), name: 'Folding Cartons / Boxes', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing'], sides: ['2-sided'], rollDirection: false, notes: 'Boxes — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer.' },
+    { id: u(), name: 'Folding Cartons / Box', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing'], sides: ['2-sided'], rollDirection: false, notes: 'Folding cartons — HP Indigo 15K → Lamination → GM Die/Laser Cutter → Moll Brothers Folder-Gluer.' },
     { id: u(), name: 'Business Cards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','80lb Cover','100lb Cover','110lb Cover'], finishing: ['Lamination','Spot UV','Foil','Scodix'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Business Cards — HP Indigo 15K → Lamination → Duplo or Guillotine.' },
     { id: u(), name: 'Flyers / Postcards', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','14pt C1S','16pt C1S'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Flat sheets — HP Indigo 15K → Lamination → Guillotine.' },
     { id: u(), name: 'Booklets', facilities: ['16th-street'], colorModes: ['CMYK'], materials: ['80lb Cover','100lb Cover','80lb Text','100lb Text'], finishing: ['Lamination'], sides: ['2-sided'], rollDirection: false, notes: 'Booklets — HP Indigo 15K → Lamination → Booklet Folder → Guillotine.' },
@@ -4972,8 +4968,8 @@ function buildPulseDefaultProductCatalog() {
     { id: u(), name: 'Banners / Large Format', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['Banner Material'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Large format banners.' },
     { id: u(), name: 'Window Decals', facilities: ['boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Window Decal'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Window decals.' },
     { id: u(), name: 'Wallpaper', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['Self-Adhesive (Peel-and-Stick)','Traditional / Unpasted'], finishing: [], sides: ['1-sided'], rollDirection: false, notes: 'Wallpaper.' },
-    { id: u(), name: 'Sheet Products (Boyd)', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['18pt (Boyd)','20pt (Boyd)','24pt (Boyd)'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Boyd sheet products.' },
-    { id: u(), name: 'Other', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web','Gloss Label Sheet','Matte Label Sheet','Semi Gloss','14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','24pt C1S','80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','White Vinyl','Banner Material','Window Decal','Vinyl'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing','Perforation'], sides: ['1-sided','2-sided'], rollDirection: false, notes: '' },
+    { id: u(), name: 'Sheet Products (Boyd)', facilities: ['boyd-street'], colorModes: ['CMYK'], materials: ['16pt (Boyd)','18pt (Boyd)','20pt (Boyd)','24pt (Boyd)'], finishing: ['Lamination','Spot UV'], sides: ['1-sided','2-sided'], rollDirection: false, notes: 'Boyd sheet products.' },
+    { id: u(), name: 'Other', facilities: ['16th-street','boyd-street'], colorModes: ['CMYK', 'CMYK + White'], materials: ['Clear BOPP','White BOPP','Silver BOPP','Holo BOPP','Clear Cosmetic Web','White Cosmetic Web','Silver Cosmetic Web','Gloss Label Sheet','Matte Label Sheet','Semi Gloss','14pt C1S','14pt C2S','16pt C1S','16pt C2S','18pt C1S','18pt C2S','18pt Silver','24pt C1S','24pt C2S','16pt (Boyd)','18pt (Boyd)','20pt (Boyd)','24pt (Boyd)','80lb Cover','100lb Cover','110lb Cover','80lb Text','100lb Text','White Vinyl','White Vinyl - Aggressive Glue','Holographic Vinyl','Banner Material','Window Decal','Self-Adhesive (Peel-and-Stick)','Traditional / Unpasted'], finishing: ['Lamination','Spot UV','Foil','Scodix','Embossing','Perforation'], sides: ['1-sided','2-sided'], rollDirection: false, notes: '' },
   ];
 }
 
