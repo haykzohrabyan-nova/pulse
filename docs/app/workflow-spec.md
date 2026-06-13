@@ -98,6 +98,8 @@ Print (Roland or Canon Colorado) → Lamination → Flatbed Cut (Graphtec Flatbe
 Press 6K → Lamination (Nobelus) → GM Die Cutter w/ JetFX OR GM Laser Cutter w/ JetFX → [Karlville Poucher if pouches]
 ```
 
+**Job ticket step order (enforced in code):** On every ticket, the **press step is always saved before the GM cut step**. Pulse runs `enforcePressBeforeCuttingOrder()` when resolving routes from Admin config and when saving workflows. If a template in `product_workflows` has steps reversed (cutter first), the app corrects order at save/resolve time; migration **057** fixes stored templates and existing inverted `order_workflow_steps` rows. See [`product-workflow-config.md`](product-workflow-config.md).
+
 **HP Indigo 15K Line (Boxes/Cards/Booklets):**
 ```
 Press 15K → Lamination (Nobelus) → Scodix → Moll Brothers Cutter → Moll Brothers Folder-Gluer → [Duplo] → [Guillotine] → [UV Coater] → [Booklet Folder]

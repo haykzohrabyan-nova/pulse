@@ -39,6 +39,7 @@ Staging deployments (`pulse-staging.bazaar-admin.com`) only require the **Stagin
   - `049_upsert_pulse_personnel_email_check.sql` (duplicate login email rejection + edit `p_profile_id`)
   - `047a_user_role_david_review.sql`, `047b_ensure_david_review_user.sql`, `047c_fix_david_auth_tokens.sql` (David review user — 047a must run alone first)
   - `048_realtime_reference_tables.sql` (Realtime for config, dies, org, profiles, machine_issues)
+  - `057_fix_workflow_step_order.sql` (print-before-cut: fix product_workflows templates + swap inverted order_workflow_steps)
   ```bash
   supabase db diff --project-ref <prod-project-ref>
   # should show no pending changes

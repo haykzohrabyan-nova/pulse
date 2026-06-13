@@ -234,7 +234,7 @@ Defines **how** each catalog product is manufactured (ordered machine sequence),
 
 - **Data:** Supabase tables `machines` + `product_workflows` (migration `022`); PM swap audit `workflow_override_log` (migration `023`). Steps stored as JSONB on `product_workflows.steps`.
 - **Defaults:** `PRODUCT_WORKFLOW_DEFAULTS` in `shared.js`; auto-seeded for catalog products on first tab load via `seedProductWorkflowsFromDefaults()`.
-- **Job tickets:** Resolve route from DB + job options (`lamination`, `cutMethod`, `materialFinish`, Scodix flags); preview under Cutting; save builds `workflowSteps[]` with display names. Legacy `WORKFLOW_TEMPLATES` used if config missing.
+- **Job tickets:** Resolve route from DB + job options (`lamination`, `cutMethod`, `materialFinish`, Scodix flags); preview under Cutting; save builds `workflowSteps[]` with display names. Step order enforces **press before cut** (`enforcePressBeforeCuttingOrder`). Legacy `WORKFLOW_TEMPLATES` used if config missing.
 - **Production Manager:** **Swap** only when step has configured alternatives; logged to `workflow_override_log`.
 - **Full reference:** [`product-workflow-config.md`](product-workflow-config.md).
 
@@ -323,6 +323,7 @@ SQL under **`supabase/migrations/`** — run in numeric order:
 
 | Date | Change |
 |------|--------|
+| 2026-06-12 | **Workflow step order (print before cut)** — `enforcePressBeforeCuttingOrder()` in `shared.js`; migration **057** resets Labels (Roll) / Pouches / Stickers templates and swaps inverted steps on existing orders. See [`product-workflow-config.md`](product-workflow-config.md). |
 | 2026-06-09 | **Admin Personnel email UX** — table **Email** column; modal login-email hint; duplicate-email validation (UI + migration **049**). `pulsePersonnelLoginEmail()` exported from `auth.js`. |
 | 2026-06-09 | **Supabase Realtime multi-user sync** — removed dashboard/job-ticket polling; Realtime push via `supabase-client.js` + `onDBUpdate`. Migration **048** for reference-table publication. See [`production-status.md`](../supabase/production-status.md). |
 | 2026-06-09 | **Email + password login** (Supabase mode) in `auth.js`. |

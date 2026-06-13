@@ -37,6 +37,33 @@ Apply migrations in order:
 |-----------|---------|
 | [`022_product_workflows.sql`](supabase/migrations/022_product_workflows.sql) | `machines` registry (18 seeded slugs) + `product_workflows` (JSONB `steps[]`) + RLS |
 | [`023_workflow_override_log.sql`](supabase/migrations/023_workflow_override_log.sql) | Audit log when PM swaps a step machine |
+| [`057_fix_workflow_step_order.sql`](supabase/migrations/057_fix_workflow_step_order.sql) | Correct print-before-cut step order on `product_workflows` templates and swap inverted rows on `order_workflow_steps` |
+
+### Step order rule (print before cut)
+
+Job tickets must always visit **press / printing** before **cutting / finishing** on the same route. Example for **Labels (Roll)**:
+
+| Step | Machine |
+|------|---------|
+| 1 | HP Indigo 6K |
+| 2 | GM Laser Cutter w/ JetFX (or GM Die Cutter w/ JetFX when cut method is die) |
+
+**Never** save GM Laser/Die as step 1 with the press as step 2.
+
+Enforcement in code (`js/shared.js`):
+
+1. **`enforcePressBeforeCuttingOrder(steps)`** — if any cutting step appears before the first press step, early cuts are moved to immediately after the press block (downstream steps like Karlville pouching stay in place).
+2. **`resolveProductWorkflowSteps()`** — calls the enforcer after conditional resolution.
+3. **`_normalizeLocalProductWorkflow()`** / **`_productWorkflowToRow()`** — enforces on Admin save to Supabase.
+
+**Labels (Roll) default** in `PRODUCT_WORKFLOW_DEFAULTS['labels-roll']`:
+
+```text
+sortOrder 1: press-6k
+sortOrder 2: gm-die-cutter (conditional — defaultMachineId gm-laser-cutter when cutMethod ≠ die)
+```
+
+Same pattern applies to **Pouches**, **Stickers**, and **Diecut Stickers** (press first, then GM cut).
 
 ### `machines`
 
@@ -107,7 +134,7 @@ Apply migrations in order:
 
 | File | Role |
 |------|------|
-| [`js/shared.js`](../../js/shared.js) | `PRODUCT_WORKFLOW_DEFAULTS`, `getDefaultProductWorkflowForCatalogName()`, `resolveProductWorkflowSteps()`, `buildProductWorkflowJobOptions()`, `workflowStepsFromResolvedConfig()`, `MACHINE_SLUG_TO_DISPLAY` |
+| [`js/shared.js`](../../js/shared.js) | `PRODUCT_WORKFLOW_DEFAULTS`, `getDefaultProductWorkflowForCatalogName()`, `resolveProductWorkflowSteps()`, `enforcePressBeforeCuttingOrder()`, `buildProductWorkflowJobOptions()`, `workflowStepsFromResolvedConfig()`, `MACHINE_SLUG_TO_DISPLAY` |
 | [`js/supabase-client.js`](../../js/supabase-client.js) | `getAllMachines`, `getProductWorkflowByCatalogId`, `upsertProductWorkflow`, `seedProductWorkflowsFromDefaults`, `logWorkflowOverride` |
 | [`pages/admin.html`](../../pages/admin.html) | Tab **Product Workflow Configuration** — edit routes per catalog product |
 | [`pages/job-ticket.html`](../../pages/job-ticket.html) | Loads + resolves route; **Production route** preview; save builds `workflowSteps` from config |
@@ -142,9 +169,11 @@ When product type or related options change (`autoDetectWorkflow` → `applyProd
 1. Find catalog product: `_jtProductCatalog.find(p => p.name === productType)`.
 2. Load workflow: `getProductWorkflowByCatalogId(id)` or `getDefaultProductWorkflowForCatalogName(name)`.
 3. Build options: `buildProductWorkflowJobOptions({ cutMethod, lamination, hasUV, hasFoil, material, … })`.
-4. Resolve: `resolveProductWorkflowSteps(steps, jobOptions)`.
+4. Resolve: `resolveProductWorkflowSteps(steps, jobOptions)` (includes print-before-cut enforcement).
 5. Preview: `#workflowRoutePreview` lists machines (source: Admin config / Default template / Legacy auto-detect).
 6. On save: `buildWorkflowStepsForSave()` → `workflowStepsFromResolvedConfig()` (sets `machine`, `machineId`, `alternativeMachines`).
+
+**Verify step order after save:** Production Manager → expand ticket → Workflow Steps should show **HP Indigo 6K** (or equivalent press) as step 1, **GM Laser/Die Cutter** as step 2 for roll labels. Operator Terminal should offer the press step first.
 
 **Legacy fallback:** If no config steps resolve, the old `WORKFLOW_TEMPLATES` + `legacyAutoDetectWorkflowKey()` path still runs.
 
@@ -185,10 +214,13 @@ Seeded in `PRODUCT_WORKFLOW_DEFAULTS` (`shared.js`), mapped from catalog names v
 
 ## Deploy checklist
 
-1. Apply migrations **022** and **023** on Supabase (see [`release-checklist.md`](../deploy/release-checklist.md)).
+1. Apply migrations **022**, **023**, and **057** on Supabase (see [`release-checklist.md`](../deploy/release-checklist.md)).
 2. Open Admin → Product Workflow Configuration; confirm products seeded; adjust routes; Save.
-3. Create a test job ticket; confirm **Production route** preview updates when changing lamination / cut method.
-4. In Production Manager, open a job with alternatives on a step; confirm Swap is limited and saves.
+3. Create a test **Labels (Roll)** job ticket; confirm **Production route** shows press → cutter (not reversed).
+4. Confirm route preview updates when changing lamination / cut method.
+5. In Production Manager, open the test ticket; confirm Step 1 is the press and Step 2 is GM Laser/Die.
+6. In Operator Terminal, assign the ticket; confirm Step 1 (print) is active before the cutter step.
+7. Open a job with alternatives on a step; confirm Swap is limited and saves.
 
 ---
 

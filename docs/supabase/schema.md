@@ -3,7 +3,7 @@
 **Project:** Pulse Production Management System  
 **Supabase project domain:** pulse.bazaar-admin.com  
 **Generated:** 2026-04-27 (PRI-236)  
-**Updated:** 2026-06-09 (Supabase production cutover — migrations 039–048, Realtime multi-user sync, `pages/`/`js/` layout)
+**Updated:** 2026-06-12 (workflow step order fix — migration 057)
 
 ---
 
@@ -50,6 +50,7 @@ Pulse migrates from a browser-local IndexedDB app to a shared Supabase/Postgres 
 | `migrations/047b_ensure_david_review_user.sql` | Create David Zargaryan auth account + profile (User ID 1111) |
 | `migrations/047c_fix_david_auth_tokens.sql` | Fix SQL-seeded auth users: empty token columns, password, `auth.identities` row |
 | `migrations/048_realtime_reference_tables.sql` | Add reference tables to `supabase_realtime` publication (idempotent; skips missing tables) |
+| `migrations/057_fix_workflow_step_order.sql` | Reset print-before-cut templates on `product_workflows` (Labels Roll, Pouches, Stickers, Diecut Stickers); swap inverted press/cutter rows on `order_workflow_steps` |
 | `rollback/001_rollback.sql` | Full teardown — drops everything in safe order |
 | `seed.sql` | Reference data: 20 machines, 18 workflow templates, 33 materials, 4 config keys |
 
@@ -213,6 +214,8 @@ One row per production step per order. Steps are numbered by `step_index`.
 | machine | TEXT | Machine name (must match machines.name) |
 | status | step_status | pending / in-progress / completed / skipped |
 | operator_id | UUID | Who is assigned at this step |
+
+**Step order:** On 6K roll-label routes, press steps (e.g. HP Indigo 6K) must come before GM cut steps. Legacy rows with inverted order are fixed by migration **057**; new tickets enforce order via `enforcePressBeforeCuttingOrder()` in `js/shared.js`. See [`product-workflow-config.md`](../app/product-workflow-config.md).
 
 ### `order_files`
 File metadata only. Bytes live in Cloudflare R2 private bucket.

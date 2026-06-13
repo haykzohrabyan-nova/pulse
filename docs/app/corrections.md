@@ -1,5 +1,15 @@
 # Corrections from Hayk — Apply to shared.js
 
+## Applied: Workflow step order — print before cut (2026-06-12)
+
+**Issue:** Job tickets for Labels (Roll) were saved with GM Laser/Die as step 1 and HP Indigo 6K as step 2.
+
+**Fix:** `enforcePressBeforeCuttingOrder()` in `js/shared.js`; migration `057_fix_workflow_step_order.sql` for DB templates and existing orders.
+
+**Rule:** Press / printing always before GM cut on the same ticket. Documented in [`product-workflow-config.md`](product-workflow-config.md) and [`workflow-spec.md`](workflow-spec.md).
+
+---
+
 ## Materials Corrections
 
 ### Cardstock — C1S and C2S variants
