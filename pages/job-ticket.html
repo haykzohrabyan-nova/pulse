@@ -3288,41 +3288,10 @@ async function attachSkuPreviewArtwork(idx) {
   const btnLabel = '⬇️ Attach to Main artwork';
   if (btn) { btn.disabled = true; btn.textContent = 'Attaching...'; }
 
-  const baseName = (sku.name || `sku-${idx + 1}`).replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || `sku-${idx + 1}`;
-
   try {
-    let dataUrl = null;
-    let contentType = 'image/jpeg';
-    let ext = 'jpg';
-
-    if (String(sourceUrl).startsWith('data:')) {
-      dataUrl = sourceUrl;
-      const mimeMatch = sourceUrl.match(/^data:([^;,]+)/);
-      if (mimeMatch) {
-        contentType = mimeMatch[1];
-        if (contentType.includes('png')) ext = 'png';
-        else if (contentType.includes('webp')) ext = 'webp';
-        else if (contentType.includes('gif')) ext = 'gif';
-      }
-    } else {
-      const response = await fetch(sourceUrl);
-      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-      const blob = await response.blob();
-      contentType = blob.type || 'image/jpeg';
-      ext = typeof _extFromArtworkBlob === 'function' ? _extFromArtworkBlob(blob, sourceUrl) : 'jpg';
-      dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    sku.artworkDataUrl = dataUrl;
-    sku.artworkName = `${baseName}.${ext}`;
-    sku.artworkType = contentType;
+    await _attachSkuArtworkDataUrl(sku, sourceUrl, idx);
     if (String(sourceUrl).startsWith('http')) sku.artwork_url = sourceUrl;
-    if (sku.previewImportStatus === 'importing') sku.previewImportStatus = 'saved';
+    if (sku.previewImportStatus === 'importing') sku.previewImportStatus = 'failed';
 
     if (typeof showToast === 'function') {
       showToast(`✅ Artwork attached to "${sku.name || 'SKU #' + (idx + 1)}"`, 3000);
@@ -3333,7 +3302,7 @@ async function attachSkuPreviewArtwork(idx) {
     if (String(sourceUrl).startsWith('http')) {
       sku.artworkDataUrl = sourceUrl;
       sku.artwork_url = sourceUrl;
-      sku.artworkName = `${baseName}.jpg`;
+      sku.artworkName = sku.artworkName || `${sku.name || 'artwork'}.jpg`;
       sku.artworkType = 'image/jpeg';
       renderSKUs();
       if (typeof showToast === 'function') {
@@ -3388,7 +3357,8 @@ function skuHasArtwork(sku) {
 }
 
 function skuOrderPreviewHTML(sku, idx) {
-  // After auto-save, main artwork slot shows the file — hide duplicate preview.
+  // Main artwork attached locally — no duplicate preview needed
+  if (sku.artworkDataUrl && String(sku.artworkDataUrl).startsWith('data:')) return '';
   if (sku.previewImportStatus === 'saved' && sku.artworkDataUrl) return '';
 
   if (sku.previewImageUrl) {
@@ -3396,14 +3366,18 @@ function skuOrderPreviewHTML(sku, idx) {
     let label = 'Preview from order — upload final artwork below';
     if (sku.previewImportStatus === 'importing') label = 'Artwork from Workflow — saving to Pulse...';
     else if (sku.previewImportStatus === 'saved') label = '✅ Artwork saved to Pulse';
-    else if (sku.previewImportStatus === 'failed') label = '⚠️ Auto-save failed — attach or upload manually';
+    else if (sku.previewImportStatus === 'failed') {
+      label = sku.artworkDataUrl
+        ? '⚠️ Cloud save failed — artwork attached locally (OK to save ticket)'
+        : '⚠️ Auto-save failed — attach or upload manually';
+    }
     const attachBtn = !sku.artworkDataUrl
       ? `<button type="button" class="btn btn-sm btn-primary" data-sku-attach-btn="${idx}"
            style="margin-top:8px;font-size:11px;padding:4px 10px;"
            onclick="attachSkuPreviewArtwork(${idx})">
            ⬇️ Attach to Main artwork
          </button>`
-      : '';
+      : (sku.previewImportStatus === 'failed' && sku.artworkDataUrl ? '' : '');
     return `<div class="sku-order-preview" data-sku-preview style="padding:8px 0 4px;">
       <div class="sku-order-preview-label" style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${label}</div>
       <img src="${safeUrl}" alt="SKU preview" style="max-width:100px;max-height:100px;object-fit:contain;border:1px solid var(--border);border-radius:4px;" referrerpolicy="no-referrer">
@@ -6292,6 +6266,63 @@ function _waitForSelectReady(selectId, minOptions = 2, maxMs = 3000) {
   });
 }
 
+async function waitForOptions(selectEl, minOptions = 2, timeoutMs = 3000) {
+  if (!selectEl) return false;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (selectEl.options.length >= minOptions) return true;
+    await new Promise(r => setTimeout(r, 150));
+  }
+  return false;
+}
+
+function setDropdownByText(selectEl, targetText) {
+  if (!selectEl || !targetText) return false;
+  const target = targetText.trim().toLowerCase();
+  const options = Array.from(selectEl.options).filter(o => o.value && !o.disabled);
+
+  // 1. Exact match first (case-insensitive) — text or value
+  for (const opt of options) {
+    if (opt.text.trim().toLowerCase() === target || opt.value.trim().toLowerCase() === target) {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+  }
+
+  // 2. Option text starts with the target
+  for (const opt of options) {
+    if (opt.text.trim().toLowerCase().startsWith(target)) {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+  }
+
+  // 3. Target starts with option text (e.g. param="Clear BOPP 3mil", option="Clear BOPP")
+  for (const opt of options) {
+    const optText = opt.text.trim().toLowerCase();
+    if (optText.length > 3 && target.startsWith(optText)) {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+  }
+
+  // 4. Either contains the other (last resort)
+  for (const opt of options) {
+    const optText = opt.text.trim().toLowerCase();
+    if (optText.length > 3 && (target.includes(optText) || optText.includes(target))) {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+  }
+
+  console.warn('[Autofill] No dropdown match for:', targetText, 'in', selectEl.id || selectEl.name);
+  return false;
+}
+
 function _parseSkusFromParam(skusStr) {
   if (!skusStr?.trim()) return [];
 
@@ -6339,7 +6370,7 @@ function _parseSkusFromParam(skusStr) {
 
 async function _prefillFromLinkParams(p) {
   // Wait for async catalog dropdowns before setting values
-  await _waitForSelectReady('productType');
+  await waitForOptions(document.getElementById('productType'), 2, 3000);
 
   // Use non-bubbling events so we don't accidentally trigger the document-level
   // change/input listeners (which can kick off concurrent Supabase fetches that
@@ -6354,19 +6385,9 @@ async function _prefillFromLinkParams(p) {
   }
 
   function selectByText(id, text) {
-    if (!text) return false;
     const el = document.getElementById(id);
     if (!el) return false;
-    const lower = text.toLowerCase();
-    const opt = Array.from(el.options).find(o =>
-      o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
-    );
-    if (opt) {
-      el.value = opt.value;
-      el.dispatchEvent(new Event('change', { bubbles: false }));
-      return true;
-    }
-    return false;
+    return setDropdownByText(el, text);
   }
 
   // Customer
@@ -6375,36 +6396,32 @@ async function _prefillFromLinkParams(p) {
   // Order ref (pre-fill job ticket number only if explicitly provided)
   setVal('jobTicketNumber', p.get('order_ref'));
 
-  // Product type — call handler directly after setting value so material/color
-  // dropdowns are rebuilt without triggering the global change listener
+  // Product type — match strictly (never partial-wrong)
   if (p.get('product')) {
     const ptEl = document.getElementById('productType');
-    if (ptEl) {
-      const lower = p.get('product').toLowerCase();
-      const opt = Array.from(ptEl.options).find(o =>
-        o.text.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
-      );
-      if (opt) {
-        ptEl.value = opt.value;
-        if (typeof onProductTypeChange === 'function') onProductTypeChange({ resetMaterial: true });
-      }
+    if (ptEl && setDropdownByText(ptEl, p.get('product'))) {
+      if (typeof onProductTypeChange === 'function') onProductTypeChange({ resetMaterial: true });
     }
   }
 
-  await _waitForSelectReady('material');
+  await waitForOptions(document.getElementById('material'), 2, 3000);
 
   const productTypeDetail = p.get('product_type');
   let productTypeDetailNote = '';
   if (productTypeDetail) {
     const ptVal = document.getElementById('productType')?.value || '';
+    const detail = productTypeDetail.trim();
     if (ptVal === 'Other') {
-      setVal('otherProductDesc', productTypeDetail);
-    } else if (!selectByText('productType', productTypeDetail)) {
-      productTypeDetailNote = productTypeDetail;
+      setVal('otherProductDesc', detail);
+    } else if (/^(sheet|roll)$/i.test(detail)) {
+      const printEl = document.getElementById('printType');
+      if (printEl) printEl.value = detail.toLowerCase() === 'roll' ? 'Roll' : 'Sheet';
+    } else if (!setDropdownByText(document.getElementById('productType'), detail)) {
+      productTypeDetailNote = detail;
     }
   }
 
-  // Material (dropdown was rebuilt by onProductTypeChange above)
+  // Material (dropdown rebuilt by onProductTypeChange above)
   selectByText('material', p.get('material'));
 
   // Color mode
@@ -6528,6 +6545,31 @@ function _extFromArtworkBlob(blob, imageUrl) {
   return 'jpg';
 }
 
+function _skuArtworkMimeType(ext, blob) {
+  if (blob?.type && /^image\//i.test(blob.type)) return blob.type;
+  const map = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
+  return map[String(ext || '').toLowerCase()] || 'image/jpeg';
+}
+
+function _blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function _attachSkuArtworkDataUrl(sku, sourceUrl, idx) {
+  const blob = await _fetchArtworkBlob(sourceUrl);
+  const ext = _extFromArtworkBlob(blob, sourceUrl);
+  const dataUrl = await _blobToDataUrl(blob);
+  sku.artworkDataUrl = dataUrl;
+  sku.artworkName = `${sku.name || `sku-${idx + 1}`}.${ext}`;
+  sku.artworkType = _skuArtworkMimeType(ext, blob);
+  return { ext, contentType: sku.artworkType };
+}
+
 async function _fetchArtworkBlob(imageUrl) {
   try {
     const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
@@ -6564,19 +6606,19 @@ async function importSkuArtwork(imageUrl, skuName) {
     if (!sb?.storage) throw new Error('Supabase client unavailable');
 
     const blob = await _fetchArtworkBlob(imageUrl);
-
     const ext = _extFromArtworkBlob(blob, imageUrl);
+    const contentType = _skuArtworkMimeType(ext, blob);
     const safeName = String(skuName || 'sku').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'sku';
     const fileName = `${Date.now()}-${safeName}.${ext}`;
 
     const { error: uploadError } = await sb.storage
       .from('sku-artwork')
-      .upload(fileName, blob, { contentType: blob.type || `image/${ext}`, upsert: true });
+      .upload(fileName, blob, { contentType, upsert: true });
 
     if (uploadError) throw uploadError;
 
     const { data: urlData } = sb.storage.from('sku-artwork').getPublicUrl(fileName);
-    return { publicUrl: urlData.publicUrl, contentType: blob.type || `image/${ext}`, ext };
+    return { publicUrl: urlData.publicUrl, contentType, ext };
   } catch (err) {
     console.warn('[Pulse] SKU artwork import failed:', skuName, err);
     return null;
@@ -6602,10 +6644,22 @@ async function _importPrefillSkuArtwork() {
       sku.previewImageUrl = result.publicUrl;
       sku.previewImportStatus = 'saved';
     } else {
-      sku.artworkDataUrl = sourceUrl;
-      sku.artwork_url = sourceUrl;
-      sku.artworkName = sku.artworkName || `${sku.name || 'artwork'}.jpg`;
-      sku.artworkType = sku.artworkType || 'image/jpeg';
+      // Pulse storage unavailable — keep local data URL so save still works
+      const hasDataUrl = sku.artworkDataUrl && String(sku.artworkDataUrl).startsWith('data:');
+      if (!hasDataUrl) {
+        try {
+          await _attachSkuArtworkDataUrl(sku, sourceUrl, idx);
+          sku.previewImageUrl = sourceUrl;
+        } catch (err) {
+          console.warn('[Pulse] SKU artwork local attach fallback', sku.name, err);
+          if (!sku.artworkDataUrl) {
+            sku.artworkDataUrl = sourceUrl;
+            sku.artwork_url = sourceUrl;
+            sku.artworkName = sku.artworkName || `${sku.name || 'artwork'}.jpg`;
+            sku.artworkType = sku.artworkType || 'image/jpeg';
+          }
+        }
+      }
       sku.previewImportStatus = 'failed';
     }
     if (typeof renderSKUs === 'function') renderSKUs();

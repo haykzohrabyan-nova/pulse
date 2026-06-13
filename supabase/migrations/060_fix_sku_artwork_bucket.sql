@@ -1,5 +1,5 @@
--- Public bucket for permanent SKU artwork imported from Workflow order links.
--- Signed Workflow URLs expire in 7 days; job-ticket autofill re-uploads here.
+-- Fix sku-artwork bucket policies (manager role) and ensure bucket exists.
+-- Run in Supabase SQL Editor if 058 was applied with ops_manager or bucket missing.
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
