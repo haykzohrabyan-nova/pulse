@@ -7250,6 +7250,10 @@ function normalizeJobTicketSku(sku) {
   }
   if (!s.artworkName) s.artworkName = s.artwork_name || s.fileName || s.artwork?.name || '';
   if (!s.artworkType) s.artworkType = s.artwork_type || s.artwork?.type || '';
+  if (!s.artwork_url && s.artworkUrl) s.artwork_url = s.artworkUrl;
+  if (!s.artwork_url && s.artworkDataUrl && /^https?:\/\//i.test(String(s.artworkDataUrl))) {
+    s.artwork_url = s.artworkDataUrl;
+  }
   if (!s.whiteDataUrl) {
     s.whiteDataUrl = s.white_data_url || s.whiteLayerFile?.dataUrl || s.white?.dataUrl || null;
   }
@@ -7354,7 +7358,7 @@ function mergeJobTicketSkuMedia(nextSkus, previousSkus) {
     return nextSkus.map(normalizeJobTicketSku);
   }
   const mediaKeys = [
-    'artworkDataUrl', 'artworkName', 'artworkType',
+    'artworkDataUrl', 'artworkName', 'artworkType', 'artwork_url',
     'whiteDataUrl', 'whiteName', 'uvDataUrl', 'uvName', 'foilDataUrl', 'foilName',
   ];
   return nextSkus.map((sku, i) => {

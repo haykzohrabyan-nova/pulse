@@ -3186,7 +3186,8 @@ function _emptySkuEntry() {
     whiteDataUrl: null, whiteName: '',
     uvDataUrl: null, uvName: '',
     foilDataUrl: null, foilName: '',
-    previewImageUrl: null, previewHint: false,
+    previewImageUrl: null, previewHint: false, previewImportStatus: null,
+    artwork_url: null,
   };
 }
 
@@ -3269,11 +3270,82 @@ function removeSKUFile(idx, type) {
     skuList[idx].artworkDataUrl = null;
     skuList[idx].artworkName = '';
     skuList[idx].artworkType = '';
+    skuList[idx].artwork_url = null;
   } else {
     skuList[idx][type + 'DataUrl'] = null;
     skuList[idx][type + 'Name'] = '';
   }
   renderSKUs();
+}
+
+async function attachSkuPreviewArtwork(idx) {
+  const sku = skuList[idx];
+  if (!sku) return;
+  const sourceUrl = sku.previewImageUrl || sku.artwork_url;
+  if (!sourceUrl) return;
+
+  const btn = document.querySelector(`[data-sku-attach-btn="${idx}"]`);
+  const btnLabel = '⬇️ Attach to Main artwork';
+  if (btn) { btn.disabled = true; btn.textContent = 'Attaching...'; }
+
+  const baseName = (sku.name || `sku-${idx + 1}`).replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || `sku-${idx + 1}`;
+
+  try {
+    let dataUrl = null;
+    let contentType = 'image/jpeg';
+    let ext = 'jpg';
+
+    if (String(sourceUrl).startsWith('data:')) {
+      dataUrl = sourceUrl;
+      const mimeMatch = sourceUrl.match(/^data:([^;,]+)/);
+      if (mimeMatch) {
+        contentType = mimeMatch[1];
+        if (contentType.includes('png')) ext = 'png';
+        else if (contentType.includes('webp')) ext = 'webp';
+        else if (contentType.includes('gif')) ext = 'gif';
+      }
+    } else {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+      const blob = await response.blob();
+      contentType = blob.type || 'image/jpeg';
+      ext = typeof _extFromArtworkBlob === 'function' ? _extFromArtworkBlob(blob, sourceUrl) : 'jpg';
+      dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    sku.artworkDataUrl = dataUrl;
+    sku.artworkName = `${baseName}.${ext}`;
+    sku.artworkType = contentType;
+    if (String(sourceUrl).startsWith('http')) sku.artwork_url = sourceUrl;
+    if (sku.previewImportStatus === 'importing') sku.previewImportStatus = 'saved';
+
+    if (typeof showToast === 'function') {
+      showToast(`✅ Artwork attached to "${sku.name || 'SKU #' + (idx + 1)}"`, 3000);
+    }
+    renderSKUs();
+  } catch (err) {
+    console.warn('[Pulse] attach SKU preview artwork', err);
+    if (String(sourceUrl).startsWith('http')) {
+      sku.artworkDataUrl = sourceUrl;
+      sku.artwork_url = sourceUrl;
+      sku.artworkName = `${baseName}.jpg`;
+      sku.artworkType = 'image/jpeg';
+      renderSKUs();
+      if (typeof showToast === 'function') {
+        showToast('Artwork linked by URL — save the ticket to keep it.', 4000);
+      }
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+      if (typeof showToast === 'function') {
+        showToast('Could not attach artwork — try uploading manually.', 5000);
+      }
+    }
+  }
 }
 
 function jtSkuThumbViewOnly(dataUrl, name) {
@@ -3308,16 +3380,38 @@ function skuFileThumbHTML(skuIdx, fileType) {
     </div>`;
 }
 
-function skuOrderPreviewHTML(sku) {
+function skuHasArtwork(sku) {
+  if (sku?.artworkDataUrl) return true;
+  if (sku?.artwork_url && /^https?:\/\//i.test(String(sku.artwork_url))) return true;
+  if (sku?.previewImageUrl && sku.previewImportStatus !== 'failed') return true;
+  return false;
+}
+
+function skuOrderPreviewHTML(sku, idx) {
+  // After auto-save, main artwork slot shows the file — hide duplicate preview.
+  if (sku.previewImportStatus === 'saved' && sku.artworkDataUrl) return '';
+
   if (sku.previewImageUrl) {
     const safeUrl = escHtmlJT(sku.previewImageUrl);
-    return `<div class="sku-order-preview" style="padding:8px 0 4px;">
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Preview from order — upload final artwork below</div>
-      <img src="${safeUrl}" alt="SKU preview" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid var(--border);border-radius:4px;" referrerpolicy="no-referrer">
+    let label = 'Preview from order — upload final artwork below';
+    if (sku.previewImportStatus === 'importing') label = 'Artwork from Workflow — saving to Pulse...';
+    else if (sku.previewImportStatus === 'saved') label = '✅ Artwork saved to Pulse';
+    else if (sku.previewImportStatus === 'failed') label = '⚠️ Auto-save failed — attach or upload manually';
+    const attachBtn = !sku.artworkDataUrl
+      ? `<button type="button" class="btn btn-sm btn-primary" data-sku-attach-btn="${idx}"
+           style="margin-top:8px;font-size:11px;padding:4px 10px;"
+           onclick="attachSkuPreviewArtwork(${idx})">
+           ⬇️ Attach to Main artwork
+         </button>`
+      : '';
+    return `<div class="sku-order-preview" data-sku-preview style="padding:8px 0 4px;">
+      <div class="sku-order-preview-label" style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${label}</div>
+      <img src="${safeUrl}" alt="SKU preview" style="max-width:100px;max-height:100px;object-fit:contain;border:1px solid var(--border);border-radius:4px;" referrerpolicy="no-referrer">
+      ${attachBtn}
     </div>`;
   }
   if (sku.previewHint) {
-    return `<div style="font-size:11px;color:var(--text-muted);padding:8px 0 4px;">No preview — upload artwork file</div>`;
+    return `<div style="font-size:11px;color:var(--text-muted);padding:8px 0 4px;">No artwork — upload file manually</div>`;
   }
   return '';
 }
@@ -3361,12 +3455,12 @@ function renderSKUs() {
         </div>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeSKU(${i})" title="Remove SKU">✕</button>
       </div>
-      ${skuOrderPreviewHTML(sku)}
+      ${skuOrderPreviewHTML(sku, i)}
       <div class="sku-files" style="grid-template-columns:repeat(${fileCols}, minmax(0, 1fr));">
         <div class="sku-file-slot">
           <label>🎨 Main artwork *</label>
           ${sku.artworkDataUrl
-            ? skuFileThumbHTML(i, 'artwork')
+            ? `${skuFileThumbHTML(i, 'artwork')}${sku.previewImportStatus === 'saved' ? '<div style="font-size:10px;color:#0891b2;margin-top:4px;">✅ Artwork saved to Pulse</div>' : ''}`
             : `<input type="file" accept=".pdf,.ai,.eps,.png,.jpg,.jpeg,.tif,.tiff,.psd" onchange="handleSKUFile(${i},'artwork',this)">`
           }
         </div>
@@ -4641,7 +4735,7 @@ async function saveTicket(suppressRedirect = false) {
         alert(`SKU "${label}" requires a quantity of at least 1.`);
         return;
       }
-      if (!sku.artworkDataUrl) {
+      if (!skuHasArtwork(sku)) {
         alert(`Please upload main artwork for "${label}".`);
         return;
       }
@@ -4866,7 +4960,18 @@ async function saveTicket(suppressRedirect = false) {
       whiteLayerFile: skuList.length > 0 ? null : (singleFileData.white || null),
       uvFile: skuList.length > 0 ? null : (singleFileData.uv || null),
       foilFile: skuList.length > 0 ? null : (singleFileData.foil || null),
-      skus: skuList.length > 0 ? skuList : null,
+      skus: skuList.length > 0
+        ? skuList.map(s => {
+            const artworkUrl = s.artwork_url
+              || (/^https?:\/\//i.test(String(s.artworkDataUrl || '')) ? s.artworkDataUrl : null)
+              || (/^https?:\/\//i.test(String(s.previewImageUrl || '')) ? s.previewImageUrl : null);
+            return {
+              ...s,
+              artwork_url: artworkUrl,
+              artworkDataUrl: s.artworkDataUrl || artworkUrl || null,
+            };
+          })
+        : null,
       skuCount: skuList.length || 0,
       // Sales & Billing
       customerPO: document.getElementById('customerPO').value.trim(),
@@ -6330,7 +6435,6 @@ async function _prefillFromLinkParams(p) {
   if (p.get('contact')) noteParts.push('Contact: ' + p.get('contact'));
   if (productTypeDetailNote) noteParts.push('Product type detail: ' + productTypeDetailNote);
   if (p.get('notes')) noteParts.push(p.get('notes'));
-  if (p.get('artwork')) noteParts.push('Artwork (GDrive): ' + p.get('artwork'));
   if (noteParts.length) setVal('specialNotes', noteParts.join('\n\n'));
 
   // Finishing — case-insensitive partial match (Spot UV, Lamination, Foil, Perforation)
@@ -6371,7 +6475,8 @@ async function _prefillFromLinkParams(p) {
         name: sku.name,
         quantity: parseInt(sku.qty, 10) || 0,
         previewImageUrl: imageUrl || null,
-        previewHint: !imageUrl,
+        previewImportStatus: imageUrl ? 'importing' : null,
+        artwork_url: null,
         artworkDataUrl: null, artworkName: '', artworkType: '',
         whiteDataUrl: null, whiteName: '',
         uvDataUrl: null, uvName: '',
@@ -6381,11 +6486,12 @@ async function _prefillFromLinkParams(p) {
 
     if (typeof showMultiSkuMode === 'function') showMultiSkuMode();
     if (typeof renderSKUs === 'function') renderSKUs();
+    _importPrefillSkuArtwork().catch(err => console.warn('[Pulse] SKU artwork import batch', err));
   }
 
   _showPrefillBanner(p.get('order_ref'), p.get('artwork'));
   if (typeof showToast === 'function') {
-    showToast('✅ Form pre-filled from order link — please review before saving.', 6000);
+    showToast('✅ Form pre-filled from Workflow order — review and save.', 6000);
   }
 
   if (typeof renderQueuePane === 'function') renderQueuePane();
@@ -6397,18 +6503,115 @@ function _showPrefillBanner(orderRef, artworkUrl) {
     ? `<a href="${escHtmlJT(artworkUrl)}" target="_blank" rel="noopener"
          style="margin-left:8px;background:#1d4ed8;color:#fff;padding:5px 12px;border-radius:6px;
                 text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0;">
-         🎨 Open Artwork in GDrive ↗
+         📁 Project GDrive File ↗
        </a>`
     : '';
   const div = document.createElement('div');
   div.id = 'prefill-banner';
   div.style.cssText = 'background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8;display:flex;align-items:center;gap:4px;flex-wrap:wrap;';
-  div.innerHTML = `✅ <strong>Form pre-filled from order link — please review before saving.</strong>
+  div.innerHTML = `✅ <strong>Form pre-filled from Workflow order — review and save.</strong>
     ${orderRef ? `<span style="margin-left:4px;">(Order #${escHtmlJT(orderRef)})</span>` : ''}
     ${artworkBtn}
     <button type="button" onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#93c5fd;font-size:18px;line-height:1;">✕</button>`;
   const form = document.getElementById('ticketForm');
   if (form) form.prepend(div);
+}
+
+function _extFromArtworkBlob(blob, imageUrl) {
+  const type = blob?.type || '';
+  if (type.includes('png')) return 'png';
+  if (type.includes('webp')) return 'webp';
+  if (type.includes('gif')) return 'gif';
+  if (type.includes('jpeg') || type.includes('jpg')) return 'jpg';
+  const m = String(imageUrl || '').match(/\.(png|jpe?g|webp|gif)(\?|$)/i);
+  if (m) return m[1].toLowerCase().replace('jpeg', 'jpg');
+  return 'jpg';
+}
+
+async function _fetchArtworkBlob(imageUrl) {
+  try {
+    const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (res.ok) return await res.blob();
+  } catch (err) {
+    console.warn('[Pulse] artwork fetch (CORS):', err);
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('Canvas export failed'))),
+          'image/png',
+        );
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = imageUrl;
+  });
+}
+
+async function importSkuArtwork(imageUrl, skuName) {
+  try {
+    const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
+    if (!sb?.storage) throw new Error('Supabase client unavailable');
+
+    const blob = await _fetchArtworkBlob(imageUrl);
+
+    const ext = _extFromArtworkBlob(blob, imageUrl);
+    const safeName = String(skuName || 'sku').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'sku';
+    const fileName = `${Date.now()}-${safeName}.${ext}`;
+
+    const { error: uploadError } = await sb.storage
+      .from('sku-artwork')
+      .upload(fileName, blob, { contentType: blob.type || `image/${ext}`, upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = sb.storage.from('sku-artwork').getPublicUrl(fileName);
+    return { publicUrl: urlData.publicUrl, contentType: blob.type || `image/${ext}`, ext };
+  } catch (err) {
+    console.warn('[Pulse] SKU artwork import failed:', skuName, err);
+    return null;
+  }
+}
+
+async function _importPrefillSkuArtwork() {
+  await waitForJtSupabaseSession();
+
+  const tasks = skuList.map(async (sku, idx) => {
+    const sourceUrl = sku.previewImageUrl;
+    if (!sourceUrl || sku.previewImportStatus === 'saved') return;
+
+    sku.previewImportStatus = 'importing';
+    if (typeof renderSKUs === 'function') renderSKUs();
+
+    const result = await importSkuArtwork(sourceUrl, sku.name || `sku-${idx + 1}`);
+    if (result?.publicUrl) {
+      sku.artworkDataUrl = result.publicUrl;
+      sku.artwork_url = result.publicUrl;
+      sku.artworkName = `${sku.name || 'artwork'}.${result.ext}`;
+      sku.artworkType = result.contentType;
+      sku.previewImageUrl = result.publicUrl;
+      sku.previewImportStatus = 'saved';
+    } else {
+      sku.artworkDataUrl = sourceUrl;
+      sku.artwork_url = sourceUrl;
+      sku.artworkName = sku.artworkName || `${sku.name || 'artwork'}.jpg`;
+      sku.artworkType = sku.artworkType || 'image/jpeg';
+      sku.previewImportStatus = 'failed';
+    }
+    if (typeof renderSKUs === 'function') renderSKUs();
+  });
+
+  await Promise.allSettled(tasks);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
